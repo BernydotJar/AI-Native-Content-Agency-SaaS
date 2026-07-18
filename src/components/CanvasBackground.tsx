@@ -1,128 +1,160 @@
 import { useEffect, useRef } from "react";
 
-interface Node {
+interface MeshNode {
   x: number;
   y: number;
   vx: number;
   vy: number;
 }
 
+const makeNode = (width: number, height: number): MeshNode => ({
+  x: Math.random() * width,
+  y: Math.random() * height,
+  vx: (Math.random() - 0.5) * 0.28,
+  vy: (Math.random() - 0.5) * 0.28,
+});
+
 export const CanvasBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
 
-    let animationId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-    const nodeCount = Math.floor((width * height) / 9000);
+    const pointer = { x: 0, y: 0, active: false };
+    const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduceMotion = reduceMotionQuery.matches;
+    let frameId = 0;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let nodes: MeshNode[] = [];
+    let accent = "hsla(200, 80%, 60%, 0.46)";
 
-    const nodes: Node[] = Array.from({ length: nodeCount }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-    }));
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+    const readAccent = () => {
+      const styles = getComputedStyle(document.documentElement);
+      const hue = styles.getPropertyValue("--primary-hue").trim() || "200";
+      const saturation = styles.getPropertyValue("--primary-saturation").trim() || "80%";
+      const lightness = styles.getPropertyValue("--primary-lightness").trim() || "60%";
+      accent = `hsla(${hue}, ${saturation}, ${lightness}, 0.46)`;
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current.x = e.clientX;
-      mouseRef.current.y = e.clientY;
-      mouseRef.current.active = true;
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      const targetCount = Math.min(92, Math.max(26, Math.floor((width * height) / 18_000)));
+      if (nodes.length > targetCount) nodes = nodes.slice(0, targetCount);
+      while (nodes.length < targetCount) nodes.push(makeNode(width, height));
     };
 
-    const handleMouseLeave = () => {
-      mouseRef.current.active = false;
+    const draw = (advance = true) => {
+      context.clearRect(0, 0, width, height);
+
+      for (const node of nodes) {
+        if (advance) {
+          node.x += node.vx;
+          node.y += node.vy;
+
+          if (node.x <= 0 || node.x >= width) node.vx *= -1;
+          if (node.y <= 0 || node.y >= height) node.vy *= -1;
+
+          if (pointer.active) {
+            const dx = pointer.x - node.x;
+            const dy = pointer.y - node.y;
+            const distance = Math.hypot(dx, dy);
+            if (distance > 0 && distance < 190) {
+              node.x += (dx / distance) * 0.11;
+              node.y += (dy / distance) * 0.11;
+            }
+          }
+        }
+
+        context.beginPath();
+        context.arc(node.x, node.y, 1.05, 0, Math.PI * 2);
+        context.fillStyle = accent;
+        context.fill();
+      }
+
+      context.lineWidth = 0.5;
+      for (let first = 0; first < nodes.length; first += 1) {
+        for (let second = first + 1; second < nodes.length; second += 1) {
+          const dx = nodes[first].x - nodes[second].x;
+          const dy = nodes[first].y - nodes[second].y;
+          const distance = Math.hypot(dx, dy);
+          if (distance >= 125) continue;
+
+          context.strokeStyle = `rgba(212, 212, 216, ${(1 - distance / 125) * 0.085})`;
+          context.beginPath();
+          context.moveTo(nodes[first].x, nodes[first].y);
+          context.lineTo(nodes[second].x, nodes[second].y);
+          context.stroke();
+        }
+      }
     };
 
+    const animate = () => {
+      draw(true);
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const start = () => {
+      window.cancelAnimationFrame(frameId);
+      if (document.hidden || reduceMotion) {
+        draw(false);
+        return;
+      }
+      animate();
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      pointer.active = event.pointerType !== "touch";
+    };
+    const handlePointerLeave = () => { pointer.active = false; };
+    const handleResize = () => { resize(); start(); };
+    const handleMotionChange = (event: MediaQueryListEvent) => {
+      reduceMotion = event.matches;
+      start();
+    };
+
+    const styleObserver = new MutationObserver(() => readAccent());
+    styleObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+
+    readAccent();
+    resize();
+    start();
     window.addEventListener("resize", handleResize);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    document.addEventListener("pointerleave", handlePointerLeave);
+    document.addEventListener("visibilitychange", start);
+    reduceMotionQuery.addEventListener("change", handleMotionChange);
 
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Draw background dotted mesh grid
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.015)";
-      ctx.lineWidth = 0.5;
-      const gridSize = 40;
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      nodes.forEach((node) => {
-        node.x += node.vx;
-        node.y += node.vy;
-
-        if (node.x < 0 || node.x > width) node.vx *= -1;
-        if (node.y < 0 || node.y > height) node.vy *= -1;
-
-        if (mouseRef.current.active) {
-          const dx = mouseRef.current.x - node.x;
-          const dy = mouseRef.current.y - node.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 180) {
-            // Attract toward client cursor
-            node.x += (dx / dist) * 0.15;
-            node.y += (dy / dist) * 0.15;
-          }
-        }
-
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, 1.2, 0, Math.PI * 2);
-        // Extract raw HSL accent color from document styles
-        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--primary-color") || "rgba(255, 255, 255, 0.35)";
-        ctx.fill();
-      });
-
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[i].x - nodes[j].x;
-          const dy = nodes[i].y - nodes[j].y;
-          const dist = Math.hypot(dx, dy);
-
-          if (dist < 120) {
-            const alpha = (1 - dist / 120) * 0.1;
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-            ctx.beginPath();
-            ctx.moveTo(nodes[i].x, nodes[i].y);
-            ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-      animationId = requestAnimationFrame(draw);
-    };
-
-    draw();
     return () => {
-      cancelAnimationFrame(animationId);
+      window.cancelAnimationFrame(frameId);
+      styleObserver.disconnect();
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerleave", handlePointerLeave);
+      document.removeEventListener("visibilitychange", start);
+      reduceMotionQuery.removeEventListener("change", handleMotionChange);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 h-full w-full opacity-65 z-0" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-0 h-full w-full opacity-55"
+    />
+  );
 };

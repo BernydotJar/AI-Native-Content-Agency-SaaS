@@ -1,19 +1,35 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CanvasBackground } from "./components/CanvasBackground";
 import { ControlPanel } from "./components/ControlPanel";
+import type {
+  CampaignSimulationParams,
+  ImageSimulationParams,
+  SimulationParams,
+  UseCaseId,
+  VideoSimulationParams,
+} from "./components/ControlPanel";
 import { PipelineGraph } from "./components/PipelineGraph";
 import type { NodeState } from "./components/PipelineGraph";
 import { InteractiveSidebar } from "./components/InteractiveSidebar";
+import {
+  MemorySkillsPanel,
+} from "./components/MemorySkillsPanel";
+import type {
+  SessionMemoryFlag,
+  SkillId,
+} from "./components/MemorySkillsPanel";
 import { MetaAdsDashboard } from "./components/MetaAdsDashboard";
 import type { MetaAdsCampaign } from "./components/MetaAdsDashboard";
-import { GlowCard } from "./components/GlowCard";
+import { ToolFabricPanel } from "./components/ToolFabricPanel";
+import { packageCampaign } from "./lib/simulationRuntime";
 import { 
   Terminal, 
   Cpu, 
   Layers, 
   Wifi, 
   ShieldCheck,
-  Sliders
+  Sliders,
+  Sparkles,
 } from "lucide-react";
 
 
@@ -52,12 +68,18 @@ interface NodeData {
   assets: GeneratedAsset[];
 }
 
+interface DeferredApprovalTask {
+  task: () => void;
+  delay: number;
+}
+
 const DEFAULT_NODE_STATES: Record<string, NodeState> = {
   ingestion: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "archivos" },
   ceo: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "briefs" },
   research: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "conceptos" },
   media: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "assets" },
   strategist: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "canales" },
+  growth: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "rutas" },
   writer: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "copys" },
   risk: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "alertas" },
   publisher: { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "campañas" }
@@ -68,18 +90,49 @@ export default function App() {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ingestion");
   const [isApproved, setIsApproved] = useState<boolean>(false);
+  const [approvalReady, setApprovalReady] = useState<boolean>(false);
   const [isAdsSyncing, setIsAdsSyncing] = useState<boolean>(false);
+  const [enabledSkills, setEnabledSkills] = useState<Record<SkillId, boolean>>({
+    "scholar-nlp": true,
+    "ai-seo": true,
+    "churn-prevention": false,
+    "brand-guard": true,
+  });
+  const [memoryFlags, setMemoryFlags] = useState<SessionMemoryFlag[]>([]);
   
   // Terminal log messages
   const [systemLogs, setSystemLogs] = useState<string[]>([
-    "System booted. Obsidian-slate design system loaded.",
-    "Sensors active: X API, Instagram Scraping, TikTok Trends.",
-    "MCP connections resolved: Meta Ads, Puppeteer, Slack, GitHub.",
-    "War Room awaiting campaign briefing input..."
+    "Simulation kernel booted. Obsidian-slate scene loaded.",
+    "Sensor adapters staged in mock mode: X, Facebook, TikTok and Instagram.",
+    "MCP contracts available for demo: Meta Ads, browser, GitHub and Context7.",
+    "War Room is awaiting a campaign brief. No live actions will be executed."
   ]);
 
   // Accent Color Theme Hue state
   const [accentHue, setAccentHue] = useState<number>(200);
+  const scheduledWorkRef = useRef<number[]>([]);
+  const deferredApprovalWorkRef = useRef<DeferredApprovalTask[]>([]);
+  const approvalRef = useRef(false);
+
+  const clearScheduledWork = () => {
+    scheduledWorkRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scheduledWorkRef.current = [];
+    deferredApprovalWorkRef.current = [];
+  };
+
+  const schedule = (task: () => void, delay: number) => {
+    const timerId = window.setTimeout(() => {
+      scheduledWorkRef.current = scheduledWorkRef.current.filter((candidate) => candidate !== timerId);
+      task();
+    }, delay);
+    scheduledWorkRef.current.push(timerId);
+  };
+
+  const deferUntilApproval = (task: () => void, delay: number) => {
+    deferredApprovalWorkRef.current.push({ task, delay });
+  };
+
+  useEffect(() => () => clearScheduledWork(), []);
 
   // Dynamic node states tracking percentages and active items count
   const [nodeStates, setNodeStates] = useState<Record<string, NodeState>>(DEFAULT_NODE_STATES);
@@ -119,7 +172,7 @@ export default function App() {
     media: {
       id: "media",
       name: "Media / Storytelling",
-      role: "Runway & Cap Cut",
+      role: "Video Planning / Sandbox",
       status: "idle",
       progress: 0,
       logs: [],
@@ -130,6 +183,16 @@ export default function App() {
       id: "strategist",
       name: "Strategist Agent",
       role: "Trend-Mixer Strategy",
+      status: "idle",
+      progress: 0,
+      logs: [],
+      files: [],
+      assets: []
+    },
+    growth: {
+      id: "growth",
+      name: "Growth / Territorio",
+      role: "Distribution & Community",
       status: "idle",
       progress: 0,
       logs: [],
@@ -195,6 +258,8 @@ export default function App() {
     const lightness = accentHue === 200 ? "60%" : accentHue === 260 ? "65%" : accentHue === 145 ? "50%" : "60%";
     document.documentElement.style.setProperty("--primary-saturation", saturation);
     document.documentElement.style.setProperty("--primary-lightness", lightness);
+    document.documentElement.style.setProperty("--primary-color-raw", `hsla(${accentHue}, ${saturation}, ${lightness}, 0.46)`);
+    document.documentElement.style.setProperty("--primary-color-glow", `hsla(${accentHue}, ${saturation}, ${lightness}, 0.18)`);
   }, [accentHue]);
 
   const addSystemLog = (msg: string) => {
@@ -221,43 +286,118 @@ export default function App() {
     }));
   };
 
+  const handleApprovalToggle = () => {
+    if (!approvalReady && !approvalRef.current) {
+      addSystemLog("Greenlight bloqueado: Risk Agent todavía no ha completado la auditoría.");
+      return;
+    }
+
+    const nextApproved = !approvalRef.current;
+    approvalRef.current = nextApproved;
+    setIsApproved(nextApproved);
+
+    if (nextApproved) {
+      const releaseQueue = deferredApprovalWorkRef.current;
+      deferredApprovalWorkRef.current = [];
+      setApprovalReady(false);
+      addSystemLog("Greenlight concedido. Liberando la cola de Publisher en el sandbox.");
+      releaseQueue.forEach(({ task, delay }) => schedule(task, delay));
+      return;
+    }
+
+    clearScheduledWork();
+    setIsAdsSyncing(false);
+
+    if (isRunning) {
+      setIsRunning(false);
+      setActiveStep("");
+      updateNodeProgressState("publisher", { status: "error" });
+      updateNodeDataMap("publisher", {
+        status: "error",
+        logs: [{
+          sender: "Operator Gate",
+          message: "Publicación cancelada: el operador revocó el greenlight.",
+          timestamp: new Date().toLocaleTimeString(),
+        }],
+      });
+      addSystemLog("Greenlight revocado. El trabajo pendiente de Publisher fue cancelado.");
+      return;
+    }
+
+    addSystemLog("Greenlight retirado después del ensayo. Se canceló cualquier pulso local pendiente; no había acciones externas que revertir.");
+  };
+
   // Run simulated flow for the three Use Cases
-  const handleRunSimulation = (useCaseId: number, params: any) => {
+  const handleRunSimulation = (useCaseId: UseCaseId, params: SimulationParams) => {
     if (isRunning) return;
+    clearScheduledWork();
+    setIsAdsSyncing(false);
     setIsRunning(true);
+    approvalRef.current = false;
     setIsApproved(false);
+    setApprovalReady(false);
     setSelectedNodeId("ingestion");
     addSystemLog(`Iniciando simulación del Caso de Uso ${useCaseId}...`);
 
     // Reset node progress states to idle
     const cleanStates = { ...DEFAULT_NODE_STATES };
     setNodeStates(cleanStates);
+    setNodeDataMap((current) => Object.fromEntries(
+      Object.entries(current).map(([nodeId, node]) => [
+        nodeId,
+        { ...node, status: "idle", progress: 0, logs: [], files: [], assets: [] },
+      ]),
+    ) as Record<string, NodeData>);
 
-    if (useCaseId === 1) {
+    if (useCaseId === 1 && "videoName" in params) {
       runUseCase1(params);
-    } else if (useCaseId === 2) {
+    } else if (useCaseId === 2 && "imageName" in params) {
       runUseCase2(params);
-    } else {
+    } else if (useCaseId === 3 && "prompt" in params) {
       runUseCase3(params);
     }
   };
 
   const handleManualSync = () => {
     setIsAdsSyncing(true);
-    addSystemLog("Invocando Meta Ads MCP Server para jalar métricas de rendimiento y CTR...");
-    setTimeout(() => {
+    addSystemLog("Ejecutando fixture local del contrato Meta Ads para simular CTR, gasto y conversiones...");
+    schedule(() => {
       setIsAdsSyncing(false);
-      // Boost campaigns metrics slightly to represent optimization
-      setMetaCampaigns(prev => prev.map(c => ({
-        ...c,
-        spent: Math.min(c.budget, c.spent + 120),
-        impressions: c.impressions + 5400,
-        conversions: c.conversions + 12,
-        ctr: parseFloat((c.ctr + 0.12).toFixed(2)),
-        cac: parseFloat((c.cac - 0.25).toFixed(2))
-      })));
-      addSystemLog("Sincronización de Meta Ads finalizada. CTR optimizado y CAC reducido.");
+      setMetaCampaigns(prev => prev.map((campaign) => {
+        if (campaign.status !== "active" || campaign.spent >= campaign.budget) return campaign;
+        const nextSpent = Math.min(campaign.budget, campaign.spent + 120);
+        const spendDelta = nextSpent - campaign.spent;
+        const nextConversions = campaign.conversions + Math.max(1, Math.round(spendDelta / 10));
+        return {
+          ...campaign,
+          spent: nextSpent,
+          impressions: campaign.impressions + Math.round(spendDelta * 45),
+          conversions: nextConversions,
+          ctr: Math.min(9.99, Number((campaign.ctr + 0.12).toFixed(2))),
+          cac: Number((nextSpent / nextConversions).toFixed(2)),
+        };
+      }));
+      addSystemLog("Pulso de Meta Ads simulado: gasto acotado al presupuesto y CAC recalculado desde conversiones.");
     }, 1800);
+  };
+
+  const handleSkillToggle = (skillId: SkillId) => {
+    setEnabledSkills((current) => ({
+      ...current,
+      [skillId]: !current[skillId],
+    }));
+    addSystemLog(`Skill ${skillId} actualizado. El cambio afectará el próximo Caso de Uso 3.`);
+  };
+
+  const handleAddMemoryFlag = (content: string) => {
+    const memoryFlag: SessionMemoryFlag = {
+      id: `session-memory-${Date.now()}`,
+      content,
+      provenance: "Operator input · Memory Console · Browser session",
+      confidence: 100,
+    };
+    setMemoryFlags((current) => [...current, memoryFlag]);
+    addSystemLog("Memory flag observada y almacenada en la sesión; se recuperará en el próximo pack de campaña.");
   };
 
   /* ==========================================
@@ -265,13 +405,16 @@ export default function App() {
      ========================================== */
 
   // Use Case 1: Video Input & Optimization
-  const runUseCase1 = (params: any) => {
+  const runUseCase1 = (params: VideoSimulationParams) => {
     const videoName = params.videoName;
     const platform = params.platform;
+    const targetFormat = platform === "X" ? "cuadrado (1:1)" : "vertical (9:16)";
+    const outputSlug = platform.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const publicationReference = `sandbox://${outputSlug}/growth-agency/video-739192841`;
     const timeScale = 1200;
 
     // Step 1: Ingestion
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("ingestion");
       setSelectedNodeId("ingestion");
       addSystemLog(`Ingestando archivo de video: ${videoName}`);
@@ -279,39 +422,39 @@ export default function App() {
       updateNodeDataMap("ingestion", {
         status: "running",
         progress: 40,
-        files: [{ name: videoName, type: "video/mp4", size: "24.5 MB" }],
+        files: [{ name: videoName, type: "video/*", size: "Filename only" }],
         logs: [{
           sender: "Sensor Ingestion",
-          message: `Ingestando video en crudo '${videoName}'. Extrayendo pistas de audio.`,
+          message: `Registrando '${videoName}'. La demo sólo recibe el nombre; no sube ni decodifica el archivo.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 100);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("ingestion", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("ingestion", { status: "success", progress: 100 });
-      addSystemLog("Video cargado en base de datos. Transfiriendo a Research para transcripción.");
+      addSystemLog("Manifiesto local creado. Research usará una transcripción fixture; no se almacenó el video.");
     }, 1 * timeScale);
 
     // Step 2: Research (Audio parsing & transcription)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("research");
       setSelectedNodeId("research");
-      addSystemLog("ResearchAgent procesando audio y extrayendo transcripción.");
+      addSystemLog("ResearchAgent cargando una transcripción fixture del sandbox.");
       updateNodeProgressState("research", { status: "running", progress: 50, itemsCount: 1 });
       updateNodeDataMap("research", {
         status: "running",
         progress: 50,
         logs: [{
           sender: "ResearchAgent",
-          message: "Analizando canal de audio. Transcribiendo y buscando anclas teóricas sobre arquitectura de sistemas...",
+          message: "Simulando la salida de transcripción para demostrar el contrato de VideoOptimizerTool; no se leyó audio real.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 2 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("research", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("research", {
         status: "success",
@@ -319,12 +462,12 @@ export default function App() {
         logs: [
           {
             sender: "ResearchAgent",
-            message: "Transcripción de audio finalizada. Aplicando capa académica (Scholar Layer).",
+            message: "Fixture de transcripción listo. Aplicando capa académica (Scholar Layer).",
             timestamp: new Date().toLocaleTimeString()
           },
           {
             sender: "ResearchAgent (Scholar Layer)",
-            message: "He detectado que el video habla sobre 'fallas de red en bases de datos'. He generado el análisis NLP Persuasivo:",
+            message: "El fixture representa una conversación sobre fallas de red en bases de datos. Scholar produjo este análisis de demostración:",
             timestamp: new Date().toLocaleTimeString(),
             isScholar: true,
             nlpExplanation: {
@@ -339,45 +482,45 @@ export default function App() {
     }, 4 * timeScale);
 
     // Step 3: Media (Video Reframing)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("media");
       setSelectedNodeId("media");
-      addSystemLog(`MediaAgent aplicando re-framing y auto-captions para ${platform}.`);
+      addSystemLog(`MediaAgent planificando re-framing y auto-captions para ${platform} en modo mock.`);
       updateNodeProgressState("media", { status: "running", progress: 45, itemsCount: 1 });
       updateNodeDataMap("media", {
         status: "running",
         progress: 45,
         logs: [{
           sender: "MediaAgent",
-          message: `Iniciando VideoOptimizerTool. Modificando relación de aspecto a vertical (9:16) y quemando subtítulos automáticos estilizados.`,
+          message: `VideoOptimizerTool crea un manifiesto: relación ${targetFormat}, captions fixture y referencia sandbox. No renderiza el archivo.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 5 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("media", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("media", {
         status: "success",
         progress: 100,
         assets: [{
-          name: "clip_vertical_optimizado.mp4",
+          name: `clip_${outputSlug}_optimizado.mp4`,
           type: "video",
-          content: "https://media.simulated-cdn.com/assets/clip_vertical_optimizado.mp4"
+          content: `sandbox://media/${outputSlug}/clip-optimized.mp4`
         }],
         logs: [
           {
             sender: "MediaAgent",
-            message: `Autocaptions añadidas. Video recortado en formato vertical. Listo para redes móviles.`,
+            message: `Plan de autocaptions y recorte ${targetFormat} completado como manifiesto sandbox para ${platform}.`,
             timestamp: new Date().toLocaleTimeString()
           }
         ]
       });
-      addSystemLog("Video optimizado visualmente. Transfiriendo a Writer.");
+      addSystemLog("Manifiesto de optimización listo. Transfiriendo el fixture a Writer.");
     }, 7 * timeScale);
 
     // Step 4: Writer (Copywriting)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("writer");
       setSelectedNodeId("writer");
       addSystemLog("WriterAgent redactando copia persuasiva de acompañamiento.");
@@ -393,7 +536,7 @@ export default function App() {
       });
     }, 8 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       const copyText = `🔥 ¿Confías ciegamente en tus transacciones SQL?\n\nTu base de datos está a un parpadeo de red de fallar. En sistemas distribuidos, la red no es confiable. Es el gran trade-off que Martin Kleppmann detalla en DDIA.\n\n👇 Entiende el dilema en este video y por qué no existen soluciones mágicas.\n\n#SoftwareEngineering #BasesDeDatos #SystemDesign #Coding`;
       updateNodeProgressState("writer", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("writer", {
@@ -416,7 +559,7 @@ export default function App() {
     }, 10 * timeScale);
 
     // Step 5: Risk (Compliance Check)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("risk");
       setSelectedNodeId("risk");
       addSystemLog("RiskAgent auditando contenido.");
@@ -432,7 +575,7 @@ export default function App() {
       });
     }, 11 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("risk", { status: "success", progress: 100, itemsCount: 0 });
       updateNodeDataMap("risk", {
         status: "success",
@@ -444,42 +587,42 @@ export default function App() {
         }]
       });
       addSystemLog("Aprobación de marca otorgada. Pendiente de greenlight del operador.");
-      setIsApproved(true); // Auto greenlight simulated
+      setApprovalReady(true);
     }, 13 * timeScale);
 
     // Step 6: Publisher
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("publisher");
       setSelectedNodeId("publisher");
-      addSystemLog(`PublisherAgent publicando video y copy en ${platform}.`);
+      addSystemLog(`PublisherAgent preparando la cola sandbox para ${platform}.`);
       updateNodeProgressState("publisher", { status: "running", progress: 50, itemsCount: 1 });
       updateNodeDataMap("publisher", {
         status: "running",
         progress: 50,
         logs: [{
           sender: "PublisherAgent",
-          message: `Estableciendo conexión API con ${platform} Ingestion. Subiendo video...`,
+          message: `Modelando el contrato de ${platform} Ingestion. No se abrió una conexión ni se subió el video.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-    }, 14 * timeScale);
+    }, 0.25 * timeScale);
 
-    setTimeout(() => {
+    deferUntilApproval(() => {
       updateNodeProgressState("publisher", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("publisher", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "PublisherAgent",
-          message: `✅ Video publicado exitosamente en ${platform} orgánico. URL simulada: https://tiktok.com/@growth_agency/video/739192841`,
+          message: `✅ Publicación simulada completada en ${platform}. Referencia local: ${publicationReference}`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Publicación exitosa.");
-    }, 16 * timeScale);
+      addSystemLog("Referencia sandbox creada; no hubo publicación externa.");
+    }, 2 * timeScale);
 
     // Step 7: CEO (Review)
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("ceo");
       setSelectedNodeId("ceo");
       addSystemLog("CEO Agent finalizando ciclo de campaña. Reportando estado.");
@@ -489,25 +632,26 @@ export default function App() {
         progress: 100,
         logs: [{
           sender: "CEOAgent",
-          message: `Campaña de video '${videoName}' completada en ${platform}. Sensores listos para monitorear vistas.`,
+          message: `Ensayo de '${videoName}' completado para ${platform}. No existen vistas ni sensores externos en esta demo.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
       setIsRunning(false);
       setActiveStep("");
+      setApprovalReady(false);
       addSystemLog("Caso de Uso 1 finalizado con éxito.");
-    }, 17 * timeScale);
+    }, 3 * timeScale);
   };
 
   // Use Case 2: Image-to-Video Motion Generation
-  const runUseCase2 = (params: any) => {
+  const runUseCase2 = (params: ImageSimulationParams) => {
     const imageName = params.imageName;
     const duration = params.duration;
     const style = params.style;
     const timeScale = 1200;
 
     // Step 1: Ingestion
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("ingestion");
       setSelectedNodeId("ingestion");
       addSystemLog(`Ingestando imagen base: ${imageName}`);
@@ -515,39 +659,39 @@ export default function App() {
       updateNodeDataMap("ingestion", {
         status: "running",
         progress: 50,
-        files: [{ name: imageName, type: "image/png", size: "3.8 MB" }],
+        files: [{ name: imageName, type: "image/*", size: "Filename only" }],
         logs: [{
           sender: "Sensor Ingestion",
-          message: `Cargando imagen '${imageName}'. Validando resolución y capas cromáticas.`,
+          message: `Registrando '${imageName}'. La demo sólo usa el nombre y no inspecciona píxeles ni resolución.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 100);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("ingestion", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("ingestion", { status: "success", progress: 100 });
-      addSystemLog("Imagen cargada. Enviando a Media para render de animación Runway.");
+      addSystemLog("Manifiesto de imagen listo. Media simulará un plan de motion; Runway no será contactado.");
     }, 1 * timeScale);
 
     // Step 2: Media (Image-to-Video API)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("media");
       setSelectedNodeId("media");
-      addSystemLog(`Invocando API de Runway con estilo '${style}' para renderizar ${duration}s.`);
+      addSystemLog(`ImageToVideoTool modelando ${duration}s con estilo '${style}' en modo mock.`);
       updateNodeProgressState("media", { status: "running", progress: 30, itemsCount: 1 });
       updateNodeDataMap("media", {
         status: "running",
         progress: 30,
         logs: [{
           sender: "MediaAgent",
-          message: `Iniciando ImageToVideoTool. Generando vector de interpolación con el prompt de estilo '${style}' por ${duration} segundos.`,
+          message: `Creando storyboard y referencia sandbox para '${style}' por ${duration}s. No se invoca una API de video.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 2 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("media", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("media", {
         status: "success",
@@ -555,19 +699,19 @@ export default function App() {
         assets: [{
           name: `motion_clip_${duration}s.mp4`,
           type: "video",
-          content: "https://media.runway-sim.com/outputs/motion_clip_9281.mp4"
+          content: "sandbox://media/motion-clip-9281.mp4"
         }],
         logs: [{
           sender: "MediaAgent",
-          message: `Render finalizado. Video de ${duration} segundos generado con éxito en estilo ${style}.`,
+          message: `Manifiesto de motion de ${duration}s listo en estilo ${style}. No se generó media real.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Video renderizado por Runway. Enviando a Strategist para segmentación.");
+      addSystemLog("Plan de motion sandbox listo. Enviando a Strategist para segmentación.");
     }, 5 * timeScale);
 
     // Step 3: Strategist (Audience mapping)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("strategist");
       setSelectedNodeId("strategist");
       addSystemLog("StrategistAgent mapeando audiencias y canales de distribución.");
@@ -583,7 +727,7 @@ export default function App() {
       });
     }, 6 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("strategist", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("strategist", {
         status: "success",
@@ -598,7 +742,7 @@ export default function App() {
     }, 8 * timeScale);
 
     // Step 4: Writer (Copia)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("writer");
       setSelectedNodeId("writer");
       addSystemLog("WriterAgent redactando copia para LinkedIn y X.");
@@ -614,7 +758,7 @@ export default function App() {
       });
     }, 9 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       const copyText = `La estética es el nuevo código de barras de tu SaaS.\n\nSi tu software se ve anticuado, tus clientes asumirán que tu infraestructura también lo está. Diseña con intención. Construye para impactar.\n\nDescubre cómo unificamos estética premium y robustez técnica en este clip.`;
       updateNodeProgressState("writer", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("writer", {
@@ -635,7 +779,7 @@ export default function App() {
     }, 11 * timeScale);
 
     // Step 5: Risk (Compliance)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("risk");
       setSelectedNodeId("risk");
       addSystemLog("RiskAgent evaluando cumplimiento.");
@@ -651,54 +795,54 @@ export default function App() {
       });
     }, 12 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("risk", { status: "success", progress: 100, itemsCount: 0 });
       updateNodeDataMap("risk", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "RiskAgent",
-          message: "✅ Aprobado. El video renderizado no incumple ninguna directriz visual de Ads.",
+          message: "QA local completado sobre el manifiesto y el copy. No se validó media renderizada ni una política externa.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Cumplimiento verificado. Listo para publicar.");
-      setIsApproved(true);
+      addSystemLog("Cumplimiento verificado. Publisher espera el greenlight del operador.");
+      setApprovalReady(true);
     }, 14 * timeScale);
 
     // Step 6: Publisher
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("publisher");
       setSelectedNodeId("publisher");
-      addSystemLog("PublisherAgent publicando asset de video en canales...");
+      addSystemLog("PublisherAgent preparando referencias locales de entrega...");
       updateNodeProgressState("publisher", { status: "running", progress: 40, itemsCount: 1 });
       updateNodeDataMap("publisher", {
         status: "running",
         progress: 40,
         logs: [{
           sender: "PublisherAgent",
-          message: "Subiendo clip vertical a X API. Programando publicación para hora pico.",
+          message: "Modelando una cola para X y LinkedIn. No se contactaron APIs ni se programaron publicaciones reales.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-    }, 15 * timeScale);
+    }, 0.25 * timeScale);
 
-    setTimeout(() => {
+    deferUntilApproval(() => {
       updateNodeProgressState("publisher", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("publisher", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "PublisherAgent",
-          message: "✅ Publicado en X. Programado en LinkedIn para mañana a las 8:00 AM.",
+          message: "Pack marcado sandbox-queued para X y LinkedIn; sin publicación externa.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Flujo de publicación completado.");
-    }, 17 * timeScale);
+      addSystemLog("Ensayo de publicación completado dentro del sandbox.");
+    }, 2 * timeScale);
 
     // Step 7: CEO
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("ceo");
       setSelectedNodeId("ceo");
       addSystemLog("CEO Agent cerrando simulación.");
@@ -708,25 +852,48 @@ export default function App() {
         progress: 100,
         logs: [{
           sender: "CEOAgent",
-          message: "Caso 2 exitoso. El asset de video ya está en circulación.",
+          message: "Caso 2 completado como ensayo. El manifiesto permanece local y no está en circulación.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
       setIsRunning(false);
       setActiveStep("");
+      setApprovalReady(false);
       addSystemLog("Caso de Uso 2 finalizado con éxito.");
-    }, 18 * timeScale);
+    }, 3 * timeScale);
   };
 
-  // Use Case 3: Text Prompt to Full Campaign & Paid Ad Pack (Kleppmann campaign)
-  const runUseCase3 = (params: any) => {
+  // Use Case 3: Text Prompt to Full Campaign & Paid Ad Pack
+  const runUseCase3 = (params: CampaignSimulationParams) => {
     const promptText = params.prompt;
     const audience = params.audience;
     const budget = params.budget;
+    const durationDays = params.durationDays;
+    const channels = params.channels;
+    const activeSkills = (Object.entries(enabledSkills) as Array<[SkillId, boolean]>)
+      .filter(([, isEnabled]) => isEnabled)
+      .map(([skillId]) => skillId);
+    const campaignPackage = packageCampaign({
+      thesis: promptText,
+      audience,
+      channels,
+      durationDays,
+      budget,
+      enabledSkills: activeSkills,
+    });
+    const campaignId = `${campaignPackage.campaignId}-${Date.now()}`;
+    const campaignLabel = campaignPackage.thesis.slice(0, 54);
+    const channelsLabel = channels.join(", ");
+    const recalledMemory = memoryFlags.at(-1)?.content
+      ?? "No operator flag stored; use evidence-led tone and reversible decisions.";
+    const trendSummary = campaignPackage.trendMix.insights
+      .map((insight) => `${insight.platform}: ${insight.topic} (${insight.momentum}%)`)
+      .join(" · ");
+    const [reframe, tradeoff, resolution] = campaignPackage.trendMix.scholar;
     const timeScale = 1200;
 
     // Step 1: Ingestion
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("ingestion");
       setSelectedNodeId("ingestion");
       addSystemLog(`Ingestando prompt de campaña: '${promptText}'`);
@@ -743,14 +910,14 @@ export default function App() {
       });
     }, 100);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("ingestion", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("ingestion", { status: "success", progress: 100 });
       addSystemLog("Prompt ingestado. Transfiriendo a CEO para definir presupuesto y canales.");
     }, 1 * timeScale);
 
     // Step 2: CEO (Brief definition)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("ceo");
       setSelectedNodeId("ceo");
       addSystemLog("CEO Agent estructurando metas de la campaña y presupuesto.");
@@ -760,36 +927,36 @@ export default function App() {
         progress: 40,
         logs: [{
           sender: "CEOAgent",
-          message: `Estructurando campaña: 'Kleppmann No Silver Bullets'. Presupuesto asignado: $${budget}. Audiencia: ${audience}. Canales: X y Meta Ads (Paid).`,
+          message: `Estructurando '${campaignLabel}' para ${durationDays} días. Presupuesto sandbox: $${budget}. Audiencia: ${audience}. Canales: ${channelsLabel}.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 2 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("ceo", { status: "success", progress: 100, itemsCount: 1 });
       updateNodeDataMap("ceo", { status: "success", progress: 100 });
       addSystemLog("Objetivos de campaña validados. Enviando a Research para extraer base teórica del libro.");
     }, 3 * timeScale);
 
-    // Step 3: Research (Scholar Layer - DDIA concepts)
-    setTimeout(() => {
+    // Step 3: Research (Scholar Layer)
+    schedule(() => {
       setActiveStep("research");
       setSelectedNodeId("research");
-      addSystemLog("ResearchAgent indexando libro 'Designing Data-Intensive Applications' de Kleppmann.");
+      addSystemLog("ResearchAgent recuperando los resúmenes locales de AI-native y DDIA para la tesis indicada.");
       updateNodeProgressState("research", { status: "running", progress: 60, itemsCount: 3 });
       updateNodeDataMap("research", {
         status: "running",
         progress: 60,
         logs: [{
           sender: "ResearchAgent",
-          message: "Buscando referencias sobre 'soluciones universales' y 'dilemas de replicación' en Kleppmann. Extrayendo citas clave...",
+          message: `Buscando modelos aplicables a '${campaignLabel}' sin atribuir citas textuales no verificadas. Memoria recuperada: ${recalledMemory}`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 4 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("research", { status: "success", progress: 100, itemsCount: 3 });
       updateNodeDataMap("research", {
         status: "success",
@@ -797,7 +964,7 @@ export default function App() {
         logs: [
           {
             sender: "ResearchAgent",
-            message: "Cita extraída: 'There are no simple answers; every design is a trade-off.' (Capítulo 1). Capa Scholar NLP activada:",
+            message: `Ancla conceptual seleccionada para '${campaignLabel}': las decisiones de arquitectura y negocio desplazan costes; no existe una solución universal. Memoria recuperada: ${recalledMemory}. Capa Scholar activada:`,
             timestamp: new Date().toLocaleTimeString()
           },
           {
@@ -806,49 +973,80 @@ export default function App() {
             timestamp: new Date().toLocaleTimeString(),
             isScholar: true,
             nlpExplanation: {
-              reencuadre: "Los ingenieros buscan la 'base de datos perfecta' (ej. MongoDB vs PostgreSQL). Reencuadramos esto demostrando que elegir una base de datos sin analizar los trade-offs es apostar al fracaso técnico de la startup.",
-              tradeoff: "El dilema persistente: Consistencia fuerte vs Escalabilidad de escritura. No puedes tener ambas en un entorno distribuido sin pagar con latencia o riesgo de partición. Kleppmann lo deja claro.",
-              resolucion: "Deja de discutir en Twitter sobre qué base de datos es mejor. Diseña una matriz de decisión técnica basada en los requerimientos específicos de carga de tu negocio (Lectura/Escritura)."
+              reencuadre: reframe.explanation,
+              tradeoff: tradeoff.explanation,
+              resolucion: resolution.explanation,
             }
           }
         ]
       });
-      addSystemLog("Teoría académica de Kleppmann lista. Enviando a Strategist para mezclar con tendencias sociales.");
+      addSystemLog("Scholar de tres puntos listo. Enviando a Strategist para mezclar cuatro señales sociales sintéticas.");
     }, 6 * timeScale);
 
     // Step 4: Strategist (Trend-Mixing Loop)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("strategist");
       setSelectedNodeId("strategist");
       addSystemLog("StrategistAgent ejecutando MultiPlatformTrendsTool...");
-      updateNodeProgressState("strategist", { status: "running", progress: 50, itemsCount: 2 });
+      updateNodeProgressState("strategist", { status: "running", progress: 50, itemsCount: 4 });
       updateNodeDataMap("strategist", {
         status: "running",
         progress: 50,
         logs: [{
           sender: "StrategistAgent",
-          message: "Buscando tendencias en X y LinkedIn. Tendencia detectada: debates sobre costes de migración a la nube y abandono de Kubernetes. Mezclando tendencia con Kleppmann...",
+          message: `MultiPlatformTrendsTool en modo fixture, sin red. Señales: ${trendSummary}. Skills: ${activeSkills.join(", ") || "baseline"}.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 7 * timeScale);
 
-    setTimeout(() => {
-      updateNodeProgressState("strategist", { status: "success", progress: 100, itemsCount: 2 });
+    schedule(() => {
+      updateNodeProgressState("strategist", { status: "success", progress: 100, itemsCount: 4 });
       updateNodeDataMap("strategist", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "StrategistAgent",
-          message: "Estrategia de mezcla formulada. Campaña enfocada en 'La ilusión del Serverless y las bases de datos auto-escalables'. Enviando brief a Writer.",
+          message: `Mix formulado para '${campaignLabel}' en ${channelsLabel}. Cada señal conserva formato nativo y Scholar; ninguna tendencia fue consultada en vivo.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Estrategia de tendencia lista. Enviando a Writer.");
+      addSystemLog("Estrategia de tendencia lista. Enviando a Growth para diseñar distribución.");
     }, 9 * timeScale);
 
-    // Step 5: Writer (Redacción Copy & Ad Creatives)
-    setTimeout(() => {
+    // Step 5: Growth (Territory & distribution routes)
+    schedule(() => {
+      setActiveStep("growth");
+      setSelectedNodeId("growth");
+      addSystemLog("GrowthAgent priorizando comunidades, canales y ventanas de distribución.");
+      updateNodeProgressState("growth", { status: "running", progress: 58, itemsCount: 3 });
+      updateNodeDataMap("growth", {
+        status: "running",
+        progress: 58,
+        logs: [{
+          sender: "GrowthAgent",
+          message: `Modelando ${campaignPackage.schedule.length} rutas sandbox para ${channelsLabel}, distribuidas durante ${durationDays} días y sin automatizar DMs reales.`,
+          timestamp: new Date().toLocaleTimeString()
+        }]
+      });
+    }, 9.2 * timeScale);
+
+    schedule(() => {
+      updateNodeProgressState("growth", { status: "success", progress: 100, itemsCount: 3 });
+      updateNodeDataMap("growth", {
+        status: "success",
+        progress: 100,
+        logs: [{
+          sender: "GrowthAgent",
+          message: `Ruta lista: ${campaignPackage.schedule.map((slot) => `${slot.channel}@+${slot.offsetHours}h`).join(" → ")}.`,
+          timestamp: new Date().toLocaleTimeString()
+        }]
+      });
+      addSystemLog("Growth route validada. Entregando contexto de canal al Writer.");
+    }, 9.8 * timeScale);
+
+    // Step 6: Writer (Redacción Copy & Ad Creatives)
+    schedule(() => {
       setActiveStep("writer");
       setSelectedNodeId("writer");
       addSystemLog("WriterAgent estructurando el pack de contenidos persuasivos.");
@@ -858,17 +1056,18 @@ export default function App() {
         progress: 45,
         logs: [{
           sender: "WriterAgent",
-          message: "Redactando hilo para X y copy para Meta Ads integrando el patrón de persuasión NLP...",
+          message: `CampaignPackagerTool componiendo thread de 3 partes, newsletter, video hook y paid concept. Recall aplicado: ${recalledMemory}`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 10 * timeScale);
 
-    setTimeout(() => {
-      const xThread = `🧵 1/5 ¿Por qué tu startup morirá por culpa de una base de datos 'universal'?\n\nTodos buscan la arquitectura mágica. Pero en sistemas complejos, no hay balas de plata. Cada decisión es un compromiso de ingeniería.\n\n2/5 Martin Kleppmann en su libro 'Designing Data-Intensive Applications' explica el trade-off clásico: si buscas consistencia instantánea en toda tu red, estás sacrificando disponibilidad y velocidad de respuesta.\n\n3/5 Intentar meter tu lógica relacional en una base de datos NoSQL sin modelar trade-offs causa fallos catastróficos al escalar.\n\n4/5 Reencuadra tu visión: la base de datos perfecta no existe. Deja de seguir modas de influencers de código. Define tu throughput real primero.\n\n5/5 ¿Quieres diseñar sistemas robustos basados en teoría dura y no en marketing? Síguenos.`;
-      const metaCopy = `🚨 DEJA de buscar la base de datos perfecta.\n\nEn ingeniería, no hay balas de plata. Cada base de datos tiene un trade-off oculto. Si escalas sin entenderlo, tu sistema colapsará.\n\n👉 Aprende los principios de sistemas distribuidos y reduce tus costes en la nube.\n\n[Registrarme al Webinar de Arquitectura Tech]`;
+    schedule(() => {
+      const xThread = campaignPackage.thread.map((part) => part.copy).join("\n\n");
+      const metaCopy = `${campaignPackage.paidConcept.primaryText}\n\n${campaignPackage.paidConcept.headline}\nCTA: ${campaignPackage.paidConcept.callToAction}\nDaily sandbox budget: $${campaignPackage.paidConcept.dailyBudget}`;
+      const newsletter = `${campaignPackage.newsletter.subject}\n${campaignPackage.newsletter.preheader}\n\n${campaignPackage.newsletter.introduction}\n\n${campaignPackage.newsletter.sections.map((section) => `${section.label}: ${section.explanation}`).join("\n\n")}\n\n${campaignPackage.newsletter.closing}`;
 
-      updateNodeProgressState("writer", { status: "success", progress: 100, itemsCount: 2 });
+      updateNodeProgressState("writer", { status: "success", progress: 100, itemsCount: 3 });
       updateNodeDataMap("writer", {
         status: "success",
         progress: 100,
@@ -882,11 +1081,16 @@ export default function App() {
             name: "Ad Copy para Meta Ads (Pagado)",
             type: "text",
             content: metaCopy
+          },
+          {
+            name: "Newsletter / Scholar Edition",
+            type: "text",
+            content: newsletter
           }
         ],
         logs: [{
           sender: "WriterAgent",
-          message: "Pack de textos de campaña creados exitosamente.",
+          message: `Pack sandbox creado con 3 partes de thread, newsletter y paid concept para ${channelsLabel}.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
@@ -894,35 +1098,42 @@ export default function App() {
     }, 12 * timeScale);
 
     // Step 6: Media (Visual assets)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("media");
       setSelectedNodeId("media");
-      addSystemLog("MediaAgent renderizando imagen conceptual del anuncio.");
-      updateNodeProgressState("media", { status: "running", progress: 50, itemsCount: 1 });
+      addSystemLog("MediaAgent creando manifiestos locales para imagen y video hook; no invocará un generador externo.");
+      updateNodeProgressState("media", { status: "running", progress: 50, itemsCount: 2 });
       updateNodeDataMap("media", {
         status: "running",
         progress: 50,
         logs: [{
           sender: "MediaAgent",
-          message: "Diseñando imagen técnica: Diagrama de transacciones y bases de datos con estilo cinematic dark slate.",
+          message: `Planificando visual para '${campaignLabel}' y video hook de ${campaignPackage.videoHook.durationSeconds}s: ${campaignPackage.videoHook.visualDirection}`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 13 * timeScale);
 
-    setTimeout(() => {
-      updateNodeProgressState("media", { status: "success", progress: 100, itemsCount: 1 });
+    schedule(() => {
+      updateNodeProgressState("media", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("media", {
         status: "success",
         progress: 100,
-        assets: [{
-          name: "diagrama_tradeoffs_anuncio.png",
-          type: "image",
-          content: "https://media.agency-sim.com/diagram_dark_slate.png"
-        }],
+        assets: [
+          {
+            name: "paid-concept-dark-slate.image-manifest",
+            type: "image",
+            content: `${campaignPackage.campaignId}/image-concept`
+          },
+          {
+            name: "campaign-hook.video-manifest",
+            type: "video",
+            content: `${campaignPackage.campaignId}/video-hook`
+          }
+        ],
         logs: [{
           sender: "MediaAgent",
-          message: "Imagen de anuncio generada en alta resolución.",
+          message: "Manifiestos de preview generados localmente. No se renderizó ni descargó media real.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
@@ -930,7 +1141,7 @@ export default function App() {
     }, 15 * timeScale);
 
     // Step 7: Risk (Compliance Check)
-    setTimeout(() => {
+    schedule(() => {
       setActiveStep("risk");
       setSelectedNodeId("risk");
       addSystemLog("RiskAgent auditando campaña completa y código de ad set.");
@@ -940,49 +1151,54 @@ export default function App() {
         progress: 65,
         logs: [{
           sender: "RiskAgent",
-          message: "Validando que el copy no infrinja políticas de Meta Ads (sin promesas engañosas, sin lenguaje agresivo). Verificando enlaces.",
+          message: `${enabledSkills["brand-guard"] ? "Brand Guard activo" : "Baseline QA activo"}: revisando precisión, promesas, tono y referencias sandbox. Constraint recuperado: ${recalledMemory}`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
     }, 16 * timeScale);
 
-    setTimeout(() => {
+    schedule(() => {
       updateNodeProgressState("risk", { status: "success", progress: 100, itemsCount: 0 });
       updateNodeDataMap("risk", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "RiskAgent",
-          message: "✅ Campaña aprobada al 100%. No hay violaciones de política de Meta Ads. Listo para pauta.",
+          message: "QA sandbox completado sin hallazgos en las reglas locales. Esto no sustituye una revisión legal ni una validación real de Meta Ads.",
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-      addSystemLog("Aprobación regulatoria y de marca otorgada. Activando switch de pauta.");
-      setIsApproved(true);
+      addSystemLog("QA sandbox completado; apto para decisión humana, sin validación regulatoria externa.");
+      setApprovalReady(true);
     }, 18 * timeScale);
 
     // Step 8: Publisher (Meta Ads MCP integration)
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("publisher");
       setSelectedNodeId("publisher");
-      addSystemLog("PublisherAgent llamando al Meta Ads MCP Server para provisionar campaña...");
+      addSystemLog("PublisherAgent preparando un borrador local mediante el contrato MetaAdsMcpTool...");
       updateNodeProgressState("publisher", { status: "running", progress: 30, itemsCount: 1 });
       updateNodeDataMap("publisher", {
         status: "running",
         progress: 30,
         logs: [{
           sender: "PublisherAgent",
-          message: `Llamando a las herramientas del Meta Ads MCP. Creando campaña 'Kleppmann No Silver Bullets'. Presupuesto: $${budget}. Configurando audiencias interesadas en Rust, Next.js y DDIA.`,
+          message: `MetaAdsMcpTool permanece en mock. Modelando '${campaignLabel}', $${budget} durante ${durationDays} días, audiencia '${audience}', canales ${campaignPackage.paidConcept.channels.join(", ")}.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
-    }, 19 * timeScale);
+    }, 0.25 * timeScale);
 
-    setTimeout(() => {
-      // Create new dynamic campaign in MetaAds panel
+    deferUntilApproval(() => {
+      const topicInterests = campaignPackage.thesis
+        .split(/[^\p{L}\p{N}]+/u)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 4)
+        .slice(0, 4);
+      // Create a sandbox-only campaign record in the local dashboard.
       const newCamp: MetaAdsCampaign = {
-        id: `camp-${Date.now()}`,
-        name: "Meta Ads: Kleppmann Trade-offs (Automated)",
+        id: campaignId,
+        name: `Scholar Campaign: ${campaignLabel}`,
         budget: budget,
         spent: 0,
         ctr: 0.00,
@@ -991,9 +1207,9 @@ export default function App() {
         conversions: 0,
         status: "active",
         targeting: {
-          demographics: "Software Engineers (24-45)",
-          interests: ["Rust", "Next.js", "System Design", "Kubernetes"],
-          locations: ["Latam", "US"]
+          demographics: audience,
+          interests: topicInterests.length > 0 ? topicInterests : ["Decision systems"],
+          locations: ["Sandbox / not geo-targeted"]
         }
       };
       
@@ -1005,193 +1221,279 @@ export default function App() {
         logs: [
           {
             sender: "PublisherAgent",
-            message: "✅ Publicado en X orgánico con éxito.",
+            message: `Pack marcado como sandbox-queued para ${channelsLabel}. No se publicó contenido externo.`,
             timestamp: new Date().toLocaleTimeString()
           },
           {
             sender: "PublisherAgent (Meta Ads MCP)",
-            message: `✅ Campaña registrada en Meta Ads Manager. Estado: Activa. Puja configurada para maximizar leads.`,
+            message: `Borrador local ${campaignPackage.campaignId} creado. Puja modelada; Meta Ads Manager no fue contactado y no existe gasto real.`,
             timestamp: new Date().toLocaleTimeString()
           }
         ]
       });
-      addSystemLog("Campaña pagada y orgánica sincronizada correctamente.");
-    }, 21 * timeScale);
+      addSystemLog("Pack orgánico y paid-ad draft registrados en el estado local del sandbox.");
+    }, 2 * timeScale);
 
     // Step 9: CEO (Confirmation & Feedback loop)
-    setTimeout(() => {
+    deferUntilApproval(() => {
       setActiveStep("ceo");
       setSelectedNodeId("ceo");
-      addSystemLog("CEO Agent finalizando flujo. Iniciando sensor de recolección de CTR.");
+      addSystemLog("CEO Agent cerrando el flujo y aplicando un pulso sintético de métricas.");
       updateNodeProgressState("ceo", { status: "success", progress: 100, itemsCount: 2 });
       updateNodeDataMap("ceo", {
         status: "success",
         progress: 100,
         logs: [{
           sender: "CEOAgent",
-          message: `Campaña 'Kleppmann' iniciada. Presupuesto de $${budget} en distribución. Sensores sincronizados con el Meta Ads MCP.`,
+          message: `Campaña '${campaignLabel}' quedó activa sólo en el dashboard local. Plan: ${durationDays} días, $${budget}, ${channelsLabel}. El feedback sintético alimentará una memoria para el siguiente ciclo.`,
           timestamp: new Date().toLocaleTimeString()
         }]
       });
 
-      // Simulate first metrics update on the campaign
-      setTimeout(() => {
-        setMetaCampaigns(prev => prev.map(c => {
-          if (c.name.includes("Automated")) {
-            return {
-              ...c,
-              spent: 120,
-              impressions: 4500,
-              conversions: 18,
-              ctr: 2.34,
-              cac: 6.67
-            };
-          }
-          return c;
-        }));
-        addSystemLog("Primer pulso de métricas recibido de Meta Ads MCP: CTR 2.34%, CAC $6.67.");
-      }, 1500);
+      // Apply the deterministic feedback before the run closes so the next cycle cannot cancel it.
+      const simulatedSpend = Math.min(120, budget);
+      const simulatedConversions = Math.max(1, Math.round(simulatedSpend / 8));
+      const simulatedCac = Number((simulatedSpend / simulatedConversions).toFixed(2));
+      setMetaCampaigns(prev => prev.map(c => {
+        if (c.id === campaignId) {
+          return {
+            ...c,
+            spent: simulatedSpend,
+            impressions: 4500,
+            conversions: simulatedConversions,
+            ctr: 2.34,
+            cac: simulatedCac
+          };
+        }
+        return c;
+      }));
+      const feedbackMemory: SessionMemoryFlag = {
+        id: `feedback-${campaignId}`,
+        content: `Priorizar el hook de ${campaignPackage.videoHook.channels.join("/")} y mantener un CAC sandbox de referencia cercano a $${simulatedCac}.`,
+        provenance: "Synthetic Meta metrics → CEO feedback · Current session",
+        confidence: 82,
+      };
+      setMemoryFlags((current) => [...current, feedbackMemory]);
+      addSystemLog(`Pulso sintético: CTR 2.34%, CAC $${simulatedCac}. CEO lo almacenó como memoria de optimización para el siguiente ciclo.`);
 
       setIsRunning(false);
       setActiveStep("");
+      setApprovalReady(false);
       addSystemLog("Caso de Uso 3 finalizado con éxito.");
-    }, 22 * timeScale);
+    }, 3 * timeScale);
   };
 
+  const completedNodes = Object.values(nodeStates).filter((node) => node.status === "success").length;
+  const overallProgress = Math.round(
+    Object.values(nodeStates).reduce((total, node) => total + node.progress, 0) /
+      Object.keys(nodeStates).length,
+  );
+  const activeNodeName = activeStep ? nodeDataMap[activeStep]?.name : "Awaiting mission";
+
   return (
-    <div className="relative min-h-screen w-full bg-[#070708] text-[#f4f4f5] overflow-hidden flex flex-col font-sans">
-      {/* 2D Canvas Mesh Background */}
+    <div className="relative min-h-screen w-full overflow-x-clip bg-[#070708] font-sans text-[#f4f4f5]">
+      <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
       <CanvasBackground />
+      <div className="scene-vignette" aria-hidden="true" />
+      <div className="scene-noise" aria-hidden="true" />
 
-      {/* Dotted Pixel Grid Overlay */}
-      <div className="absolute inset-0 pixel-grid pointer-events-none opacity-20 z-0" />
+      <header className="relative z-40 border-b border-white/[0.06] bg-[#070708]/75 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="brand-glyph" aria-hidden="true">
+              <span /><span /><Cpu size={17} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-extrabold tracking-[-0.02em] text-white">NATIVE / WAR ROOM</p>
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2 py-0.5 font-mono text-[9px] text-zinc-400">ALPHA 02</span>
+              </div>
+              <p className="mt-0.5 truncate text-[11px] text-zinc-500">Autonomous content operations · simulation workspace</p>
+            </div>
+          </div>
 
-      {/* Header Bar */}
-      <header className="relative z-10 w-full px-6 py-4 border-b border-white/5 bg-zinc-950/40 backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sky-400">
-            <Cpu size={20} className="animate-pulse" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-              War Room Campaign Board
-              <span className="text-[10px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-full font-mono font-medium">
-                Autonomous multi-agent SaaS
-              </span>
-            </h1>
-            <p className="text-[10px] text-zinc-500">
-              Orquestador digital de contenido y pauta optimizada por IA
-            </p>
-          </div>
-        </div>
-
-        {/* System status display */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="hidden md:flex items-center gap-1.5 text-zinc-400">
-            <Layers size={12} className="text-zinc-500" />
-            <span>Schema: PostgreSQL Campaign db</span>
-          </div>
-          <div className="h-4 w-px bg-white/10 hidden md:block" />
-          <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-            <Wifi size={12} className="animate-pulse" />
-            <span>Conectores MCP activos</span>
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="status-pill">
+              <Layers size={12} aria-hidden="true" /> 8-station architecture
+            </span>
+            <span className="status-pill status-pill--amber">
+              <Wifi size={12} aria-hidden="true" /> MCP adapters simulated
+            </span>
+            <span className={`status-pill ${isRunning ? "status-pill--live" : ""}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${isRunning ? "animate-pulse bg-emerald-300" : "bg-zinc-500"}`} />
+              {isRunning ? "Cycle running" : "Local standby"}
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Main Core Layout Grid */}
-      <main className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden">
-        {/* Left Column (Width 4/12) - Configuration & Ads */}
-        <section className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-130px)] pr-2">
-          {/* Controls Card */}
-          <GlowCard className="bg-zinc-950/60 border border-white/5 flex flex-col gap-4">
-            <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
-              <div className="p-1 rounded bg-white/5 text-sky-400">
-                <Sliders size={14} />
-              </div>
-              <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">Lanzador de Campañas</h3>
+      <main id="main-content" className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16">
+        <section aria-labelledby="hero-title" className="hero-stage">
+          <div className="hero-copy">
+            <div className="coordinate-tag">
+              <span>OPS / GT-14.63</span>
+              <i />
+              <span>SESSION 0248</span>
             </div>
-            <ControlPanel 
-              onRunSimulation={handleRunSimulation} 
-              isRunning={isRunning} 
-              onAccentChange={setAccentHue}
-            />
-          </GlowCard>
+            <p className="mt-8 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--primary-color)]">
+              <Sparkles size={13} aria-hidden="true" /> AI-native campaign intelligence
+            </p>
+            <h1 id="hero-title" className="hero-title">
+              Convierte una señal en una <span>campaña completa.</span>
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base sm:leading-8">
+              Ocho agentes especializados investigan, diseñan, producen, auditan y distribuyen contenido desde una sola sala de operaciones. Cada decisión conserva contexto, trade-offs y un gate humano visible.
+            </p>
 
-          {/* Meta Ads Panel */}
-          <GlowCard className="bg-zinc-950/60 border border-white/5 flex flex-col gap-4">
-            <MetaAdsDashboard 
-              campaigns={metaCampaigns} 
-              isSyncing={isAdsSyncing} 
-              onSync={handleManualSync}
-            />
-          </GlowCard>
-        </section>
-
-        {/* Middle Column (Width 5/12) - In-process Graph & Live Logs */}
-        <section className="lg:col-span-5 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-130px)]">
-          {/* Node Graph Container */}
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center px-1">
-              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Flujo de Datos (Microsoft Fabric Layout)</span>
-              {activeStep && (
-                <span className="text-[9px] text-sky-400 flex items-center gap-1.5 animate-pulse">
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                  Transfiriendo datos...
-                </span>
-              )}
+            <div className="mt-7 grid max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
+              <div className="hero-stat"><strong>08</strong><span>agents</span></div>
+              <div className="hero-stat"><strong>03</strong><span>missions</span></div>
+              <div className="hero-stat"><strong>{String(completedNodes).padStart(2, "0")}</strong><span>complete</span></div>
+              <div className="hero-stat"><strong>{String(overallProgress).padStart(2, "0")}%</strong><span>cycle</span></div>
             </div>
-            <PipelineGraph 
-              activeStep={activeStep}
-              nodeStates={nodeStates}
-              selectedNodeId={selectedNodeId}
-              onNodeSelect={setSelectedNodeId}
-            />
           </div>
 
-          {/* Core System Log Terminal Console */}
-          <GlowCard className="p-4 bg-zinc-950/70 border border-white/5 flex flex-col gap-2.5 flex-1 min-h-[220px]">
-            <div className="flex justify-between items-center border-b border-white/5 pb-2">
-              <div className="flex items-center gap-1.5 text-zinc-300">
-                <Terminal size={13} className="text-sky-400" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider">Consola del War Room</span>
-              </div>
-              <span className="text-[8px] font-mono text-zinc-600">v1.2.0-stable</span>
+          <div className="orchestration-visual" aria-hidden="true">
+            <div className="orchestration-halo" />
+            <div className="orbit-ring orbit-ring--outer"><span /><span /><span /></div>
+            <div className="orbit-ring orbit-ring--inner"><span /><span /></div>
+            <div className="orchestration-core">
+              <Cpu size={24} />
+              <strong>08</strong>
+              <small>AGENTS / SANDBOX</small>
             </div>
-            
-            <div className="flex-1 font-mono text-[10px] text-zinc-400 flex flex-col gap-1.5 overflow-y-auto max-h-[280px] leading-relaxed">
-              {systemLogs.map((log, index) => (
-                <div key={index} className="flex gap-1.5 items-start">
-                  <span className="text-sky-500/80 flex-shrink-0">&gt;</span>
-                  <span className="break-all">{log}</span>
-                </div>
-              ))}
-            </div>
-          </GlowCard>
+            <span className="orbit-tag orbit-tag--one">SCHOLAR / 02</span>
+            <span className="orbit-tag orbit-tag--two">MEDIA / 06</span>
+            <span className="orbit-tag orbit-tag--three">RISK / 07</span>
+          </div>
         </section>
 
-        {/* Right Column (Width 3/12) - Sidebar Details */}
-        <section className="lg:col-span-3 flex flex-col overflow-y-auto max-h-[calc(100vh-130px)]">
-          <InteractiveSidebar 
-            nodeData={selectedNodeId ? nodeDataMap[selectedNodeId] : null}
-            onClose={() => setSelectedNodeId(null)}
-            isApproved={isApproved}
-            onApproveToggle={() => {
-              setIsApproved(!isApproved);
-              addSystemLog(isApproved ? "Campaña pausada por operador." : "Aprobación manual (Greenlight) concedida por operador.");
-            }}
-          />
+        <section aria-labelledby="mission-control-title" className="mt-10 lg:mt-14">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">01 / COMMAND</p>
+              <h2 id="mission-control-title">Define la misión. Observa el sistema.</h2>
+            </div>
+            <p>El pipeline usa datos simulados para demostrar la interacción end-to-end sin ejecutar publicaciones ni gasto real.</p>
+          </div>
+
+          <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(330px,0.72fr)_minmax(0,1.65fr)] 2xl:gap-6">
+            <div className="surface-panel p-4 sm:p-5">
+              <div className="mb-5 flex items-center justify-between border-b border-white/[0.07] pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.035] text-[var(--primary-color)]">
+                    <Sliders size={16} aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-zinc-100">Mission launcher</p>
+                    <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500">Compose / configure / launch</p>
+                  </div>
+                </div>
+                <span className="font-mono text-[9px] text-zinc-600">CMD-01</span>
+              </div>
+              <ControlPanel
+                onRunSimulation={handleRunSimulation}
+                isRunning={isRunning}
+                onAccentChange={setAccentHue}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-3 px-1">
+                <div>
+                  <p className="section-kicker">LIVE TOPOLOGY / FABRIC FLOW</p>
+                  <h3 className="mt-1 text-base font-bold text-zinc-100">Eight-station orchestration map</h3>
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/20 px-3 py-1.5 font-mono text-[10px] text-zinc-400" aria-live="polite">
+                  <span className={`h-1.5 w-1.5 rounded-full ${activeStep ? "animate-pulse bg-[var(--primary-color)]" : "bg-zinc-600"}`} />
+                  {activeNodeName}
+                </div>
+              </div>
+              <PipelineGraph
+                activeStep={activeStep}
+                nodeStates={nodeStates}
+                selectedNodeId={selectedNodeId}
+                onNodeSelect={setSelectedNodeId}
+              />
+            </div>
+          </div>
         </section>
-      </main>
-      
-      {/* Footer System Status Bar */}
-      <footer className="relative z-10 py-2.5 px-6 border-t border-white/5 bg-zinc-950/60 backdrop-blur-md flex items-center justify-between text-[10px] text-zinc-500">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck size={12} className="text-sky-400/80" />
-          <span>Cumplimiento del Acuerdo de Licencia de Marca SaaS y Auditoría de Riesgos</span>
+
+        <section aria-labelledby="operations-title" className="mt-10 lg:mt-14">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">02 / OBSERVE & APPROVE</p>
+              <h2 id="operations-title">Trazabilidad, entregables y feedback loop.</h2>
+            </div>
+            <p>Inspecciona decisiones por agente, revisa outputs y observa la simulación de métricas antes del greenlight.</p>
+          </div>
+
+          <div className="mt-5 grid items-start gap-5 2xl:grid-cols-[minmax(330px,0.82fr)_minmax(380px,1fr)_minmax(390px,0.92fr)] 2xl:gap-6">
+            <InteractiveSidebar
+              nodeData={selectedNodeId ? nodeDataMap[selectedNodeId] : null}
+              onClose={() => setSelectedNodeId(null)}
+              isApproved={isApproved}
+              canApprove={approvalReady || isApproved}
+              onApproveToggle={handleApprovalToggle}
+            />
+
+            <div className="surface-panel overflow-hidden">
+              <header className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-sky-400/[0.08] text-sky-300">
+                    <Terminal size={14} aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-100">War Room transmission</h3>
+                    <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500">Local event stream</p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-white/[0.07] px-2 py-1 font-mono text-[9px] text-zinc-500">v2.0-sim</span>
+              </header>
+              <div className="system-terminal max-h-[540px] min-h-[360px] overflow-y-auto p-4 sm:p-5" aria-live="polite" aria-label="Eventos recientes del War Room">
+                {systemLogs.slice(-18).map((log, index) => (
+                  <div key={`${index}-${log}`} className="terminal-line">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <i />
+                    <p>{log}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="surface-panel p-4 sm:p-5">
+              <MetaAdsDashboard
+                campaigns={metaCampaigns}
+                isSyncing={isAdsSyncing}
+                onSync={handleManualSync}
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-10 lg:mt-14">
+          <MemorySkillsPanel
+            enabledSkills={enabledSkills}
+            memoryFlags={memoryFlags}
+            onToggleSkill={handleSkillToggle}
+            onAddMemoryFlag={handleAddMemoryFlag}
+          />
         </div>
-        <div className="font-mono">
-          © 2026 AI-Native Content Agency
+
+        <div className="mt-10 lg:mt-14">
+          <ToolFabricPanel />
+        </div>
+      </main>
+
+      <footer className="relative z-10 border-t border-white/[0.06] bg-black/20">
+        <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-4 text-[11px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={13} className="text-[var(--primary-color)]" aria-hidden="true" />
+            <span>Risk, brand and operator gates remain visible throughout the cycle.</span>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">
+            <span>Local simulation</span><span>No live spend</span><span>© 2026 Native Agency OS</span>
+          </div>
         </div>
       </footer>
     </div>

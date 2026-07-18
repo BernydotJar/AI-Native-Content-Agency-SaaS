@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "runtime_mode": "deterministic_sandbox",
+  "external_framework_required": false,
+  "approval_gate": {
+    "required": true,
+    "after": "risk",
+    "before": "publisher",
+    "on_rejection": "publisher_blocked"
+  },
+  "agents": [
+    {"role": "ceo", "runtime_artifact": "mission_charter", "conceptual_alias": "mission_brief"},
+    {"role": "research", "runtime_artifact": "research_dossier", "conceptual_alias": "research_dossier"},
+    {"role": "strategist", "runtime_artifact": "channel_strategy", "conceptual_alias": "campaign_strategy"},
+    {"role": "growth", "runtime_artifact": "growth_forecast", "conceptual_alias": "distribution_experiment"},
+    {"role": "writer", "runtime_artifact": "copy_deck", "conceptual_alias": "copy_pack"},
+    {"role": "media", "runtime_artifact": "media_plan", "conceptual_alias": "media_pack"},
+    {"role": "risk", "runtime_artifact": "risk_report", "conceptual_alias": "risk_report"},
+    {"role": "publisher", "runtime_artifact": "campaign_package", "conceptual_alias": "publication_receipt"}
+  ],
+  "external_side_effects_enabled": false
+}

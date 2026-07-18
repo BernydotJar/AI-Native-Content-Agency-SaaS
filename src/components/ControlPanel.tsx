@@ -1,256 +1,426 @@
-import React, { useState } from "react";
-import { 
-  Play, 
-  UploadCloud, 
-  Palette
+import { useId, useState } from "react";
+import type { ComponentType, MouseEvent } from "react";
+import { flushSync } from "react-dom";
+import { CAMPAIGN_CHANNELS } from "../lib/simulationRuntime";
+import type { CampaignChannel } from "../lib/simulationRuntime";
+import {
+  Aperture,
+  ArrowUpRight,
+  FileVideo,
+  Megaphone,
+  Palette,
+  Play,
+  Sparkles,
+  UploadCloud,
 } from "lucide-react";
-import { GlowCard } from "./GlowCard";
 
+export interface VideoSimulationParams {
+  videoName: string;
+  platform: string;
+}
+
+export interface ImageSimulationParams {
+  imageName: string;
+  duration: number;
+  style: string;
+}
+
+export interface CampaignSimulationParams {
+  prompt: string;
+  audience: string;
+  channels: CampaignChannel[];
+  durationDays: number;
+  budget: number;
+}
+
+export type SimulationParams = VideoSimulationParams | ImageSimulationParams | CampaignSimulationParams;
+export type UseCaseId = 1 | 2 | 3;
 
 interface ControlPanelProps {
-  onRunSimulation: (useCaseId: number, params: any) => void;
+  onRunSimulation: (useCaseId: UseCaseId, params: SimulationParams) => void;
   isRunning: boolean;
   onAccentChange: (hue: number) => void;
 }
 
 const ACCENT_COLORS = [
-  { name: "Cyan Slate", hue: 200, class: "bg-sky-500" },
-  { name: "Neon Violet", hue: 260, class: "bg-purple-500" },
-  { name: "Emerald Cyber", hue: 145, class: "bg-emerald-500" },
-  { name: "Crimson Ember", hue: 350, class: "bg-rose-500" }
+  { name: "Ion Blue", hue: 200, color: "#38bdf8" },
+  { name: "Neon Violet", hue: 260, color: "#8b5cf6" },
+  { name: "Signal Green", hue: 145, color: "#22c55e" },
+  { name: "Ember Rose", hue: 350, color: "#f43f5e" },
 ];
 
-export const ControlPanel: React.FC<ControlPanelProps> = ({
+const USE_CASES: Array<{
+  id: UseCaseId;
+  kicker: string;
+  name: string;
+  output: string;
+  icon: ComponentType<{ size?: number }>;
+}> = [
+  { id: 1, kicker: "01 / OPTIMIZE", name: "Video ready-to-publish", output: "Captions · reframing · copy", icon: FileVideo },
+  { id: 2, kicker: "02 / ANIMATE", name: "Still image to motion", output: "4–5s clip · channel pack", icon: Aperture },
+  { id: 3, kicker: "03 / ORCHESTRATE", name: "Idea to full campaign", output: "Organic · paid · scholar", icon: Megaphone },
+];
+
+export const ControlPanel = ({
   onRunSimulation,
   isRunning,
-  onAccentChange
-}) => {
-  const [activeUseCase, setActiveUseCase] = useState<number>(3);
-  const [activeAccent, setActiveAccent] = useState<number>(200);
-
-  // Form parameters
-  const [useCase1Params, setUseCase1Params] = useState({
+  onAccentChange,
+}: ControlPanelProps) => {
+  const uid = useId().replace(/:/g, "");
+  const [activeUseCase, setActiveUseCase] = useState<UseCaseId>(3);
+  const [activeAccent, setActiveAccent] = useState(200);
+  const [videoParams, setVideoParams] = useState<VideoSimulationParams>({
     videoName: "entrevista_raw_final.mp4",
-    platform: "TikTok"
+    platform: "TikTok",
   });
-
-  const [useCase2Params, setUseCase2Params] = useState({
+  const [imageParams, setImageParams] = useState<ImageSimulationParams>({
     imageName: "flyer_evento_arquitectura.png",
     duration: 5,
-    style: "Cinemático Cyber"
+    style: "Cinemático Cyber",
   });
-
-  const [useCase3Params, setUseCase3Params] = useState({
+  const [campaignParams, setCampaignParams] = useState<CampaignSimulationParams>({
     prompt: "Quiero una campaña sobre por qué no hay soluciones técnicas universales basándome en Kleppmann.",
     audience: "Desarrolladores Senior y Technical Founders",
-    budget: 3500
+    channels: [...CAMPAIGN_CHANNELS],
+    durationDays: 7,
+    budget: 3500,
   });
 
-  const handleAccentSelect = (hue: number) => {
-    setActiveAccent(hue);
-    onAccentChange(hue);
+  const handleAccentSelect = (event: MouseEvent<HTMLButtonElement>, hue: number) => {
+    if (hue === activeAccent) return;
+
+    const applyAccent = () => {
+      setActiveAccent(hue);
+      onAccentChange(hue);
+    };
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const startViewTransition = typeof document.startViewTransition === "function"
+      ? document.startViewTransition.bind(document)
+      : null;
+
+    if (reduceMotion || !startViewTransition) {
+      applyAccent();
+      return;
+    }
+
+    const originX = event.clientX;
+    const originY = event.clientY;
+    const radius = Math.hypot(
+      Math.max(originX, window.innerWidth - originX),
+      Math.max(originY, window.innerHeight - originY),
+    );
+    const transition = startViewTransition(() => flushSync(applyAccent));
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${originX}px ${originY}px)`,
+            `circle(${radius}px at ${originX}px ${originY}px)`,
+          ],
+        },
+        {
+          duration: 680,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        },
+      );
+    }).catch(() => undefined);
   };
 
   const handleRun = () => {
-    if (activeUseCase === 1) {
-      onRunSimulation(1, useCase1Params);
-    } else if (activeUseCase === 2) {
-      onRunSimulation(2, useCase2Params);
-    } else {
-      onRunSimulation(3, useCase3Params);
-    }
+    if (activeUseCase === 1) onRunSimulation(1, videoParams);
+    if (activeUseCase === 2) onRunSimulation(2, imageParams);
+    if (activeUseCase === 3) onRunSimulation(3, campaignParams);
   };
 
+  const missionInvalid = activeUseCase === 3
+    ? !campaignParams.prompt.trim()
+      || !campaignParams.audience.trim()
+      || campaignParams.channels.length === 0
+      || !campaignParams.channels.includes("X")
+      || !campaignParams.channels.some((channel) => channel === "Facebook" || channel === "Instagram")
+      || campaignParams.durationDays < 3
+      || campaignParams.durationDays > 30
+      || campaignParams.budget < 500
+    : activeUseCase === 2
+      ? imageParams.duration < 4 || imageParams.duration > 5
+      : !videoParams.videoName.trim();
+
+  const videoInputId = `${uid}-video`;
+  const imageInputId = `${uid}-image`;
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* Accent Shift Theme Picker */}
-      <GlowCard className="p-3 bg-zinc-950/40 border border-white/5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Palette size={14} className="text-sky-400" />
-          <span className="text-[11px] font-semibold text-zinc-300">Skin Accent Shift</span>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-black/20 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.035] text-[var(--primary-color)]">
+            <Palette size={15} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-zinc-200">Signal color</p>
+            <p className="font-mono text-[10px] text-zinc-500">VIEW TRANSITION / HSL</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1" aria-label="Seleccionar color de señal">
           {ACCENT_COLORS.map((color) => (
             <button
               key={color.hue}
-              onClick={() => handleAccentSelect(color.hue)}
+              type="button"
+              onClick={(event) => handleAccentSelect(event, color.hue)}
+              aria-label={`Cambiar acento a ${color.name}`}
+              aria-pressed={activeAccent === color.hue}
               title={color.name}
-              className={`w-3.5 h-3.5 rounded-full border ${
-                activeAccent === color.hue 
-                  ? "border-white scale-125" 
-                  : "border-white/10 opacity-70 hover:opacity-100"
-              } ${color.class} transition-all`}
-            />
+              className="group grid h-11 w-11 place-items-center rounded-full"
+            >
+              <span
+                className={`block h-3.5 w-3.5 rounded-full border transition-[transform,opacity,box-shadow] duration-200 ${activeAccent === color.hue ? "scale-125 border-white opacity-100 shadow-[0_0_14px_currentColor]" : "border-white/20 opacity-65 group-hover:scale-110 group-hover:opacity-100"}`}
+                style={{ backgroundColor: color.color, color: color.color }}
+                aria-hidden="true"
+              />
+            </button>
           ))}
         </div>
-      </GlowCard>
-
-      {/* Use Cases Toggle */}
-      <div className="grid grid-cols-3 gap-2 bg-zinc-900/40 p-1 rounded-lg border border-white/5">
-        <button
-          onClick={() => setActiveUseCase(1)}
-          disabled={isRunning}
-          className={`px-2 py-1.5 rounded text-[10px] font-semibold transition-all ${
-            activeUseCase === 1 
-              ? "bg-white/10 text-white shadow-sm" 
-              : "text-zinc-500 hover:text-zinc-300"
-          }`}
-        >
-          Caso 1: Optimizar Video
-        </button>
-        <button
-          onClick={() => setActiveUseCase(2)}
-          disabled={isRunning}
-          className={`px-2 py-1.5 rounded text-[10px] font-semibold transition-all ${
-            activeUseCase === 2 
-              ? "bg-white/10 text-white shadow-sm" 
-              : "text-zinc-500 hover:text-zinc-300"
-          }`}
-        >
-          Caso 2: Foto a Video
-        </button>
-        <button
-          onClick={() => setActiveUseCase(3)}
-          disabled={isRunning}
-          className={`px-2 py-1.5 rounded text-[10px] font-semibold transition-all ${
-            activeUseCase === 3 
-              ? "bg-white/10 text-white shadow-sm" 
-              : "text-zinc-500 hover:text-zinc-300"
-          }`}
-        >
-          Caso 3: Prompt Campaña
-        </button>
       </div>
 
-      {/* Main Parameters Panel */}
-      <div className="flex-1 flex flex-col justify-between gap-4">
-        {/* Use Case 1 Form */}
-        {activeUseCase === 1 && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Archivo de Video Ingestado</label>
-              <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-white/10 bg-zinc-950/20 hover:bg-zinc-950/40 cursor-pointer transition-colors text-center justify-center flex-col">
-                <UploadCloud className="text-zinc-500" size={24} />
-                <div className="flex flex-col">
-                  <span className="text-xs text-zinc-300 font-medium">{useCase1Params.videoName}</span>
-                  <span className="text-[9px] text-zinc-600">Formato: MP4, MOV. Tamaño máx: 100MB</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Plataforma Objetivo</label>
-              <select
-                value={useCase1Params.platform}
-                onChange={(e) => setUseCase1Params({ ...useCase1Params, platform: e.target.value })}
-                disabled={isRunning}
-                className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/15"
+      <fieldset disabled={isRunning} className="space-y-2">
+        <legend className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Select mission profile
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
+          {USE_CASES.map((useCase) => {
+            const Icon = useCase.icon;
+            const selected = activeUseCase === useCase.id;
+            return (
+              <button
+                key={useCase.id}
+                type="button"
+                onClick={() => setActiveUseCase(useCase.id)}
+                aria-pressed={selected}
+                className={`mission-option ${selected ? "is-selected" : ""}`}
               >
-                <option value="TikTok">TikTok (Vertical 9:16)</option>
-                <option value="Instagram">Instagram Reels (Vertical 9:16)</option>
-                <option value="YouTube">YouTube Shorts (Vertical 9:16)</option>
-                <option value="X">X / Twitter (Square 1:1)</option>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[9px] font-semibold tracking-[0.12em] text-zinc-500">{useCase.kicker}</span>
+                  <Icon size={14} aria-hidden="true" />
+                </span>
+                <span className="mt-4 block text-left text-xs font-bold leading-snug text-zinc-100">{useCase.name}</span>
+                <span className="mt-1 block text-left text-[10px] leading-relaxed text-zinc-500">{useCase.output}</span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <div className="rounded-2xl border border-white/[0.07] bg-zinc-950/55 p-4 shadow-inner shadow-black/20">
+        {activeUseCase === 1 && (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor={videoInputId} className="form-label">Source video</label>
+              <input
+                id={videoInputId}
+                name="source-video"
+                type="file"
+                accept="video/mp4,video/quicktime"
+                disabled={isRunning}
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) setVideoParams((current) => ({ ...current, videoName: file.name }));
+                }}
+              />
+              <label htmlFor={videoInputId} className="upload-zone">
+                <UploadCloud size={20} aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-zinc-200">{videoParams.videoName}</span>
+                  <span className="mt-0.5 block text-[11px] text-zinc-500">MP4 or MOV · demo records filename only</span>
+                </span>
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </label>
+            </div>
+            <div>
+              <label htmlFor={`${uid}-platform`} className="form-label">Target surface</label>
+              <select
+                id={`${uid}-platform`}
+                name="target-platform"
+                value={videoParams.platform}
+                onChange={(event) => setVideoParams((current) => ({ ...current, platform: event.target.value }))}
+                className="form-control"
+              >
+                <option value="TikTok">TikTok · vertical 9:16</option>
+                <option value="Instagram">Instagram Reels · vertical 9:16</option>
+                <option value="YouTube">YouTube Shorts · vertical 9:16</option>
+                <option value="X">X · square 1:1</option>
               </select>
             </div>
           </div>
         )}
 
-        {/* Use Case 2 Form */}
         {activeUseCase === 2 && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Diseño / Foto Base</label>
-              <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-white/10 bg-zinc-950/20 hover:bg-zinc-950/40 cursor-pointer transition-colors text-center justify-center flex-col">
-                <UploadCloud className="text-zinc-500" size={24} />
-                <div className="flex flex-col">
-                  <span className="text-xs text-zinc-300 font-medium">{useCase2Params.imageName}</span>
-                  <span className="text-[9px] text-zinc-600">Formatos: PNG, JPG, WebP</span>
-                </div>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor={imageInputId} className="form-label">Source still</label>
+              <input
+                id={imageInputId}
+                name="source-image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={isRunning}
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) setImageParams((current) => ({ ...current, imageName: file.name }));
+                }}
+              />
+              <label htmlFor={imageInputId} className="upload-zone">
+                <UploadCloud size={20} aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-zinc-200">{imageParams.imageName}</span>
+                  <span className="mt-0.5 block text-[11px] text-zinc-500">PNG, JPG or WebP · demo reads filename only</span>
+                </span>
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </label>
             </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-zinc-500 font-semibold uppercase">Duración</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor={`${uid}-duration`} className="form-label">Duration / seconds</label>
                 <input
+                  id={`${uid}-duration`}
+                  name="clip-duration"
                   type="number"
-                  min={3}
-                  max={8}
-                  value={useCase2Params.duration}
-                  onChange={(e) => setUseCase2Params({ ...useCase2Params, duration: parseInt(e.target.value) })}
-                  disabled={isRunning}
-                  className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/15"
+                  min={4}
+                  max={5}
+                  value={imageParams.duration}
+                  onChange={(event) => setImageParams((current) => ({
+                    ...current,
+                    duration: Math.min(5, Math.max(4, Number(event.target.value) || 4)),
+                  }))}
+                  className="form-control"
                 />
               </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-zinc-500 font-semibold uppercase">Estilo Runway</label>
+              <div>
+                <label htmlFor={`${uid}-style`} className="form-label">Motion treatment</label>
                 <select
-                  value={useCase2Params.style}
-                  onChange={(e) => setUseCase2Params({ ...useCase2Params, style: e.target.value })}
-                  disabled={isRunning}
-                  className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/15"
+                  id={`${uid}-style`}
+                  name="motion-treatment"
+                  value={imageParams.style}
+                  onChange={(event) => setImageParams((current) => ({ ...current, style: event.target.value }))}
+                  className="form-control"
                 >
-                  <option value="Cinemático Cyber">Cinemático Cyber</option>
-                  <option value="Anime Hyper-detail">Anime Hyper-detail</option>
-                  <option value="Sleek Obsidian 3D">Sleek Obsidian 3D</option>
-                  <option value="Realista Documental">Realista Documental</option>
+                  <option value="Cinemático Cyber">Cinematic cyber</option>
+                  <option value="Anime Hyper-detail">Anime hyper-detail</option>
+                  <option value="Sleek Obsidian 3D">Obsidian 3D</option>
+                  <option value="Realista Documental">Documentary</option>
                 </select>
               </div>
             </div>
           </div>
         )}
 
-        {/* Use Case 3 Form */}
         {activeUseCase === 3 && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Prompt de Idea (Campañas)</label>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor={`${uid}-prompt`} className="form-label">Campaign thesis</label>
               <textarea
-                value={useCase3Params.prompt}
-                onChange={(e) => setUseCase3Params({ ...useCase3Params, prompt: e.target.value })}
-                disabled={isRunning}
-                rows={3}
-                placeholder="Escribe la idea conceptual..."
-                className="w-full bg-zinc-950/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-300 focus:outline-none focus:border-white/15 resize-none leading-relaxed"
+                id={`${uid}-prompt`}
+                name="campaign-thesis"
+                value={campaignParams.prompt}
+                onChange={(event) => setCampaignParams((current) => ({ ...current, prompt: event.target.value }))}
+                rows={4}
+                placeholder="Describe the idea, tension or point of view..."
+                className="form-control min-h-28 resize-y leading-relaxed"
               />
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Audiencia Objetivo (NLP Target)</label>
+            <div>
+              <label htmlFor={`${uid}-audience`} className="form-label">Audience / NLP target</label>
               <input
+                id={`${uid}-audience`}
+                name="campaign-audience"
                 type="text"
-                value={useCase3Params.audience}
-                onChange={(e) => setUseCase3Params({ ...useCase3Params, audience: e.target.value })}
-                disabled={isRunning}
-                className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/15"
+                value={campaignParams.audience}
+                onChange={(event) => setCampaignParams((current) => ({ ...current, audience: event.target.value }))}
+                className="form-control"
               />
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-zinc-500 font-semibold uppercase">Presupuesto Inicial Ads (USD)</label>
-              <input
-                type="number"
-                step={500}
-                value={useCase3Params.budget}
-                onChange={(e) => setUseCase3Params({ ...useCase3Params, budget: parseInt(e.target.value) })}
-                disabled={isRunning}
-                className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-white/15"
-              />
+            <fieldset>
+              <legend className="form-label">Target channels</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {CAMPAIGN_CHANNELS.map((platform) => {
+                  const selected = campaignParams.channels.includes(platform);
+                  return (
+                    <button
+                      key={platform}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setCampaignParams((current) => ({
+                        ...current,
+                        channels: selected
+                          ? current.channels.filter((channel) => channel !== platform)
+                          : [...current.channels, platform],
+                      }))}
+                      className={`min-h-11 rounded-xl border px-3 text-left text-xs font-semibold transition-colors ${selected ? "border-sky-300/25 bg-sky-400/10 text-sky-200" : "border-white/[0.07] bg-black/20 text-zinc-500 hover:text-zinc-300"}`}
+                    >
+                      {platform}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+                X is required for the 3-part thread; Facebook or Instagram is required for paid media.
+              </p>
+            </fieldset>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor={`${uid}-campaign-duration`} className="form-label">Flight / days</label>
+                <input
+                  id={`${uid}-campaign-duration`}
+                  name="campaign-duration"
+                  type="number"
+                  min={3}
+                  max={30}
+                  value={campaignParams.durationDays}
+                  onChange={(event) => setCampaignParams((current) => ({
+                    ...current,
+                    durationDays: Math.min(30, Math.max(3, Number(event.target.value) || 3)),
+                  }))}
+                  className="form-control font-mono"
+                />
+              </div>
+              <div>
+                <label htmlFor={`${uid}-budget`} className="form-label">Media budget / USD</label>
+                <input
+                  id={`${uid}-budget`}
+                  name="campaign-budget"
+                  type="number"
+                  min={500}
+                  step={500}
+                  value={campaignParams.budget}
+                  onChange={(event) => setCampaignParams((current) => ({
+                    ...current,
+                    budget: Math.max(500, Number(event.target.value) || 500),
+                  }))}
+                  className="form-control font-mono"
+                />
+              </div>
             </div>
           </div>
         )}
-
-        {/* Bottom Execute Button */}
-        <button
-          onClick={handleRun}
-          disabled={isRunning}
-          className="cyber-btn cyber-btn-primary w-full py-2.5 rounded-lg text-xs flex items-center justify-center gap-2 mt-4"
-        >
-          <Play size={12} fill="currentColor" />
-          {isRunning ? "War Room en Proceso..." : "Iniciar Flujo del War Room"}
-        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={isRunning || missionInvalid}
+        className="launch-button"
+      >
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-black/15">
+          {isRunning ? <Sparkles size={15} className="animate-pulse" aria-hidden="true" /> : <Play size={14} fill="currentColor" aria-hidden="true" />}
+        </span>
+        <span className="flex-1 text-left">
+          <span className="block text-sm font-bold">{isRunning ? "War Room is orchestrating" : "Launch autonomous cycle"}</span>
+          <span className="mt-0.5 block text-[10px] font-medium opacity-65">{isRunning ? "Follow the live signal in the pipeline" : "Run in local simulation sandbox"}</span>
+        </span>
+        <ArrowUpRight size={17} aria-hidden="true" />
+      </button>
     </div>
   );
 };

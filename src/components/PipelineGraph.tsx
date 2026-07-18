@@ -1,15 +1,15 @@
-import React from "react";
-import { 
-  Download, 
-  UserCheck, 
-  BookOpen, 
-  Compass, 
-  FileText, 
-  Video, 
-  ShieldAlert, 
-  Share2
+import type { ComponentType } from "react";
+import {
+  Aperture,
+  BookOpen,
+  Compass,
+  Crown,
+  Download,
+  Megaphone,
+  PenTool,
+  Send,
+  ShieldCheck,
 } from "lucide-react";
-
 
 export interface NodeState {
   status: "idle" | "running" | "success" | "error";
@@ -27,227 +27,192 @@ interface PipelineGraphProps {
 
 interface NodeConfig {
   id: string;
+  index: string;
   name: string;
   role: string;
-  x: number; // grid x coordinate
-  y: number; // grid y coordinate
-  colorClass: string;
-  icon: React.ComponentType<any>;
+  x: number;
+  y: number;
+  tone: "green" | "blue" | "violet" | "orange" | "rose";
+  icon: ComponentType<{ size?: number; className?: string }>;
 }
 
 const NODES: NodeConfig[] = [
-  { id: "ingestion", name: "Real-Time Ingestion", role: "Sensor / Ingestion", x: 8, y: 50, colorClass: "node-bar-green", icon: Download },
-  { id: "ceo", name: "CEO / Jefe de Campaña", role: "Orchestration & Target", x: 30, y: 50, colorClass: "node-bar-blue", icon: UserCheck },
-  { id: "research", name: "Research / Scholar", role: "Theory & NLP Scholar", x: 30, y: 15, colorClass: "node-bar-blue", icon: BookOpen },
-  { id: "media", name: "Media / Storytelling", role: "Runway & Cap Cut", x: 30, y: 85, colorClass: "node-bar-orange", icon: Video },
-  { id: "strategist", name: "Strategist Agent", role: "Trend-Mixer Strategy", x: 55, y: 32, colorClass: "node-bar-purple", icon: Compass },
-  { id: "writer", name: "Writer Agent", role: "Content Copywriter", x: 55, y: 68, colorClass: "node-bar-purple", icon: FileText },
-  { id: "risk", name: "Risk Agent", role: "Seguimiento & Compliance", x: 78, y: 32, colorClass: "node-bar-red", icon: ShieldAlert },
-  { id: "publisher", name: "Publisher / Meta Ads", role: "Pauta & Meta Ads MCP", x: 78, y: 68, colorClass: "node-bar-orange", icon: Share2 }
+  { id: "ingestion", index: "00", name: "Signal Intake", role: "X · FB · TikTok · IG · files", x: 10, y: 50, tone: "green", icon: Download },
+  { id: "ceo", index: "01", name: "CEO Director", role: "Brief · budget · gates", x: 31, y: 50, tone: "blue", icon: Crown },
+  { id: "research", index: "02", name: "Research", role: "Scholar + Context7", x: 31, y: 18, tone: "blue", icon: BookOpen },
+  { id: "strategist", index: "03", name: "Strategist", role: "Trend-mixing loop", x: 53, y: 18, tone: "violet", icon: Compass },
+  { id: "growth", index: "04", name: "Growth", role: "Territory · distribution", x: 53, y: 50, tone: "green", icon: Megaphone },
+  { id: "writer", index: "05", name: "Writer", role: "Narrative · channel copy", x: 53, y: 82, tone: "violet", icon: PenTool },
+  { id: "media", index: "06", name: "Media Studio", role: "Video · image · motion", x: 31, y: 82, tone: "orange", icon: Aperture },
+  { id: "risk", index: "07", name: "Risk & QA", role: "Truth · brand · policy", x: 75, y: 28, tone: "rose", icon: ShieldCheck },
+  { id: "publisher", index: "08", name: "Publisher", role: "Organic · Meta Ads", x: 89, y: 63, tone: "orange", icon: Send },
 ];
 
-// Connection definition: source -> target
 interface EdgeConfig {
   from: string;
   to: string;
-  curvature?: number; // positive = curves down, negative = curves up
+  bend?: number;
 }
 
 const EDGES: EdgeConfig[] = [
   { from: "ingestion", to: "ceo" },
-  { from: "ingestion", to: "research", curvature: -20 },
-  { from: "ingestion", to: "media", curvature: 20 },
-  { from: "ceo", to: "research" },
-  { from: "research", to: "strategist", curvature: 10 },
-  { from: "ceo", to: "strategist", curvature: -10 },
-  { from: "strategist", to: "writer" },
-  { from: "writer", to: "risk", curvature: -10 },
-  { from: "media", to: "writer", curvature: -10 },
+  { from: "ceo", to: "research", bend: -8 },
+  { from: "research", to: "strategist" },
+  { from: "strategist", to: "growth" },
+  { from: "growth", to: "writer" },
+  { from: "writer", to: "media" },
+  { from: "media", to: "risk", bend: 12 },
   { from: "risk", to: "publisher" },
-  { from: "publisher", to: "ceo", curvature: 30 } // Loopback
+  { from: "publisher", to: "ceo", bend: 31 },
 ];
 
-export const PipelineGraph: React.FC<PipelineGraphProps> = ({
+const TONE_CLASSES: Record<NodeConfig["tone"], string> = {
+  green: "pipeline-node--green",
+  blue: "pipeline-node--blue",
+  violet: "pipeline-node--violet",
+  orange: "pipeline-node--orange",
+  rose: "pipeline-node--rose",
+};
+
+const STATUS_LABELS: Record<NodeState["status"], string> = {
+  idle: "Standby",
+  running: "Processing",
+  success: "Complete",
+  error: "Attention",
+};
+
+export const PipelineGraph = ({
   activeStep,
   nodeStates,
   selectedNodeId,
-  onNodeSelect
-}) => {
-  // Find node coordinate by ID
-  const getNodeCoords = (id: string) => {
-    const node = NODES.find(n => n.id === id);
+  onNodeSelect,
+}: PipelineGraphProps) => {
+  const coords = (id: string) => {
+    const node = NODES.find((candidate) => candidate.id === id);
     return node ? { x: node.x, y: node.y } : { x: 0, y: 0 };
   };
 
   return (
-    <div className="relative w-full h-[520px] glass-panel border border-white/5 rounded-2xl bg-zinc-950/20 overflow-hidden select-none">
-      {/* Background cyber grid overlay */}
-      <div className="absolute inset-0 pixel-grid pointer-events-none opacity-25" />
+    <div className="pipeline-scroll" aria-label="Topología de orquestación multiagente">
+      <div className="pipeline-stage">
+        <div className="pipeline-grid" aria-hidden="true" />
+        <div className="pipeline-horizon" aria-hidden="true" />
 
-      {/* SVG Connecting Edges */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-        <defs>
-          {/* Arrow marker */}
-          <marker
-            id="arrow"
-            viewBox="0 0 10 10"
-            refX="6"
-            refY="5"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(255, 255, 255, 0.15)" />
-          </marker>
-          {/* Glowing arrow marker */}
-          <marker
-            id="arrow-glow"
-            viewBox="0 0 10 10"
-            refX="6"
-            refY="5"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--primary-color)" />
-          </marker>
-        </defs>
+        <svg
+          className="absolute inset-0 z-10 h-full w-full pointer-events-none"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <filter id="edge-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="0.55" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <marker id="edge-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 1 1 L 9 5 L 1 9 z" fill="rgba(161, 161, 170, 0.45)" />
+            </marker>
+            <marker id="edge-arrow-live" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 1 1 L 9 5 L 1 9 z" fill="var(--primary-color)" />
+            </marker>
+          </defs>
 
-        {/* Draw all connection lines */}
-        {EDGES.map((edge, index) => {
-          const fromCoords = getNodeCoords(edge.from);
-          const toCoords = getNodeCoords(edge.to);
+          {EDGES.map((edge) => {
+            const start = coords(edge.from);
+            const end = coords(edge.to);
+            const midX = (start.x + end.x) / 2;
+            const midY = (start.y + end.y) / 2 + (edge.bend ?? 0);
+            const path = `M ${start.x} ${start.y} Q ${midX} ${midY} ${end.x} ${end.y}`;
+            const isLive = activeStep === edge.from || activeStep === edge.to;
 
-
-
-          // Control point for curve
-          const midX = (fromCoords.x + toCoords.x) / 2;
-          const midY = (fromCoords.y + toCoords.y) / 2 + (edge.curvature || 0);
-          const pathD = `M ${fromCoords.x} ${fromCoords.y} Q ${midX} ${midY} ${toCoords.x} ${toCoords.y}`;
-
-          // Is this path active?
-          const isEdgeActive = activeStep === edge.from;
-
-          return (
-            <g key={index}>
-              {/* Static background path */}
-              <path
-                d={pathD}
-                pathLength="100"
-                className="transition-all duration-300"
-                style={{
-                  fill: "none",
-                  stroke: isEdgeActive ? "rgba(96, 165, 250, 0.2)" : "rgba(255, 255, 255, 0.05)",
-                  strokeWidth: isEdgeActive ? 2 : 1.5,
-                  markerEnd: isEdgeActive ? "url(#arrow-glow)" : "url(#arrow)"
-                }}
-                transform="scale(1)" // coordinates are percentages directly relative to viewBox
-                vectorEffect="non-scaling-stroke"
-              />
-
-              {/* Pulsing overlay path for active transmission */}
-              {isEdgeActive && (
+            return (
+              <g key={`${edge.from}-${edge.to}`}>
                 <path
-                  d={pathD}
+                  d={path}
                   pathLength="100"
                   fill="none"
-                  stroke="var(--primary-color)"
-                  strokeWidth={2}
-                  className="pulsing-edge"
+                  stroke={isLive ? "rgba(125, 211, 252, 0.3)" : "rgba(161, 161, 170, 0.18)"}
+                  strokeWidth={isLive ? 0.35 : 0.18}
                   vectorEffect="non-scaling-stroke"
+                  markerEnd={isLive ? "url(#edge-arrow-live)" : "url(#edge-arrow)"}
                 />
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Nodes Container */}
-      <div className="absolute inset-0 w-full h-full z-20">
-        {NODES.map((node) => {
-          const state = nodeStates[node.id] || { status: "idle", progress: 0, itemsCount: 0, itemsLabel: "elementos" };
-          const isActive = activeStep === node.id;
-          const isSelected = selectedNodeId === node.id;
-          const Icon = node.icon;
-
-          // Compute styles based on state
-          let statusBorder = "border-white/5";
-          let statusBg = "bg-zinc-950/70";
-          let glowStyle = {};
-
-          if (isActive) {
-            statusBorder = "border-sky-500/40";
-            statusBg = "bg-zinc-900/80 shadow-[0_0_25px_rgba(56,189,248,0.15)]";
-          } else if (state.status === "success") {
-            statusBorder = "border-emerald-500/20";
-          } else if (isSelected) {
-            statusBorder = "border-white/20";
-            statusBg = "bg-zinc-900/80";
-          }
-
-          return (
-            <div
-              key={node.id}
-              onClick={() => onNodeSelect(node.id)}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col w-[170px] rounded-lg border overflow-hidden transition-all duration-300 cursor-pointer ${node.colorClass} ${statusBorder} ${statusBg} hover:scale-[1.03] hover:border-white/20`}
-              style={{
-                left: `${node.x}%`,
-                top: `${node.y}%`,
-                ...glowStyle
-              }}
-            >
-              {/* Node Header */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] border-b border-white/5">
-                <div className={`p-1 rounded-md ${isActive ? 'bg-sky-500/10 text-sky-400' : 'bg-white/5 text-zinc-400'}`}>
-                  <Icon size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-semibold text-zinc-100 truncate">{node.name}</h4>
-                  <p className="text-[9px] text-zinc-500 truncate">{node.role}</p>
-                </div>
-              </div>
-
-              {/* Node Body / Status */}
-              <div className="p-2.5 flex flex-col gap-1.5">
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-zinc-500">Estado</span>
-                  <span className={`font-semibold capitalize ${
-                    isActive ? 'text-sky-400 animate-pulse' : 
-                    state.status === 'success' ? 'text-emerald-400' : 
-                    state.status === 'error' ? 'text-rose-400' : 'text-zinc-500'
-                  }`}>
-                    {isActive ? 'Procesando' : state.status === 'success' ? 'Listo' : 'Inactivo'}
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-300 ${
-                      isActive ? 'bg-sky-500' : 
-                      state.status === 'success' ? 'bg-emerald-500' : 'bg-zinc-700'
-                    }`}
-                    style={{ width: `${state.progress}%` }}
+                {isLive && (
+                  <path
+                    d={path}
+                    pathLength="100"
+                    fill="none"
+                    stroke="var(--primary-color)"
+                    strokeWidth="0.28"
+                    vectorEffect="non-scaling-stroke"
+                    className="pulsing-edge"
+                    filter="url(#edge-glow)"
                   />
-                </div>
+                )}
+              </g>
+            );
+          })}
+        </svg>
 
-                {/* Bottom stats info */}
-                <div className="flex justify-between items-center text-[9px] text-zinc-400">
-                  <span>{state.itemsCount} {state.itemsLabel}</span>
-                  <span className="font-medium text-zinc-300">{state.progress}%</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        <div className="pipeline-nodes">
+          {NODES.map((node) => {
+            const state = nodeStates[node.id] ?? {
+              status: "idle" as const,
+              progress: 0,
+              itemsCount: 0,
+              itemsLabel: "items",
+            };
+            const isActive = activeStep === node.id;
+            const isSelected = selectedNodeId === node.id;
+            const Icon = node.icon;
 
-      {/* Floating help tags */}
-      <div className="absolute bottom-3 left-4 flex gap-3 text-[10px] text-zinc-500 z-30">
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Ingestión</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Estrategia</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Contenido</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Pauta</span>
+            return (
+              <button
+                key={node.id}
+                type="button"
+                onClick={() => onNodeSelect(node.id)}
+                aria-pressed={isSelected}
+                aria-controls="agent-detail"
+                aria-label={`${node.name}. ${node.role}. ${STATUS_LABELS[state.status]}, ${state.progress}%`}
+                className={`pipeline-node ${TONE_CLASSES[node.tone]} ${isActive ? "is-active" : ""} ${isSelected ? "is-selected" : ""} ${state.status === "success" ? "is-complete" : ""}`}
+                style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              >
+                <span className="pipeline-node__rail" aria-hidden="true" />
+                <span className="pipeline-node__header">
+                  <span className="pipeline-node__index">{node.index}</span>
+                  <span className="pipeline-node__icon"><Icon size={15} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="pipeline-node__name">{node.name}</span>
+                    <span className="pipeline-node__role">{node.role}</span>
+                  </span>
+                  <span className={`pipeline-node__status status-${state.status}`}>
+                    <span className="pipeline-node__status-dot" />
+                    {isActive ? "Live" : STATUS_LABELS[state.status]}
+                  </span>
+                </span>
+                <span className="pipeline-node__body">
+                  <span className="pipeline-node__progress-track">
+                    <span className="pipeline-node__progress" style={{ width: `${state.progress}%` }} />
+                  </span>
+                  <span className="pipeline-node__meta">
+                    <span>{state.itemsCount} {state.itemsLabel}</span>
+                    <span>{String(state.progress).padStart(2, "0")}%</span>
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pipeline-legend" aria-hidden="true">
+          <span><i className="bg-emerald-400" />Signal</span>
+          <span><i className="bg-sky-400" />Intelligence</span>
+          <span><i className="bg-violet-400" />Transform</span>
+          <span><i className="bg-orange-400" />Delivery</span>
+          <span className="ml-auto font-mono text-zinc-600">CANONICAL / 08-STATION LOOP</span>
+        </div>
       </div>
     </div>
   );
