@@ -39,8 +39,7 @@ class RepositoryIntegrityTest(unittest.TestCase):
 
     def test_allows_documented_placeholders(self) -> None:
         path = self._temporary_repo_file(
-            b"GCP_BILLING_ACCOUNT=AAAAAA-BBBBBB-CCCCCC\n"
-            b"POSTGRES_PASSWORD=compose-validation-only\n"
+            b"GCP_BILLING_ACCOUNT=AAAAAA-BBBBBB-CCCCCC\nPOSTGRES_PASSWORD=compose-validation-only\n"
         )
 
         self.assertEqual(scan([path]), [])

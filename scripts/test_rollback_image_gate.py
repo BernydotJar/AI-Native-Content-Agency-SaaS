@@ -92,9 +92,7 @@ class RollbackImageGateTest(unittest.TestCase):
 
     def test_wrong_registry_on_deployed_predecessor_is_rejected(self):
         with self.assertRaisesRegex(RollbackGateError, "foundation repository"):
-            self.inspect(
-                FakeRunner(service_image="evil.invalid/app@sha256:" + "b" * 64)
-            )
+            self.inspect(FakeRunner(service_image="evil.invalid/app@sha256:" + "b" * 64))
 
     def test_missing_or_wrong_protected_tag_is_rejected(self):
         with self.assertRaisesRegex(RollbackGateError, "protected rollback tag"):

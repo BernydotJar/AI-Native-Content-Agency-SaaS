@@ -24,9 +24,7 @@ from scripts.eval_harness import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIREMENT_PATTERN = re.compile(
-    r"^\| ((?:APP|SEC|DLV|GCP|GOV)-\d{3}) \|", re.MULTILINE
-)
+REQUIREMENT_PATTERN = re.compile(r"^\| ((?:APP|SEC|DLV|GCP|GOV)-\d{3}) \|", re.MULTILINE)
 RISK_PATTERN = re.compile(r"^\| (RISK-\d{3}) \|", re.MULTILINE)
 REQUIRED_AGENT_FILES = (
     "agent/current-state.md",
@@ -221,14 +219,8 @@ def _cycle(adjacency: Mapping[str, set[str]]) -> list[str]:
     return []
 
 
-def _graph_check(
-    graph: Mapping[str, Any], ledger: Mapping[str, Any]
-) -> tuple[bool, str]:
-    task_ids = {
-        str(task["task_id"])
-        for task in ledger.get("tasks", [])
-        if isinstance(task, dict)
-    }
+def _graph_check(graph: Mapping[str, Any], ledger: Mapping[str, Any]) -> tuple[bool, str]:
+    task_ids = {str(task["task_id"]) for task in ledger.get("tasks", []) if isinstance(task, dict)}
     edges = graph.get("edges")
     critical_path = graph.get("critical_path")
     if (
@@ -291,12 +283,10 @@ def _critical_path_check(graph: Mapping[str, Any]) -> tuple[bool, str]:
     edges = graph.get("edges")
     if not isinstance(critical_path, list) or not isinstance(edges, list):
         return False, "task graph edges and critical_path must be lists"
-    edge_pairs = {
-        (edge.get("from"), edge.get("to")) for edge in edges if isinstance(edge, dict)
-    }
+    edge_pairs = {(edge.get("from"), edge.get("to")) for edge in edges if isinstance(edge, dict)}
     missing = [
         f"{source}->{target}"
-        for source, target in zip(critical_path, critical_path[1:])
+        for source, target in zip(critical_path, critical_path[1:], strict=False)
         if (source, target) not in edge_pairs
     ]
     if missing:
@@ -346,7 +336,7 @@ def _mandatory_phase_chain_check(graph: Mapping[str, Any]) -> tuple[bool, str]:
             adjacency.setdefault(source, set()).add(target)
     disconnected = [
         f"{source}->{target}"
-        for source, target in zip(MANDATORY_PHASE_TASKS, MANDATORY_PHASE_TASKS[1:])
+        for source, target in zip(MANDATORY_PHASE_TASKS, MANDATORY_PHASE_TASKS[1:], strict=False)
         if not _reachable(adjacency, source, target)
     ]
     if disconnected:
@@ -362,17 +352,11 @@ def _locks_overlap(first: str, second: str) -> bool:
     second = second.strip().removeprefix("./").rstrip("/")
     if not first or not second or first.lower() == "none" or second.lower() == "none":
         return False
-    if (
-        first == second
-        or fnmatch.fnmatchcase(first, second)
-        or fnmatch.fnmatchcase(second, first)
-    ):
+    if first == second or fnmatch.fnmatchcase(first, second) or fnmatch.fnmatchcase(second, first):
         return True
 
     def static_prefix(pattern: str) -> str:
-        wildcard_positions = [
-            position for token in "*[?" if (position := pattern.find(token)) >= 0
-        ]
+        wildcard_positions = [position for token in "*[?" if (position := pattern.find(token)) >= 0]
         end = min(wildcard_positions) if wildcard_positions else len(pattern)
         return pattern[:end].rstrip("/")
 
@@ -408,9 +392,7 @@ def _active_write_lock_check(ledger: Mapping[str, Any]) -> tuple[bool, str]:
             for first_lock in first_locks:
                 for second_lock in second_locks:
                     if _locks_overlap(first_lock, second_lock):
-                        conflicts.append(
-                            f"{first_id}:{first_lock}<->{second_id}:{second_lock}"
-                        )
+                        conflicts.append(f"{first_id}:{first_lock}<->{second_id}:{second_lock}")
     if conflicts:
         return False, f"active write-lock conflicts: {','.join(conflicts)}"
     return True, f"{len(active)} active tasks have non-conflicting write locks"
@@ -428,14 +410,10 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
         else f"missing files: {','.join(missing_files)}",
     )
 
-    spec_text = (root / "docs/specs/production-foundation-v1.md").read_text(
-        encoding="utf-8"
-    )
+    spec_text = (root / "docs/specs/production-foundation-v1.md").read_text(encoding="utf-8")
     spec_ids = REQUIREMENT_PATTERN.findall(spec_text)
     spec_unique, spec_detail = _unique_nonempty(spec_ids, "spec requirement IDs")
-    traced_ids = traceability_requirement_ids(
-        root / "agent/requirements-traceability.csv"
-    )
+    traced_ids = traceability_requirement_ids(root / "agent/requirements-traceability.csv")
     checks["spec_requirement_ids_are_unique"] = (spec_unique, spec_detail)
     checks["spec_and_traceability_match"] = (
         set(spec_ids) == traced_ids,
@@ -489,9 +467,7 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
     evidence_error = ""
     try:
         for line_number, raw_line in enumerate(
-            (root / "agent/evidence-register.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines(),
+            (root / "agent/evidence-register.jsonl").read_text(encoding="utf-8").splitlines(),
             start=1,
         ):
             if raw_line.strip():
@@ -504,8 +480,7 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
     evidence_ids = [str(item.get("evidence_id", "")) for item in evidence]
     evidence_unique, evidence_detail = _unique_nonempty(evidence_ids, "evidence IDs")
     evidence_fields_ok = all(
-        {"evidence_id", "timestamp", "type", "result", "summary", "sensitive"}
-        <= set(item)
+        {"evidence_id", "timestamp", "type", "result", "summary", "sensitive"} <= set(item)
         and item.get("sensitive") is False
         for item in evidence
     )
@@ -520,9 +495,7 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
     )
 
     findings = _read_json(root / "agent/critique-findings.json").get("findings", [])
-    finding_ids = [
-        str(item.get("finding_id", "")) for item in findings if isinstance(item, dict)
-    ]
+    finding_ids = [str(item.get("finding_id", "")) for item in findings if isinstance(item, dict)]
     finding_unique, finding_detail = _unique_nonempty(finding_ids, "finding IDs")
     finding_fields_ok = all(
         isinstance(item, dict)
@@ -531,14 +504,10 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
     )
     checks["critique_findings_are_structured_and_unique"] = (
         finding_unique and finding_fields_ok,
-        finding_detail
-        if finding_fields_ok
-        else "finding records are missing required fields",
+        finding_detail if finding_fields_ok else "finding records are missing required fields",
     )
 
-    risk_ids = RISK_PATTERN.findall(
-        (root / "agent/risk-register.md").read_text(encoding="utf-8")
-    )
+    risk_ids = RISK_PATTERN.findall((root / "agent/risk-register.md").read_text(encoding="utf-8"))
     checks["risk_ids_are_unique"] = _unique_nonempty(risk_ids, "risk IDs")
 
     adr_files = sorted((root / "docs/adr").glob("[0-9][0-9][0-9][0-9]-*.md"))
@@ -550,9 +519,7 @@ def evaluate(root: Path = ROOT, *, validate_evals: bool = True) -> dict[str, Any
     if validate_evals:
         try:
             catalog = load_catalog(root / "agent/eval-catalog.json")
-            validate_catalog_coverage(
-                catalog, root / "agent/requirements-traceability.csv"
-            )
+            validate_catalog_coverage(catalog, root / "agent/requirements-traceability.csv")
             validate_report(
                 _read_json(root / "agent/eval-results.json"),
                 catalog,

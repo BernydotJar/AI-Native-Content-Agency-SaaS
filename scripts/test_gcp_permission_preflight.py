@@ -12,9 +12,7 @@ from scripts.gcp_permission_preflight import (
 
 class GcpPermissionPreflightTest(unittest.TestCase):
     def test_each_phase_has_distinct_bounded_targets(self) -> None:
-        build = permission_targets(
-            "build", "agency-dev-test", "us-central1", None, None
-        )
+        build = permission_targets("build", "agency-dev-test", "us-central1", None, None)
         plan = permission_targets(
             "plan", "agency-dev-test", "us-central1", "agency-state-test", None
         )
@@ -59,12 +57,8 @@ class GcpPermissionPreflightTest(unittest.TestCase):
             },
         )
         self.assertNotIn("artifactregistry.tags.delete", apply[2].permissions)
-        self.assertNotIn(
-            "artifactregistry.repositories.deleteArtifacts", apply[2].permissions
-        )
-        self.assertNotIn(
-            "artifactregistry.repositories.uploadArtifacts", apply[2].permissions
-        )
+        self.assertNotIn("artifactregistry.repositories.deleteArtifacts", apply[2].permissions)
+        self.assertNotIn("artifactregistry.repositories.uploadArtifacts", apply[2].permissions)
         self.assertEqual(
             set(apply[0].permissions),
             {
@@ -103,9 +97,7 @@ class GcpPermissionPreflightTest(unittest.TestCase):
             evaluate(targets, missing_last)
 
     def test_evaluate_reports_counts_without_tokens_or_policy_payloads(self) -> None:
-        targets = permission_targets(
-            "build", "agency-dev-test", "us-central1", None, None
-        )
+        targets = permission_targets("build", "agency-dev-test", "us-central1", None, None)
         report = evaluate(
             targets,
             lambda target: {"permissions": list(target.permissions)},

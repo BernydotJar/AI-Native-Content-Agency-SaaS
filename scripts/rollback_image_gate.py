@@ -27,24 +27,18 @@ def _load(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise RollbackGateError(
-            "invalid rollback evidence: {}".format(path.name)
-        ) from error
+        raise RollbackGateError("invalid rollback evidence: {}".format(path.name)) from error
 
 
 def _write(path: Path, report: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _parse_application_image(reference: str, artifact_repository: str) -> str:
     expected_prefix = "{}/app@".format(artifact_repository.rstrip("/"))
     if not reference.startswith(expected_prefix):
-        raise RollbackGateError(
-            "application image is outside the exact foundation repository"
-        )
+        raise RollbackGateError("application image is outside the exact foundation repository")
     digest = reference[len(expected_prefix) :]
     if IMAGE_DIGEST.fullmatch(digest) is None:
         raise RollbackGateError("application image is not pinned by one sha256 digest")
@@ -66,28 +60,20 @@ def _run_json(
     if completed.returncode != 0:
         combined = "{}\n{}".format(completed.stdout, completed.stderr).lower()
         if allow_not_found and (
-            "not_found" in combined
-            or "not found" in combined
-            or "cannot find" in combined
+            "not_found" in combined or "not found" in combined or "cannot find" in combined
         ):
             return None
-        raise RollbackGateError(
-            "cloud evidence command failed: {}".format(" ".join(command[:4]))
-        )
+        raise RollbackGateError("cloud evidence command failed: {}".format(" ".join(command[:4])))
     try:
         return json.loads(completed.stdout)
     except json.JSONDecodeError as error:
-        raise RollbackGateError(
-            "cloud evidence command returned invalid JSON"
-        ) from error
+        raise RollbackGateError("cloud evidence command returned invalid JSON") from error
 
 
 def _require_digest(evidence: Any, digest: str, label: str) -> None:
     observed = set(IMAGE_DIGEST.findall(json.dumps(evidence, sort_keys=True)))
     if digest not in observed:
-        raise RollbackGateError(
-            "{} did not resolve to the expected digest".format(label)
-        )
+        raise RollbackGateError("{} did not resolve to the expected digest".format(label))
 
 
 def _service_application_image(service: Any) -> str:
@@ -180,9 +166,7 @@ def inspect(
             "rollback application image",
         )
         if require_protected_rollback:
-            protected_reference = "{}/app:{}".format(
-                artifact_repository.rstrip("/"), ROLLBACK_TAG
-            )
+            protected_reference = "{}/app:{}".format(artifact_repository.rstrip("/"), ROLLBACK_TAG)
             _require_digest(
                 _describe_image(protected_reference, runner=runner),
                 rollback_digest,
@@ -223,9 +207,7 @@ def inspect(
             "first_deployment",
         )
         if any(baseline.get(key) != report.get(key) for key in comparable):
-            raise RollbackGateError(
-                "rollback candidate changed after the reviewed runtime plan"
-            )
+            raise RollbackGateError("rollback candidate changed after the reviewed runtime plan")
     return report
 
 
@@ -308,9 +290,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         if arguments.command == "inspect":
             baseline = (
-                _load(arguments.baseline_report)
-                if arguments.baseline_report is not None
-                else None
+                _load(arguments.baseline_report) if arguments.baseline_report is not None else None
             )
             report = inspect(
                 artifact_repository=arguments.artifact_repository,

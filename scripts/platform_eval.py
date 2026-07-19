@@ -24,9 +24,7 @@ def _all_platform_text() -> str:
         *(ROOT / "infra").rglob("*.tf"),
         *(ROOT / "infra").rglob("*.hcl"),
     ]
-    return "\n".join(
-        path.read_text(encoding="utf-8") for path in paths if path.is_file()
-    )
+    return "\n".join(path.read_text(encoding="utf-8") for path in paths if path.is_file())
 
 
 def _tracked_files() -> list[str]:
@@ -62,13 +60,9 @@ def main() -> None:
     tracked = _tracked_files()
 
     checks = {
-        "no_public_iam_binding": re.search(
-            r'member\s*=\s*"all(?:Authenticated)?Users"', text
-        )
+        "no_public_iam_binding": re.search(r'member\s*=\s*"all(?:Authenticated)?Users"', text)
         is None,
-        "no_basic_owner_editor_roles": re.search(
-            r"roles/(?:owner|editor)\b", text, re.IGNORECASE
-        )
+        "no_basic_owner_editor_roles": re.search(r"roles/(?:owner|editor)\b", text, re.IGNORECASE)
         is None,
         "no_forbidden_broad_deployment_roles": not any(
             role in dev_foundation
@@ -113,8 +107,7 @@ def main() -> None:
         "wif_immutable_owner_and_repository_ids": (
             '"attribute.repository_owner_id" = "assertion.repository_owner_id"' in wif
             and '"attribute.repository_id"       = "assertion.repository_id"' in wif
-            and "assertion.repository_owner_id == '${var.github_repository_owner_id}'"
-            in wif
+            and "assertion.repository_owner_id == '${var.github_repository_owner_id}'" in wif
             and "assertion.repository_id == '${var.github_repository_id}'" in wif
         ),
         "wif_exact_branch_ref": "assertion.ref ==" in wif
@@ -133,23 +126,19 @@ def main() -> None:
             and "attribute.environment" in wif
         ),
         "plan_state_cannot_mutate_tfstate": (
-            'resource "google_project_iam_custom_role" "terraform_state_locker"'
-            in bootstrap
-            and 'resource "google_storage_bucket_iam_member" "terraform_plan_lock"'
-            in bootstrap
+            'resource "google_project_iam_custom_role" "terraform_state_locker"' in bootstrap
+            and 'resource "google_storage_bucket_iam_member" "terraform_plan_lock"' in bootstrap
             and "resource.name.endsWith('.tflock')" in bootstrap
             and 'member = "serviceAccount:${module.github_wif.service_account_emails.plan}"'
             in bootstrap
-            and 'resource "google_storage_bucket_iam_member" "terraform_apply_runtime"'
-            in bootstrap
+            and 'resource "google_storage_bucket_iam_member" "terraform_apply_runtime"' in bootstrap
         ),
         "apply_state_is_runtime_prefix_only": (
             "apply-runtime-state-only" in bootstrap
             and "/objects/environments/dev-runtime/" in bootstrap
             and 'google_storage_bucket_iam_member" "terraform_state"' not in bootstrap
         ),
-        "cloud_sql_connector_required": 'connector_enforcement       = "REQUIRED"'
-        in cloud_sql,
+        "cloud_sql_connector_required": 'connector_enforcement       = "REQUIRED"' in cloud_sql,
         "cloud_sql_iam_auth": 'name  = "cloudsql.iam_authentication"' in cloud_sql,
         "cloud_sql_no_authorized_networks": "authorized_networks" not in cloud_sql,
         "cloud_sql_postgres_15_enterprise": (
@@ -180,10 +169,8 @@ def main() -> None:
         "artifact_cleanup_bounds_tagged_builds": (
             "immutable_tags = false" in _read("infra/modules/artifact_registry/main.tf")
             and 'tag_state  = "ANY"' in _read("infra/modules/artifact_registry/main.tf")
-            and 'older_than = "604800s"'
-            in _read("infra/modules/artifact_registry/main.tf")
-            and "most_recent_versions"
-            in _read("infra/modules/artifact_registry/main.tf")
+            and 'older_than = "604800s"' in _read("infra/modules/artifact_registry/main.tf")
+            and "most_recent_versions" in _read("infra/modules/artifact_registry/main.tf")
             and "keep_count = 20" in _read("infra/modules/artifact_registry/main.tf")
         ),
         "runtime_project_roles_are_live_verified_exactly": all(
@@ -296,8 +283,7 @@ def main() -> None:
             )
         ),
         "required_labels_cannot_be_overridden": (
-            "effective_labels = merge(var.additional_labels, local.required_labels)"
-            in bootstrap
+            "effective_labels = merge(var.additional_labels, local.required_labels)" in bootstrap
             and "effective_labels = merge(var.additional_labels, local.required_labels)"
             in dev_foundation
             and "effective_labels = merge(var.additional_labels, local.required_labels)"
@@ -309,39 +295,28 @@ def main() -> None:
             'type         = "email"' in observability
             and 'channel.verification_status == "VERIFIED"' in observability
             and "channel.enabled" in observability
-            and "notification_channels = local.notification_channel_ids"
-            in observability
-            and "monitoring_notification_channels = local.notification_channel_ids"
-            in observability
-            and observability.count(
-                "depends_on = [terraform_data.notification_delivery_gate]"
-            )
-            == 2
+            and "notification_channels = local.notification_channel_ids" in observability
+            and "monitoring_notification_channels = local.notification_channel_ids" in observability
+            and observability.count("depends_on = [terraform_data.notification_delivery_gate]") == 2
         ),
         "notification_channels_are_terraform_owned_and_attested": (
-            'resource "google_monitoring_notification_channel" "delivery"'
-            in observability
+            'resource "google_monitoring_notification_channel" "delivery"' in observability
             and "prevent_destroy = true" in observability
             and "for_each = local.notification_channel_imports" in dev_foundation
             and "to = module.observability.google_monitoring_notification_channel.delivery[each.key]"
             in dev_foundation
             and "notification_channels" in observability
-            and "gcp-notification-channel.v1"
-            in _read("infra/modules/observability/variables.tf")
+            and "gcp-notification-channel.v1" in _read("infra/modules/observability/variables.tf")
             and "notification_channel_provenance_sha256" in observability
             and "notification_channel_provenance_sha256" in dev_runtime
         ),
         "notification_verification_precedes_costly_foundation_resources": (
             "depends_on = [module.services, module.observability]" in dev_foundation
-            and dev_foundation.count(
-                "depends_on = [module.services, module.observability]"
-            )
-            >= 5
+            and dev_foundation.count("depends_on = [module.services, module.observability]") >= 5
             and 'module "artifact_registry"' in dev_foundation
         ),
         "compose_waits_for_database": "condition: service_healthy" in compose,
-        "compose_waits_for_migration": "condition: service_completed_successfully"
-        in compose,
+        "compose_waits_for_migration": "condition: service_completed_successfully" in compose,
         "compose_loopback_publish_only": '"127.0.0.1:8080:8080"' in compose,
         "compose_edge_is_separated": (
             "agency-edge:" in compose
@@ -349,8 +324,7 @@ def main() -> None:
             and "agency-internal:\n    internal: true" in compose
         ),
         "container_non_root": "USER ${APP_UID}:${APP_GID}" in dockerfile,
-        "container_locked_install": "--require-hashes" in dockerfile
-        and "npm ci" in dockerfile,
+        "container_locked_install": "--require-hashes" in dockerfile and "npm ci" in dockerfile,
         "deploy_dev_only": "environment: dev" in deploy and "refs/heads/main" in deploy,
         "deploy_saved_plan_only": "terraform apply" in deploy and "tfplan" in deploy,
         "deploy_no_auto_approve": "-auto-approve" not in deploy,
@@ -400,10 +374,7 @@ def main() -> None:
             and '["rev-parse", "--verify", "HEAD"]' in apply_gate
             and "source_commit does not match the checked-out HEAD" in apply_gate
         ),
-        "deploy_granular_permission_preflight": deploy.count(
-            "gcp_permission_preflight.py"
-        )
-        == 3,
+        "deploy_granular_permission_preflight": deploy.count("gcp_permission_preflight.py") == 3,
         "deploy_post_apply_core_evidence": all(
             value in deploy
             for value in (
@@ -436,8 +407,7 @@ def main() -> None:
             )
         ),
         "no_tracked_state_or_plan": not any(
-            re.search(r"(?:^|/)(?:terraform\.tfstate|tfplan)(?:\.|$)", path)
-            for path in tracked
+            re.search(r"(?:^|/)(?:terraform\.tfstate|tfplan)(?:\.|$)", path) for path in tracked
         ),
     }
     failed = sorted(name for name, passed in checks.items() if not passed)

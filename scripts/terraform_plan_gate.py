@@ -89,16 +89,12 @@ def main() -> None:
         (r'"authorized_networks"\s*:\s*\[(?!\s*\])', "Cloud SQL authorized network"),
     ):
         if re.search(pattern, serialized, re.IGNORECASE):
-            findings.append(
-                {"severity": "CRITICAL", "target": "plan", "description": description}
-            )
+            findings.append({"severity": "CRITICAL", "target": "plan", "description": description})
 
     result = {
         "task_id": "CLOUD-STATIC-PRECHECK",
         "status": "FAIL" if findings else "PASS",
-        "apply_recommendation": "DENY_APPLY"
-        if findings
-        else "REQUIRES_INDEPENDENT_REVIEW",
+        "apply_recommendation": "DENY_APPLY" if findings else "REQUIRES_INDEPENDENT_REVIEW",
         "plan_summary": summary,
         "findings": findings,
         "limitations": [

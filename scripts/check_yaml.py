@@ -46,9 +46,7 @@ def main() -> None:
                     and not str(action).startswith("docker://")
                     and not ACTION_PIN.fullmatch(str(action))
                 ):
-                    raise SystemExit(
-                        f"Unpinned action in {target.relative_to(ROOT)}: {action}"
-                    )
+                    raise SystemExit(f"Unpinned action in {target.relative_to(ROOT)}: {action}")
     print(f"yaml_validation=PASS files={len(targets)}")
 
 

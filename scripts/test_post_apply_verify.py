@@ -69,8 +69,9 @@ def impersonation_policy(environment):
             {
                 "role": "roles/iam.workloadIdentityUser",
                 "members": [
-                    "principalSet://iam.googleapis.com/{}/"
-                    "attribute.environment/{}".format(POOL, environment)
+                    "principalSet://iam.googleapis.com/{}/attribute.environment/{}".format(
+                        POOL, environment
+                    )
                 ],
             }
         ]
@@ -87,9 +88,7 @@ def state_bucket_policy():
                 "members": ["serviceAccount:" + PLAN, "serviceAccount:" + DEPLOY],
             },
             {
-                "role": "projects/{}/roles/terraformStateReader".format(
-                    BOOTSTRAP_PROJECT_ID
-                ),
+                "role": "projects/{}/roles/terraformStateReader".format(BOOTSTRAP_PROJECT_ID),
                 "members": ["serviceAccount:" + PLAN],
                 "condition": {
                     "title": "plan-state-read",
@@ -101,9 +100,7 @@ def state_bucket_policy():
                 },
             },
             {
-                "role": "projects/{}/roles/terraformStateReader".format(
-                    BOOTSTRAP_PROJECT_ID
-                ),
+                "role": "projects/{}/roles/terraformStateReader".format(BOOTSTRAP_PROJECT_ID),
                 "members": ["serviceAccount:" + DEPLOY],
                 "condition": {
                     "title": "apply-state-read",
@@ -114,9 +111,7 @@ def state_bucket_policy():
                 },
             },
             {
-                "role": "projects/{}/roles/terraformStateLocker".format(
-                    BOOTSTRAP_PROJECT_ID
-                ),
+                "role": "projects/{}/roles/terraformStateLocker".format(BOOTSTRAP_PROJECT_ID),
                 "members": ["serviceAccount:" + PLAN],
                 "condition": {
                     "title": "plan-runtime-lock-only",
@@ -202,9 +197,7 @@ class PostApplyVerifyTest(unittest.TestCase):
             "service": service,
             "service_iam": iam_policy([]),
             "job": job,
-            "sql": {
-                "settings": {"connectorEnforcement": "REQUIRED", "ipConfiguration": {}}
-            },
+            "sql": {"settings": {"connectorEnforcement": "REQUIRED", "ipConfiguration": {}}},
             "logs": [{"textPayload": '{"event":"http_request","status_code":200}'}],
             "project_iam": iam_policy(project_bindings),
             "artifact_iam": iam_policy(
@@ -221,9 +214,7 @@ class PostApplyVerifyTest(unittest.TestCase):
                         ],
                     },
                     {
-                        "role": "projects/{}/roles/agencyRollbackTagOperator".format(
-                            PROJECT_ID
-                        ),
+                        "role": "projects/{}/roles/agencyRollbackTagOperator".format(PROJECT_ID),
                         "members": ["serviceAccount:" + DEPLOY],
                     },
                 ]
@@ -247,16 +238,12 @@ class PostApplyVerifyTest(unittest.TestCase):
                 },
                 "state_bucket_iam": state_bucket_policy(),
                 "runtime_custom_role": {
-                    "name": "projects/{}/roles/agencyRuntimeDeployer".format(
-                        PROJECT_ID
-                    ),
+                    "name": "projects/{}/roles/agencyRuntimeDeployer".format(PROJECT_ID),
                     "includedPermissions": sorted(RUNTIME_DEPLOYER_PERMISSIONS),
                     "stage": "GA",
                 },
                 "rollback_custom_role": {
-                    "name": "projects/{}/roles/agencyRollbackTagOperator".format(
-                        PROJECT_ID
-                    ),
+                    "name": "projects/{}/roles/agencyRollbackTagOperator".format(PROJECT_ID),
                     "includedPermissions": sorted(ROLLBACK_TAG_OPERATOR_PERMISSIONS),
                     "stage": "GA",
                 },
@@ -433,9 +420,7 @@ class PostApplyVerifyTest(unittest.TestCase):
         evidence["foundation"]["rollback_custom_role"]["includedPermissions"].append(
             "artifactregistry.versions.delete"
         )
-        with self.assertRaisesRegex(
-            EvidenceError, "rollback tag operator custom-role permissions"
-        ):
+        with self.assertRaisesRegex(EvidenceError, "rollback tag operator custom-role permissions"):
             self.run_verify(evidence)
 
     def test_unprotected_rollback_digest_is_rejected(self):

@@ -24,9 +24,7 @@ class StartContainerTest(unittest.TestCase):
         migration_module.main = lambda: calls.append("migration")  # type: ignore[attr-defined]
 
         with (
-            patch.dict(
-                os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "true", "PORT": "8080"}
-            ),
+            patch.dict(os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "true", "PORT": "8080"}),
             patch.dict(sys.modules, {"run_cloud_migrations": migration_module}),
             patch(
                 "scripts.start_container.uvicorn.run",
@@ -40,9 +38,7 @@ class StartContainerTest(unittest.TestCase):
     def test_local_container_skips_cloud_migration(self) -> None:
         calls: list[str] = []
         with (
-            patch.dict(
-                os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "false", "PORT": "8080"}
-            ),
+            patch.dict(os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "false", "PORT": "8080"}),
             patch(
                 "scripts.start_container.uvicorn.run",
                 side_effect=lambda *_args, **_kwargs: calls.append("server"),

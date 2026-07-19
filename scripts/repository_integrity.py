@@ -122,9 +122,7 @@ def scan_history() -> tuple[int, list[dict[str, str]]]:
             continue
         filename_rule = _unsafe_filename(relative)
         if filename_rule:
-            findings.append(
-                {"path": "git-history:{}".format(relative), "rule": filename_rule}
-            )
+            findings.append({"path": "git-history:{}".format(relative), "rule": filename_rule})
     patches = subprocess.run(
         ["git", "log", "--all", "-p", "--no-ext-diff", "--no-renames", "--format="],
         cwd=ROOT,

@@ -33,9 +33,7 @@ class DevApplyGateTest(unittest.TestCase):
         self._git("init", "--quiet")
         self._git("config", "user.email", "tests@example.invalid")
         self._git("config", "user.name", "Dev Apply Gate Tests")
-        (self.repository / "application.txt").write_text(
-            "version one\n", encoding="utf-8"
-        )
+        (self.repository / "application.txt").write_text("version one\n", encoding="utf-8")
         nested = self.repository / "public"
         nested.mkdir()
         (nested / "asset.txt").write_text("tracked asset\n", encoding="utf-8")
@@ -83,12 +81,8 @@ class DevApplyGateTest(unittest.TestCase):
             "workflow_actor": WORKFLOW_ACTOR,
             "reviewer": REVIEWER,
             "environment": "dev",
-            "reviewed_at": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
-            "evidence_url": "https://github.com/owner/repository/actions/runs/{}".format(
-                RUN_ID
-            ),
+            "reviewed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "evidence_url": "https://github.com/owner/repository/actions/runs/{}".format(RUN_ID),
         }
 
     def _verify(self, payload: Dict[str, str]) -> Dict[str, str]:
@@ -109,14 +103,10 @@ class DevApplyGateTest(unittest.TestCase):
         original = source_tree_sha256(self.repository)
         self.assertEqual(source_tree_sha256(self.repository), original)
 
-        (self.repository / "untracked.txt").write_text(
-            "not part of source\n", encoding="utf-8"
-        )
+        (self.repository / "untracked.txt").write_text("not part of source\n", encoding="utf-8")
         self.assertEqual(source_tree_sha256(self.repository), original)
 
-        (self.repository / "public" / "asset.txt").write_text(
-            "changed\n", encoding="utf-8"
-        )
+        (self.repository / "public" / "asset.txt").write_text("changed\n", encoding="utf-8")
         with self.assertRaisesRegex(GateError, "uncommitted changes"):
             source_tree_sha256(self.repository)
         self._commit_all("change formerly omitted path")

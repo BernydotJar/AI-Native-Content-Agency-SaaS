@@ -105,7 +105,7 @@ class GovernanceEvalTests(unittest.TestCase):
             "critical_path": reversed_path,
             "edges": [
                 {"from": source, "to": target}
-                for source, target in zip(reversed_path, reversed_path[1:])
+                for source, target in zip(reversed_path, reversed_path[1:], strict=False)
             ],
         }
 

@@ -138,9 +138,7 @@ def _iam_roles(policy: Any, member: str) -> Set[str]:
             role = binding.get("role")
             if isinstance(role, str):
                 roles.add(role)
-        if isinstance(members, list) and (
-            {"allUsers", "allAuthenticatedUsers"} & set(members)
-        ):
+        if isinstance(members, list) and ({"allUsers", "allAuthenticatedUsers"} & set(members)):
             raise EvidenceError("public IAM principal detected")
     return roles
 
@@ -209,9 +207,7 @@ def _wif_condition(
     environment: str,
 ) -> str:
     owner = github_repository.split("/", maxsplit=1)[0]
-    workflow_ref = "{}/.github/workflows/deploy-dev.yml@refs/heads/main".format(
-        github_repository
-    )
+    workflow_ref = "{}/.github/workflows/deploy-dev.yml@refs/heads/main".format(github_repository)
     return " && ".join(
         (
             "assertion.repository_owner == '{}'".format(owner),
@@ -236,9 +232,9 @@ def _verify_wif_and_impersonation(
 ) -> None:
     if not isinstance(wif_providers, dict) or set(wif_providers) != set(WIF_PHASES):
         raise EvidenceError("phase WIF provider evidence is incomplete")
-    if not isinstance(phase_service_account_iam, dict) or set(
-        phase_service_account_iam
-    ) != set(WIF_PHASES):
+    if not isinstance(phase_service_account_iam, dict) or set(phase_service_account_iam) != set(
+        WIF_PHASES
+    ):
         raise EvidenceError("phase impersonation evidence is incomplete")
     pool_name: Optional[str] = None
     for phase, (provider_id, environment) in WIF_PHASES.items():
@@ -264,9 +260,9 @@ def _verify_wif_and_impersonation(
             environment=environment,
         )
         actual_condition = provider.get("attributeCondition")
-        if not isinstance(actual_condition, str) or " ".join(
-            actual_condition.split()
-        ) != " ".join(expected_condition.split()):
+        if not isinstance(actual_condition, str) or " ".join(actual_condition.split()) != " ".join(
+            expected_condition.split()
+        ):
             raise EvidenceError("{} WIF attribute condition differs".format(phase))
         oidc = provider.get("oidc")
         if not isinstance(oidc, dict) or oidc.get("issuerUri") != (
@@ -276,10 +272,8 @@ def _verify_wif_and_impersonation(
         if provider.get("state") not in (None, "ACTIVE"):
             raise EvidenceError("{} WIF provider is not active".format(phase))
 
-        principal = (
-            "principalSet://iam.googleapis.com/{}/attribute.environment/{}".format(
-                current_pool_name, environment
-            )
+        principal = "principalSet://iam.googleapis.com/{}/attribute.environment/{}".format(
+            current_pool_name, environment
         )
         expected_bindings = {("roles/iam.workloadIdentityUser", "", "")}
         actual_bindings = _member_bindings(phase_service_account_iam[phase], principal)
@@ -298,15 +292,11 @@ def _verify_wif_and_impersonation(
             if isinstance(member, str)
         }
         if all_impersonation_members != {principal}:
-            raise EvidenceError(
-                "{} phase has extra impersonation principals".format(phase)
-            )
+            raise EvidenceError("{} phase has extra impersonation principals".format(phase))
         if _all_binding_records(phase_service_account_iam[phase]) != {
             ("roles/iam.workloadIdentityUser", principal, "", "")
         }:
-            raise EvidenceError(
-                "{} phase IAM policy has unreviewed drift".format(phase)
-            )
+            raise EvidenceError("{} phase IAM policy has unreviewed drift".format(phase))
 
 
 def _verify_state_bucket_iam(
@@ -359,9 +349,7 @@ def _verify_state_bucket_iam(
             "roles/storage.objectAdmin",
             "apply-runtime-state-only",
             "resource.type == 'storage.googleapis.com/Object' && "
-            "resource.name.startsWith('{}/environments/dev-runtime/')".format(
-                object_prefix
-            ),
+            "resource.name.startsWith('{}/environments/dev-runtime/')".format(object_prefix),
         ),
     }
     if _member_bindings(state_bucket_iam, plan_member) != expected_plan:
@@ -407,10 +395,7 @@ def _verify_rollback_report(
     if rollback_image is None:
         if rollback.get("first_deployment") is not True:
             raise EvidenceError("first-deployment rollback evidence is inconsistent")
-    elif (
-        not isinstance(rollback_image, str)
-        or rollback.get("retention_verified") is not True
-    ):
+    elif not isinstance(rollback_image, str) or rollback.get("retention_verified") is not True:
         raise EvidenceError("prior rollback digest is not protected")
 
 
@@ -452,9 +437,7 @@ def verify(
             _values_for_key(resource, "serviceAccount")
         )
         if expected_runtime_service_account not in service_accounts:
-            raise EvidenceError(
-                "{} does not use the reviewed runtime identity".format(name)
-            )
+            raise EvidenceError("{} does not use the reviewed runtime identity".format(name))
         if not _has_labels(resource, expected_labels):
             raise EvidenceError("{} is missing required labels".format(name))
 
@@ -475,9 +458,7 @@ def verify(
         raise EvidenceError("Cloud SQL exposes an authorized network")
 
     plan_member = "serviceAccount:{}".format(plan_service_account)
-    image_pusher_service_account = foundation_expectations.get(
-        "image_pusher_service_account"
-    )
+    image_pusher_service_account = foundation_expectations.get("image_pusher_service_account")
     if not isinstance(image_pusher_service_account, str):
         raise EvidenceError("image-pusher expectation is absent")
     image_pusher_member = "serviceAccount:{}".format(image_pusher_service_account)
@@ -499,28 +480,16 @@ def verify(
     if deploy_roles & FORBIDDEN_DEPLOY_ROLES:
         raise EvidenceError("deploy identity received a forbidden administration role")
     if deploy_roles != expected_deploy_roles:
-        raise EvidenceError(
-            "deploy identity project roles differ from the reviewed set"
-        )
+        raise EvidenceError("deploy identity project roles differ from the reviewed set")
     if runtime_roles != RUNTIME_PROJECT_ROLES:
-        raise EvidenceError(
-            "runtime identity project roles differ from the reviewed set"
-        )
+        raise EvidenceError("runtime identity project roles differ from the reviewed set")
     if artifact_image_pusher_roles != {"roles/artifactregistry.writer"}:
-        raise EvidenceError(
-            "image-pusher repository roles differ from the reviewed set"
-        )
+        raise EvidenceError("image-pusher repository roles differ from the reviewed set")
     if artifact_plan_roles != {"roles/artifactregistry.reader"}:
-        raise EvidenceError(
-            "plan identity repository roles differ from the reviewed set"
-        )
-    rollback_role_name = "projects/{}/roles/agencyRollbackTagOperator".format(
-        project_id
-    )
+        raise EvidenceError("plan identity repository roles differ from the reviewed set")
+    rollback_role_name = "projects/{}/roles/agencyRollbackTagOperator".format(project_id)
     if artifact_roles != {"roles/artifactregistry.reader", rollback_role_name}:
-        raise EvidenceError(
-            "deploy identity repository roles differ from the reviewed set"
-        )
+        raise EvidenceError("deploy identity repository roles differ from the reviewed set")
     expected_artifact_records = {
         ("roles/artifactregistry.writer", image_pusher_member, "", ""),
         ("roles/artifactregistry.reader", plan_member, "", ""),
@@ -547,10 +516,7 @@ def verify(
         "github_repository_owner_id",
         "github_repository_id",
     )
-    if any(
-        not isinstance(foundation_expectations.get(field), str)
-        for field in expected_fields
-    ):
+    if any(not isinstance(foundation_expectations.get(field), str) for field in expected_fields):
         raise EvidenceError("foundation drift expectations are incomplete")
     artifact_repository = foundation_expectations["artifact_repository"]
     expected_prefix = "{}/app@sha256:".format(artifact_repository.rstrip("/"))
@@ -564,9 +530,7 @@ def verify(
         foundation_evidence.get("wif_providers"),
         foundation_evidence.get("phase_service_account_iam"),
         github_repository=foundation_expectations["github_repository"],
-        github_repository_owner_id=foundation_expectations[
-            "github_repository_owner_id"
-        ],
+        github_repository_owner_id=foundation_expectations["github_repository_owner_id"],
         github_repository_id=foundation_expectations["github_repository_id"],
     )
     _verify_state_bucket_iam(
@@ -706,9 +670,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "bootstrap_project_id": arguments.bootstrap_project_id,
                 "state_bucket_name": arguments.state_bucket_name,
                 "artifact_repository": arguments.artifact_repository,
-                "image_pusher_service_account": (
-                    arguments.image_pusher_service_account
-                ),
+                "image_pusher_service_account": (arguments.image_pusher_service_account),
                 "github_repository": arguments.github_repository,
                 "github_repository_owner_id": (arguments.github_repository_owner_id),
                 "github_repository_id": arguments.github_repository_id,

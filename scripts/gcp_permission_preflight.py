@@ -85,9 +85,7 @@ def permission_targets(
     runtime_service_account_email: Optional[str],
 ) -> List[PermissionTarget]:
     if phase == "build":
-        resource = "projects/{}/locations/{}/repositories/agency-images".format(
-            project_id, region
-        )
+        resource = "projects/{}/locations/{}/repositories/agency-images".format(project_id, region)
         return [
             PermissionTarget(
                 "project_runtime_read",
@@ -100,9 +98,7 @@ def permission_targets(
             PermissionTarget(
                 "artifact_registry",
                 "POST",
-                "https://artifactregistry.googleapis.com/v1/{}:testIamPermissions".format(
-                    resource
-                ),
+                "https://artifactregistry.googleapis.com/v1/{}:testIamPermissions".format(resource),
                 ARTIFACT_PERMISSIONS,
             ),
         ]
@@ -142,9 +138,7 @@ def permission_targets(
         )
     if phase == "apply":
         if not runtime_service_account_email:
-            raise PermissionError(
-                "apply preflight requires the runtime service-account email"
-            )
+            raise PermissionError("apply preflight requires the runtime service-account email")
         resource = "projects/{}/serviceAccounts/{}".format(
             project_id,
             urllib.parse.quote(runtime_service_account_email, safe=""),
@@ -165,9 +159,7 @@ def permission_targets(
                 PermissionTarget(
                     "runtime_service_account",
                     "POST",
-                    "https://iam.googleapis.com/v1/{}:testIamPermissions".format(
-                        resource
-                    ),
+                    "https://iam.googleapis.com/v1/{}:testIamPermissions".format(resource),
                     ("iam.serviceAccounts.actAs",),
                 ),
             ]
@@ -204,19 +196,13 @@ def _request(target: PermissionTarget, token: str) -> Mapping[str, object]:
         url += "?" + urllib.parse.urlencode(
             [("permissions", permission) for permission in target.permissions]
         )
-    request = urllib.request.Request(
-        url, data=data, headers=headers, method=target.method
-    )
+    request = urllib.request.Request(url, data=data, headers=headers, method=target.method)
     try:
         payload = json.loads(_transport(request))
     except Exception as error:
-        raise PermissionError(
-            "permission test failed for {}".format(target.name)
-        ) from error
+        raise PermissionError("permission test failed for {}".format(target.name)) from error
     if not isinstance(payload, dict):
-        raise PermissionError(
-            "permission response was invalid for {}".format(target.name)
-        )
+        raise PermissionError("permission response was invalid for {}".format(target.name))
     return payload
 
 
@@ -234,11 +220,9 @@ def probe_state_access(
         nonce or uuid.uuid4().hex
     )
     headers = {"Authorization": "Bearer {}".format(token), "Accept": "application/json"}
-    metadata_url = (
-        "https://storage.googleapis.com/storage/v1/b/{}/o/{}?fields=name".format(
-            encoded_bucket,
-            urllib.parse.quote(foundation_name, safe=""),
-        )
+    metadata_url = "https://storage.googleapis.com/storage/v1/b/{}/o/{}?fields=name".format(
+        encoded_bucket,
+        urllib.parse.quote(foundation_name, safe=""),
     )
     upload_url = "https://storage.googleapis.com/upload/storage/v1/b/{}/o?{}".format(
         encoded_bucket,
@@ -251,14 +235,10 @@ def probe_state_access(
     created_generation: Optional[str] = None
     cleanup_error: Optional[Exception] = None
     try:
-        metadata_request = urllib.request.Request(
-            metadata_url, headers=headers, method="GET"
-        )
+        metadata_request = urllib.request.Request(metadata_url, headers=headers, method="GET")
         metadata = json.loads(transport(metadata_request))
         if not isinstance(metadata, dict) or metadata.get("name") != foundation_name:
-            raise PermissionError(
-                "foundation state read probe returned invalid metadata"
-            )
+            raise PermissionError("foundation state read probe returned invalid metadata")
 
         upload_headers = dict(headers)
         upload_headers["Content-Type"] = "application/octet-stream"
@@ -271,9 +251,7 @@ def probe_state_access(
         uploaded_bytes = transport(upload_request)
         created = True
         uploaded = json.loads(uploaded_bytes)
-        raw_generation = (
-            uploaded.get("generation") if isinstance(uploaded, dict) else None
-        )
+        raw_generation = uploaded.get("generation") if isinstance(uploaded, dict) else None
         if (
             not isinstance(uploaded, dict)
             or uploaded.get("name") != lock_name
@@ -288,18 +266,12 @@ def probe_state_access(
         raise PermissionError("state read/lock capability probe failed") from error
     finally:
         if created:
-            delete_url = (
-                "https://storage.googleapis.com/storage/v1/b/{}/o/{}?{}".format(
-                    encoded_bucket,
-                    urllib.parse.quote(lock_name, safe=""),
-                    urllib.parse.urlencode(
-                        {"ifGenerationMatch": created_generation or "invalid"}
-                    ),
-                )
+            delete_url = "https://storage.googleapis.com/storage/v1/b/{}/o/{}?{}".format(
+                encoded_bucket,
+                urllib.parse.quote(lock_name, safe=""),
+                urllib.parse.urlencode({"ifGenerationMatch": created_generation or "invalid"}),
             )
-            delete_request = urllib.request.Request(
-                delete_url, headers=headers, method="DELETE"
-            )
+            delete_request = urllib.request.Request(delete_url, headers=headers, method="DELETE")
             try:
                 transport(delete_request)
             except Exception as error:  # cleanup failure must fail closed
@@ -325,16 +297,12 @@ def evaluate(
         if not isinstance(granted_raw, list) or not all(
             isinstance(item, str) for item in granted_raw
         ):
-            raise PermissionError(
-                "permission response was invalid for {}".format(target.name)
-            )
+            raise PermissionError("permission response was invalid for {}".format(target.name))
         granted = set(granted_raw)
         missing = sorted(set(target.permissions) - granted)
         if missing:
             raise PermissionError(
-                "{} is missing required permissions: {}".format(
-                    target.name, ",".join(missing)
-                )
+                "{} is missing required permissions: {}".format(target.name, ",".join(missing))
             )
         results.append(
             {

@@ -159,14 +159,10 @@ def load_catalog(path: Path) -> dict[str, Any]:
                 or not command
                 or not all(isinstance(part, str) and part for part in command)
             ):
-                raise CatalogError(
-                    f"{context}.command must be a non-empty string array"
-                )
+                raise CatalogError(f"{context}.command must be a non-empty string array")
             timeout = gate.get("timeout_seconds", 600)
             if not isinstance(timeout, int) or timeout < 1 or timeout > 3600:
-                raise CatalogError(
-                    f"{context}.timeout_seconds must be between 1 and 3600"
-                )
+                raise CatalogError(f"{context}.timeout_seconds must be between 1 and 3600")
             cwd = gate.get("cwd", ".")
             if (
                 not isinstance(cwd, str)
@@ -174,9 +170,7 @@ def load_catalog(path: Path) -> dict[str, Any]:
                 or Path(cwd).is_absolute()
                 or ".." in Path(cwd).parts
             ):
-                raise CatalogError(
-                    f"{context}.cwd must be a safe repository-relative path"
-                )
+                raise CatalogError(f"{context}.cwd must be a safe repository-relative path")
         elif gate_type == "external_blocker":
             _require_string(gate, "actual", context)
             _require_string(gate, "required_fix", context)
@@ -208,9 +202,7 @@ def load_catalog(path: Path) -> dict[str, Any]:
             raise CatalogError(f"{context}.gate_ids must be a non-empty string array")
         unknown = sorted(set(referenced) - gate_ids)
         if unknown:
-            raise CatalogError(
-                f"{context} references unknown gates: {', '.join(unknown)}"
-            )
+            raise CatalogError(f"{context} references unknown gates: {', '.join(unknown)}")
     return raw
 
 
@@ -221,9 +213,7 @@ def traceability_statuses(path: Path) -> dict[str, str]:
     except OSError as exc:
         raise CatalogError(f"cannot load traceability matrix {path}: {exc}") from exc
     if not rows or not {"requirement_id", "status"}.issubset(rows[0]):
-        raise CatalogError(
-            "traceability matrix requires requirement_id and status columns"
-        )
+        raise CatalogError("traceability matrix requires requirement_id and status columns")
     identifiers = [str(row.get("requirement_id", "")).strip() for row in rows]
     if "" in identifiers:
         raise CatalogError("traceability matrix contains a blank requirement_id")
@@ -240,9 +230,7 @@ def traceability_statuses(path: Path) -> dict[str, str]:
     )
     if invalid:
         raise CatalogError(
-            "traceability matrix contains invalid statuses: {}".format(
-                ", ".join(invalid)
-            )
+            "traceability matrix contains invalid statuses: {}".format(", ".join(invalid))
         )
     return statuses
 
@@ -251,9 +239,7 @@ def traceability_requirement_ids(path: Path) -> set[str]:
     return set(traceability_statuses(path))
 
 
-def validate_catalog_coverage(
-    catalog: Mapping[str, Any], traceability_path: Path
-) -> None:
+def validate_catalog_coverage(catalog: Mapping[str, Any], traceability_path: Path) -> None:
     traced = traceability_requirement_ids(traceability_path)
     catalogued = {item["requirement_id"] for item in catalog["requirements"]}
     missing = sorted(traced - catalogued)
@@ -266,18 +252,14 @@ def validate_catalog_coverage(
         )
 
 
-def _command_environment(
-    extra: Mapping[str, Any] | None, root: Path = ROOT
-) -> dict[str, str]:
+def _command_environment(extra: Mapping[str, Any] | None, root: Path = ROOT) -> dict[str, str]:
     environment = os.environ.copy()
     environment.setdefault("RTK_TELEMETRY_DISABLED", "1")
     environment.setdefault("PYTHONPYCACHEPREFIX", "/tmp/agency-eval-pycache")
     environment.setdefault("UV_CACHE_DIR", "/tmp/agency-eval-uv-cache")
     local_bin = root / "backend" / ".venv" / "bin"
     if local_bin.is_dir():
-        environment["PATH"] = os.pathsep.join(
-            (str(local_bin), environment.get("PATH", ""))
-        )
+        environment["PATH"] = os.pathsep.join((str(local_bin), environment.get("PATH", "")))
     if extra:
         for key, value in extra.items():
             if not isinstance(key, str) or not isinstance(value, str):
@@ -316,27 +298,19 @@ def run_gate(gate: Mapping[str, Any], root: Path = ROOT) -> GateResult:
             check=False,
         )
         exit_code = completed.returncode
-        combined = "\n".join(
-            part for part in (completed.stdout, completed.stderr) if part
-        )
+        combined = "\n".join(part for part in (completed.stdout, completed.stderr) if part)
         status = "PASS" if completed.returncode == 0 else "FAIL"
     except FileNotFoundError as exc:
         combined = f"required executable unavailable: {exc.filename}"
         status = "NOT_RUN"
     except subprocess.TimeoutExpired as exc:
         stdout = (
-            exc.stdout.decode(errors="replace")
-            if isinstance(exc.stdout, bytes)
-            else exc.stdout
+            exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else exc.stdout
         )
         stderr = (
-            exc.stderr.decode(errors="replace")
-            if isinstance(exc.stderr, bytes)
-            else exc.stderr
+            exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else exc.stderr
         )
-        combined = "\n".join(
-            part for part in (stdout, stderr, "command timed out") if part
-        )
+        combined = "\n".join(part for part in (stdout, stderr, "command timed out") if part)
         status = "FAIL"
     duration = round(time.monotonic() - started, 3)
     safe_output = _redact(combined.strip())
@@ -400,9 +374,7 @@ def build_evaluations(
     evaluations: list[dict[str, Any]] = []
     for requirement in catalog["requirements"]:
         selected_gates = [gates_by_id[gate_id] for gate_id in requirement["gate_ids"]]
-        selected_results = [
-            gate_results[gate_id] for gate_id in requirement["gate_ids"]
-        ]
+        selected_results = [gate_results[gate_id] for gate_id in requirement["gate_ids"]]
         gate_status = _status_for(selected_results)
         trace_status = (
             trace_statuses.get(requirement["requirement_id"], "PASS")
@@ -420,8 +392,7 @@ def build_evaluations(
             for result in selected_results
         )
         actual = f"traceability status is {trace_status}; " + "; ".join(
-            f"{result.gate_id}: {result.output_excerpt[-500:]}"
-            for result in selected_results
+            f"{result.gate_id}: {result.output_excerpt[-500:]}" for result in selected_results
         )
         evaluator = (
             "deterministic"
@@ -519,9 +490,7 @@ def _source_commit_matches_provenance(root: Path, claimed: Any) -> bool:
     if changed.returncode != 0:
         return False
     paths = {
-        raw.decode("utf-8", errors="surrogateescape")
-        for raw in changed.stdout.split(b"\0")
-        if raw
+        raw.decode("utf-8", errors="surrogateescape") for raw in changed.stdout.split(b"\0") if raw
     }
     return bool(paths) and paths <= {"agent/eval-results.json"}
 
@@ -533,12 +502,9 @@ def _report_aggregates(
     for evaluation in evaluations:
         counts[evaluation["status"]] += 1
     open_critical = sum(
-        item["status"] != "PASS" and item["severity"] == "CRITICAL"
-        for item in evaluations
+        item["status"] != "PASS" and item["severity"] == "CRITICAL" for item in evaluations
     )
-    open_high = sum(
-        item["status"] != "PASS" and item["severity"] == "HIGH" for item in evaluations
-    )
+    open_high = sum(item["status"] != "PASS" and item["severity"] == "HIGH" for item in evaluations)
     if counts["FAIL"] or counts["NOT_RUN"] or open_critical or open_high:
         overall = "FAIL"
     elif counts["BLOCKED"]:
@@ -583,9 +549,7 @@ def build_report(
     }
 
 
-def _require_exact_keys(
-    record: Mapping[str, Any], expected: set[str], context: str
-) -> None:
+def _require_exact_keys(record: Mapping[str, Any], expected: set[str], context: str) -> None:
     missing = expected - set(record)
     extra = set(record) - expected
     if missing or extra:
@@ -600,9 +564,7 @@ def _validate_generated_at(value: Any) -> None:
     try:
         parsed = datetime.fromisoformat(value[:-1] + "+00:00")
     except ValueError as exc:
-        raise CatalogError(
-            "results.generated_at must be a UTC ISO-8601 timestamp"
-        ) from exc
+        raise CatalogError("results.generated_at must be a UTC ISO-8601 timestamp") from exc
     if parsed.tzinfo != timezone.utc:
         raise CatalogError("results.generated_at must be UTC")
 
@@ -631,26 +593,16 @@ def _parse_evidence(
         exit_claim = match.group("exit")
         if gate["type"] == "external_blocker":
             if status not in {"BLOCKED", "NOT_RUN"} or exit_claim != "n/a":
-                raise CatalogError(
-                    f"{context}.evidence cannot override external blocker {gate_id}"
-                )
+                raise CatalogError(f"{context}.evidence cannot override external blocker {gate_id}")
         else:
             if status == "BLOCKED":
-                raise CatalogError(
-                    f"{context}.evidence command gate {gate_id} cannot be BLOCKED"
-                )
+                raise CatalogError(f"{context}.evidence command gate {gate_id} cannot be BLOCKED")
             if status == "PASS" and exit_claim != "0":
-                raise CatalogError(
-                    f"{context}.evidence PASS gate {gate_id} must exit zero"
-                )
+                raise CatalogError(f"{context}.evidence PASS gate {gate_id} must exit zero")
             if status == "NOT_RUN" and exit_claim != "n/a":
-                raise CatalogError(
-                    f"{context}.evidence NOT_RUN gate {gate_id} must use exit=n/a"
-                )
+                raise CatalogError(f"{context}.evidence NOT_RUN gate {gate_id} must use exit=n/a")
             if status == "FAIL" and exit_claim == "0":
-                raise CatalogError(
-                    f"{context}.evidence FAIL gate {gate_id} cannot exit zero"
-                )
+                raise CatalogError(f"{context}.evidence FAIL gate {gate_id} cannot exit zero")
         statuses.append(status)
     return statuses
 
@@ -701,18 +653,14 @@ def validate_report(
     if not SHA256_PATTERN.fullmatch(str(report.get("source_tree_sha256", ""))):
         raise CatalogError("results.source_tree_sha256 must be a SHA-256 digest")
     if report.get("source_tree_sha256") != source_tree_sha256:
-        raise CatalogError(
-            "results.source_tree_sha256 does not match the evaluated tree"
-        )
+        raise CatalogError("results.source_tree_sha256 does not match the evaluated tree")
     if (
         not isinstance(report.get("source_file_count"), int)
         or isinstance(report.get("source_file_count"), bool)
         or report.get("source_file_count") != source_file_count
         or source_file_count < 1
     ):
-        raise CatalogError(
-            "results.source_file_count does not match the evaluated tree"
-        )
+        raise CatalogError("results.source_file_count does not match the evaluated tree")
     if report.get("apply_recommendation") != "DENY_APPLY":
         raise CatalogError("results.apply_recommendation must remain DENY_APPLY")
     hard_gates = report.get("hard_gates")
@@ -737,9 +685,7 @@ def validate_report(
         raise CatalogError("results.evaluations must be a non-empty list")
     if len(evaluations) != len(requirements):
         raise CatalogError("result requirement coverage does not match the catalog")
-    for index, (evaluation, requirement) in enumerate(
-        zip(evaluations, requirements, strict=True)
-    ):
+    for index, (evaluation, requirement) in enumerate(zip(evaluations, requirements, strict=True)):
         context = f"evaluations[{index}]"
         if not isinstance(evaluation, dict):
             raise CatalogError(f"{context} must be an object")
@@ -784,9 +730,7 @@ def validate_report(
         _validate_actual_trace_and_gates(
             evaluation["actual"], selected_gates, trace_status, context
         )
-        derived_status = _evaluation_status(
-            _status_for_claims(gate_statuses), trace_status
-        )
+        derived_status = _evaluation_status(_status_for_claims(gate_statuses), trace_status)
         if evaluation["status"] != derived_status:
             raise CatalogError(f"{context}.status is not supported by its evidence")
         expected_fix = "" if derived_status == "PASS" else requirement["required_fix"]
@@ -810,9 +754,7 @@ def validate_report(
         raise CatalogError("results.status does not match recomputed aggregates")
 
 
-def _select_gates(
-    catalog: Mapping[str, Any], selected: set[str] | None
-) -> list[dict[str, Any]]:
+def _select_gates(catalog: Mapping[str, Any], selected: set[str] | None) -> list[dict[str, Any]]:
     gates = list(catalog["gates"])
     if selected is None:
         return gates
@@ -841,9 +783,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG)
     parser.add_argument("--traceability", type=Path, default=DEFAULT_TRACEABILITY)
-    parser.add_argument(
-        "--output", type=Path, help="write the JSON report to this path"
-    )
+    parser.add_argument("--output", type=Path, help="write the JSON report to this path")
     parser.add_argument(
         "--only",
         action="append",

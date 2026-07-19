@@ -113,9 +113,7 @@ def main() -> int:
             identity_token=identity_token,
         )
         verify_run(run)
-        print(
-            json.dumps({"result": "PASS", "mode": "restore", "run_id": run["run_id"]})
-        )
+        print(json.dumps({"result": "PASS", "mode": "restore", "run_id": run["run_id"]}))
         return 0
 
     command_scope = uuid.uuid4().hex

@@ -83,9 +83,7 @@ class EvalHarnessTests(unittest.TestCase):
             cwd=self.root,
             check=True,
         )
-        subprocess.run(
-            ["git", "config", "user.name", "Eval Test"], cwd=self.root, check=True
-        )
+        subprocess.run(["git", "config", "user.name", "Eval Test"], cwd=self.root, check=True)
         subprocess.run(["git", "add", "."], cwd=self.root, check=True)
         subprocess.run(
             ["git", "commit", "--quiet", "-m", "fixture"],
@@ -98,12 +96,8 @@ class EvalHarnessTests(unittest.TestCase):
 
     def test_executes_commands_and_preserves_explicit_external_blockers(self) -> None:
         catalog = load_catalog(self.catalog_path)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
-        evaluations = build_evaluations(
-            catalog, results, traceability_statuses(self.traceability)
-        )
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
+        evaluations = build_evaluations(catalog, results, traceability_statuses(self.traceability))
         report = build_report(catalog, evaluations, root=self.root)
 
         self.assertEqual([item["status"] for item in evaluations], ["PASS", "BLOCKED"])
@@ -136,9 +130,7 @@ class EvalHarnessTests(unittest.TestCase):
 
     def test_partial_traceability_cannot_be_reported_as_pass(self) -> None:
         catalog = load_catalog(self.catalog_path)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         with self.traceability.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=["requirement_id", "status"])
             writer.writeheader()
@@ -150,9 +142,7 @@ class EvalHarnessTests(unittest.TestCase):
                 }
             )
 
-        evaluations = build_evaluations(
-            catalog, results, traceability_statuses(self.traceability)
-        )
+        evaluations = build_evaluations(catalog, results, traceability_statuses(self.traceability))
 
         self.assertEqual(evaluations[0]["status"], "FAIL")
         self.assertIn("TRACEABILITY=PARTIAL", evaluations[0]["evidence"])
@@ -164,15 +154,11 @@ class EvalHarnessTests(unittest.TestCase):
         self.catalog_path.write_text(json.dumps(catalog), encoding="utf-8")
 
         with self.assertRaisesRegex(CatalogError, "missing=REQ-002"):
-            validate_catalog_coverage(
-                load_catalog(self.catalog_path), self.traceability
-            )
+            validate_catalog_coverage(load_catalog(self.catalog_path), self.traceability)
 
     def test_result_schema_rejects_unsupported_claims_and_missing_fixes(self) -> None:
         catalog = load_catalog(self.catalog_path)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         statuses = traceability_statuses(self.traceability)
         report = build_report(
             catalog,
@@ -187,9 +173,7 @@ class EvalHarnessTests(unittest.TestCase):
     def test_fabricated_all_pass_report_is_rejected(self) -> None:
         catalog = load_catalog(self.catalog_path)
         statuses = traceability_statuses(self.traceability)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         report = build_report(
             catalog,
             build_evaluations(catalog, results, statuses),
@@ -225,9 +209,7 @@ class EvalHarnessTests(unittest.TestCase):
     def test_catalog_bound_fields_and_gate_set_reject_tampering(self) -> None:
         catalog = load_catalog(self.catalog_path)
         statuses = traceability_statuses(self.traceability)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         report = build_report(
             catalog,
             build_evaluations(catalog, results, statuses),
@@ -248,9 +230,7 @@ class EvalHarnessTests(unittest.TestCase):
             with self.subTest(key=key):
                 field_tamper = copy.deepcopy(report)
                 field_tamper["evaluations"][0][key] = value
-                with self.assertRaisesRegex(
-                    CatalogError, f"{key} is not catalog-bound"
-                ):
+                with self.assertRaisesRegex(CatalogError, f"{key} is not catalog-bound"):
                     validate_report(field_tamper, catalog, statuses, root=self.root)
 
         gate_tamper = copy.deepcopy(report)
@@ -262,9 +242,7 @@ class EvalHarnessTests(unittest.TestCase):
     def test_source_and_top_level_tampering_is_rejected(self) -> None:
         catalog = load_catalog(self.catalog_path)
         statuses = traceability_statuses(self.traceability)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         report = build_report(
             catalog,
             build_evaluations(catalog, results, statuses),
@@ -303,9 +281,7 @@ class EvalHarnessTests(unittest.TestCase):
     def test_checked_in_result_commit_preserves_source_provenance(self) -> None:
         catalog = load_catalog(self.catalog_path)
         statuses = traceability_statuses(self.traceability)
-        results = {
-            gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]
-        }
+        results = {gate["gate_id"]: run_gate(gate, self.root) for gate in catalog["gates"]}
         report = build_report(
             catalog,
             build_evaluations(catalog, results, statuses),
@@ -314,9 +290,7 @@ class EvalHarnessTests(unittest.TestCase):
         result_path = self.root / "agent" / "eval-results.json"
         result_path.parent.mkdir()
         result_path.write_text(json.dumps(report), encoding="utf-8")
-        subprocess.run(
-            ["git", "add", "agent/eval-results.json"], cwd=self.root, check=True
-        )
+        subprocess.run(["git", "add", "agent/eval-results.json"], cwd=self.root, check=True)
         subprocess.run(
             ["git", "commit", "--quiet", "-m", "record evaluation"],
             cwd=self.root,
@@ -329,8 +303,7 @@ class EvalHarnessTests(unittest.TestCase):
         catalog = load_catalog(DEFAULT_CATALOG)
         gates = {gate["gate_id"]: gate for gate in catalog["gates"]}
         requirements = {
-            requirement["requirement_id"]: requirement
-            for requirement in catalog["requirements"]
+            requirement["requirement_id"]: requirement for requirement in catalog["requirements"]
         }
 
         self.assertEqual(
@@ -351,10 +324,7 @@ class EvalHarnessTests(unittest.TestCase):
             "command": [
                 sys.executable,
                 "-c",
-                "print('/"
-                + "Users/example/private Authorization: Bearer ghp_"
-                + "A" * 40
-                + "')",
+                "print('/" + "Users/example/private Authorization: Bearer ghp_" + "A" * 40 + "')",
             ],
             "timeout_seconds": 30,
         }

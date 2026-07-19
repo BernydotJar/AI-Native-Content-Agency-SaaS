@@ -18,9 +18,7 @@ from control_plane.storage import AuditEventRow, IdempotencyRow, RunRow, ToolEvi
 def main() -> None:
     database_url = os.environ.get("AGENCY_DATABASE_URL", "")
     if not database_url.startswith(("postgresql://", "postgresql+psycopg://")):
-        raise SystemExit(
-            "AGENCY_DATABASE_URL must select the isolated PostgreSQL test database"
-        )
+        raise SystemExit("AGENCY_DATABASE_URL must select the isolated PostgreSQL test database")
     settings = Settings(
         environment="test",
         auth_mode="development_headers",
@@ -110,8 +108,7 @@ def main() -> None:
                     .select_from(IdempotencyRow)
                     .where(
                         IdempotencyRow.tenant_id == tenant_id,
-                        IdempotencyRow.idempotency_key
-                        == f"ci-postgres-run-{namespace}",
+                        IdempotencyRow.idempotency_key == f"ci-postgres-run-{namespace}",
                     )
                 )
                 == 1
@@ -183,10 +180,7 @@ def main() -> None:
         assert approval_response.status_code == 200, approval_response.text
         completed = approval_response.json()
         assert completed["status"] == "completed"
-        assert (
-            completed["approval"]["idempotency_key"]
-            == f"ci-postgres-approval-{namespace}"
-        )
+        assert completed["approval"]["idempotency_key"] == f"ci-postgres-approval-{namespace}"
         assert len(completed["artifacts"]) == 8
         assert len(completed["evidence"]) == 8
         assert completed["external_side_effects"] is False
@@ -196,9 +190,7 @@ def main() -> None:
     # reconstructed from PostgreSQL rather than retained process state.
     restarted_application = create_app(settings)
     with TestClient(restarted_application) as restarted_client:
-        restarted = restarted_client.get(
-            f"/api/v1/runs/{run['run_id']}", headers=identity
-        )
+        restarted = restarted_client.get(f"/api/v1/runs/{run['run_id']}", headers=identity)
         assert restarted.status_code == 200, restarted.text
         assert restarted.json() == completed
         restarted_cross_tenant = restarted_client.get(
