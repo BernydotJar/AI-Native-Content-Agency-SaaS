@@ -48,4 +48,3 @@ Registra source, observed_at, format/audio y sandbox. Adapta la tendencia a un p
 ## Métricas
 
 Saves, shares cualificados, replies, profile action o conversion según el rol. Follower growth es secundaria salvo que el brief la justifique.
-

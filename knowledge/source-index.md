@@ -47,4 +47,3 @@ Fecha de revisión de las fuentes: 2026-07-17.
 ## Política de atribución
 
 Cada afirmación derivada de estas fuentes debe usar al menos una referencia S1–S4 y un rango de líneas. Si se combina con experiencia del equipo, se etiqueta como inference. Si se propone una acción sin evidencia, se etiqueta como hypothesis.
-

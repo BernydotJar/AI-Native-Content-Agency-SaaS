@@ -119,4 +119,3 @@ Una tendencia sólo entra al plan si:
 - Risk la considera segura.
 
 Viralidad sin relevancia es una métrica de vanidad. S4, 1017–1044 y 1289–1309 distingue alcance amplio de conexión con la audiencia correcta.
-

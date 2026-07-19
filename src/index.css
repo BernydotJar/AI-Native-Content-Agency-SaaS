@@ -498,7 +498,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Grid overlay background */
 .pixel-grid {
   background-size: 20px 20px;
-  background-image: 
+  background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 

@@ -1,6 +1,6 @@
 # Production Foundation Architecture
 
-Updated: 2026-07-18  
+Updated: 2026-07-18
 Status: Implementation in progress; cloud apply blocked by billing
 
 ## Runtime topology

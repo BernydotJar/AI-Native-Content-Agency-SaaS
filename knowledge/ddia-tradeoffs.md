@@ -70,4 +70,3 @@ Cuando Research entrega un concepto técnico, añade:
 3. **Resolución operativa:** qué decisión o experimento pequeño puede ejecutar la audiencia.
 
 Este formato organiza la explicación; no prueba la veracidad del concepto. La evidencia sigue siendo obligatoria.
-

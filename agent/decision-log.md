@@ -75,4 +75,3 @@
 - Status: Accepted
 - Chosen option: Defer GKE/OpenShift, service mesh, GPUs/vLLM/llm-d, Pub/Sub/Cloud Tasks, Redis, and pgvector until a demonstrated behavior requires them.
 - Trade-off: Avoids premature distributed-systems cost; future scale work remains explicit.
-

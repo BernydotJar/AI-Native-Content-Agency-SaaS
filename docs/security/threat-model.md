@@ -1,6 +1,6 @@
 # Threat Model — Production Foundation V1
 
-Status: Active design and verification document  
+Status: Active design and verification document
 Updated: 2026-07-18
 
 ## Scope and assets

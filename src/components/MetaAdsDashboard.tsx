@@ -1,11 +1,11 @@
 import React from "react";
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
-  RefreshCw, 
-  Cpu, 
-  BarChart3 
+import {
+  TrendingUp,
+  DollarSign,
+  Users,
+  RefreshCw,
+  Cpu,
+  BarChart3
 } from "lucide-react";
 import { GlowCard } from "./GlowCard";
 
@@ -156,7 +156,7 @@ export const MetaAdsDashboard: React.FC<MetaAdsDashboardProps> = ({
                     <span>${camp.spent} / ${camp.budget}</span>
                   </div>
                   <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       role="progressbar"
                       aria-label={`Presupuesto consumido de ${camp.name}`}
                       aria-valuemin={0}

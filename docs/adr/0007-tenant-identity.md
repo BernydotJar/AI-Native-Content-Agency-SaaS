@@ -11,4 +11,3 @@
 - Review trigger: First external tenant or production identity-provider selection.
 - Date: 2026-07-18
 - Owner: Orchestrator
-

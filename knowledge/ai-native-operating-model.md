@@ -79,4 +79,3 @@ S1, 605–629 describe estructuras más lineales y personas cercanas al cliente.
 - [ ] El feedback apunta a esa versión.
 - [ ] La memoria evita secretos y datos innecesarios.
 - [ ] El siguiente experimento es falsable.
-

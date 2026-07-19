@@ -11,4 +11,3 @@ Production Foundation V1 decisions are accepted for the current vertical slice a
 7. [Tenant and identity boundary](0007-tenant-identity.md)
 8. [Terraform-managed GCP foundation](0008-terraform-gcp.md)
 9. [No Kubernetes or self-hosted inference yet](0009-no-kubernetes-vllm.md)
-

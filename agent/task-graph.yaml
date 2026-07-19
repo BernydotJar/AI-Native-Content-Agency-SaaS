@@ -30,4 +30,3 @@ edges:
     gate: apply_recommendation == ALLOW_DEV_APPLY
   - from: APPLY-DEV-001
     to: VERIFY-DEV-001
-

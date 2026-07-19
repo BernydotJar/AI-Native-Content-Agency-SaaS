@@ -1,9 +1,9 @@
 # Production Foundation V1
 
-Status: In progress  
-Version: 1.0  
-Date: 2026-07-18  
-Owner: Orchestrator  
+Status: In progress
+Version: 1.0
+Date: 2026-07-18
+Owner: Orchestrator
 Compatibility policy: additive changes may extend the `v1` API; removals, renamed fields, enum narrowing, or semantic changes require a new API/schema version.
 
 ## Purpose

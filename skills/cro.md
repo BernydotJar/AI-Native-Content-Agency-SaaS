@@ -56,4 +56,3 @@ Reducir fricción y aumentar una acción valiosa mediante experimentos éticos. 
 ## Métricas
 
 La conversión siempre tiene numerador, denominador, ventana y fuente. CAC requiere gasto y conversiones atribuibles; si conversiones es cero, CAC no se representa como cero.
-

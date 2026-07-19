@@ -37,4 +37,3 @@ Usa una tendencia únicamente con evidencia reciente y relevancia para la comuni
 ## Métricas
 
 Según rol: meaningful comments, qualified clicks, event registrations, community retention o conversion. Alcance amplio sin audiencia correcta no valida la estrategia.
-

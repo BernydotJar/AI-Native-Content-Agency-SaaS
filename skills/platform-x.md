@@ -36,4 +36,3 @@ Una señal de X necesita topic, source, observed_at y sandbox. Combínala con un
 ## Métricas
 
 Elige una: qualified replies, outbound clicks, saves/bookmarks observables o conversion. Impressions y likes son diagnóstico, no outcome por defecto.
-

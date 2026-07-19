@@ -11,4 +11,3 @@
 - Review trigger: A stable cross-provider capability cannot be represented without harmful abstraction leakage.
 - Date: 2026-07-18
 - Owner: Orchestrator
-

@@ -48,4 +48,3 @@ Registra audio/formato/topic, source, observed_at, territorio y sandbox. Si no e
 ## Métricas
 
 Qualified watch completion, saves, profile-to-action o conversion según objetivo. Views por sí solas no prueban impacto.
-

@@ -58,4 +58,3 @@ Diseñar contenido descubrible que responda una intención real y mantenga traza
 ## Métricas
 
 Según el objetivo: impresiones cualificadas, CTR orgánico, consultas relevantes, engagement de la página o conversión asistida. Define fuente y baseline; no agregues datos de distintas ventanas sin explicarlo.
-

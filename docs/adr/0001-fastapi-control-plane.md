@@ -11,4 +11,3 @@
 - Review trigger: A non-HTTP consumer or protocol requirement cannot use the application-service boundary.
 - Date: 2026-07-18
 - Owner: Orchestrator
-

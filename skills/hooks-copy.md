@@ -82,4 +82,3 @@ La pregunta debe abrir una decisión, no inducir miedo.
 - CTA;
 - claim_map;
 - risk_notes.
-

@@ -66,4 +66,3 @@ Explica qué cambió, para quién, cómo usarlo, limitaciones y dónde obtener s
 ## Métricas
 
 Primary según misión: click-through, reply, activation o conversion. Open rate puede ser señal imperfecta; documenta limitaciones de privacidad. Guardrails: unsubscribe, complaint, bounce y frecuencia.
-
