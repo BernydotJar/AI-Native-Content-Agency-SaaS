@@ -46,6 +46,8 @@ def main() -> None:
     compose = _read("docker-compose.yml")
     dockerfile = _read("Dockerfile")
     deploy = _read(".github/workflows/deploy-dev.yml")
+    ci = _read(".github/workflows/ci.yml")
+    platform_ci = ci.split("  platform:", maxsplit=1)[1].split("  security:", maxsplit=1)[0]
     bootstrap = _read("infra/bootstrap/main.tf")
     dev_foundation = _read("infra/environments/dev/main.tf")
     dev_runtime = _read("infra/environments/dev_runtime/main.tf")
@@ -325,6 +327,14 @@ def main() -> None:
         ),
         "container_non_root": "USER ${APP_UID}:${APP_GID}" in dockerfile,
         "container_locked_install": "--require-hashes" in dockerfile and "npm ci" in dockerfile,
+        "ci_python_uses_canonical_ruff_config": all(
+            command in ci
+            for command in (
+                "ruff check backend scripts --config backend/pyproject.toml",
+                "ruff format --check backend scripts --config backend/pyproject.toml",
+            )
+        ),
+        "ci_platform_preserves_eval_source_parent": "fetch-depth: 2" in platform_ci,
         "deploy_dev_only": "environment: dev" in deploy and "refs/heads/main" in deploy,
         "deploy_saved_plan_only": "terraform apply" in deploy and "tfplan" in deploy,
         "deploy_no_auto_approve": "-auto-approve" not in deploy,

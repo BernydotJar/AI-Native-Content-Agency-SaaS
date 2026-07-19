@@ -70,8 +70,8 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e backend
       - name: Lint Python
         run: |
-          ruff check backend scripts
-          ruff format --check backend scripts
+          ruff check backend scripts --config backend/pyproject.toml
+          ruff format --check backend scripts --config backend/pyproject.toml
       - name: Type-check control plane
         run: mypy --config-file backend/pyproject.toml backend/control_plane
       - name: Run Python tests
@@ -98,6 +98,9 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The canonical result commit must be able to prove its source parent.
+          fetch-depth: 2
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
