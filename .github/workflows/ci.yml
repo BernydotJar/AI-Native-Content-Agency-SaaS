@@ -55,8 +55,6 @@ jobs:
           --health-retries 20
         ports:
           - 5432:5432
-    env:
-      AGENCY_DATABASE_URL: postgresql+psycopg://agency:ci-postgres-only@127.0.0.1:5432/agency
     steps:
       - name: Check out source
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -77,10 +75,16 @@ jobs:
       - name: Run Python tests
         run: pytest -c backend/pyproject.toml backend/tests
       - name: Apply migrations to PostgreSQL
+        env:
+          AGENCY_DATABASE_URL: postgresql+psycopg://agency:ci-postgres-only@127.0.0.1:5432/agency
         run: alembic -c backend/alembic.ini upgrade head
       - name: Reject model and migration drift
+        env:
+          AGENCY_DATABASE_URL: postgresql+psycopg://agency:ci-postgres-only@127.0.0.1:5432/agency
         run: alembic -c backend/alembic.ini check
       - name: Verify PostgreSQL API integration
+        env:
+          AGENCY_DATABASE_URL: postgresql+psycopg://agency:ci-postgres-only@127.0.0.1:5432/agency
         run: python scripts/postgres_integration.py
       - name: Verify OpenAPI snapshot
         run: agency-export-openapi --output backend/openapi.json --check

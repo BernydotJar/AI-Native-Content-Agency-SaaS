@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Callable, Iterator
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine import Engine
 
 from control_plane.openapi import canonical_openapi
 
@@ -18,11 +21,30 @@ def alembic_config(database: Path) -> Config:
     return config
 
 
-def test_migration_upgrade_downgrade_and_reupgrade(tmp_path: Path) -> None:
+@pytest.fixture
+def engine_factory() -> Iterator[Callable[[str], Engine]]:
+    engines = []
+
+    def build(url: str) -> Engine:
+        engine = create_engine(url)
+        engines.append(engine)
+        return engine
+
+    yield build
+    for engine in engines:
+        engine.dispose()
+
+
+def test_migration_upgrade_downgrade_and_reupgrade(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    engine_factory: Callable[[str], Engine],
+) -> None:
+    monkeypatch.delenv("AGENCY_DATABASE_URL", raising=False)
     database = tmp_path / "migration.sqlite3"
     config = alembic_config(database)
     command.upgrade(config, "head")
-    engine = create_engine("sqlite+pysqlite:///{}".format(database))
+    engine = engine_factory("sqlite+pysqlite:///{}".format(database))
     expected = {
         "alembic_version",
         "tenants",
@@ -68,12 +90,16 @@ def test_migration_upgrade_downgrade_and_reupgrade(tmp_path: Path) -> None:
     assert inspect(engine).get_table_names() == ["alembic_version"]
     command.upgrade(config, "head")
     assert expected == set(inspect(engine).get_table_names())
-    engine.dispose()
 
 
-def test_migration_honors_injected_sqlalchemy_connection(tmp_path: Path) -> None:
+def test_migration_honors_injected_sqlalchemy_connection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    engine_factory: Callable[[str], Engine],
+) -> None:
+    monkeypatch.delenv("AGENCY_DATABASE_URL", raising=False)
     database = tmp_path / "injected-connection.sqlite3"
-    engine = create_engine("sqlite+pysqlite:///{}".format(database))
+    engine = engine_factory("sqlite+pysqlite:///{}".format(database))
     config = alembic_config(database)
     config.set_main_option("sqlalchemy.url", "invalid-dialect://must-not-be-used")
 
@@ -82,7 +108,6 @@ def test_migration_honors_injected_sqlalchemy_connection(tmp_path: Path) -> None
         command.upgrade(config, "head")
 
     assert "runs" in inspect(engine).get_table_names()
-    engine.dispose()
 
 
 def test_openapi_document_is_deterministic_and_versioned() -> None:

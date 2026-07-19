@@ -220,10 +220,20 @@ export function IntegratedApp({
 
   useEffect(() => {
     if (!run || isTerminalRun(run.status) || pollIntervalMs <= 0) return;
-    const timer = window.setInterval(() => {
-      void refreshRun(run.run_id, false);
-    }, pollIntervalMs);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const poll = async () => {
+      const refreshed = await refreshRun(run.run_id, false);
+      if (cancelled || (refreshed && isTerminalRun(refreshed.status))) return;
+      timer = window.setTimeout(() => void poll(), pollIntervalMs);
+    };
+
+    timer = window.setTimeout(() => void poll(), pollIntervalMs);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [pollIntervalMs, refreshRun, run]);
 
   const launchMission = async (event: FormEvent<HTMLFormElement>) => {

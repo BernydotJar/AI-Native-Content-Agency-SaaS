@@ -38,7 +38,7 @@ La ruta de CI y contenedor está fijada a:
 - Docker Desktop/Engine con Compose v2 para la ruta integrada;
 - Terraform 1.15.8 sólo para validar infraestructura.
 
-El paquete Python conserva `requires-python >=3.9`; CI y la imagen usan 3.13.5 para que resolución, análisis de tipos y producción compartan intérprete.
+El paquete Python requiere 3.10 o posterior; CI y la imagen usan 3.13.5 para que resolución, análisis de tipos y producción compartan intérprete. Python 3.9 ya no forma parte de la matriz soportada.
 
 ## Inicio integrado con Docker Compose
 
