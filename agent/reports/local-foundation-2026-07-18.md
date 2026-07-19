@@ -16,7 +16,7 @@ The current working tree contains a production-oriented local foundation with re
 | Frontend tests | PASS — 47 |
 | Frontend lint / typecheck / contract / build | PASS |
 | Live Playwright | PASS — fresh approval, rejection and app-only restart 3/3 against SPA/FastAPI/PostgreSQL |
-| Terraform/static platform | PASS_LOCAL — nine roots, 24 Terraform tests, 65 script tests and 61 controls; result remains `DENY_APPLY` |
+| Terraform/static platform | PASS_LOCAL — nine roots, 24 Terraform tests, 65 script tests and 63 controls; result remains `DENY_APPLY` |
 
 These counts describe the uncommitted repair working tree. GitHub Actions run `29672994585` passed the prior committed HEAD `34c3489`; it is not current-tree CI evidence.
 

@@ -1,14 +1,14 @@
 # Current State
 
-Updated: 2026-07-19T20:08:49Z
+Updated: 2026-07-19T22:29:41Z
 
 ## Repository and release truth
 
 - Branch: `feat/production-foundation-v1`; base branch: `main`.
-- Latest committed implementation repair: `06a13b21989a44e75db31b41e1c460ae24e01d7f`; this state update belongs to the following governance source commit.
+- Latest committed implementation repair: `6ac004e71673521ae601523c85c7561cf3cfa6bd`; this state update belongs to the following governance source commit.
 - Tracking issue: `#1`; draft PR: `#2`. The PR is open, draft, mergeable and unmerged.
-- GitHub Actions run `29672994585` passed all four jobs on `34c3489`. It predates the current uncommitted repair increment and is historical evidence, not proof of the present tree.
-- The repaired tree now has focused local source commits but has not been pushed or exercised by exact-tree GitHub Actions, and the repaired deploy workflow is not on `main`.
+- GitHub Actions run `29703195255` evaluated result commit `6d6b09e`: frontend and security passed; backend exposed root/default versus canonical Ruff formatting, and platform correctly rejected unverifiable result provenance under a depth-one checkout. The exact logs and failed gates are recorded.
+- Commit `6ac004e` supplies the canonical Ruff config in CI, fetches the result/source commit pair in platform, and adds two preventive static checks. That repair is locally green but has not yet been pushed or rerun; the deploy workflow is not on `main`.
 - `main` branch protection is now configured with strict required checks, administrator enforcement, one approving review, last-push approval, conversation resolution, linear history, and force-push/deletion disabled. The exact required checks are `Backend, migrations, OpenAPI, and PostgreSQL`; `Dependency, secret, and repository integrity gates`; `Frontend build, lint, and tests`; and `Terraform, Compose, container, and platform evals`.
 - Environments `dev-build` and `dev-plan` allow only protected branches. `dev` also names `BernydotJar` as reviewer and enables `prevent_self_review`. This does not satisfy independence because no distinct reviewer/dispatch actor is available. Actions variables remain unconfigured, so no deploy dispatch is eligible.
 - Release recommendation: `DENY_RELEASE`. Cloud recommendation: `DENY_APPLY`. No merge, release or deployment is authorized.
@@ -33,9 +33,9 @@ Updated: 2026-07-19T20:08:49Z
 - Frontend producer validation: 47 unit/component tests, lint, typecheck, OpenAPI mapping and build passed.
 - Live transport: a fresh disposable Compose project passed approval, rejection and restart persistence 3/3 against real networking and PostgreSQL in five seconds; no fetch interception or mocked transport is used, and exact volume cleanup passed. The first restart attempt exposed and recorded a Compose process-control defect before the corrected rerun.
 - Real PostgreSQL: the isolated non-deployed test stage applied migrations 0001-0003 and passed concurrent same-key single-execution, cross-tenant denial and application recreation on a fresh volume. Direct image inspection shows both targets run as UID 10001, with `httpx2` absent from runtime and present only in the integration stage.
-- Platform validation now passes 24 Terraform tests—bootstrap 4, dev 7, runtime 9, observability 3 and Artifact Registry 1—plus 65 platform script tests, 61/61 static controls, repository integrity, YAML, Compose and diff checks. The umbrella command is green with eval-result validation intentionally skipped; normal validation remains red until final-tree eval results are regenerated. Every cloud result remains explicit `DENY_APPLY`.
+- Platform validation now passes 24 Terraform tests—bootstrap 4, dev 7, runtime 9, observability 3 and Artifact Registry 1—plus 65 platform script tests, 63/63 static controls, repository integrity, YAML, Compose and diff checks. The two added controls require canonical CI Ruff configuration and source-parent visibility. The umbrella command is green with eval-result validation intentionally skipped; normal validation remains red until final-tree eval results are regenerated. Every cloud result remains explicit `DENY_APPLY`.
 - The first strict source-commit harness run passed Docker browser, real PostgreSQL, backend functional, image, platform, integrity and dependency gates, then correctly failed because its canonical backend Ruff configuration found three explicit-zip violations and 20 scripts needing canonical formatting. `TASK-HARNESS-RUFF-FIXER-016` repaired that parity gap without weakening policy; exact Ruff, 19 evaluator/governance tests and the complete source-only platform gate now pass, while the full harness rerun remains pending.
-- These are local results. The backend evaluator's 24/24 repeated races and timeout review are now corroborated by fresh real PostgreSQL. Governance passes 14 checks on 39 typed tasks, a 24-edge critical path, 42 findings, 71 evidence items and 31 risks. A role-separated Terraform review closes all four code findings locally; it is not live-cloud proof. The checked-in eval result intentionally remains stale until the final source commit, and a new final evaluator has not issued a release recommendation.
+- These are local results. The backend evaluator's 24/24 repeated races and timeout review are now corroborated by fresh real PostgreSQL. Governance passes 14 checks on 40 typed tasks, a 25-edge critical path, 44 findings, 73 evidence items and 31 risks. A role-separated Terraform review closes all four code findings locally; it is not live-cloud proof. The checked-in eval result is intentionally stale after the CI repair and must be regenerated from the next source commit; a new final evaluator has not issued a release recommendation.
 - Interactive visual inspection through the required in-app browser remains unavailable because that runtime exposed zero browser instances. Playwright proves behavior and transport, not manual visual/accessibility quality.
 
 ## Independent veto history and active gates

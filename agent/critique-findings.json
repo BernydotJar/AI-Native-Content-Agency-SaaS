@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-07-19T20:08:49Z",
+  "updated_at": "2026-07-19T22:29:41Z",
   "release_recommendation": "DENY_RELEASE",
   "apply_recommendation": "DENY_APPLY",
   "review_provenance": "Requirements, backend, Terraform and evaluation-harness critiques were performed by role-separated agents where available; their external vetoes remain active. Focused repairs pass their local reviewer gates, but no final exact-tree evaluator, distinct GitHub reviewer or real cloud-plan reviewer result is claimed.",
@@ -401,6 +401,26 @@
       "required_fix": "Declare the intended strictness for unequal zip iterables, format backend and scripts with the canonical backend configuration, and rerun the exact lint, format, governance and platform gates before regenerating results.",
       "evidence": "All three loops now declare strict=False; the canonical Ruff lint and 58-file format check pass, 19 evaluator/governance tests pass, and the complete source-only platform gate passes 24 Terraform tests, 65 script tests and 61 static controls.",
       "source_task": "TASK-HARNESS-RUFF-FIXER-016"
+    },
+    {
+      "finding_id": "CI-RUFF-CONFIG-PARITY-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_PENDING_EXACT_CI",
+      "target": "GitHub Actions Python format policy",
+      "description": "Run 29703195255 invoked Ruff from the repository root without an explicit config, so its default formatter contradicted the canonical backend configuration used by the strict harness and failed 19 scripts.",
+      "required_fix": "Pass backend/pyproject.toml explicitly to both CI Ruff commands and enforce that exact command pair in the platform policy evaluator.",
+      "evidence": "The CI backend job now supplies --config backend/pyproject.toml for lint and format; the exact commands pass locally and the new ci_python_uses_canonical_ruff_config control is green.",
+      "source_task": "TASK-CI-PROVENANCE-FIXER-017"
+    },
+    {
+      "finding_id": "CI-EVAL-PROVENANCE-DEPTH-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_PENDING_EXACT_CI",
+      "target": "GitHub Actions canonical result provenance",
+      "description": "The platform job in run 29703195255 used checkout depth one, so the result-only HEAD could not prove that its recorded source commit was the immediate source parent and governance failed closed.",
+      "required_fix": "Fetch the result commit and its source parent in the platform job, preserve the two-commit lifecycle, and enforce the checkout depth statically.",
+      "evidence": "The platform checkout now uses fetch-depth 2 and the new ci_platform_preserves_eval_source_parent control passes; exact remote confirmation remains pending the next result-only commit.",
+      "source_task": "TASK-CI-PROVENANCE-FIXER-017"
     },
     {
       "finding_id": "VISUAL-QA-001",

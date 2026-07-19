@@ -25,7 +25,7 @@ DLV-001,delivery,PASS,TASK-E2E-CI-PRODUCER-003,Documented Compose smoke fresh Po
 DLV-002,delivery,PASS,TASK-E2E-RESTART-FIXER-014,Current 58 pytest seven legacy unittests 47 frontend tests real PostgreSQL and fresh three-scenario browser suite pass locally
 DLV-003,delivery,PASS,TASK-POSTGRES-GATE-FIXER-013,UID 10001 locked runtime isolated test stage Compose health migration ordering restart and exact cleanup
 DLV-004,delivery,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Main requires the exact four jobs and review controls but the repaired workflow is not on main and no distinct reviewer is eligible
-DLV-005,delivery,PASS,TASK-TERRAFORM-REVIEWER-015,Nine roots 24 Terraform tests 65 script tests and 61 controls cover exact identities roles images rollback drift and notification gates
+DLV-005,delivery,PASS,TASK-TERRAFORM-REVIEWER-015,Nine roots 24 Terraform tests 65 script tests and 63 controls cover exact identities roles images rollback drift notification and CI provenance gates
 DLV-006,delivery,PASS,TASK-EVAL-HARNESS-003,The strict catalog covers all 52 requirements and 19 tamper provenance lifecycle and governance tests pass; canonical results are generated only from a committed source tree
 DLV-007,delivery,PASS,TASK-GOVERNANCE-WRITER-004,Setup API migration deployment bounded rollback incident sandbox and limitation docs match fresh executable evidence
 DLV-008,delivery,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Protected phase environments and immutable split OIDC exist but the workflow is not on main variables are absent and no distinct reviewer is eligible

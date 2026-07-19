@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: 2026-07-19T20:06:04Z
+updated_at: 2026-07-19T22:29:41Z
 critical_path:
   - TASK-REQ-AUDIT-002
   - TASK-BACKEND-PRODUCER-003
@@ -23,6 +23,7 @@ critical_path:
   - TASK-GOVERNANCE-WRITER-004
   - TASK-GITHUB-GATES-004
   - TASK-HARNESS-RUFF-FIXER-016
+  - TASK-CI-PROVENANCE-FIXER-017
   - EVAL-INC-004
   - APPLY-DEV-001
   - VERIFY-DEV-001
@@ -204,6 +205,9 @@ edges:
     to: TASK-HARNESS-RUFF-FIXER-016
     gate: critical_path_order
   - from: TASK-HARNESS-RUFF-FIXER-016
+    to: TASK-CI-PROVENANCE-FIXER-017
+    gate: critical_path_order
+  - from: TASK-CI-PROVENANCE-FIXER-017
     to: EVAL-INC-004
   - from: EVAL-INC-004
     to: APPLY-DEV-001

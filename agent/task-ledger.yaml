@@ -1,6 +1,6 @@
 schema_version: 2
 iteration: production-foundation-v1
-updated_at: 2026-07-19T20:08:49Z
+updated_at: 2026-07-19T22:29:41Z
 tasks:
   - task_id: TASK-MAP-001
     role: Repository Mapper
@@ -1248,6 +1248,49 @@ tasks:
     status: PASS
     owner: root_strict_harness_fixer_016
 
+  - task_id: TASK-CI-PROVENANCE-FIXER-017
+    role: GitHub Actions CI Fixer
+    objective: Repair exact remote Ruff and evaluation-provenance failures without weakening either gate.
+    inputs:
+      - GitHub Actions run 29703195255 at 6d6b09e2925b97b2f7943cb45b4857780f6490d2
+      - backend Lint Python job logs
+      - platform governance provenance job logs
+      - canonical two-commit evaluation lifecycle
+    dependencies:
+      - TASK-HARNESS-RUFF-FIXER-016
+    allowed_paths:
+      - .github/workflows/ci.yml
+      - scripts/platform_eval.py
+      - agent governance evidence
+    read_only_paths:
+      - backend/pyproject.toml
+      - run 29703195255 logs and metadata
+    write_lock:
+      - CI Ruff configuration and platform checkout depth
+      - static controls for those exact invariants
+    expected_outputs:
+      - one canonical Ruff policy in local harness and remote CI
+      - source-parent visibility for result-only commit validation
+      - exact remote rerun on a newly generated result commit
+    acceptance_criteria:
+      - backend CI passes explicit backend/pyproject.toml to Ruff lint and format
+      - platform CI fetches exactly enough history to validate the source parent
+      - two new deterministic platform controls pass
+      - source-only platform validation remains DENY_APPLY and green
+    validation:
+      - canonical Ruff lint and 58-file format check
+      - YAML and diff checks
+      - 19 evaluator governance tests
+      - 24 Terraform tests 65 script tests and 63 static controls
+      - exact four-job GitHub Actions rerun after result regeneration
+    prohibited_actions:
+      - disable or suppress Ruff formatting
+      - accept unverifiable result provenance
+      - amend or force-push the prior result commit
+      - mutate GCP or merge the PR
+    status: PASS
+    owner: root_github_actions_ci_fixer_017
+
   - task_id: EVAL-INC-004
     role: Independent Production Readiness Evaluator
     objective: Evaluate the complete repaired increment and issue the final release/apply veto or recommendation.
@@ -1270,6 +1313,7 @@ tasks:
       - TASK-E2E-RESTART-FIXER-014
       - TASK-TERRAFORM-REVIEWER-015
       - TASK-HARNESS-RUFF-FIXER-016
+      - TASK-CI-PROVENANCE-FIXER-017
     dependencies:
       - TASK-BACKEND-CRITIC-003
       - TASK-TERRAFORM-CRITIC-004
@@ -1289,6 +1333,7 @@ tasks:
       - TASK-E2E-RESTART-FIXER-014
       - TASK-TERRAFORM-REVIEWER-015
       - TASK-HARNESS-RUFF-FIXER-016
+      - TASK-CI-PROVENANCE-FIXER-017
     allowed_paths:
       - repository read-only
       - agent/reports/eval-inc-004.md
