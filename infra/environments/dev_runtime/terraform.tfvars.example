@@ -1,0 +1,6 @@
+project_id        = "agency-dev-unique"
+region            = "us-central1"
+state_bucket_name = "agency-bootstrap-unique-tfstate"
+
+runtime_deployer_service_account_email = "github-deploy-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+container_image = "us-central1-docker.pkg.dev/agency-dev-unique/agency-images/app@sha256:replace-with-64-hex-digest"

@@ -1,0 +1,14 @@
+# Examples only. Do not copy a billing account until it is open and explicitly selected.
+project_id        = "agency-bootstrap-unique"
+create_project    = false
+region            = "us-central1"
+state_bucket_name = "agency-bootstrap-unique-tfstate"
+
+github_repository_owner = "repository-owner"
+github_repository       = "repository-name"
+github_allowed_ref      = "refs/heads/main"
+github_workflow_path    = ".github/workflows/deploy-dev.yml"
+
+# billing_account = "AAAAAA-BBBBBB-CCCCCC"
+# organization_id = "000000000000"
+# folder_id       = "000000000000"

@@ -1,0 +1,33 @@
+schema_version: 1
+critical_path:
+  - TASK-SPEC-001
+  - TASK-BACKEND-001
+  - TASK-WEB-001
+  - TASK-PLATFORM-001
+  - TASK-CRITIQUE-001
+  - EVAL-INC-001
+  - APPLY-DEV-001
+  - VERIFY-DEV-001
+edges:
+  - from: TASK-MAP-001
+    to: TASK-BACKEND-001
+  - from: TASK-SPEC-001
+    to: TASK-BACKEND-001
+  - from: TASK-BACKEND-001
+    to: TASK-WEB-001
+  - from: TASK-GCP-DISC-001
+    to: TASK-PLATFORM-001
+  - from: TASK-BACKEND-001
+    to: TASK-PLATFORM-001
+  - from: TASK-WEB-001
+    to: TASK-CRITIQUE-001
+  - from: TASK-PLATFORM-001
+    to: TASK-CRITIQUE-001
+  - from: TASK-CRITIQUE-001
+    to: EVAL-INC-001
+  - from: EVAL-INC-001
+    to: APPLY-DEV-001
+    gate: apply_recommendation == ALLOW_DEV_APPLY
+  - from: APPLY-DEV-001
+    to: VERIFY-DEV-001
+

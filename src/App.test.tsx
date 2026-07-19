@@ -1,15 +1,15 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
+import { DemoApp } from "./control-plane/DemoApp";
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("campaign approval gate", () => {
+describe("explicit legacy demo campaign approval gate", () => {
   it("holds Publisher until approval and cancels pending work when approval is revoked", () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<DemoApp />);
 
     const lockedGate = screen.getByRole("button", { name: "Awaiting QA" });
     expect(lockedGate).toBeDisabled();
@@ -32,7 +32,7 @@ describe("campaign approval gate", () => {
 
   it("builds the writer pack from the operator thesis instead of a fixed template", () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<DemoApp />);
 
     fireEvent.change(screen.getByRole("textbox", { name: /campaign thesis/i }), {
       target: { value: "Why reversible AI experiments beat platform bets" },
@@ -54,7 +54,7 @@ describe("campaign approval gate", () => {
 
   it("recalls operator memory and enabled skills during the next campaign", () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<DemoApp />);
 
     fireEvent.click(screen.getByRole("switch", { name: /Activar Churn Prevention/i }));
     fireEvent.change(screen.getByRole("textbox", { name: /Add session memory flag/i }), {
@@ -71,7 +71,7 @@ describe("campaign approval gate", () => {
 
   it("stores CEO feedback before a completed run can be replaced", () => {
     vi.useFakeTimers();
-    render(<App />);
+    render(<DemoApp />);
 
     fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
     act(() => vi.advanceTimersByTime(18 * 1200 + 10));

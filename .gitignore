@@ -22,3 +22,44 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Local application data and environment overrides
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+
+# Terraform working data may contain credentials or secret material
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+tfplan.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local cloud credentials and generated deployment evidence
+gha-creds-*.json
+*.pem
+*.key
+application_default_credentials.json
+service-account*.json
+infra/**/backend.hcl
+infra/**/terraform.tfvars
+infra/**/plan-metadata.json

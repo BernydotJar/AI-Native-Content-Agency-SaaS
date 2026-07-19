@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "check:api-contract": "python3 scripts/generate_ts_contracts.py --check && node src/api/check-openapi.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview"

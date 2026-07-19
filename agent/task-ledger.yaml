@@ -1,0 +1,113 @@
+schema_version: 1
+iteration: production-foundation-v1
+updated_at: 2026-07-18T23:45:35Z
+tasks:
+  - task_id: TASK-MAP-001
+    role: Repository Mapper
+    status: PASS
+    owner: agent_knowledge
+    dependencies: []
+    validations:
+      - clean feature branch at baseline
+      - all P0 targets inspected
+  - task_id: TASK-SPEC-001
+    role: Specification Analyst
+    status: PASS
+    owner: docs_closure
+    dependencies: []
+    validations:
+      - all minimum outcomes and GCP gates traced
+  - task_id: TASK-GCP-DISC-001
+    role: Cloud Infrastructure Discovery Agent
+    status: PARTIAL_BLOCKED_EXTERNAL
+    owner: functional_audit
+    dependencies: []
+    outputs:
+      - masked GCP discovery report
+    blocker: zero visible open billing accounts and no authorized target project or region
+  - task_id: TASK-BACKEND-001
+    role: Backend API and Data Producer
+    status: PASS
+    owner: root
+    dependencies:
+      - TASK-SPEC-001
+    outputs:
+      - FastAPI control plane
+      - durable repository and migrations
+      - Greenlight idempotency concurrency and error tests
+    validations:
+      - 40 backend tests passed on Python 3.13 and independently on Python 3.9
+      - 16 legacy Python tests passed
+      - ruff mypy Alembic and OpenAPI passed
+  - task_id: TASK-WEB-001
+    role: Frontend Integration Producer
+    status: PASS
+    owner: root
+    dependencies:
+      - TASK-BACKEND-001
+    outputs:
+      - typed API client
+      - backend-driven UI
+      - explicit demo isolation
+    validations:
+      - 45 frontend tests passed
+      - lint typecheck build and OpenAPI contract passed
+      - stable retry keys and stale-poll guards independently verified
+  - task_id: TASK-PLATFORM-001
+    role: Platform and Terraform Producer
+    status: PASS_LOCAL
+    owner: functional_audit
+    dependencies:
+      - TASK-GCP-DISC-001
+      - TASK-BACKEND-001
+      - TASK-WEB-001
+    outputs:
+      - non-root combined image and Compose
+      - CI and gated dev workflow
+      - Terraform bootstrap and dev environment
+      - static plan and platform veto gates
+    validations:
+      - exact Python lock install and advisory scan passed
+      - live Compose migration HTTP and restart persistence passed
+      - eight Terraform roots validate with multi-platform locks
+      - two Terraform mock tests and 30 static checks passed
+  - task_id: TASK-SEC-REVIEW-001
+    role: Independent Security and Reliability Reviewer
+    status: REAUDIT_PENDING
+    owner: docs_closure
+    dependencies:
+      - TASK-BACKEND-001
+      - TASK-WEB-001
+      - TASK-PLATFORM-001
+    blocker: initial medium dependency finding repaired; final exact-tree review pending
+  - task_id: TASK-CRITIQUE-001
+    role: Independent Cloud Infrastructure Critique
+    status: IN_PROGRESS
+    owner: agent_knowledge
+    dependencies:
+      - TASK-PLATFORM-001
+    outputs:
+      - read-only cloud finding report and apply recommendation
+  - task_id: EVAL-INC-001
+    role: Independent Production Readiness Evaluator
+    status: TODO
+    owner: unassigned
+    dependencies:
+      - TASK-SEC-REVIEW-001
+      - TASK-CRITIQUE-001
+    outputs:
+      - application release and cloud apply recommendations
+  - task_id: APPLY-DEV-001
+    role: Exact Saved Plan Apply
+    status: BLOCKED_EXTERNAL
+    owner: root
+    dependencies:
+      - EVAL-INC-001
+    gate: exact_plan_recommendation == ALLOW_DEV_APPLY
+    blocker: no open billing account target hierarchy project region or real saved plan
+  - task_id: VERIFY-DEV-001
+    role: Post-apply Verification
+    status: BLOCKED_EXTERNAL
+    owner: root
+    dependencies:
+      - APPLY-DEV-001

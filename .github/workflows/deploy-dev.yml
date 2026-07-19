@@ -1,0 +1,310 @@
+name: Deploy dev from an independently evaluated plan
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  build_image:
+    name: Build and push the immutable image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev-build
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.image.outputs.reference }}
+    steps:
+      - name: Check out the exact source revision
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Authenticate as the image-only identity
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_BUILD_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGE_PUSHER_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+      - name: Verify granular image permissions
+        run: >-
+          python scripts/gcp_permission_preflight.py
+          --phase build
+          --project-id "${{ vars.GCP_DEV_PROJECT_ID }}"
+          --region "${{ vars.GCP_REGION }}"
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Configure private Artifact Registry authentication
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+      - name: Build and push the combined image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_DEV_PROJECT_ID }}/agency-images/app:${{ github.sha }}-${{ github.run_attempt }}
+          target: runtime
+          provenance: mode=max
+          sbom: true
+      - name: Bind the immutable image digest
+        id: image
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          reference="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_DEV_PROJECT_ID }}/agency-images/app@${IMAGE_DIGEST}"
+          printf 'reference=%s\n' "${reference}" >> "${GITHUB_OUTPUT}"
+
+  plan_runtime:
+    name: Produce the exact dev-runtime plan
+    needs: build_image
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: dev-plan
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ needs.build_image.outputs.image }}
+      plan_sha256: ${{ steps.metadata.outputs.plan_sha256 }}
+      source_tree_sha256: ${{ steps.metadata.outputs.source_tree_sha256 }}
+      source_commit: ${{ steps.metadata.outputs.source_commit }}
+      workflow_ref: ${{ steps.metadata.outputs.workflow_ref }}
+    env:
+      TF_IN_AUTOMATION: "1"
+      TF_INPUT: "0"
+      TF_VAR_container_image: ${{ needs.build_image.outputs.image }}
+      TF_VAR_project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_runtime_deployer_service_account_email: ${{ vars.GCP_RUNTIME_DEPLOYER_SERVICE_ACCOUNT }}
+      TF_VAR_state_bucket_name: ${{ vars.GCP_TF_STATE_BUCKET }}
+    steps:
+      - name: Check out the exact source revision
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Authenticate as the read-only plan identity
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_PLAN_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_RUNTIME_PLAN_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+      - name: Verify granular plan permissions
+        run: >-
+          python scripts/gcp_permission_preflight.py
+          --phase plan
+          --project-id "${TF_VAR_project_id}"
+          --region "${TF_VAR_region}"
+          --state-bucket "${TF_VAR_state_bucket_name}"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize the dev-runtime backend
+        working-directory: infra/environments/dev_runtime
+        run: >-
+          terraform init
+          -input=false
+          -backend-config="bucket=${TF_VAR_state_bucket_name}"
+          -backend-config="prefix=environments/dev-runtime"
+      - name: Produce and statically inspect the exact plan
+        working-directory: infra/environments/dev_runtime
+        run: |
+          terraform validate
+          terraform plan -input=false -out=tfplan
+          terraform show -json tfplan > tfplan.json
+          python ../../../scripts/terraform_plan_gate.py tfplan.json
+      - name: Create full-tree plan metadata
+        id: metadata
+        working-directory: infra/environments/dev_runtime
+        env:
+          WORKFLOW_REF: ${{ github.repository }}/.github/workflows/deploy-dev.yml@${{ github.ref }}
+        run: |
+          python ../../../scripts/dev_apply_gate.py create-metadata \
+            --plan tfplan \
+            --repository ../../.. \
+            --source-commit "${GITHUB_SHA}" \
+            --image-reference "${TF_VAR_container_image}" \
+            --workflow-ref "${WORKFLOW_REF}" \
+            --output plan-metadata.json \
+            --github-output "${GITHUB_OUTPUT}"
+          {
+            printf '### Dev runtime plan requires an exact independent attestation\n\n'
+            printf -- '- Plan SHA-256: `%s`\n' "$(python -c 'import json; print(json.load(open("plan-metadata.json"))["plan_sha256"])')"
+            printf -- '- Source commit: `%s`\n' "${GITHUB_SHA}"
+            printf -- '- Image: `%s`\n' "${TF_VAR_container_image}"
+            printf -- '- Static precheck remains `REQUIRES_INDEPENDENT_REVIEW`; it cannot issue `ALLOW_DEV_APPLY`.\n'
+          } >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload short-lived plan evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-runtime-plan-${{ github.run_id }}
+          path: |
+            infra/environments/dev_runtime/tfplan
+            infra/environments/dev_runtime/tfplan.json
+            infra/environments/dev_runtime/plan-metadata.json
+          if-no-files-found: error
+          retention-days: 1
+
+  apply_runtime:
+    name: Verify attestation, apply exact plan, and collect evidence
+    needs: plan_runtime
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: "1"
+      TF_INPUT: "0"
+      TF_VAR_container_image: ${{ needs.plan_runtime.outputs.image }}
+      TF_VAR_project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_runtime_deployer_service_account_email: ${{ vars.GCP_RUNTIME_DEPLOYER_SERVICE_ACCOUNT }}
+      TF_VAR_state_bucket_name: ${{ vars.GCP_TF_STATE_BUCKET }}
+    steps:
+      - name: Check out the exact source revision
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Download the reviewed plan evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dev-runtime-plan-${{ github.run_id }}
+          path: infra/environments/dev_runtime
+      - name: Require ALLOW_DEV_APPLY for the exact plan, source, workflow, actor, and image
+        working-directory: infra/environments/dev_runtime
+        env:
+          DEV_APPLY_ATTESTATION_JSON: ${{ secrets.DEV_APPLY_ATTESTATION_JSON }}
+          WORKFLOW_REF: ${{ github.repository }}/.github/workflows/deploy-dev.yml@${{ github.ref }}
+        run: |
+          python ../../../scripts/dev_apply_gate.py verify \
+            --plan tfplan \
+            --repository ../../.. \
+            --source-commit "${GITHUB_SHA}" \
+            --image-reference "${TF_VAR_container_image}" \
+            --workflow-ref "${WORKFLOW_REF}" \
+            --workflow-actor "${GITHUB_ACTOR}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --environment dev
+      - name: Authenticate as the runtime-only deployment identity
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_APPLY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_RUNTIME_DEPLOYER_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+      - name: Verify granular apply permissions
+        run: >-
+          python scripts/gcp_permission_preflight.py
+          --phase apply
+          --project-id "${TF_VAR_project_id}"
+          --region "${TF_VAR_region}"
+          --state-bucket "${TF_VAR_state_bucket_name}"
+          --runtime-service-account-email "agency-runtime-dev@${TF_VAR_project_id}.iam.gserviceaccount.com"
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize the identical dev-runtime backend
+        working-directory: infra/environments/dev_runtime
+        run: >-
+          terraform init
+          -input=false
+          -backend-config="bucket=${TF_VAR_state_bucket_name}"
+          -backend-config="prefix=environments/dev-runtime"
+      - name: Apply only the attested saved plan
+        working-directory: infra/environments/dev_runtime
+        run: terraform apply -input=false tfplan
+      - name: Execute the checked passwordless migration job
+        working-directory: infra/environments/dev_runtime
+        run: |
+          migration_job="$(terraform output -raw migration_job_name)"
+          gcloud run jobs execute "${migration_job}" --project "${TF_VAR_project_id}" --region "${TF_VAR_region}" --wait
+      - name: Prove unauthenticated denial and the authenticated sandbox flow
+        working-directory: infra/environments/dev_runtime
+        run: |
+          service_uri="$(terraform output -raw cloud_run_service_uri)"
+          unauthenticated_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "${service_uri}/healthz")"
+          test "${unauthenticated_status}" = "401" || test "${unauthenticated_status}" = "403"
+          identity_token="$(gcloud auth print-identity-token --audiences="${service_uri}")"
+          printf '::add-mask::%s\n' "${identity_token}"
+          export AGENCY_ID_TOKEN="${identity_token}"
+          curl --fail --silent --show-error --header "Authorization: Bearer ${AGENCY_ID_TOKEN}" "${service_uri}/healthz" >/dev/null
+          curl --fail --silent --show-error --header "Authorization: Bearer ${AGENCY_ID_TOKEN}" "${service_uri}/readyz" >/dev/null
+          python ../../../scripts/http_smoke.py \
+            --base-url "${service_uri}" \
+            --identity-token-env AGENCY_ID_TOKEN
+      - name: Collect and verify non-sensitive runtime evidence
+        working-directory: infra/environments/dev_runtime
+        env:
+          PLAN_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_PLAN_SERVICE_ACCOUNT }}
+        run: |
+          evidence_dir="${RUNNER_TEMP}/dev-post-apply"
+          mkdir -p "${evidence_dir}"
+          service_name="$(terraform output -raw cloud_run_service_name)"
+          migration_job="$(terraform output -raw migration_job_name)"
+          runtime_service_account="$(terraform output -raw runtime_service_account_email)"
+          connection_name="$(terraform output -raw cloud_sql_connection_name)"
+          sql_instance="${connection_name##*:}"
+          gcloud run services describe "${service_name}" --project "${TF_VAR_project_id}" --region "${TF_VAR_region}" --format=json > "${evidence_dir}/service.json"
+          gcloud run services get-iam-policy "${service_name}" --project "${TF_VAR_project_id}" --region "${TF_VAR_region}" --format=json > "${evidence_dir}/service-iam.json"
+          gcloud run jobs describe "${migration_job}" --project "${TF_VAR_project_id}" --region "${TF_VAR_region}" --format=json > "${evidence_dir}/job.json"
+          gcloud sql instances describe "${sql_instance}" --project "${TF_VAR_project_id}" --format=json > "${evidence_dir}/sql.json"
+          gcloud projects get-iam-policy "${TF_VAR_project_id}" --format=json > "${evidence_dir}/project-iam.json"
+          gcloud artifacts repositories get-iam-policy agency-images --project "${TF_VAR_project_id}" --location "${TF_VAR_region}" --format=json > "${evidence_dir}/artifact-iam.json"
+          terraform output -json > "${evidence_dir}/outputs.json"
+          for attempt in 1 2 3 4 5 6; do
+            gcloud logging read \
+              "resource.type=cloud_run_revision AND resource.labels.service_name=${service_name}" \
+              --project "${TF_VAR_project_id}" --freshness=15m --limit=50 --format=json > "${evidence_dir}/logs.json"
+            python -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])) else 1)' "${evidence_dir}/logs.json" && break
+            sleep 5
+          done
+          python ../../../scripts/post_apply_verify.py \
+            --service "${evidence_dir}/service.json" \
+            --service-iam "${evidence_dir}/service-iam.json" \
+            --job "${evidence_dir}/job.json" \
+            --sql "${evidence_dir}/sql.json" \
+            --logs "${evidence_dir}/logs.json" \
+            --project-iam "${evidence_dir}/project-iam.json" \
+            --artifact-iam "${evidence_dir}/artifact-iam.json" \
+            --outputs "${evidence_dir}/outputs.json" \
+            --expected-image "${TF_VAR_container_image}" \
+            --runtime-service-account "${runtime_service_account}" \
+            --plan-service-account "${PLAN_SERVICE_ACCOUNT}" \
+            --deploy-service-account "${TF_VAR_runtime_deployer_service_account_email}" \
+            --project-id "${TF_VAR_project_id}" \
+            --output "${evidence_dir}/post-apply-report.json"
+      - name: Require a no-change second plan
+        working-directory: infra/environments/dev_runtime
+        run: |
+          set +e
+          terraform plan -input=false -detailed-exitcode -out=second.tfplan
+          result=$?
+          set -e
+          if [ "${result}" -ne 0 ]; then
+            terraform show -json second.tfplan > second.tfplan.json || true
+            exit "${result}"
+          fi
+          printf 'second_plan=NO_CHANGES\n' >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload the non-sensitive post-apply report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-post-apply-${{ github.run_id }}
+          path: ${{ runner.temp }}/dev-post-apply/post-apply-report.json
+          if-no-files-found: error
+          retention-days: 30

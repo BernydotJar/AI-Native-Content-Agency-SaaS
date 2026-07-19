@@ -4,7 +4,7 @@ import hashlib
 import json
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 
 def to_primitive(value: Any) -> Any:

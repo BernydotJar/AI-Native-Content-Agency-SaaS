@@ -1,8 +1,10 @@
-# Implementation Audit
+# Historical Implementation Audit — Baseline
 
 Fecha de corte: 17 de julio de 2026.
 
-Este documento compara el producto actual con `proposal_and_prompt.md` y con el contrato operativo de `agency_manifesto.md`. La evidencia se refiere a archivos ejecutables o pruebas del repositorio; no a intención futura.
+> Snapshot histórico, superado por Production Foundation V1 el 18 de julio de 2026. No describe el árbol actual. Consulta [`agent/reports/local-foundation-2026-07-18.md`](../agent/reports/local-foundation-2026-07-18.md), [`agent/current-state.md`](../agent/current-state.md) y la [matriz vigente](../agent/requirements-traceability.csv).
+
+Este documento compara el estado del producto en la fecha de corte con `proposal_and_prompt.md` y con el contrato operativo de `agency_manifesto.md`. La evidencia se refiere al árbol que existía entonces; se conserva para trazabilidad de baseline.
 
 ## Convención de estado
 

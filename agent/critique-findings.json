@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-18T23:45:35Z",
+  "findings": [
+    {
+      "finding_id": "BASE-CRIT-001",
+      "severity": "CRITICAL",
+      "status": "CLOSED_INDEPENDENTLY_VERIFIED",
+      "target": "runtime architecture",
+      "description": "The UI and Python runtime had no shared authoritative control plane.",
+      "evidence": "Default API-backed UI, 40 backend tests, 45 frontend tests and live HTTP persistence smoke."
+    },
+    {
+      "finding_id": "BASE-CRIT-002",
+      "severity": "HIGH",
+      "status": "CLOSED_INDEPENDENTLY_VERIFIED",
+      "target": "Greenlight and durability",
+      "description": "Run/approval state was process-local and not tenant/hash/policy/idempotency bound.",
+      "evidence": "Independent adversarial tenancy, replay, concurrency and manifest-TOCTOU probes passed."
+    },
+    {
+      "finding_id": "SEC-DEP-001",
+      "severity": "MEDIUM",
+      "status": "REPAIRED_AWAITING_FINAL_REAUDIT",
+      "target": "Python runtime lock",
+      "description": "setuptools 81.0.0 was affected by PYSEC-2026-3447.",
+      "evidence": "Both locks now pin 83.0.0; exact hash install, pip check and pip-audit report no known vulnerabilities."
+    },
+    {
+      "finding_id": "PLAT-COMPOSE-001",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "target": "local integrated topology",
+      "description": "An app attached only to an internal Compose network did not publish its declared loopback port.",
+      "evidence": "Separated edge/internal networks; localhost probes and full HTTP smoke pass; CI regression added."
+    },
+    {
+      "finding_id": "GCP-BLOCK-001",
+      "severity": "BLOCKER",
+      "status": "OPEN_EXTERNAL",
+      "target": "GCP dev plan/apply",
+      "description": "Zero visible open billing accounts and no authorized target project/region prevent a real saved plan or apply.",
+      "required_fix": "Satisfy the exact resume conditions in agent/reports/gcp-discovery-2026-07-18.md."
+    }
+  ]
+}

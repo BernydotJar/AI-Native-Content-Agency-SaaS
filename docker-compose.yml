@@ -1,0 +1,90 @@
+name: ai-native-content-agency
+
+x-app-environment: &app-environment
+  AGENCY_AUTH_MODE: development_headers
+  AGENCY_AUTO_CREATE_SCHEMA: "false"
+  AGENCY_CORS_ORIGINS: '["http://localhost:8080"]'
+  AGENCY_DATABASE_URL: postgresql+psycopg://agency:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@database:5432/agency
+  AGENCY_ENVIRONMENT: development
+  AGENCY_LOG_LEVEL: INFO
+  AGENCY_WEB_DIST: /app/static
+
+x-app-security: &app-security
+  read_only: true
+  init: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m
+
+services:
+  database:
+    image: postgres:15.13-alpine3.22@sha256:1414298ea93186123a6dcf872f778ba3bd2347edcbd2f31aa7bb2d9814ff5393
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agency
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_USER: agency
+      POSTGRES_INITDB_ARGS: --data-checksums
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agency -d agency"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agency-internal
+
+  migrate:
+    <<: *app-security
+    build:
+      context: .
+      target: runtime
+    image: ai-native-content-agency:${IMAGE_TAG:-local}
+    command: ["alembic", "-c", "/app/backend/alembic.ini", "upgrade", "head"]
+    environment: *app-environment
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - agency-internal
+    restart: "no"
+
+  app:
+    <<: *app-security
+    build:
+      context: .
+      target: runtime
+    image: ai-native-content-agency:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2).read()"
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - agency-internal
+      - agency-edge
+
+networks:
+  agency-internal:
+    internal: true
+  agency-edge:
+
+volumes:
+  postgres-data:

@@ -1,0 +1,13 @@
+# All identifiers are placeholders. Never use the unrelated active gcloud project.
+project_id     = "agency-dev-unique"
+create_project = false
+billing_account = "AAAAAA-BBBBBB-CCCCCC"
+region          = "us-central1"
+
+image_pusher_service_account_email     = "github-image-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+runtime_plan_service_account_email     = "github-plan-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+runtime_deployer_service_account_email = "github-deploy-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+
+notification_channel_display_names = ["Agency dev operators"]
+
+monthly_budget_usd = 50

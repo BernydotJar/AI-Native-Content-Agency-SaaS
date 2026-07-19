@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-18T23:45:35Z",
+  "evaluations": [
+    {
+      "eval_id": "EVAL-BASELINE-001",
+      "target": "pre-change repository",
+      "evaluator": "deterministic",
+      "status": "PASS",
+      "evidence": "EVD-BASE-001 through EVD-BASE-006",
+      "actual": "Existing prototype gates passed and its duplicate-state architecture was recorded."
+    },
+    {
+      "eval_id": "EVAL-APPLICATION-001",
+      "target": "integrated application exact tree",
+      "evaluator": "deterministic plus independent adversarial reviewer",
+      "status": "PASS_LOCAL",
+      "evidence": "EVD-APP-001 through EVD-APP-007 and EVD-WEB-001 through EVD-WEB-005",
+      "actual": "API database UI contracts retries Greenlight rollback and restart persistence pass; browser visual inspection remains unavailable."
+    },
+    {
+      "eval_id": "EVAL-SECURITY-001",
+      "target": "dependency and application security",
+      "evaluator": "independent security reviewer",
+      "status": "REPAIRED_REAUDIT_PENDING",
+      "evidence": "EVD-SEC-001 and EVD-SEC-002",
+      "actual": "The initial setuptools finding was valid; fixed locks now produce zero known vulnerabilities."
+    },
+    {
+      "eval_id": "EVAL-PLATFORM-001",
+      "target": "container Compose CI and static Terraform",
+      "evaluator": "deterministic plus independent mechanical audit",
+      "status": "PASS_STATIC",
+      "apply_recommendation": "DENY_APPLY",
+      "evidence": "EVD-PLAT-001 through EVD-PLAT-005",
+      "actual": "Local delivery and static cloud definitions pass; no real target or saved GCP plan exists."
+    },
+    {
+      "eval_id": "EVAL-GCP-001",
+      "target": "GCP dev deployment",
+      "evaluator": "read-only discovery",
+      "status": "BLOCKED_EXTERNAL",
+      "apply_recommendation": "DENY_APPLY",
+      "evidence": "EVD-GCP-001 through EVD-GCP-003",
+      "actual": "All six visible billing accounts are closed and no related project or region is authorized."
+    }
+  ]
+}

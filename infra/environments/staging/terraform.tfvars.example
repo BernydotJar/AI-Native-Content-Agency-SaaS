@@ -1,0 +1,4 @@
+environment = "staging"
+apply_mode  = "HUMAN_GATE_REQUIRED"
+project_id  = "replace-with-isolated-staging-project"
+region      = "replace-after-policy-check"

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple
+from time import perf_counter
+from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple, TypeVar
 
 from .memory import SQLiteMemory, utc_now
 from .models import (
@@ -26,6 +27,7 @@ from .tools import (
     ImageToVideoRequest,
     MetaAdsRequest,
     SandboxToolset,
+    ToolResponse,
     TrendsRequest,
     VideoOptimizationRequest,
 )
@@ -33,6 +35,8 @@ from .utils import stable_id, to_primitive
 
 
 Clock = Callable[[], str]
+ToolCallObserver = Callable[[Mapping[str, object]], None]
+ToolResultT = TypeVar("ToolResultT")
 
 
 class GreenlightError(RuntimeError):
@@ -47,14 +51,20 @@ class AgencyOrchestrator:
         tools: SandboxToolset,
         memory: SQLiteMemory,
         clock: Clock = utc_now,
+        tool_call_observer: Optional[ToolCallObserver] = None,
     ) -> None:
         self.tools = tools
         self.memory = memory
         self._clock = clock
+        self._tool_call_observer = tool_call_observer
         self._runs: Dict[str, ExecutionRun] = {}
 
-    def start(self, brief: MissionBrief) -> ExecutionRun:
-        run_id = stable_id("run", brief)
+    def start(
+        self,
+        brief: MissionBrief,
+        run_id: Optional[str] = None,
+    ) -> ExecutionRun:
+        run_id = run_id or stable_id("run", brief)
         if run_id in self._runs:
             raise ValueError("run already exists in this orchestrator: {}".format(run_id))
         run = ExecutionRun(
@@ -175,12 +185,18 @@ class AgencyOrchestrator:
             AgentStatus.PROCESSING.value,
             "Approval recorded locally; publication remains disabled.",
         )
-        response = self.tools.campaign_packager.package(
-            CampaignPackageRequest(
-                run_id=run.run_id,
-                platforms=run.brief.platforms,
-                artifacts=tuple(run.artifacts),
-            )
+        response = self._invoke_tool(
+            run,
+            AgentRole.PUBLISHER,
+            "campaign_packager",
+            "package_manifest",
+            lambda: self.tools.campaign_packager.package(
+                CampaignPackageRequest(
+                    run_id=run.run_id,
+                    platforms=run.brief.platforms,
+                    artifacts=tuple(run.artifacts),
+                )
+            ),
         )
         package = response.result
         artifact = self._complete_agent(
@@ -207,6 +223,49 @@ class AgencyOrchestrator:
         )
         return run
 
+    def _invoke_tool(
+        self,
+        run: ExecutionRun,
+        role: AgentRole,
+        tool: str,
+        operation: str,
+        invoke: Callable[[], ToolResponse[ToolResultT]],
+    ) -> ToolResponse[ToolResultT]:
+        started = perf_counter()
+        try:
+            response = invoke()
+        except Exception as error:
+            if self._tool_call_observer is not None:
+                self._tool_call_observer(
+                    {
+                        "run_id": run.run_id,
+                        "step": role.value,
+                        "tool": tool,
+                        "operation": operation,
+                        "sandbox": True,
+                        "success": False,
+                        "retry_count": 0,
+                        "latency_ms": round((perf_counter() - started) * 1000, 3),
+                        "error_type": type(error).__name__,
+                    }
+                )
+            raise
+        if self._tool_call_observer is not None:
+            self._tool_call_observer(
+                {
+                    "run_id": run.run_id,
+                    "step": role.value,
+                    "tool": response.evidence.tool,
+                    "operation": response.evidence.operation,
+                    "sandbox": response.evidence.sandbox,
+                    "success": True,
+                    "retry_count": 0,
+                    "latency_ms": round((perf_counter() - started) * 1000, 3),
+                    "evidence_id": response.evidence.evidence_id,
+                }
+            )
+        return response
+
     def _run_ceo(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.CEO, "Interpreting mission constraints")
         brief = run.brief
@@ -232,18 +291,30 @@ class AgencyOrchestrator:
 
     def _run_research(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.RESEARCH, "Collecting synthetic market evidence")
-        trends = self.tools.trends.collect(
-            TrendsRequest(
-                query=run.brief.objective,
-                audience=run.brief.audience,
-                platforms=run.brief.platforms,
-            )
+        trends = self._invoke_tool(
+            run,
+            AgentRole.RESEARCH,
+            "multi_platform_trends",
+            "collect_fixture",
+            lambda: self.tools.trends.collect(
+                TrendsRequest(
+                    query=run.brief.objective,
+                    audience=run.brief.audience,
+                    platforms=run.brief.platforms,
+                )
+            ),
         )
-        browser = self.tools.browser.observe(
-            BrowserRequest(
-                url="sandbox://market-pulse/fixture",
-                purpose="audience language and category framing",
-            )
+        browser = self._invoke_tool(
+            run,
+            AgentRole.RESEARCH,
+            "puppeteer_browser",
+            "observe_fixture",
+            lambda: self.tools.browser.observe(
+                BrowserRequest(
+                    url="sandbox://market-pulse/fixture",
+                    purpose="audience language and category framing",
+                )
+            ),
         )
         artifact = self._complete_agent(
             run,
@@ -272,11 +343,17 @@ class AgencyOrchestrator:
 
     def _run_strategist(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.STRATEGIST, "Designing channel strategy")
-        docs = self.tools.context7.lookup(
-            Context7Request(
-                library="sandbox-adapter-contracts",
-                topic="idempotent approval-gated orchestration",
-            )
+        docs = self._invoke_tool(
+            run,
+            AgentRole.STRATEGIST,
+            "context7_docs",
+            "lookup_fixture",
+            lambda: self.tools.context7.lookup(
+                Context7Request(
+                    library="sandbox-adapter-contracts",
+                    topic="idempotent approval-gated orchestration",
+                )
+            ),
         )
         pillars = (
             "Evidence: lead with a verifiable audience tension",
@@ -310,13 +387,19 @@ class AgencyOrchestrator:
 
     def _run_growth(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.GROWTH, "Forecasting sandbox acquisition envelope")
-        forecast = self.tools.meta_ads.forecast(
-            MetaAdsRequest(
-                objective=run.brief.campaign_goal,
-                audience=run.brief.audience,
-                budget_cents=run.brief.budget_cents,
-                platforms=run.brief.platforms,
-            )
+        forecast = self._invoke_tool(
+            run,
+            AgentRole.GROWTH,
+            "meta_ads_mcp",
+            "forecast_fixture",
+            lambda: self.tools.meta_ads.forecast(
+                MetaAdsRequest(
+                    objective=run.brief.campaign_goal,
+                    audience=run.brief.audience,
+                    budget_cents=run.brief.budget_cents,
+                    platforms=run.brief.platforms,
+                )
+            ),
         )
         artifact = self._complete_agent(
             run,
@@ -377,19 +460,31 @@ class AgencyOrchestrator:
     def _run_media(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.MEDIA, "Planning video and motion assets")
         primary_platform = run.brief.platforms[0]
-        video = self.tools.video_optimizer.plan(
-            VideoOptimizationRequest(
-                source_asset=run.brief.source_asset,
-                platform=primary_platform,
-                target_duration_seconds=15,
-            )
+        video = self._invoke_tool(
+            run,
+            AgentRole.MEDIA,
+            "video_optimizer",
+            "plan_only",
+            lambda: self.tools.video_optimizer.plan(
+                VideoOptimizationRequest(
+                    source_asset=run.brief.source_asset,
+                    platform=primary_platform,
+                    target_duration_seconds=15,
+                )
+            ),
         )
-        motion = self.tools.image_to_video.plan(
-            ImageToVideoRequest(
-                source_asset=run.brief.source_asset,
-                prompt="Motion study for {}".format(run.brief.title),
-                target_duration_seconds=8,
-            )
+        motion = self._invoke_tool(
+            run,
+            AgentRole.MEDIA,
+            "image_to_video",
+            "plan_only",
+            lambda: self.tools.image_to_video.plan(
+                ImageToVideoRequest(
+                    source_asset=run.brief.source_asset,
+                    prompt="Motion study for {}".format(run.brief.title),
+                    target_duration_seconds=8,
+                )
+            ),
         )
         artifact = self._complete_agent(
             run,
@@ -419,12 +514,18 @@ class AgencyOrchestrator:
 
     def _run_risk(self, run: ExecutionRun) -> None:
         self._begin(run, AgentRole.RISK, "Auditing release constraints")
-        inspection = self.tools.github.inspect(
-            GitHubRequest(
-                repository="sandbox://local/agency-runtime",
-                paths=("policy/claims", "policy/platforms"),
-                question="Does the sandbox package preserve the Greenlight boundary?",
-            )
+        inspection = self._invoke_tool(
+            run,
+            AgentRole.RISK,
+            "github_codebase",
+            "inspect_fixture",
+            lambda: self.tools.github.inspect(
+                GitHubRequest(
+                    repository="sandbox://local/agency-runtime",
+                    paths=("policy/claims", "policy/platforms"),
+                    question="Does the sandbox package preserve the Greenlight boundary?",
+                )
+            ),
         )
         checks = (
             "All configured adapters declare sandbox=true",
