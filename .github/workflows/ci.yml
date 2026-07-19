@@ -158,8 +158,10 @@ jobs:
           python -m pip install --require-hashes --no-deps -r scripts/requirements-ci.lock
       - name: Audit JavaScript dependencies
         run: npm audit --audit-level=high
-      - name: Audit Python runtime dependencies
-        run: pip-audit --require-hashes -r scripts/requirements-container.lock
+      - name: Audit Python runtime and CI dependencies
+        run: |
+          pip-audit --require-hashes -r scripts/requirements-container.lock
+          pip-audit --require-hashes -r scripts/requirements-ci.lock
       - name: Scan platform policy
         run: python scripts/platform_eval.py
       - name: Scan the repository and Git history for secrets and personal paths

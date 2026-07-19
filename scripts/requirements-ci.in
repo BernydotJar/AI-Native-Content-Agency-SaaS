@@ -1,6 +1,6 @@
 -r requirements-container.in
 
-httpx>=0.28,<1
+httpx2>=2.7,<3
 mypy>=1.15,<2
 pip-audit>=2.8,<3
 pytest>=8.3,<9

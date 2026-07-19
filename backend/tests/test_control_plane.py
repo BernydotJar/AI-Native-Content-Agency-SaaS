@@ -40,6 +40,14 @@ IDENTITY_HEADERS = {
     "X-Tenant-ID": "tenant-alpha",
     "X-Principal-ID": "principal-owner",
 }
+_TEST_ENGINES = []
+
+
+@pytest.fixture(autouse=True)
+def dispose_test_engines():
+    yield
+    while _TEST_ENGINES:
+        _TEST_ENGINES.pop().dispose()
 
 
 def mission_payload(title: str = "Production foundation") -> Dict[str, object]:
@@ -60,7 +68,7 @@ def command_headers(key: str, identity: Dict[str, str] = IDENTITY_HEADERS) -> Di
 
 
 def build_test_app(database: Path, web_dist: Optional[Path] = None):
-    return create_app(
+    app = create_app(
         Settings(
             environment="test",
             auth_mode="development_headers",
@@ -69,6 +77,8 @@ def build_test_app(database: Path, web_dist: Optional[Path] = None):
             web_dist=web_dist,
         )
     )
+    _TEST_ENGINES.append(app.state.engine)
+    return app
 
 
 def test_application_service_uses_the_repository_port_only(tmp_path: Path) -> None:
@@ -153,6 +163,25 @@ def test_health_readiness_security_headers_and_openapi(tmp_path: Path) -> None:
         document = client.get("/openapi.json").json()
         assert document["info"]["version"] == "1.0.0"
         assert "/api/v1/runs/{run_id}/approvals" in document["paths"]
+
+
+def test_app_lifespan_disposes_database_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = build_test_app(tmp_path / "lifespan.sqlite3")
+    original_dispose = app.state.engine.dispose
+    dispose_calls = []
+
+    def tracked_dispose() -> None:
+        dispose_calls.append("disposed")
+        original_dispose()
+
+    monkeypatch.setattr(app.state.engine, "dispose", tracked_dispose)
+    with TestClient(app) as client:
+        assert client.get("/readyz").status_code == 200
+        assert dispose_calls == []
+
+    assert dispose_calls == ["disposed"]
 
 
 def test_integrated_run_survives_restart_and_approves_exact_manifest(tmp_path: Path) -> None:
@@ -449,21 +478,24 @@ def test_concurrent_approval_allows_exactly_one_decision(tmp_path: Path) -> None
     with TestClient(app) as client:
         _, run = create_mission_and_run(client)
 
-    def decide(key: str) -> Tuple[int, str]:
-        with TestClient(app) as concurrent_client:
-            response = concurrent_client.post(
+        def decide(key: str) -> Tuple[int, str]:
+            response = client.post(
                 "/api/v1/runs/{}/approvals".format(run["run_id"]),
                 json=approval_payload(run),
                 headers=command_headers(key),
             )
             return response.status_code, response.json().get("error", {}).get("code", "ok")
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(decide, ("approval-concurrent-a", "approval-concurrent-b")))
-    assert sorted(status for status, _ in results) == [200, 409]
-    assert next(code for status, code in results if status == 409) == "APPROVAL_ALREADY_DECIDED"
-    with app.state.session_factory() as session:
-        assert session.scalar(select(func.count()).select_from(ApprovalRow)) == 1
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(
+                executor.map(decide, ("approval-concurrent-a", "approval-concurrent-b"))
+            )
+        assert sorted(status for status, _ in results) == [200, 409]
+        assert next(code for status, code in results if status == 409) == (
+            "APPROVAL_ALREADY_DECIDED"
+        )
+        with app.state.session_factory() as session:
+            assert session.scalar(select(func.count()).select_from(ApprovalRow)) == 1
 
 
 def test_concurrent_first_commands_upsert_one_identity_without_transient_failure(
@@ -476,37 +508,38 @@ def test_concurrent_first_commands_upsert_one_identity_without_transient_failure
     }
     barrier = Barrier(2)
 
-    def create(key: str) -> Tuple[int, str]:
-        with TestClient(app) as concurrent_client:
+    with TestClient(app) as client:
+
+        def create(key: str) -> Tuple[int, str]:
             barrier.wait(timeout=5)
-            response = concurrent_client.post(
+            response = client.post(
                 "/api/v1/missions",
                 json=mission_payload("Concurrent {}".format(key)),
                 headers=command_headers(key, identity),
             )
             return response.status_code, response.json().get("error", {}).get("code", "ok")
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(create, ("first-command-a", "first-command-b")))
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(create, ("first-command-a", "first-command-b")))
 
-    assert sorted(results) == [(201, "ok"), (201, "ok")]
-    with app.state.session_factory() as session:
-        assert session.scalar(
-            select(func.count()).select_from(TenantRow).where(
-                TenantRow.tenant_id == identity["X-Tenant-ID"]
-            )
-        ) == 1
-        assert session.scalar(
-            select(func.count()).select_from(PrincipalRow).where(
-                PrincipalRow.tenant_id == identity["X-Tenant-ID"],
-                PrincipalRow.principal_id == identity["X-Principal-ID"],
-            )
-        ) == 1
-        assert session.scalar(
-            select(func.count()).select_from(MissionRow).where(
-                MissionRow.tenant_id == identity["X-Tenant-ID"]
-            )
-        ) == 2
+        assert sorted(results) == [(201, "ok"), (201, "ok")]
+        with app.state.session_factory() as session:
+            assert session.scalar(
+                select(func.count()).select_from(TenantRow).where(
+                    TenantRow.tenant_id == identity["X-Tenant-ID"]
+                )
+            ) == 1
+            assert session.scalar(
+                select(func.count()).select_from(PrincipalRow).where(
+                    PrincipalRow.tenant_id == identity["X-Tenant-ID"],
+                    PrincipalRow.principal_id == identity["X-Principal-ID"],
+                )
+            ) == 1
+            assert session.scalar(
+                select(func.count()).select_from(MissionRow).where(
+                    MissionRow.tenant_id == identity["X-Tenant-ID"]
+                )
+            ) == 2
 
 
 def test_structured_logs_include_safe_context_and_sandbox_evidence(
@@ -920,6 +953,7 @@ def test_disabled_auth_fails_closed_and_cors_is_explicit(tmp_path: Path) -> None
             auto_create_schema=True,
         )
     )
+    _TEST_ENGINES.append(disabled_app.state.engine)
     with TestClient(disabled_app) as client:
         denied = client.post(
             "/api/v1/missions",

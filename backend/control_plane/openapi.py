@@ -18,12 +18,15 @@ def canonical_openapi() -> str:
             auto_create_schema=True,
         )
     )
-    return json.dumps(
-        application.openapi(),
-        ensure_ascii=False,
-        indent=2,
-        sort_keys=True,
-    ) + "\n"
+    try:
+        return json.dumps(
+            application.openapi(),
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ) + "\n"
+    finally:
+        application.state.engine.dispose()
 
 
 def build_parser() -> argparse.ArgumentParser:

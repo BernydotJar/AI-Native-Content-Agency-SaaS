@@ -68,6 +68,7 @@ def test_migration_upgrade_downgrade_and_reupgrade(tmp_path: Path) -> None:
     assert inspect(engine).get_table_names() == ["alembic_version"]
     command.upgrade(config, "head")
     assert expected == set(inspect(engine).get_table_names())
+    engine.dispose()
 
 
 def test_migration_honors_injected_sqlalchemy_connection(tmp_path: Path) -> None:
@@ -81,6 +82,7 @@ def test_migration_honors_injected_sqlalchemy_connection(tmp_path: Path) -> None
         command.upgrade(config, "head")
 
     assert "runs" in inspect(engine).get_table_names()
+    engine.dispose()
 
 
 def test_openapi_document_is_deterministic_and_versioned() -> None:

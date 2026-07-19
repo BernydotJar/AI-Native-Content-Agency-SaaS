@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, AsyncIterator, Dict, Iterator, Optional, Union
 
 import uvicorn
 from fastapi import Depends, FastAPI, Header, Request, status
@@ -215,6 +216,13 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         create_schema(engine)
     session_factory = build_session_factory(engine)
 
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            engine.dispose()
+
     app = FastAPI(
         title="AI-Native Content Agency Control Plane",
         version="1.0.0",
@@ -222,6 +230,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             "Versioned, tenant-scoped control plane. External providers remain sandbox-only "
             "and approvals never imply publication or ad spend."
         ),
+        lifespan=lifespan,
     )
     app.state.settings = resolved_settings
     app.state.engine = engine
