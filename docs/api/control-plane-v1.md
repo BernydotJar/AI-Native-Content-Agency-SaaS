@@ -21,12 +21,23 @@ Development headers are deliberately rejected by production configuration. They 
 |---|---|---|
 | `GET` | `/healthz` | Process liveness; does not prove database readiness. |
 | `GET` | `/readyz` | Database dependency readiness. |
+| `GET` | `/api/v1/identity` | Return the strict `v1` tenant and principal contract supplied by the active identity adapter. |
 | `POST` | `/api/v1/missions` | Create a tenant-scoped mission idempotently. |
 | `POST` | `/api/v1/missions/{mission_id}/runs` | Execute the bounded sandbox workflow and persist its Greenlight wait state. |
 | `GET` | `/api/v1/runs/{run_id}` | Poll/reconnect to persisted steps, artifacts, evidence, events, audit and approval. |
 | `POST` | `/api/v1/runs/{run_id}/approvals` | Approve or reject the exact current artifact manifest. |
 
-All request models reject unknown fields. Every request and response requires `schema_version: "v1"`; timestamps use the OpenAPI `date-time` format. Agent roles/statuses and run statuses are closed enums in the canonical contract, and Greenlight policy is the literal `greenlight.v1`.
+All request models reject unknown fields. Every application response and request body uses `schema_version: "v1"`; timestamps use the OpenAPI `date-time` format. Agent roles/statuses and run statuses are closed enums in the canonical contract, and Greenlight policy is the literal `greenlight.v1`.
+
+Inspect the development identity contract without creating state:
+
+```bash
+curl -sS http://127.0.0.1:8000/api/v1/identity \
+  -H 'X-Tenant-ID: local-dev' \
+  -H 'X-Principal-ID: local-operator'
+```
+
+The response nests strict `TenantIdentityResponse` and `PrincipalIdentityResponse` objects. It is identity context, not proof of production authentication; cloud dev still requires Cloud Run IAM.
 
 ## Example flow
 
@@ -65,12 +76,17 @@ curl -sS http://127.0.0.1:8000/api/v1/runs/RUN_ID/approvals \
 
 Use `decision: "rejected"` to block Publisher. Neither decision performs external publication or ad spend.
 
+The returned `approval` object includes the same `idempotency_key` supplied in the command header. The backend stores that key directly on the approval row and in the `run.approval` audit payload. Migration `0003_approval_idempotency` backfills a legacy approval only when exactly one durable command record can identify it; unsafe or missing provenance stops the migration.
+
+Idempotency guarantees one durable command response and rejects incompatible replay. Current `run.start` provider execution is an inline sandbox boundary, not an exactly-once external-effect protocol: simultaneous identical starts can perform deterministic sandbox work twice before one transaction wins. External/effectful adapters are disabled until durable key ownership precedes provider execution.
+
 ## Idempotency behavior
 
 - Same tenant + key + operation + canonical payload: original response is returned.
 - Same tenant + key with another operation or payload: `409` structured conflict.
 - Concurrent approval decisions: at most one transition/approval row commits.
 - A request interrupted before a committed response is retried with the same key.
+- The approval row has a tenant/key uniqueness constraint in addition to one-decision-per-run.
 
 ## Errors
 

@@ -1,0 +1,252 @@
+{
+  "schema_version": 1,
+  "catalog_id": "production-foundation-v1",
+  "gates": [
+    {
+      "gate_id": "FRONTEND-LINT",
+      "type": "command",
+      "command": ["npm", "run", "lint"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "FRONTEND-TYPECHECK",
+      "type": "command",
+      "command": ["npm", "run", "typecheck"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "FRONTEND-UNIT",
+      "type": "command",
+      "command": ["npm", "test"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "FRONTEND-BUILD",
+      "type": "command",
+      "command": ["npm", "run", "build"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "OPENAPI-CONTRACT",
+      "type": "command",
+      "command": ["npm", "run", "check:api-contract"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "LIVE-UI-API-POSTGRES",
+      "type": "command",
+      "command": ["npm", "run", "test:e2e:stack"],
+      "timeout_seconds": 1800
+    },
+    {
+      "gate_id": "POSTGRES-INTEGRATION",
+      "type": "command",
+      "command": ["bash", "e2e/postgres-integration.sh"],
+      "timeout_seconds": 1800
+    },
+    {
+      "gate_id": "BACKEND-LINT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "ruff", "check", ".", "../scripts"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "BACKEND-FORMAT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "ruff", "format", "--check", ".", "../scripts"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "BACKEND-TYPECHECK",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "mypy", "--config-file", "pyproject.toml", "control_plane"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "BACKEND-TEST",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "pytest", "tests"],
+      "timeout_seconds": 900
+    },
+    {
+      "gate_id": "MIGRATION-ROUNDTRIP",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "pytest", "tests/test_migrations_openapi.py"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "OPENAPI-SNAPSHOT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "control_plane.openapi", "--output", "openapi.json", "--check"],
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "DOCKER-BUILD",
+      "type": "command",
+      "command": ["docker", "build", "--target", "runtime", "--tag", "ai-native-content-agency:eval", "."],
+      "timeout_seconds": 1800
+    },
+    {
+      "gate_id": "PLATFORM-STATIC",
+      "type": "command",
+      "command": ["scripts/validate_platform.sh"],
+      "env": {"PLATFORM_SKIP_EVAL_RESULTS": "1"},
+      "timeout_seconds": 1800
+    },
+    {
+      "gate_id": "REPOSITORY-INTEGRITY",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "../scripts/repository_integrity.py"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "NPM-AUDIT",
+      "type": "command",
+      "command": ["npm", "audit", "--audit-level=high"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "PYTHON-RUNTIME-AUDIT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "pip_audit", "--require-hashes", "-r", "../scripts/requirements-container.lock"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "PYTHON-CI-AUDIT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "pip_audit", "--require-hashes", "-r", "../scripts/requirements-ci.lock"],
+      "timeout_seconds": 600
+    },
+    {
+      "gate_id": "EVAL-HARNESS-UNIT",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "unittest", "scripts.test_eval_harness", "scripts.test_governance_eval"],
+      "env": {"PYTHONPATH": ".."},
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "GOVERNANCE-STATIC",
+      "type": "command",
+      "cwd": "backend",
+      "command": ["python", "-m", "scripts.governance_eval", "--skip-eval-results"],
+      "env": {"PYTHONPATH": ".."},
+      "timeout_seconds": 300
+    },
+    {
+      "gate_id": "GIT-DIFF-CHECK",
+      "type": "command",
+      "command": ["git", "diff", "--check"],
+      "timeout_seconds": 60
+    },
+    {
+      "gate_id": "GCP-DISCOVERY-BLOCKER",
+      "type": "external_blocker",
+      "actual": "Read-only discovery found an ACTIVE exact-name project created outside this Terraform state, but it has no billing, visible parent, region, labels, WIF, service accounts, registry, Run, or SQL APIs; all six visible billing accounts are closed and project adoption is not authorized.",
+      "required_fix": "Explicitly authorize the intended hierarchy, open billing account, bootstrap project, dev project, region, and whether the externally created exact-name project must be imported or rejected; then repeat masked discovery.",
+      "reproducibility": "Repeat the masked read-only gcloud account, ADC, organization, billing, project, API, resource, IAM, quota, and region discovery recorded in agent/reports/gcp-discovery-2026-07-18.md."
+    },
+    {
+      "gate_id": "GCP-PERMISSION-BLOCKER",
+      "type": "external_blocker",
+      "actual": "Granular foundation and runtime permissions cannot be proven against an authorized billed target; a broad Owner role on an unadopted project is not sufficient evidence.",
+      "required_fix": "Select the authorized bootstrap/dev targets and run the versioned granular permission preflight without granting a service-account key or broad routine deployment role.",
+      "reproducibility": "Run scripts/gcp_permission_preflight.py for bootstrap, image, plan, apply, and post-apply phases against the explicitly authorized target IDs."
+    },
+    {
+      "gate_id": "GCP-PLAN-BLOCKER",
+      "type": "external_blocker",
+      "actual": "No real initialized remote state, saved Terraform dev plan, plan JSON, immutable image digest, exact cost estimate, cloud critique approval, or independent plan attestation exists.",
+      "required_fix": "After target authorization and bootstrap, produce one saved dev plan and JSON, bind it to the source/image hashes, document exact cost and scope, and obtain independent ALLOW_DEV_APPLY with zero open CRITICAL/HIGH findings.",
+      "reproducibility": "Follow docs/runbooks/gcp-dev-deployment.md through saved-plan creation only; inspect the saved plan with scripts/terraform_plan_gate.py and do not apply unless the exact attestation verifies."
+    },
+    {
+      "gate_id": "GCP-APPLY-BLOCKER",
+      "type": "external_blocker",
+      "actual": "DENY_APPLY is in force; no evaluated saved dev plan has been applied.",
+      "required_fix": "Satisfy every saved-plan, independent-review, protected-environment, permission, billing, cost, and rollback precondition before applying only the attested plan.",
+      "reproducibility": "Verify the exact plan attestation with scripts/dev_apply_gate.py; a missing or non-ALLOW recommendation must exit nonzero before cloud authentication."
+    },
+    {
+      "gate_id": "GCP-POSTAPPLY-BLOCKER",
+      "type": "external_blocker",
+      "actual": "There is no applied dev environment, endpoint, post-apply evidence bundle, measured cost, or second no-change plan.",
+      "required_fix": "Only after an authorized exact apply, run private/denied access, health, migration, logs, labels, budget delivery, integration smoke, rollback, cost, and second-plan checks and record masked evidence.",
+      "reproducibility": "Run scripts/post_apply_verify.py and a second saved Terraform plan against the applied authorized dev state; retain only non-sensitive evidence."
+    },
+    {
+      "gate_id": "GITHUB-GATE-BLOCKER",
+      "type": "external_blocker",
+      "actual": "Main now requires the exact four CI jobs, strict updates, one approving review, last-push approval, conversation resolution, linear history and admin enforcement; dev-build/dev-plan/dev are protected-branch environments and dev prevents self-review. The deployment workflow is not yet on main, no required Actions variables exist, and the repository has no distinct collaborator who can satisfy the authenticated reviewer boundary.",
+      "required_fix": "Merge only after independent approval and green exact-tree CI, add a distinct eligible reviewer/actor, configure reviewed cloud-foundation Actions variables, and then verify the workflow and environment protections from main. Keep the draft PR unmerged in this iteration.",
+      "reproducibility": "Read back GitHub branch protection or rulesets, environment protection rules, Actions variables, PR review state, and workflow presence using authenticated gh api calls."
+    }
+  ],
+  "requirements": [
+    {"requirement_id": "APP-001", "target": "tenant-scoped mission creation", "severity": "HIGH", "expected": "The versioned API creates a mission with strict identity, validation, and idempotency behavior.", "required_fix": "Repair the mission API, contract, or live integrated flow and rerun all mapped gates.", "gate_ids": ["BACKEND-TEST", "OPENAPI-SNAPSHOT", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-002", "target": "durable repository state", "severity": "CRITICAL", "expected": "Identity, workflow, evidence, approval, audit, and idempotency state persist through migrations and restart on PostgreSQL.", "required_fix": "Repair repository/migration durability and prove it on the live PostgreSQL path.", "gate_ids": ["BACKEND-TEST", "MIGRATION-ROUNDTRIP", "POSTGRES-INTEGRATION", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-003", "target": "eight-station API workflow", "severity": "HIGH", "expected": "Starting a run persists seven pre-gate stations and a Publisher wait state.", "required_fix": "Repair run orchestration or persisted step transitions and rerun backend and live E2E gates.", "gate_ids": ["BACKEND-TEST", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-004", "target": "tenant-scoped run retrieval", "severity": "HIGH", "expected": "Runs, steps, artifacts, evidence, audit, and progress survive reconnect and reject cross-tenant reads.", "required_fix": "Repair persisted retrieval or tenant enforcement and repeat backend/live reconnect tests.", "gate_ids": ["BACKEND-TEST", "POSTGRES-INTEGRATION", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-005", "target": "Risk and Greenlight Publisher hold", "severity": "CRITICAL", "expected": "Publisher cannot run before a passing Risk step and valid Greenlight decision; external effects remain zero.", "required_fix": "Restore the fail-closed Risk/Greenlight transition and side-effect boundary.", "gate_ids": ["BACKEND-TEST", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-006", "target": "durable approval and rejection", "severity": "CRITICAL", "expected": "Approval and rejection persist their direct idempotency key, reviewer, decision, note, time, tenant, audit, and transition evidence.", "required_fix": "Repair approval/rejection persistence, audit linkage, or the live decision paths.", "gate_ids": ["BACKEND-TEST", "MIGRATION-ROUNDTRIP", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-007", "target": "canonical Greenlight binding", "severity": "CRITICAL", "expected": "Only the current greenlight.v1 policy and freshly recomputed exact manifest may be decided.", "required_fix": "Repair policy/hash/TOCTOU enforcement and its negative tests.", "gate_ids": ["BACKEND-TEST", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-008", "target": "durable command idempotency", "severity": "CRITICAL", "expected": "Compatible replay returns the first result while conflicting, duplicate, concurrent, and event replays fail or deduplicate deterministically.", "required_fix": "Repair transaction, uniqueness, replay, or concurrency behavior and rerun reliability tests.", "gate_ids": ["BACKEND-TEST", "POSTGRES-INTEGRATION", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-009", "target": "persisted polling and reconnect", "severity": "HIGH", "expected": "The UI reconstructs backend state after reload without overlapping or fabricated progress.", "required_fix": "Repair polling cancellation/reconnect behavior or live persistence coverage.", "gate_ids": ["FRONTEND-UNIT", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-010", "target": "typed integrated frontend client", "severity": "HIGH", "expected": "Typed UI commands and reads match OpenAPI and work over real browser transport.", "required_fix": "Repair frontend types/client/integration and rerun contract, unit, and live E2E gates.", "gate_ids": ["FRONTEND-TYPECHECK", "FRONTEND-UNIT", "OPENAPI-CONTRACT", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "APP-011", "target": "legacy simulation isolation", "severity": "HIGH", "expected": "Integrated API mode is default and browser-only simulation is explicit and separately labeled.", "required_fix": "Restore the runtime-mode boundary and its tests.", "gate_ids": ["FRONTEND-UNIT", "FRONTEND-BUILD"]},
+    {"requirement_id": "APP-012", "target": "versioned API contracts", "severity": "HIGH", "expected": "Tenant, principal, mission, run, step, agent, artifact, evidence, approval, audit, progress, and error schemas are versioned without drift.", "required_fix": "Add or repair the missing versioned schema and regenerate backend/frontend contract artifacts.", "gate_ids": ["OPENAPI-SNAPSHOT", "OPENAPI-CONTRACT", "FRONTEND-TYPECHECK"]},
+    {"requirement_id": "APP-013", "target": "truthful bounded V1 execution", "severity": "MEDIUM", "expected": "Implementation and documentation preserve inline command-boundary durability and explicit timeout/failure limits.", "required_fix": "Repair failure behavior or documentation so it matches executed runtime semantics.", "gate_ids": ["BACKEND-TEST", "GOVERNANCE-STATIC"]},
+    {"requirement_id": "APP-014", "target": "safe structured telemetry", "severity": "HIGH", "expected": "Logs carry safe correlation and execution fields without prompts, secrets, or injection forgery.", "required_fix": "Repair telemetry structure/redaction and rerun log injection and tool failure tests.", "gate_ids": ["BACKEND-TEST", "REPOSITORY-INTEGRITY"]},
+    {"requirement_id": "APP-015", "target": "provider-neutral sandbox boundary", "severity": "HIGH", "expected": "Domain services use ports and deterministic providers label every operation side-effect-free.", "required_fix": "Restore port isolation or sandbox evidence and prohibit external adapters.", "gate_ids": ["BACKEND-TEST", "LIVE-UI-API-POSTGRES"]},
+
+    {"requirement_id": "SEC-001", "target": "central tenant and principal authorization", "severity": "CRITICAL", "expected": "Missing, invalid, and wrong-tenant identities fail closed for reads and commands.", "required_fix": "Repair centralized authorization and prove cross-tenant denial on PostgreSQL and HTTP.", "gate_ids": ["BACKEND-TEST", "POSTGRES-INTEGRATION", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "SEC-002", "target": "production authentication boundary", "severity": "CRITICAL", "expected": "Production startup rejects development identity and SQLite configuration.", "required_fix": "Restore production configuration validation and fail startup closed.", "gate_ids": ["BACKEND-TEST"]},
+    {"requirement_id": "SEC-003", "target": "HTTP input and browser security", "severity": "HIGH", "expected": "CORS, size, parsing, headers, names, and paths remain constrained and structured.", "required_fix": "Repair request/security middleware or validation and rerun adversarial API tests.", "gate_ids": ["BACKEND-TEST", "FRONTEND-LINT"]},
+    {"requirement_id": "SEC-004", "target": "typed configuration and redacted logs", "severity": "HIGH", "expected": "Configuration is typed and logs contain no credentials, full prompts, or injection-controlled records.", "required_fix": "Repair configuration/redaction and repeat safe-log and repository scans.", "gate_ids": ["BACKEND-TEST", "REPOSITORY-INTEGRITY"]},
+    {"requirement_id": "SEC-005", "target": "mandatory repository and dependency scans", "severity": "HIGH", "expected": "JavaScript, runtime Python, CI Python, secrets, personal paths, history, and unsafe artifacts pass exact scans.", "required_fix": "Remove or remediate the vulnerable dependency or unsafe repository artifact without suppressing the gate.", "gate_ids": ["NPM-AUDIT", "PYTHON-RUNTIME-AUDIT", "PYTHON-CI-AUDIT", "REPOSITORY-INTEGRITY"]},
+    {"requirement_id": "SEC-006", "target": "versioned threat model and adversarial tests", "severity": "HIGH", "expected": "Threat documentation and cross-tenant, replay, injection, malformed input, and auth adversarial tests remain current and green.", "required_fix": "Repair the adversarial behavior or bring the threat model and evidence back into exact agreement.", "gate_ids": ["BACKEND-TEST", "GOVERNANCE-STATIC"]},
+    {"requirement_id": "SEC-007", "target": "zero external effects", "severity": "CRITICAL", "expected": "No publication, provider activation, ad creation, or spend occurs in local or dev sandbox flows.", "required_fix": "Disable the external adapter/effect and restore explicit zero-side-effect evidence.", "gate_ids": ["BACKEND-TEST", "LIVE-UI-API-POSTGRES"]},
+
+    {"requirement_id": "DLV-001", "target": "integrated local startup and smoke", "severity": "HIGH", "expected": "One command owns build, migration, web/API/PostgreSQL smoke, browser flow, and clean shutdown.", "required_fix": "Repair the stack-owning E2E/smoke lifecycle and its documentation.", "gate_ids": ["LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "DLV-002", "target": "complete application test suite", "severity": "HIGH", "expected": "All unit, repository, API, contract, integration, security, reliability, restart, and browser tests pass.", "required_fix": "Repair every failing or skipped required test; do not average failures away.", "gate_ids": ["FRONTEND-UNIT", "BACKEND-TEST", "MIGRATION-ROUNDTRIP", "OPENAPI-CONTRACT", "POSTGRES-INTEGRATION", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "DLV-003", "target": "reproducible non-root containers", "severity": "HIGH", "expected": "Locked non-root image, migration-ordered Compose, health, smoke, and persistence gates pass.", "required_fix": "Repair the image/Compose lifecycle or lock drift and repeat build and live tests.", "gate_ids": ["DOCKER-BUILD", "PLATFORM-STATIC", "LIVE-UI-API-POSTGRES"]},
+    {"requirement_id": "DLV-004", "target": "mandatory CI enforcement", "severity": "HIGH", "expected": "Application, migration, schema, container, E2E, security, Terraform, formatting, and whitespace gates are mandatory on protected main.", "required_fix": "Make every gate mandatory and protect main with exact required checks and review before merge.", "gate_ids": ["FRONTEND-LINT", "FRONTEND-TYPECHECK", "FRONTEND-UNIT", "FRONTEND-BUILD", "BACKEND-LINT", "BACKEND-FORMAT", "BACKEND-TYPECHECK", "BACKEND-TEST", "PLATFORM-STATIC", "GIT-DIFF-CHECK", "GITHUB-GATE-BLOCKER"]},
+    {"requirement_id": "DLV-005", "target": "validatable Terraform roots", "severity": "HIGH", "expected": "Every module/root formats, initializes with locked providers, validates, and passes mock/static policy tests without credentials.", "required_fix": "Repair Terraform format, provider locks, validation, mocks, or static security controls.", "gate_ids": ["PLATFORM-STATIC", "REPOSITORY-INTEGRITY"]},
+    {"requirement_id": "DLV-006", "target": "executable structured eval harness", "severity": "HIGH", "expected": "The catalog covers every traced requirement and deterministic, functional, security, reliability, drift, and blocked results validate against the mandatory schema.", "required_fix": "Repair the harness/catalog/schema or add direct executable coverage for every traced requirement.", "gate_ids": ["EVAL-HARNESS-UNIT", "GOVERNANCE-STATIC"]},
+    {"requirement_id": "DLV-007", "target": "operational documentation truth", "severity": "MEDIUM", "expected": "Setup, API, migration, deployment, rollback, incident, sandbox, and limitation records agree with executable evidence.", "required_fix": "Refresh stale or unsupported documentation and rerun governance and integrated gates.", "gate_ids": ["GOVERNANCE-STATIC", "LIVE-UI-API-POSTGRES", "PLATFORM-STATIC"]},
+    {"requirement_id": "DLV-008", "target": "keyless phase-isolated deployment workflow", "severity": "CRITICAL", "expected": "Immutable repository identity, split build/plan/apply WIF identities, saved-plan binding, and protected phase environments are enforced without keys.", "required_fix": "Repair WIF/workflow scoping and configure protected phase environments with an independent approval boundary.", "gate_ids": ["PLATFORM-STATIC", "REPOSITORY-INTEGRITY", "GITHUB-GATE-BLOCKER"]},
+
+    {"requirement_id": "GCP-000", "target": "Terraform-only bootstrap/dev execution boundary", "severity": "CRITICAL", "expected": "Terraform is source of truth and executable roots cannot target staging or production.", "required_fix": "Restore explicit environment guards and prohibit manual or production resource mutation.", "gate_ids": ["PLATFORM-STATIC"]},
+    {"requirement_id": "GCP-001", "target": "complete read-only cloud discovery", "severity": "HIGH", "expected": "Account, ADC, hierarchy, billing, target adoption, policies, quotas, region, and existing resources are unambiguous and recorded without secrets.", "required_fix": "Complete the exact authorized-target discovery and record masked current evidence.", "gate_ids": ["GCP-DISCOVERY-BLOCKER"]},
+    {"requirement_id": "GCP-002", "target": "granular cloud permissions", "severity": "CRITICAL", "expected": "Every required project, billing, service, IAM, state, and runtime permission is proven granularly on authorized targets.", "required_fix": "Run and pass granular permission preflights on explicitly authorized bootstrap and dev targets.", "gate_ids": ["GCP-PERMISSION-BLOCKER"]},
+    {"requirement_id": "GCP-003", "target": "bootstrap/dev project isolation", "severity": "CRITICAL", "expected": "Bootstrap and dev project IDs must differ; required labels and region cannot drift or be overridden.", "required_fix": "Repair project/region/label invariants and rerun Terraform tests.", "gate_ids": ["PLATFORM-STATIC"]},
+    {"requirement_id": "GCP-004", "target": "versioned remote state and keyless WIF bootstrap", "severity": "CRITICAL", "expected": "An authorized Terraform-managed/imported bootstrap creates uniform remote state and immutable keyless WIF with recorded state migration.", "required_fix": "Authorize targets, explicitly import/adopt or create through Terraform, and independently evaluate the bootstrap plan before apply.", "gate_ids": ["PLATFORM-STATIC", "GCP-DISCOVERY-BLOCKER", "GCP-PLAN-BLOCKER"]},
+    {"requirement_id": "GCP-005", "target": "minimal behavior-mapped dev plan", "severity": "HIGH", "expected": "Only implemented dev resources appear in an inspected saved plan with a defensible exact cost envelope.", "required_fix": "Produce and review the authorized saved dev plan, resource map, and exact cost evidence.", "gate_ids": ["PLATFORM-STATIC", "GCP-PLAN-BLOCKER"]},
+    {"requirement_id": "GCP-006", "target": "saved Terraform plan and JSON critique", "severity": "CRITICAL", "expected": "The exact saved plan and JSON contain no unauthorized destruction, public IAM, broad role, key, secret, wrong region, or non-dev resource.", "required_fix": "Create the real saved plan/JSON and close every CRITICAL/HIGH cloud critique finding.", "gate_ids": ["GCP-PLAN-BLOCKER"]},
+    {"requirement_id": "GCP-007", "target": "independent exact-plan veto gate", "severity": "CRITICAL", "expected": "Cloud critic, security reviewer, and independent evaluator issue ALLOW_DEV_APPLY for the exact saved plan with zero open CRITICAL/HIGH findings.", "required_fix": "Obtain independent authenticated review of the exact plan after all high-severity repairs.", "gate_ids": ["GCP-PLAN-BLOCKER", "GITHUB-GATE-BLOCKER"]},
+    {"requirement_id": "GCP-008", "target": "attested saved-plan apply", "severity": "CRITICAL", "expected": "Only the evaluated hash-bound saved dev plan is applied through the protected apply identity.", "required_fix": "Keep DENY_APPLY until the exact saved-plan attestation and all prerequisite gates pass.", "gate_ids": ["GCP-APPLY-BLOCKER"]},
+    {"requirement_id": "GCP-009", "target": "post-apply private runtime verification", "severity": "CRITICAL", "expected": "Applied health, database, auth denial, logs, labels, budget delivery, named image provenance, foundation authority, protected predecessor and integrated behavior pass with masked evidence.", "required_fix": "After an authorized apply, execute and record every post-apply and rollback-boundary verification.", "gate_ids": ["GCP-POSTAPPLY-BLOCKER"]},
+    {"requirement_id": "GCP-010", "target": "second no-change plan", "severity": "HIGH", "expected": "A second plan against the applied state contains no unexpected changes.", "required_fix": "After apply, produce the second plan and repair/re-evaluate all drift.", "gate_ids": ["GCP-POSTAPPLY-BLOCKER"]},
+    {"requirement_id": "GCP-011", "target": "non-sensitive resource and cost evidence", "severity": "HIGH", "expected": "Applied IDs, region, ongoing exact cost, results, and rollback are recorded without secrets.", "required_fix": "After apply, capture masked resource and measured cost evidence plus rollback outcome.", "gate_ids": ["GCP-POSTAPPLY-BLOCKER"]},
+    {"requirement_id": "GCP-012", "target": "human gates for dangerous effects", "severity": "CRITICAL", "expected": "Protected controls prevent staging/production/public/spend/billing/destruction/publication/ads actions without later human authorization.", "required_fix": "Configure protected environments and keep every dangerous effect outside this iteration.", "gate_ids": ["PLATFORM-STATIC", "GITHUB-GATE-BLOCKER"]},
+    {"requirement_id": "GCP-013", "target": "exact external resume condition", "severity": "HIGH", "expected": "Independent local work is complete and one truthful exact cloud resume condition is current while apply remains denied.", "required_fix": "Refresh the blocker and exact resume condition to match current cloud discovery.", "gate_ids": ["GOVERNANCE-STATIC"]},
+
+    {"requirement_id": "GOV-001", "target": "versioned specification and traceability", "severity": "HIGH", "expected": "Every spec requirement has one unique current traceability row.", "required_fix": "Repair spec/matrix drift and preserve all requirement IDs explicitly.", "gate_ids": ["GOVERNANCE-STATIC"]},
+    {"requirement_id": "GOV-002", "target": "complete governance state", "severity": "HIGH", "expected": "State, ledger, graph, decisions, evidence, evals, critiques, risks, issues, and reports are structured and current.", "required_fix": "Repair missing, malformed, stale, or unsupported governance evidence.", "gate_ids": ["GOVERNANCE-STATIC"]},
+    {"requirement_id": "GOV-003", "target": "explicit subagent ownership contracts", "severity": "HIGH", "expected": "Every task records the mandatory role, paths, write locks, outputs, acceptance, validation, and prohibitions.", "required_fix": "Complete every task contract and remove overlapping writer ownership.", "gate_ids": ["GOVERNANCE-STATIC"]},
+    {"requirement_id": "GOV-004", "target": "ordered producer-to-verification gates", "severity": "CRITICAL", "expected": "Producer, tests, critique, fixer, independent evaluator, apply gate, and post-apply states are explicit and veto-capable.", "required_fix": "Restore the ordered task graph and obtain independent evaluation before any next gate.", "gate_ids": ["GOVERNANCE-STATIC"]},
+    {"requirement_id": "GOV-005", "target": "independent veto authority", "severity": "CRITICAL", "expected": "Independent critique/evaluation findings cannot be self-overridden and DENY_APPLY blocks cloud authentication.", "required_fix": "Repair the independent veto record or apply gate; never self-attest a cloud plan.", "gate_ids": ["GOVERNANCE-STATIC", "PLATFORM-STATIC"]},
+    {"requirement_id": "GOV-006", "target": "required architecture decisions", "severity": "MEDIUM", "expected": "At least the nine mandated architecture choices and later material decisions remain versioned with trade-offs.", "required_fix": "Record the missing decision, alternatives, trade-off, and review trigger.", "gate_ids": ["GOVERNANCE-STATIC"]},
+    {"requirement_id": "GOV-007", "target": "focused draft delivery workflow", "severity": "HIGH", "expected": "Changes use focused commits, issue and draft PR evidence, remain unmerged, and require protected review.", "required_fix": "Refresh issue/PR/commit evidence, keep the PR draft and unmerged, and configure review protection.", "gate_ids": ["GOVERNANCE-STATIC", "GIT-DIFF-CHECK", "GITHUB-GATE-BLOCKER"]},
+    {"requirement_id": "GOV-008", "target": "truthful production-readiness claims", "severity": "CRITICAL", "expected": "Every artifact distinguishes sandbox, command-boundary durability, local proof, cloud blockers, and unperformed deployment.", "required_fix": "Remove unsupported claims and reconcile every governance artifact with current executed evidence.", "gate_ids": ["GOVERNANCE-STATIC", "LIVE-UI-API-POSTGRES"]}
+  ]
+}

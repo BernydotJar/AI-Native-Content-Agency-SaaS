@@ -1,60 +1,62 @@
 # Local Foundation Verification — 2026-07-18
 
-Updated: 2026-07-19T03:59:19Z
+Updated: 2026-07-19T19:08:21Z
 
 ## Verdict
 
-The repository has a production-oriented local foundation and a parameterized, gated GCP dev path. Application evidence is green locally and in CI, so the local recommendation is `READY_FOR_REVIEW`. Cloud apply is not authorized; its recommendation remains `DENY_APPLY`.
+The current working tree contains a production-oriented local foundation with repaired real-transport, PostgreSQL, rollback and cloud-drift gates. Local producer and focused critic validation are green, but release is not: the current executable eval result, exact-tree GitHub CI, a distinct eligible reviewer and a final evaluator remain incomplete. Main and phase-environment protections are live and fail closed. Current recommendation: `DENY_RELEASE`; cloud: `DENY_APPLY`.
 
-The verified implementation commit is `2513be1019a675426a6b3c27c0309137bea5c433` in draft PR `#2`. GitHub Actions run `29672546616` passed all four jobs.
-
-## Application evidence
+## Current local producer evidence
 
 | Gate | Result |
 |---|---|
-| Backend pytest | PASS — 44/44 with deprecation, resource and unraisable warnings treated as errors |
-| Ruff / mypy / OpenAPI | PASS |
-| Alembic / PostgreSQL integration | PASS — upgrade, no drift and API integration |
-| Frontend tests | PASS — 47/47; focused polling regression passed eight consecutive runs |
+| Backend tests | PASS_LOCAL — 58 pytest cases plus seven legacy unittest cases; 24/24 repeated races and timeout critic pass |
+| Ruff check / format; mypy; canonical OpenAPI | PASS |
+| Alembic and PostgreSQL integration | PASS — fresh migrations 0001–0003, single same-key execution, cross-tenant denial and app recreation |
+| Frontend tests | PASS — 47 |
 | Frontend lint / typecheck / contract / build | PASS |
-| npm audit | PASS — zero vulnerabilities |
-| Python runtime and CI lock audits | PASS — no known vulnerabilities |
+| Live Playwright | PASS — fresh approval, rejection and app-only restart 3/3 against SPA/FastAPI/PostgreSQL |
+| Terraform/static platform | PASS_LOCAL — nine roots, 24 Terraform tests, 65 script tests and 61 controls; result remains `DENY_APPLY` |
 
-Role-separated critical review verified tenant isolation, composite tenant foreign keys, request byte limits without trusting Content-Length, manifest TOCTOU rollback, structured safe 500/503 errors, identity bootstrap concurrency, stable idempotent retries, database lifecycle cleanup, terminal polling and stale-response protection.
+These counts describe the uncommitted repair working tree. GitHub Actions run `29672994585` passed the prior committed HEAD `34c3489`; it is not current-tree CI evidence.
 
-## Container and persistence evidence
+## Behavioral coverage added by the repair
 
-- The combined image `ai-native-content-agency:validation-final5` is pinned at its bases, installs hash-locked dependencies and runs as UID/GID `10001:10001`.
-- Compose retains PostgreSQL 15, runs Alembic to completion, then exposes the app only on `127.0.0.1:8080` through separated edge and internal networks.
-- `scripts/http_smoke.py` created a mission, completed the eight-step run and exact approval, and asserted eight artifacts, eight evidence records, `external_side_effects=false` and `publication_performed=false`.
-- Run `run-1e4a654937524e008520932253dfde80` remained readable and complete after restarting the application container against the preserved PostgreSQL volume.
-- The CI platform job repeats image construction, runtime-user inspection, migrations and the same-origin HTTP flow.
+- Approval and rejection originate in the browser, cross real HTTP, persist in PostgreSQL and restore on reload/explicit refresh.
+- Versioned tenant/principal identity is directly queryable through the protected identity endpoint.
+- Every approval directly records its idempotency key in the row, response and audit payload. Migration from revision 0002 backfills only a safe one-to-one durable command record and fails closed otherwise.
+- Explicit tests cover wrong policy, nonexistent run, provider timeout rollback, duplicate run delivery/event replay and migration failure.
+- PostgreSQL integration proves wrong-tenant read and approval denial.
+- HTTP smoke asserts exactly eight artifacts/evidence after sandbox approval.
 
-## Terraform evidence
+## Reproducibility and delivery
 
-- Nine executable roots have Google provider 7.40.0 locks with checksums for Linux AMD64 and macOS ARM64.
-- `terraform fmt`, read-only backend-free init and validate pass for all roots; three mock-provider tests pass.
-- Twenty-five script tests and 46 static controls pass for public IAM, basic roles, exact runtime deployment permissions, repository-scoped image access, split state/identities, WIF scope, Cloud SQL connector/IAM auth, Cloud Run invocation, notification delivery, Compose boundaries, pinned delivery and state/plan hygiene.
-- Static success explicitly returns `DENY_APPLY`; it is not evidence of permissions, policies, quotas, price, connectivity, drift or a safe real plan.
+- Frozen backend development dependencies include PyYAML, closing the prior clean-environment failure in `scripts/validate_platform.sh`.
+- CI includes `ruff format --check` and installs locked Chromium before live E2E.
+- The combined image/Compose design remains non-root with PostgreSQL health, one-shot Alembic ordering and same-origin SPA/API serving.
+- A separate non-deployed image stage supplies locked integration dependencies; both stages use UID 10001 and `httpx2` is absent from runtime.
+- Manual visual/accessibility inspection remains unproven because the required in-app browser returned zero instances. Playwright is transport/behavior evidence only.
 
-## CI evidence
+## Static cloud repairs
 
-GitHub Actions run `29672546616` passed:
+- WIF binds immutable numeric GitHub owner/repository IDs.
+- Existing projects require explicit evidence-backed Terraform import; no data-only implicit adoption remains.
+- Bootstrap/dev project IDs differ and required labels are protected.
+- Region, repository identity and project/channel provenance are bound from foundation into runtime; the three foundation phase accounts must come from the exact bootstrap project.
+- Routine deploy IAM contains 16 permissions and excludes service/job deletion and service IAM mutation; foundation grants service-only `roles/run.servicesInvoker` and runtime owns no service IAM member.
+- A separate two-permission role can create/update—but not upload/delete—the immediate-predecessor rollback tag only after attestation and preflight.
+- State versioning and seven-day soft deletion preserve recovery without a retention policy that traps `.tflock`.
+- Registry cleanup covers tagged and untagged versions older than seven days after keeping the 20 most recent plus `rollback-current`; runtime and rollback deploy only by immutable foundation-repository digest.
+- Post-apply now verifies exact runtime roles, named application/migration/proxy images, WIF/impersonation, state boundaries, complete repository IAM and both custom roles.
+- Terraform creates or imports Monitoring channels, protects them from destruction and blocks alert, budget and costly/runtime resources until verification plus evidence pass.
 
-- Backend, migrations, OpenAPI and PostgreSQL — 1m01s.
-- Dependency, secret and repository integrity gates — 1m06s.
-- Frontend build, lint and tests — 29s.
-- Terraform, Compose, container and platform evals — 1m54s.
+No static result proves a real GCP plan, permissions, policies, quotas, regional availability, cost, runtime health or drift.
 
-The security job also checks whitespace across the complete tracked tree. A prior run exposed historical trailing whitespace; commit `2513be1` normalized it and the exact gate now passes.
+## Pending local gates
 
-## Review provenance
+- Root-owned final-tree eval result generation and exact traceability execution.
+- Commit/push and exact-tree GitHub Actions.
+- Exact-tree validation under the now-required main checks plus a distinct eligible reviewer for the protected `dev` environment.
+- New independent readiness evaluation.
 
-Producer, critic and evaluator passes were kept separate but executed sequentially by the primary agent. Collaboration credits were exhausted, so this report does not claim independent verification. A different human or independent agent must review the draft PR before merge and any future exact cloud plan.
-
-## Unproven or blocked
-
-- Interactive visual QA: the required in-app browser runtime returned an empty browser list.
-- Real GCP plan/apply: all visible billing accounts are closed; target hierarchy, project and region are absent.
-- Post-apply authenticated/unauthenticated probes and a second no-change plan cannot exist before an authorized exact apply.
-- No GCP mutation, plan or apply occurred.
+See [`readiness-audit-2026-07-19.md`](readiness-audit-2026-07-19.md) for the authoritative hard blockers.

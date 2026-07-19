@@ -1,138 +1,1323 @@
-schema_version: 1
+schema_version: 2
 iteration: production-foundation-v1
-updated_at: 2026-07-19T03:59:19Z
+updated_at: 2026-07-19T05:55:09Z
 tasks:
   - task_id: TASK-MAP-001
     role: Repository Mapper
-    status: PASS
-    owner: agent_knowledge
+    objective: Establish the pre-iteration repository and Git/GitHub baseline without mutation.
+    inputs:
+      - mission source
+      - repository at baseline
     dependencies: []
-    validations:
-      - clean feature branch at baseline
-      - all P0 targets inspected
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - "**"
+    write_lock: []
+    expected_outputs:
+      - baseline architecture and delivery inventory
+    acceptance_criteria:
+      - all P0 targets and existing branch/PR/issue state inspected
+    validation:
+      - baseline commands recorded in agent/reports/baseline-2026-07-18.md
+    prohibited_actions:
+      - edit repository files
+      - mutate external systems
+    status: PASS
+    owner: repository_mapper
+
   - task_id: TASK-SPEC-001
     role: Specification Analyst
+    objective: Convert the mission into versioned requirements and a strict Definition of Done.
+    inputs:
+      - mission source
+      - TASK-MAP-001 output
+    dependencies:
+      - TASK-MAP-001
+    allowed_paths:
+      - docs/specs/production-foundation-v1.md
+      - agent/requirements-traceability.csv
+    read_only_paths:
+      - application and infrastructure source
+    write_lock:
+      - docs/specs/production-foundation-v1.md
+    expected_outputs:
+      - Production Foundation V1 specification
+      - requirement identifiers and acceptance evidence
+    acceptance_criteria:
+      - every included application security delivery GCP and governance requirement is explicit
+    validation:
+      - scripts/governance_eval.py requirement-ID comparison
+    prohibited_actions:
+      - mark implementation complete from documentation alone
     status: PASS
-    owner: docs_closure
-    dependencies: []
-    validations:
-      - all minimum outcomes and GCP gates traced
+    owner: specification_analyst
+
   - task_id: TASK-GCP-DISC-001
     role: Cloud Infrastructure Discovery Agent
-    status: PARTIAL_BLOCKED_EXTERNAL
-    owner: functional_audit
+    objective: Discover GCP identity hierarchy billing projects regions and existing resources without mutation.
+    inputs:
+      - GCP-0 mission procedure
+      - active local gcloud and ADC configuration
     dependencies: []
-    outputs:
+    allowed_paths:
+      - agent/reports/gcp-discovery-2026-07-18.md
+    read_only_paths:
+      - GCP account and project metadata
+    write_lock:
+      - agent/reports/gcp-discovery-2026-07-18.md
+    expected_outputs:
       - masked GCP discovery report
-    blocker: zero visible open billing accounts and no authorized target project or region
+      - exact resume condition
+    acceptance_criteria:
+      - no token or full billing identifier recorded
+      - candidate-project ambiguity and all missing eligibility inputs are explicit
+    validation:
+      - read-only gcloud listings and ADC refresh with token output discarded
+    prohibited_actions:
+      - create or change cloud resources
+      - change billing
+      - adopt a project without authorization
+    status: PARTIAL
+    owner: cloud_discovery_agent
+
   - task_id: TASK-BACKEND-001
     role: Backend API and Data Producer
-    status: PASS
-    owner: root
+    objective: Build the initial versioned FastAPI persisted workflow and backend Greenlight slice.
+    inputs:
+      - TASK-SPEC-001
+      - existing agency runtime
     dependencies:
       - TASK-SPEC-001
-    outputs:
+    allowed_paths:
+      - backend/**
+      - scripts/postgres_integration.py
+      - scripts/http_smoke.py
+    read_only_paths:
+      - src/**
+      - infra/**
+    write_lock:
+      - backend/control_plane/**
+      - backend/migrations/**
+    expected_outputs:
       - FastAPI control plane
-      - durable repository and migrations
-      - Greenlight idempotency concurrency and error tests
-      - composite tenant database integrity
-    validations:
-      - 44 strict backend tests passed on Python 3.13.5
-      - ruff mypy Alembic canonical OpenAPI and PostgreSQL integration passed
-      - application and test database engines are explicitly disposed
+      - SQL repository and migrations
+      - Greenlight policy and tests
+    acceptance_criteria:
+      - mission run query and decision flows are persisted and tenant scoped
+    validation:
+      - backend pytest Ruff mypy OpenAPI Alembic and PostgreSQL integration
+    prohibited_actions:
+      - enable external publication or spend
+      - use process memory as the runtime source of truth
+    status: PASS
+    owner: root_backend_producer
+
   - task_id: TASK-WEB-001
     role: Frontend Integration Producer
-    status: PASS
-    owner: root
+    objective: Make the API-backed integrated UI the default and isolate browser simulation.
+    inputs:
+      - TASK-BACKEND-001 contracts
+      - existing React UI
     dependencies:
       - TASK-BACKEND-001
-    outputs:
+    allowed_paths:
+      - src/**
+      - package.json
+      - package-lock.json
+    read_only_paths:
+      - backend/openapi.json
+    write_lock:
+      - src/api/**
+      - src/control-plane/**
+    expected_outputs:
       - typed API client
       - backend-driven UI
-      - explicit demo isolation
-      - sequential non-overlapping polling
-    validations:
-      - 47 frontend tests passed
-      - focused polling regression passed eight consecutive runs
-      - lint typecheck build and OpenAPI contract passed
-      - stable retry keys and stale-response guards passed role-separated verification
+      - explicit demo mode
+    acceptance_criteria:
+      - integrated state derives only from API responses
+      - refresh reconstructs persisted state
+    validation:
+      - npm test lint typecheck check:api-contract build
+    prohibited_actions:
+      - present timer simulation as integrated behavior
+    status: PASS
+    owner: root_frontend_producer
+
   - task_id: TASK-PLATFORM-001
     role: Platform and Terraform Producer
-    status: PASS_LOCAL
-    owner: functional_audit
-    dependencies:
-      - TASK-GCP-DISC-001
+    objective: Add the initial non-root container CI and statically valid GCP delivery path.
+    inputs:
       - TASK-BACKEND-001
       - TASK-WEB-001
-    outputs:
-      - non-root combined image and Compose
-      - CI and gated dev workflow
-      - split Terraform foundation and runtime state
-      - exact custom runtime deploy role
-      - static plan and platform veto gates
-    validations:
-      - exact frontend container and CI Python locks report zero known vulnerabilities
-      - live Compose migration HTTP and restart persistence passed on validation-final5
-      - nine Terraform roots validate with multi-platform locks
-      - three Terraform mock tests 25 script tests and 46 static checks passed
-      - GitHub Actions run 29672546616 passed all four jobs
+      - TASK-GCP-DISC-001
+    dependencies:
+      - TASK-BACKEND-001
+      - TASK-WEB-001
+      - TASK-GCP-DISC-001
+    allowed_paths:
+      - Dockerfile
+      - docker-compose.yml
+      - .github/workflows/**
+      - infra/**
+      - scripts/**
+    read_only_paths:
+      - application contracts
+    write_lock:
+      - infra/**
+      - .github/workflows/ci.yml
+      - .github/workflows/deploy-dev.yml
+    expected_outputs:
+      - Compose and container path
+      - CI workflow
+      - bootstrap dev and dev-runtime Terraform roots
+    acceptance_criteria:
+      - static validation denies apply without a real independently approved saved plan
+    validation:
+      - scripts/validate_platform.sh
+      - Compose HTTP and restart smoke
+    prohibited_actions:
+      - run a cloud apply without ALLOW_DEV_APPLY
+      - create service-account keys
+    status: PASS
+    owner: root_platform_producer
+
   - task_id: TASK-SEC-REVIEW-001
     role: Security and Reliability Critic
-    status: PASS_ROLE_SEPARATED
-    owner: root_sequential_critic
+    objective: Review the initial slice for tenancy replay transaction supply-chain and deployment risks.
+    inputs:
+      - TASK-BACKEND-001
+      - TASK-WEB-001
+      - TASK-PLATFORM-001
     dependencies:
       - TASK-BACKEND-001
       - TASK-WEB-001
       - TASK-PLATFORM-001
-    outputs:
-      - exact lock audits
-      - closed security and reliability findings
-    validations:
-      - npm and both Python lock audits report zero known vulnerabilities
-      - CI security integrity and complete-tree whitespace gate passed
-    limitation: sequential role separation is not independent review
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - "**"
+    write_lock: []
+    expected_outputs:
+      - security and reliability findings
+    acceptance_criteria:
+      - critical and high risks receive reproducible evidence and disposition
+    validation:
+      - dependency audits repository scan and adversarial test review
+    prohibited_actions:
+      - modify evaluated implementation
+      - suppress or downgrade findings
+    status: PARTIAL
+    owner: root_role_separated_critic
+
   - task_id: TASK-CRITIQUE-001
     role: Cloud Infrastructure Critic
-    status: PASS_STATIC_ROLE_SEPARATED
-    owner: root_sequential_critic
+    objective: Critique the initial Terraform and delivery design while denying apply without a real plan.
+    inputs:
+      - TASK-PLATFORM-001
+      - TASK-GCP-DISC-001
     dependencies:
       - TASK-PLATFORM-001
-    outputs:
-      - closed static IAM state attestation notification and migration findings
+      - TASK-GCP-DISC-001
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - infra/**
+      - .github/workflows/**
+      - scripts/**
+    write_lock: []
+    expected_outputs:
+      - static cloud findings
       - DENY_APPLY recommendation
-    limitation: no real GCP target plan exists and the critic was not an independent actor
+    acceptance_criteria:
+      - no static validation is represented as real-plan eligibility
+    validation:
+      - Terraform workflow and IAM inspection
+    prohibited_actions:
+      - modify Terraform
+      - approve an absent plan
+    status: PARTIAL
+    owner: root_role_separated_cloud_critic
+
   - task_id: EVAL-INC-001
     role: Production Readiness Evaluator
-    status: PASS_LOCAL_READY_FOR_REVIEW
-    owner: root_sequential_evaluator
+    objective: Evaluate the first local increment against the specification.
+    inputs:
+      - TASK-SEC-REVIEW-001
+      - TASK-CRITIQUE-001
     dependencies:
       - TASK-SEC-REVIEW-001
       - TASK-CRITIQUE-001
-    outputs:
-      - local application READY_FOR_REVIEW recommendation
-      - cloud DENY_APPLY recommendation
-    limitation: independent evaluator gate remains unsatisfied
+    allowed_paths:
+      - agent/eval-results.json
+      - agent/reports/final-readiness-audit-2026-07-18.md
+    read_only_paths:
+      - implementation and tests
+    write_lock:
+      - agent/eval-results.json
+      - agent/reports/final-readiness-audit-2026-07-18.md
+    expected_outputs:
+      - structured readiness recommendation
+    acceptance_criteria:
+      - evaluator is independent from the implementation and every included requirement is covered
+    validation:
+      - independent rerun of deterministic gates
+    prohibited_actions:
+      - modify implementation
+      - approve from producer claims
+    status: FAILED
+    owner: root_role_separated_evaluator
+
   - task_id: TASK-GOV-001
     role: Delivery and Evidence Custodian
-    status: PASS
-    owner: root
+    objective: Persist the initial issue PR decisions evidence risks and reports.
+    inputs:
+      - EVAL-INC-001
     dependencies:
       - EVAL-INC-001
-    outputs:
-      - tracking issue 1
-      - draft PR 2
-      - decision evidence risk and readiness records
+    allowed_paths:
+      - agent/**
+      - docs/**
+    read_only_paths:
+      - implementation and tests
+    write_lock:
+      - agent/**
+      - docs/**
+    expected_outputs:
+      - governance artifacts
+      - draft PR and issue state
+    acceptance_criteria:
+      - claims distinguish local static cloud and external evidence
+    validation:
+      - YAML JSON JSONL and traceability review
+    prohibited_actions:
+      - fabricate evidence
+      - mark the iteration complete
+    status: PARTIAL
+    owner: root
+
+  - task_id: TASK-REQ-AUDIT-002
+    role: Independent Requirements Completion Auditor
+    objective: Independently map every mission requirement to direct evidence and veto unsupported completion.
+    inputs:
+      - full mission source
+      - specification
+      - repository and agent artifacts at 34c3489
+    dependencies:
+      - TASK-GOV-001
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - "**"
+    write_lock: []
+    expected_outputs:
+      - requirement-level pass partial failed and external-blocked assessment
+      - release and apply recommendation
+    acceptance_criteria:
+      - no mock transport or static cloud claim is accepted as integration/apply evidence
+    validation:
+      - inspect implementation tests CI GitHub configuration and GCP evidence
+    prohibited_actions:
+      - modify implementation
+      - weaken requirement wording
+    status: FAILED
+    owner: req_completion_audit
+
+  - task_id: EVAL-INC-002
+    role: Independent Production Readiness Evaluator
+    objective: Independently rerun deterministic gates and decide release/apply eligibility for the prior tree.
+    inputs:
+      - TASK-REQ-AUDIT-002
+      - specification
+      - prior implementation tree
+    dependencies:
+      - TASK-REQ-AUDIT-002
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - "**"
+    write_lock: []
+    expected_outputs:
+      - independent FAIL and DENY_APPLY result
+      - reproducibility finding
+    acceptance_criteria:
+      - documented clean setup and deterministic gates are rerun rather than inferred
+    validation:
+      - backend frontend platform container and audit commands rerun independently
+    prohibited_actions:
+      - modify implementation
+      - approve with a failed reproducibility gate
+    status: FAILED
+    owner: independent_release_eval
+
+  - task_id: CLOUD-CRITIQUE-002
+    role: Cloud Infrastructure Critique Agent
+    objective: Adversarially review GCP eligibility Terraform IAM WIF isolation adoption cost and rollback.
+    inputs:
+      - current Terraform and workflow
+      - read-only GCP and GitHub discovery
+    dependencies:
+      - TASK-PLATFORM-001
+      - TASK-GCP-DISC-001
+    allowed_paths:
+      - repository and external configuration read-only
+    read_only_paths:
+      - infra/**
+      - .github/workflows/**
+      - GCP and GitHub metadata
+    write_lock: []
+    expected_outputs:
+      - cloud findings and DENY_APPLY
+      - plan and rollback assessment
+    acceptance_criteria:
+      - missing real plan cost eligibility and independent gates are explicit
+    validation:
+      - Terraform source IAM and external configuration inspection
+    prohibited_actions:
+      - mutate cloud or GitHub
+      - approve an absent saved plan
+    status: FAILED
+    owner: cloud_critique_recheck
+
+  - task_id: TASK-BACKEND-PRODUCER-003
+    role: Backend Reliability Producer
+    objective: Close approval identity PostgreSQL and negative reliability evidence gaps.
+    inputs:
+      - TASK-REQ-AUDIT-002 findings
+      - EVAL-INC-002 findings
+    dependencies:
+      - TASK-REQ-AUDIT-002
+      - EVAL-INC-002
+    allowed_paths:
+      - backend/control_plane/**
+      - backend/migrations/**
+      - backend/tests/**
+      - scripts/postgres_integration.py
+      - scripts/http_smoke.py
+    read_only_paths:
+      - frontend infrastructure workflows governance and locks
+    write_lock:
+      - backend/control_plane/**
+      - backend/migrations/**
+      - backend/tests/**
+      - scripts/postgres_integration.py
+      - scripts/http_smoke.py
+    expected_outputs:
+      - versioned identity endpoint
+      - approval idempotency migration and audit linkage
+      - PostgreSQL cross-tenant and explicit reliability tests
+    acceptance_criteria:
+      - legacy approvals migrate safely or fail closed
+      - approval key is direct contract and audit evidence
+      - smoke asserts exactly eight artifacts and evidence records
+    validation:
+      - 50 pytest cases plus seven unittest subtests
+      - Ruff check and format mypy OpenAPI Alembic and PostgreSQL integration
+    prohibited_actions:
+      - edit package locks workflows Terraform docs or governance
+      - enable external effects
+    status: PASS
+    owner: backend_producer_003
+
+  - task_id: TASK-E2E-CI-PRODUCER-003
+    role: Live Transport and CI Producer
+    objective: Add real SPA to FastAPI to PostgreSQL E2E coverage and repair reproducible CI prerequisites.
+    inputs:
+      - TASK-REQ-AUDIT-002 findings
+      - EVAL-INC-002 reproducibility finding
+    dependencies:
+      - TASK-REQ-AUDIT-002
+      - EVAL-INC-002
+    allowed_paths:
+      - package.json
+      - package-lock.json
+      - playwright.config.ts
+      - e2e/**
+      - .github/workflows/ci.yml
+      - scripts/validate_platform.sh
+      - backend/pyproject.toml
+      - backend/uv.lock
+      - README.md
+    read_only_paths:
+      - application source and Terraform code
+    write_lock:
+      - package.json
+      - package-lock.json
+      - playwright.config.ts
+      - e2e/**
+      - .github/workflows/ci.yml
+      - backend/pyproject.toml
+      - backend/uv.lock
+    expected_outputs:
+      - two real-network Playwright scenarios
+      - PyYAML in the frozen dev environment
+      - Ruff format CI gate
+    acceptance_criteria:
+      - no request interception or mocked fetch in E2E
+      - approve reject artifacts evidence and reload are proven against Compose PostgreSQL
+    validation:
+      - 47 frontend tests lint typecheck contract and build
+      - two Playwright cases passed twice against the live stack
+    prohibited_actions:
+      - mock frontend transport
+      - edit backend implementation Terraform or governance
+    status: PASS
+    owner: e2e_ci_producer_003
+
+  - task_id: TASK-TERRAFORM-FIXER-003
+    role: Terraform Safety Fixer
+    objective: Repair immutable identity project adoption isolation region labels and destructive-IAM findings.
+    inputs:
+      - CLOUD-CRITIQUE-002 findings
+      - current Terraform roots and tests
+    dependencies:
+      - CLOUD-CRITIQUE-002
+    allowed_paths:
+      - infra/**
+      - scripts/platform_eval.py
+      - scripts/gcp_permission_preflight.py
+      - Terraform-focused script tests
+    read_only_paths:
+      - application package workflows and agent artifacts
+    write_lock:
+      - infra/**
+      - scripts/platform_eval.py
+      - scripts/gcp_permission_preflight.py
+    expected_outputs:
+      - immutable GitHub ID WIF conditions
+      - explicit Terraform project import/adoption
+      - distinct-project region/provenance and protected-label gates
+      - 17-permission runtime role without service or job deletion
+    acceptance_criteria:
+      - project adoption cannot be silent
+      - service and job deletion is absent from routine deploy IAM
+      - runtime inputs exactly match foundation identity region and provenance
+    validation:
+      - nine Terraform roots 17 mock-provider tests and 52 static controls
+    prohibited_actions:
+      - run a real plan or apply
+      - mutate GCP or GitHub
+      - edit workflows or governance
+    status: PARTIAL
+    owner: terraform_fixer_003
+
+  - task_id: TASK-TERRAFORM-IAM-FIXER-004
+    role: Terraform IAM Fixer
+    objective: Remove routine Cloud Run service-IAM mutation and move invocation authority into the separately reviewed foundation.
+    inputs:
+      - TASK-TERRAFORM-CRITIC-004 interim HIGH finding
+      - TASK-TERRAFORM-FIXER-003 output
+    dependencies:
+      - TASK-TERRAFORM-FIXER-003
+    allowed_paths:
+      - infra/**
+      - scripts/platform_eval.py
+      - scripts/gcp_permission_preflight.py
+      - scripts/post_apply_verify.py
+      - focused platform tests
+    read_only_paths:
+      - application package governance and GitHub configuration
+    write_lock:
+      - Terraform IAM and Cloud Run module call sites
+      - permission preflight and post-apply policy expectations
+    expected_outputs:
+      - exact 16-permission runtime role without delete or setIamPolicy
+      - foundation-managed project-level dev invoker
+      - no runtime-owned service IAM member
+      - public and unexpected service-binding post-apply vetoes
+    acceptance_criteria:
+      - routine apply cannot mutate service IAM
+      - expected project roles and service bindings fail closed on drift
+    validation:
+      - six dev and seven runtime Terraform mocks
+      - 11 focused script tests
+      - 53 of 53 platform static controls
+    prohibited_actions:
+      - run a real plan or apply
+      - mutate GCP or GitHub
+      - grant a public principal
+    status: PASS
+    owner: root_terraform_iam_fixer_004
+
+  - task_id: TASK-TERRAFORM-SAFETY-FIXER-005
+    role: Terraform Safety Fixer
+    objective: Close state-lock, artifact-cleanup, phase-identity and Terraform-owned notification-channel safety gaps.
+    inputs:
+      - TASK-TERRAFORM-CRITIC-004 interim findings
+      - current bootstrap foundation runtime and reusable modules
+    dependencies:
+      - TASK-TERRAFORM-IAM-FIXER-004
+    allowed_paths:
+      - infra/**
+      - scripts/platform_eval.py
+      - scripts/post_apply_verify.py
+      - focused platform tests
+    read_only_paths:
+      - application package governance and GitHub configuration
+    write_lock:
+      - state bucket policy
+      - Artifact Registry cleanup policy
+      - foundation phase-identity gate
+      - notification-channel module and foundation/runtime provenance contracts
+    expected_outputs:
+      - versioned state with seven-day soft delete and releasable locks
+      - digest-immutable deployments with bounded removable-tag cleanup
+      - exact bootstrap phase service-account gate
+      - Terraform-owned CREATE_NEW or ADOPT_EXISTING notification channels
+      - two-phase channel verification procedure
+    acceptance_criteria:
+      - no retention policy can block Terraform lock deletion
+      - cleanup applies to any tag state older than seven days while keeping 20 versions
+      - costly and runtime resources wait for verified channel provenance
+    validation:
+      - 22 Terraform tests across bootstrap dev runtime observability and Artifact Registry
+      - 58 of 58 platform static controls
+      - seven post-apply verifier tests
+    prohibited_actions:
+      - run a real plan or apply
+      - mutate GCP billing resources or GitHub
+      - expose notification email addresses
+    status: PASS
+    owner: root_terraform_safety_fixer_005
+
+  - task_id: TASK-EVAL-HARNESS-003
+    role: Eval Harness Producer
+    objective: Build a strict executable requirement-level eval catalog and schema-compliant result generator.
+    inputs:
+      - mission eval schema
+      - requirements traceability matrix
+      - EVAL-INC-002 findings
+    dependencies:
+      - EVAL-INC-002
+    allowed_paths:
+      - scripts/eval_harness.py
+      - scripts/governance_eval.py
+      - scripts/test_eval_harness.py
+      - scripts/test_governance_eval.py
+      - agent/eval-catalog.json
+      - agent/eval-results.json
+    read_only_paths:
+      - implementation tests and governance inputs
+    write_lock:
+      - agent/eval-catalog.json
+      - agent/eval-results.json
+    expected_outputs:
+      - executable fail-closed eval harness
+      - one structured evaluation for every requirement
+    acceptance_criteria:
+      - catalog coverage equals traceability exactly
+      - blocked GCP requirements remain blocked and force DENY_APPLY
+    validation:
+      - python -m unittest scripts.test_eval_harness scripts.test_governance_eval
+      - python scripts/eval_harness.py --check-results agent/eval-results.json
+    prohibited_actions:
+      - turn blocked or failed gates into PASS
+      - expose tokens or personal paths in output
+    status: PARTIAL
+    owner: root
+
+  - task_id: TASK-BACKEND-CRITIC-003
+    role: Backend and Transport Critic
+    objective: Independently verify the backend and live-transport repair increment without editing it.
+    inputs:
+      - TASK-BACKEND-PRODUCER-003
+      - TASK-E2E-CI-PRODUCER-003
+    dependencies:
+      - TASK-BACKEND-PRODUCER-003
+      - TASK-E2E-CI-PRODUCER-003
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - backend/**
+      - src/**
+      - e2e/**
+      - .github/workflows/ci.yml
+    write_lock: []
+    expected_outputs:
+      - focused critique and veto recommendation
+    acceptance_criteria:
+      - migration safety transport persistence replay and CI claims are rerun independently
+    validation:
+      - focused backend frontend Playwright PostgreSQL and CI inspection
+    prohibited_actions:
+      - modify evaluated files
+      - approve from producer report alone
+    status: PARTIAL
+    owner: backend_critic_005
+
+  - task_id: TASK-TERRAFORM-CRITIC-004
+    role: Cloud Infrastructure Critique Agent
+    objective: Independently re-evaluate the static Terraform repairs and preserve the real-plan veto.
+    inputs:
+      - TASK-TERRAFORM-FIXER-003
+      - TASK-TERRAFORM-IAM-FIXER-004
+      - TASK-TERRAFORM-SAFETY-FIXER-005
+      - current GCP discovery
+    dependencies:
+      - TASK-TERRAFORM-FIXER-003
+      - TASK-TERRAFORM-IAM-FIXER-004
+      - TASK-TERRAFORM-SAFETY-FIXER-005
+      - TASK-GCP-DISC-001
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - infra/**
+      - .github/workflows/deploy-dev.yml
+      - platform scripts and tests
+    write_lock: []
+    expected_outputs:
+      - static repair critique
+      - DENY_APPLY unless a real exact plan is independently eligible
+    acceptance_criteria:
+      - adoption identity region isolation IAM and notification provenance are adversarially checked
+    validation:
+      - independent Terraform fmt validate tests and platform controls
+    prohibited_actions:
+      - modify Terraform
+      - run or authorize apply
+      - treat the candidate project as adopted
+    status: FAILED
+    owner: terraform_critic_005
+
+  - task_id: TASK-GOVERNANCE-WRITER-004
+    role: Delivery and Evidence Custodian
+    objective: Reconcile governance and documentation with current implementation evidence and blockers.
+    inputs:
+      - full mission source and specification
+      - producer and prior critic reports
+      - current worktree and discovery evidence
+    dependencies:
+      - TASK-BACKEND-PRODUCER-003
+      - TASK-E2E-CI-PRODUCER-003
+      - TASK-TERRAFORM-FIXER-003
+      - TASK-TERRAFORM-IAM-FIXER-004
+    allowed_paths:
+      - agent/**
+      - docs/**
+      - infra/README.md
+      - infra/REQUIREMENT_RESOURCE_MAP.md
+    read_only_paths:
+      - implementation tests workflows package locks and Terraform code
+      - agent/eval-catalog.json
+      - agent/eval-results.json
+    write_lock:
+      - agent/current-state.md
+      - agent/task-ledger.yaml
+      - agent/task-graph.yaml
+      - agent/requirements-traceability.csv
+      - agent/decision-log.md
+      - agent/evidence-register.jsonl
+      - agent/critique-findings.json
+      - agent/risk-register.md
+      - agent/open-issues.md
+      - agent/reports/**
+      - docs/**
+    expected_outputs:
+      - current truthful governance artifacts
+      - updated operational documentation
+      - readiness report with hard blockers
+    acceptance_criteria:
+      - task contracts are complete and graph references only ledger tasks
+      - traceability uses only the strict status vocabulary
+      - candidate project is not claimed authorized and no cloud apply is PASS
+    validation:
+      - YAML JSON JSONL CSV parse
+      - python -m scripts.governance_eval --skip-eval-results
+      - stale-claim and diff checks
+    prohibited_actions:
+      - edit implementation workflow package Terraform code or eval catalog/results
+      - mutate cloud or GitHub
+      - commit push or claim production readiness
+    status: PASS
+    owner: root_with_governance_writer_004
+
+  - task_id: TASK-GITHUB-GATES-004
+    role: GitHub Delivery Gate Owner
+    objective: Configure and verify required branch checks and protected phase environments after current-tree CI is green.
+    inputs:
+      - current committed and pushed repair increment
+      - exact current GitHub Actions checks
+    dependencies:
+      - TASK-BACKEND-CRITIC-003
+      - TASK-TERRAFORM-CRITIC-004
+      - TASK-EVAL-HARNESS-003
+    allowed_paths:
+      - GitHub repository configuration
+      - tracking issue and draft PR
+    read_only_paths:
+      - repository source
+    write_lock:
+      - GitHub branch protection and environments
+    expected_outputs:
+      - required-check branch protection
+      - dev-build dev-plan and dev environments
+      - authenticated distinct reviewer evidence or an explicit blocker
+    acceptance_criteria:
+      - main requires all current mandatory checks and one non-self review
+      - dev apply cannot bypass its protected environment
+    validation:
+      - read back GitHub rulesets branch protection environments variables and reviewers
+    prohibited_actions:
+      - merge the PR
+      - self-assert an independent reviewer
+      - place cloud secrets in repository variables
+    status: PARTIAL
+    owner: root
+
+  - task_id: TASK-GOVERNANCE-WRITER-005
+    role: Delivery and Evidence Custodian
+    objective: Reconcile governance after live GitHub protection and the final static Terraform safety repairs.
+    inputs:
+      - TASK-TERRAFORM-SAFETY-FIXER-005
+      - TASK-GITHUB-GATES-004 read-back evidence
+      - current critic and blocker state
+    dependencies:
+      - TASK-TERRAFORM-SAFETY-FIXER-005
+      - TASK-GITHUB-GATES-004
+    allowed_paths:
+      - agent/** excluding eval catalog and results
+      - docs/**
+      - infra/README.md
+      - infra/REQUIREMENT_RESOURCE_MAP.md
+    read_only_paths:
+      - implementation workflows package locks Terraform code and eval catalog/results
+    write_lock:
+      - prior governance-writer exclusive files
+      - current operational documentation
+    expected_outputs:
+      - current GitHub gate truth
+      - current Terraform safety and two-phase channel documentation
+      - updated traceability findings risks decisions and evidence
+    acceptance_criteria:
+      - protection is distinguished from workflow/reviewer/variable readiness
+      - role channel state and artifact terminology matches validated source
+      - DENY_RELEASE and DENY_APPLY remain active
+    validation:
+      - python -m scripts.governance_eval --skip-eval-results
+      - YAML JSON JSONL CSV parse and diff check
+    prohibited_actions:
+      - edit implementation or eval catalog/results
+      - mutate GitHub or GCP
+      - claim final critic approval
+    status: PASS
+    owner: root_after_governance_writer_004_credit_exit
+
+  - task_id: TASK-BACKEND-FIXER-006
+    role: Concurrent Idempotency Fixer
+    objective: Repair the independently reproduced same-key concurrent Greenlight replay race without weakening conflict or tenant boundaries.
+    inputs:
+      - TASK-BACKEND-CRITIC-003 HIGH finding
+      - current decide_run transaction and idempotency behavior
+    dependencies:
+      - TASK-BACKEND-CRITIC-003
+    allowed_paths:
+      - backend/control_plane/**
+      - backend/tests/**
+    read_only_paths:
+      - frontend infrastructure workflows and governance
+    write_lock:
+      - approval decision service path
+      - deterministic concurrent approval tests
+    expected_outputs:
+      - post-rollback exact idempotency replay recovery
+      - deterministic same-key concurrency regression test
+      - unchanged different-key exactly-one-decision semantics
+    acceptance_criteria:
+      - identical same tenant key operation and canonical request return the original durable response under a race
+      - incompatible key payload tenant hash or policy still fails closed
+    validation:
+      - focused deterministic concurrency tests
+      - exact backend pytest Ruff mypy and OpenAPI gates
+      - independent critic rerun
+    prohibited_actions:
+      - suppress or retry arbitrary approval errors
+      - weaken canonical request hash operation or tenant matching
+      - edit infrastructure governance or cloud state
+    status: PASS
+    owner: backend_fixer_006
+
+  - task_id: TASK-START-IDEMPOTENCY-FIXER-007
+    role: Pre-provider Idempotency Ownership Fixer
+    objective: Prevent concurrent identical starts from executing provider work more than once by acquiring cross-instance database ownership before replay and provider execution.
+    inputs:
+      - TASK-BACKEND-CRITIC-003 MEDIUM provider-duplication finding
+      - current repository transaction boundary
+    dependencies:
+      - TASK-BACKEND-CRITIC-003
+      - TASK-BACKEND-FIXER-006
+    allowed_paths:
+      - backend/control_plane/**
+      - backend/tests/**
+      - scripts/postgres_integration.py
+    read_only_paths:
+      - frontend infrastructure workflows and governance
+    write_lock:
+      - repository idempotency lock port and adapters
+      - command pre-replay ordering
+      - concurrent start and PostgreSQL integration tests
+    expected_outputs:
+      - PostgreSQL transaction-scoped advisory key lock
+      - SQLite BEGIN IMMEDIATE test/dev serialization
+      - one provider execution and one durable run for concurrent identical starts
+    acceptance_criteria:
+      - the lock is deterministic tenant-global and cross-process rather than Python-local
+      - replay is re-read after lock acquisition before provider work
+      - conflict tenant and approval semantics remain intact
+    validation:
+      - deterministic SQLite concurrency regression
+      - real PostgreSQL concurrent same-key integration
+      - exact backend pytest Ruff mypy and OpenAPI gates
+      - independent critic rerun
+    prohibited_actions:
+      - use an in-process-only lock
+      - commit pending idempotency state before command success
+      - enable effectful providers or edit infrastructure governance
+    status: PASS
+    owner: start_idempotency_fixer_007
+
+  - task_id: TASK-TERRAFORM-CRITIC-FIXER-008
+    role: Terraform Post-apply and Provenance Fixer
+    objective: Repair the independent cloud critic's runtime-IAM, image-provenance, rollback-retention and foundation-drift verification findings without changing cloud state.
+    inputs:
+      - CLOUD-CRITIQUE-005 HIGH and MEDIUM findings
+      - current bootstrap foundation runtime and post-apply verifier code
+    dependencies:
+      - TASK-TERRAFORM-CRITIC-004
+    allowed_paths:
+      - infra/**
+      - scripts/post_apply_verify.py
+      - scripts/test_post_apply_verify.py
+      - .github/workflows/deploy-dev.yml
+      - focused cloud validation scripts when strictly required
+    read_only_paths:
+      - backend frontend governance and eval results
+    write_lock:
+      - post-apply IAM and foundation evidence validation
+      - runtime image provenance checks
+      - rollback image retention or existence gates
+    expected_outputs:
+      - exact runtime service-account project-role verification
+      - foundation-bound application and trusted proxy image sources
+      - executable rollback digest availability boundary
+      - fail-closed WIF state IAM phase identity repository role and custom-role drift verification
+    acceptance_criteria:
+      - runtime roles equal the four intended roles and extras fail
+      - wrong application or proxy registry fails before apply
+      - rollback procedures cannot claim an unavailable digest
+      - foundation authority drift is executable and fail-closed
+    validation:
+      - terraform fmt validate and all mock tests
+      - post-apply and platform evaluator tests
+      - independent Terraform critic rerun
+    prohibited_actions:
+      - mutate GitHub or GCP
+      - weaken exact-plan or private-IAM gates
+      - edit governance or issue final apply approval
+    status: PASS
+    owner: terraform_critic_fixer_008
+
+  - task_id: TASK-EVAL-HARNESS-CRITIC-006
+    role: Executable Evaluation Harness Critic
+    objective: Independently verify that the catalog and harness cover all requirements fail closed without circular evidence and execute the claimed local integration boundaries.
+    inputs:
+      - scripts/eval_harness.py
+      - agent/eval-catalog.json
+      - scripts/governance_eval.py
+      - scripts/validate_platform.sh
+      - CI and live E2E configuration
+    dependencies:
+      - TASK-EVAL-HARNESS-003
+      - TASK-START-IDEMPOTENCY-FIXER-007
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - all repository files
+    write_lock:
+      - none
+    expected_outputs:
+      - requirement-coverage and fail-closed verdict
+      - circularity and reproducibility findings
+      - PostgreSQL integration coverage assessment
+    acceptance_criteria:
+      - every finding identifies exact executable evidence and severity
+      - external blockers are not misclassified as harness defects
+    validation:
+      - focused eval/governance units and static source inspection
+    prohibited_actions:
+      - edit files or eval results
+      - run cloud mutations or a full Docker E2E
+      - self-approve release or apply
+    status: FAILED
+    owner: eval_harness_critic_006
+
+  - task_id: TASK-EVAL-HARNESS-FIXER-009
+    role: Evaluation and Governance Gate Fixer
+    objective: Make checked-in evaluation evidence catalog/source bound, execute fresh PostgreSQL integration locally, and make task ownership/order validation fail closed.
+    inputs:
+      - TASK-EVAL-HARNESS-CRITIC-006 CRITICAL HIGH and MEDIUM findings
+      - current catalog harness governance evaluator and E2E lifecycle
+    dependencies:
+      - TASK-EVAL-HARNESS-CRITIC-006
+    allowed_paths:
+      - scripts/eval_harness.py
+      - scripts/test_eval_harness.py
+      - scripts/governance_eval.py
+      - scripts/test_governance_eval.py
+      - scripts/postgres_integration.py
+      - agent/eval-catalog.json
+      - e2e/**
+      - focused CI/package integration when required
+    read_only_paths:
+      - agent/eval-results.json
+      - application domain infrastructure governance and cloud state
+    write_lock:
+      - evaluation result validator
+      - governance task and graph validator
+      - hermetic PostgreSQL catalog gate
+    expected_outputs:
+      - canonical report metadata aggregates and per-requirement catalog binding
+      - tamper-negative result tests
+      - fresh isolated PostgreSQL concurrency and cross-tenant gate
+      - typed acyclic ordered non-conflicting task governance checks
+    acceptance_criteria:
+      - fabricated all-PASS or stale source evidence fails
+      - APP-002 APP-004 APP-008 and SEC-001 execute the PostgreSQL integration gate
+      - blank task ownership graph cycles phase disorder and active write conflicts fail
+      - normal result validation remains intentionally red until regenerated
+    validation:
+      - focused eval and governance unit tests
+      - Ruff format and lint
+      - safe static catalog and governance checks
+      - later full Docker harness by root
+    prohibited_actions:
+      - edit generated eval results or governance claims
+      - weaken PARTIAL or external blocker semantics
+      - mutate GitHub or cloud resources
+    status: PASS
+    owner: eval_harness_fixer_009
+
+  - task_id: TASK-BACKEND-RACE-EVALUATOR-010
+    role: Independent Backend Race Evaluator
+    objective: Independently close or preserve the approval and pre-provider concurrency vetoes on the stable repaired backend tree.
+    inputs:
+      - TASK-BACKEND-FIXER-006
+      - TASK-START-IDEMPOTENCY-FIXER-007
+      - TASK-BACKEND-CRITIC-003 pre-fix race evidence
+    dependencies:
+      - TASK-BACKEND-CRITIC-003
+      - TASK-BACKEND-FIXER-006
+      - TASK-START-IDEMPOTENCY-FIXER-007
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - backend/**
+      - scripts/postgres_integration.py
+    write_lock:
+      - none
+    expected_outputs:
+      - 12-run same-key approval replay verdict
+      - duplicate-start provider/log/persistence verdict
+      - lock lifetime rollback isolation and wait-risk assessment
+    acceptance_criteria:
+      - identical approvals return two equal 200 responses in every probe
+      - identical starts perform exactly one seven-tool workflow for one durable run
+      - producer claims alone cannot close either finding
+    validation:
+      - independent race probes and focused exact gates
+    prohibited_actions:
+      - edit code or tests
+      - activate effectful providers
+      - infer a cloud apply recommendation from local behavior
+    status: PASS
+    owner: backend_race_evaluator_010
+
+  - task_id: TASK-EVAL-HARNESS-REVIEWER-012
+    role: Independent Evaluation Harness Repair Reviewer
+    objective: Independently verify that result tampering, stale provenance and malformed governance now fail closed before Docker execution.
+    inputs:
+      - TASK-EVAL-HARNESS-CRITIC-006 findings
+      - TASK-EVAL-HARNESS-FIXER-009 output
+    dependencies:
+      - TASK-EVAL-HARNESS-CRITIC-006
+      - TASK-EVAL-HARNESS-FIXER-009
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - evaluation catalog harness governance scripts CI and E2E lifecycle
+    write_lock:
+      - none
+    expected_outputs:
+      - independent tamper and governance negative verdict
+      - source-commit lifecycle review
+      - PostgreSQL mapping and cleanup safety verdict
+    acceptance_criteria:
+      - fabricated result and malformed task graph probes fail
+      - all 52 requirements and critical PostgreSQL mappings are exact
+      - no arbitrary Compose project can reach volume deletion
+    validation:
+      - focused eval/governance units and read-only probes
+    prohibited_actions:
+      - edit files or generated results
+      - execute Docker or cloud/GitHub mutation
+      - convert external blockers to PASS
+    status: PASS
+    owner: eval_harness_reviewer_012
+
+  - task_id: TASK-POSTGRES-GATE-FIXER-013
+    role: Hermetic PostgreSQL Test Runner Fixer
+    objective: Execute the real PostgreSQL integration with locked test dependencies in an ephemeral non-deployed image while keeping the production runtime dependency surface unchanged.
+    inputs:
+      - failed root POSTGRES-INTEGRATION execution
+      - production runtime intentionally lacking httpx2
+      - existing hash-locked CI dependency set
+    dependencies:
+      - TASK-EVAL-HARNESS-FIXER-009
+      - TASK-EVAL-HARNESS-REVIEWER-012
+    allowed_paths:
+      - Dockerfile
+      - docker-compose.yml
+      - e2e/postgres-integration.sh
+      - focused platform tests for the opt-in runner
+    read_only_paths:
+      - backend domain governance eval catalog/results infrastructure and cloud state
+    write_lock:
+      - ephemeral integration-test container stage and service
+      - hermetic PostgreSQL runner lifecycle
+    expected_outputs:
+      - locked non-root internal-only integration runner
+      - unchanged production runtime final target and dependencies
+      - passing fresh PostgreSQL concurrency cross-tenant and recreation gate
+    acceptance_criteria:
+      - httpx2 exists only in the ephemeral test image
+      - no host database port is exposed
+      - migrations precede the integration command
+      - cleanup removes only the generated owned test project and volume
+    validation:
+      - Docker target and Compose config inspection
+      - platform static tests
+      - root rerun of e2e/postgres-integration.sh
+    prohibited_actions:
+      - add test packages to the deployed runtime image
+      - weaken fresh-volume or cleanup guards
+      - edit application behavior or generated eval evidence
+    status: PASS
+    owner: postgres_gate_fixer_013
+
+  - task_id: TASK-BACKEND-LOCK-TIMEOUT-FIXER-011
+    role: PostgreSQL Idempotency Lock Timeout Fixer
+    objective: Bound duplicate-command advisory-lock waiting without weakening transaction ownership or exposing database internals.
+    inputs:
+      - TASK-BACKEND-RACE-EVALUATOR-010 availability finding
+      - current PostgreSQL transaction advisory lock
+    dependencies:
+      - TASK-BACKEND-RACE-EVALUATOR-010
+      - TASK-START-IDEMPOTENCY-FIXER-007
+    allowed_paths:
+      - backend/control_plane/repository.py
+      - backend/tests/test_control_plane.py
+    read_only_paths:
+      - frontend infrastructure governance eval and cloud state
+    write_lock:
+      - PostgreSQL idempotency lock acquisition statements
+      - lock timeout and safe-failure tests
+    expected_outputs:
+      - explicit transaction-local advisory-lock wait bound
+      - immediate rollback and safe 503 on acquisition timeout
+    acceptance_criteria:
+      - READ COMMITTED and tenant-key transaction ownership remain intact
+      - the waiter cannot block indefinitely on a stalled holder
+      - timeout/error details do not reach the response
+    validation:
+      - focused lock and concurrency tests
+      - full backend pytest Ruff mypy and OpenAPI gates
+      - independent backend evaluator rerun
+    prohibited_actions:
+      - retry arbitrary mutations
+      - release the lock before commit or rollback
+      - alter SQLite ownership or enable external providers
+    status: PASS
+    owner: backend_lock_timeout_fixer_011
+
+  - task_id: TASK-E2E-RESTART-FIXER-014
+    role: Compose Restart Persistence Gate Fixer
+    objective: Make the browser restart scenario restart only the API container and report the durable PostgreSQL result without re-running the completed one-shot migration dependency.
+    inputs:
+      - failed fresh npm run test:e2e:stack execution
+      - successful API restart and durable GET visible in the failed-run logs
+      - guarded disposable agency-e2e project lifecycle
+    dependencies:
+      - TASK-EVAL-HARNESS-FIXER-009
+      - TASK-POSTGRES-GATE-FIXER-013
+    allowed_paths:
+      - e2e/restart-persistence.e2e.ts
+    read_only_paths:
+      - application database Docker Compose governance and cloud state
+    write_lock:
+      - restart-persistence process-control command
+    expected_outputs:
+      - app-only Compose restart command
+      - three passing live browser scenarios on a fresh owned volume
+    acceptance_criteria:
+      - migration remains one-shot and is not restarted by the browser test
+      - API readiness returns after the app-only restart
+      - the exact pre-restart run and artifacts are restored from PostgreSQL
+      - cleanup removes only the generated owned E2E project and volume
+    validation:
+      - npm lint and typecheck
+      - fresh npm run test:e2e:stack with three of three scenarios passing
+      - cleanup log inspection
+    prohibited_actions:
+      - weaken persistence assertions
+      - preserve the fresh E2E database after the run
+      - edit application behavior or cloud state
+    status: PASS
+    owner: root_e2e_restart_fixer_014
+
+  - task_id: TASK-TERRAFORM-REVIEWER-015
+    role: Role-separated Terraform Repair Reviewer
+    objective: Re-evaluate the four cloud critic code findings after the focused repair and preserve the external DENY_APPLY boundary.
+    inputs:
+      - CLOUD-CRITIC-005-01 through CLOUD-CRITIC-005-04
+      - TASK-TERRAFORM-CRITIC-FIXER-008 outputs
+      - protected rollback-tag ordering correction
+    dependencies:
+      - TASK-TERRAFORM-CRITIC-004
+      - TASK-TERRAFORM-CRITIC-FIXER-008
+    allowed_paths:
+      - repository read-only
+    read_only_paths:
+      - Terraform roots modules cloud scripts workflow tests and governance
+    write_lock:
+      - none
+    expected_outputs:
+      - finding-by-finding local verdict
+      - exact role image provenance rollback and drift gate assessment
+      - explicit residual external blockers and DENY_APPLY
+    acceptance_criteria:
+      - runtime project roles equal exactly four intended roles
+      - named application and proxy containers use exact reviewed image sources
+      - one predecessor digest is protected only after attestation and preflight
+      - WIF impersonation state repository and both custom roles fail closed on drift
+    validation:
+      - 24 Terraform mock tests across five suites
+      - 65 platform script tests and 61 static controls
+      - workflow ordering source audit and clean diff check
+    prohibited_actions:
+      - edit evaluated implementation
+      - mutate GitHub or GCP
+      - issue ALLOW_DEV_APPLY without a real saved plan and eligible target
+    status: PASS
+    owner: orchestrator_role_separated_cloud_reviewer_015
+
+  - task_id: EVAL-INC-004
+    role: Independent Production Readiness Evaluator
+    objective: Evaluate the complete repaired increment and issue the final release/apply veto or recommendation.
+    inputs:
+      - TASK-BACKEND-CRITIC-003
+      - TASK-TERRAFORM-CRITIC-004
+      - TASK-GOVERNANCE-WRITER-004
+      - TASK-GOVERNANCE-WRITER-005
+      - TASK-EVAL-HARNESS-003
+      - TASK-GITHUB-GATES-004
+      - TASK-BACKEND-FIXER-006
+      - TASK-START-IDEMPOTENCY-FIXER-007
+      - TASK-TERRAFORM-CRITIC-FIXER-008
+      - TASK-EVAL-HARNESS-CRITIC-006
+      - TASK-EVAL-HARNESS-FIXER-009
+      - TASK-BACKEND-RACE-EVALUATOR-010
+      - TASK-BACKEND-LOCK-TIMEOUT-FIXER-011
+      - TASK-EVAL-HARNESS-REVIEWER-012
+      - TASK-POSTGRES-GATE-FIXER-013
+      - TASK-E2E-RESTART-FIXER-014
+      - TASK-TERRAFORM-REVIEWER-015
+    dependencies:
+      - TASK-BACKEND-CRITIC-003
+      - TASK-TERRAFORM-CRITIC-004
+      - TASK-GOVERNANCE-WRITER-004
+      - TASK-GOVERNANCE-WRITER-005
+      - TASK-EVAL-HARNESS-003
+      - TASK-GITHUB-GATES-004
+      - TASK-BACKEND-FIXER-006
+      - TASK-START-IDEMPOTENCY-FIXER-007
+      - TASK-TERRAFORM-CRITIC-FIXER-008
+      - TASK-EVAL-HARNESS-CRITIC-006
+      - TASK-EVAL-HARNESS-FIXER-009
+      - TASK-BACKEND-RACE-EVALUATOR-010
+      - TASK-BACKEND-LOCK-TIMEOUT-FIXER-011
+      - TASK-EVAL-HARNESS-REVIEWER-012
+      - TASK-POSTGRES-GATE-FIXER-013
+      - TASK-E2E-RESTART-FIXER-014
+      - TASK-TERRAFORM-REVIEWER-015
+    allowed_paths:
+      - repository read-only
+      - agent/reports/eval-inc-004.md
+    read_only_paths:
+      - application infrastructure tests governance and GitHub/GCP evidence
+    write_lock:
+      - agent/reports/eval-inc-004.md
+    expected_outputs:
+      - requirement-level independent evaluation
+      - release and apply recommendation
+    acceptance_criteria:
+      - current committed tree and CI are evaluated
+      - no open critical/high finding and no missing required gate is hidden
+    validation:
+      - rerun all applicable deterministic gates and inspect exact external gate evidence
+    prohibited_actions:
+      - modify evaluated implementation
+      - approve cloud apply without a real saved plan JSON cost and rollback review
+    status: TODO
+    owner: unassigned_independent_evaluator
+
   - task_id: APPLY-DEV-001
     role: Exact Saved Plan Apply
-    status: BLOCKED_EXTERNAL
-    owner: root
+    objective: Apply only an independently approved exact saved Terraform plan to dev.
+    inputs:
+      - EVAL-INC-004 ALLOW_DEV_APPLY result
+      - exact saved plan and metadata
     dependencies:
-      - EVAL-INC-001
-    gate: exact_plan_recommendation == ALLOW_DEV_APPLY
-    blocker: no open billing account target hierarchy project region real saved plan or independent approval
+      - EVAL-INC-004
+    allowed_paths:
+      - authorized dev GCP target only
+    read_only_paths:
+      - staging and production
+    write_lock:
+      - exact reviewed dev Terraform state
+    expected_outputs:
+      - dev apply result and non-sensitive resource evidence
+    acceptance_criteria:
+      - plan hash source hash image and approval all match
+    validation:
+      - terraform apply of the saved plan followed by state and resource inspection
+    prohibited_actions:
+      - apply staging or production
+      - use auto-approve without the exact recorded gate
+      - change billing or delete resources
+    status: BLOCKED
+    owner: root
+
   - task_id: VERIFY-DEV-001
     role: Post-apply Verification
-    status: BLOCKED_EXTERNAL
-    owner: root
+    objective: Verify access health migrations persistence labels cost and no-drift after an authorized dev apply.
+    inputs:
+      - APPLY-DEV-001 output
     dependencies:
       - APPLY-DEV-001
+    allowed_paths:
+      - applied dev resources and evidence records
+    read_only_paths:
+      - staging and production
+    write_lock:
+      - post-apply evidence report
+    expected_outputs:
+      - authenticated and denied-access probes
+      - smoke result and second no-change plan
+    acceptance_criteria:
+      - every GCP-009 and GCP-010 check passes without secret disclosure
+    validation:
+      - scripts/post_apply_verify.py and terraform plan -detailed-exitcode
+    prohibited_actions:
+      - conceal drift
+      - publish content or incur ad spend
+    status: BLOCKED
+    owner: root

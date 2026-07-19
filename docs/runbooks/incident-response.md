@@ -38,8 +38,15 @@ The current product has no live publication or advertising adapter. Preserve tha
 ### Concurrent or duplicate approval
 
 - Reload the run and audit events.
-- One committed decision is authoritative. A second incompatible decision must remain rejected.
+- Compatible calls with the same tenant/key/payload must return the same committed response. A second incompatible decision or different-key decision must remain rejected.
 - Escalate any observation of two approval rows or two Publisher transitions as a critical integrity incident.
+
+### Concurrent or duplicate run start
+
+- Retry only with the original tenant, idempotency key and exact payload; do not invent a new key after an ambiguous transport failure.
+- Two simultaneous compatible calls must return the same run and produce one `run.started` audit event, one command record, seven tool-evidence rows and seven sandbox tool telemetry records.
+- Treat two run IDs or more than seven provider/tool calls as an idempotency integrity incident. Keep external providers disabled, preserve the database and correlation IDs, and inspect transaction/advisory-lock errors before retrying.
+- A same-key waiter that exceeds the PostgreSQL five-second transaction-local lock bound returns redacted `503 DATABASE_UNAVAILABLE`. Inspect the holder by correlation ID; retry only the unchanged command after the holder has committed or rolled back.
 
 ### UI appears ahead of backend
 
@@ -56,7 +63,7 @@ The current product has no live publication or advertising adapter. Preserve tha
 
 ## Containment and rollback
 
-- Cloud Run: route traffic back to the last known compatible revision/image digest. Keep IAM/ingress unchanged.
+- Cloud Run: routine rollback may use only the immediate predecessor from the reviewed pre-apply report. Prove it still resolves and matches `app:rollback-current`, then deploy that digest—not the tag—through a new saved-plan/evaluator sequence. Keep IAM/ingress unchanged; older digests are outside the guaranteed window.
 - Application: preserve idempotency/audit rows and database snapshots; never delete runs to make a test pass.
 - Terraform: do not run `destroy`, delete a project, disable deletion protection, or apply an unreviewed new plan. Create a saved remedial plan and repeat critique/evaluator gates.
 - Database: use documented backup/restore only after the human destructive-data gate. A code rollback is not automatically a schema rollback.

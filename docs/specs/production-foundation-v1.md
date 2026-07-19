@@ -2,7 +2,7 @@
 
 Status: In progress
 Version: 1.0
-Date: 2026-07-18
+Date: 2026-07-19
 Owner: Orchestrator
 Compatibility policy: additive changes may extend the `v1` API; removals, renamed fields, enum narrowing, or semantic changes require a new API/schema version.
 
@@ -37,8 +37,10 @@ Execution is inline and bounded in V1 because the deterministic workflow complet
 - All API resources use schema identifier `v1` and UTC RFC 3339 timestamps.
 - IDs are opaque, stable strings scoped by resource type.
 - Every mutable command requires `Idempotency-Key`.
+- Before its first repository read or provider call, every mutable command acquires a cross-instance database transaction lock scoped to tenant and key and holds it through commit or rollback. PostgreSQL bounds lock waiting to five seconds within that transaction and fails the command safely when the bound is exceeded.
 - A repeated tenant, operation, key, and identical canonical payload returns the original response.
 - Reusing that tuple with a different payload returns `409 idempotency_conflict`.
+- Two simultaneous compatible calls execute provider work once; the waiter rechecks and returns the committed response after acquiring the lock.
 - Errors use one structured envelope with a machine code, message, correlation ID, and optional field details.
 - The OpenAPI document is checked in and frontend types are generated or drift-checked from it.
 - Polling is the V1 progress transport. Clients may refresh and reconstruct the run exclusively from persisted backend state.
@@ -72,13 +74,13 @@ Approval produces only a sandbox package with `publication_performed=false`. Rej
 | APP-003 | Start the existing eight-station workflow through the API. | Persisted run reaches `awaiting_greenlight`; seven pre-gate steps and Publisher wait state are queryable. |
 | APP-004 | Query run, step, artifact, tool-evidence, audit/progress state. | Same data remains available from a new application instance; wrong-tenant reads fail. |
 | APP-005 | Hold Publisher behind Risk and Greenlight. | Negative transition tests and tool evidence prove zero external side effects. |
-| APP-006 | Persist approval and rejection decisions in the backend. | Decision, reviewer, note, timestamp, tenant, audit event, and transition tests. |
+| APP-006 | Persist approval and rejection decisions in the backend. | Decision, reviewer, note, timestamp, tenant, direct idempotency key, audit event, and transition tests. |
 | APP-007 | Bind approval to `greenlight.v1` and the canonical manifest hash. | Stale hash, wrong policy, changed artifact, and Risk-not-passed tests. |
 | APP-008 | Make commands durably idempotent and reject incompatible replay. | Database constraint plus compatible replay, conflict, and concurrent-decision tests. |
-| APP-009 | Expose persisted progress using polling. | Refresh/reconnect test reconstructs all step states without browser timers. |
-| APP-010 | Use a typed frontend API client for the integrated mode. | UI integration tests cover create, start, refresh, artifacts/evidence, approve/reject, and errors. |
+| APP-009 | Expose persisted progress using polling. | Live browser refresh/reconnect reconstructs all step states without browser timers. |
+| APP-010 | Use a typed frontend API client for the integrated mode. | Real-network SPA/API/PostgreSQL tests cover create, start, refresh, artifacts/evidence, approve/reject, and errors without transport mocks. |
 | APP-011 | Isolate the legacy browser simulation. | Integrated mode is default outside tests; demo mode is explicitly labeled and has separate state/IDs. |
-| APP-012 | Version tenant, principal, mission, run, step, agent, artifact, evidence, approval, audit, progress, and error contracts. | OpenAPI/schema drift gate and checked frontend contract. |
+| APP-012 | Version tenant, principal, mission, run, step, agent, artifact, evidence, approval, audit, progress, and error contracts. | Protected identity endpoint, OpenAPI/schema drift gate and checked frontend contract. |
 | APP-013 | Keep V1 execution proportional and truthful. | ADR documents inline boundaries, timeout/failure behavior, and no mid-step durability claim. |
 | APP-014 | Emit structured telemetry with correlation, tenant, run, step/tool, latency, result, retry, decision, and side-effect flags when applicable. | Log capture tests; secret and log-injection tests. |
 | APP-015 | Keep domain/provider dependencies neutral and sandbox adapters explicit. | Boundary/configuration tests and `external_side_effect=false` evidence. |
@@ -102,11 +104,11 @@ Approval produces only a sandbox package with `publication_performed=false`. Rej
 | DLV-001 | One documented integrated local startup and smoke flow. | Executed commands start web/API/database, migrate, smoke, and shut down cleanly. |
 | DLV-002 | Unit, repository, API, contract, integration, security, reliability, and restart tests. | Required test pass rate is 100%. |
 | DLV-003 | Reproducible non-root containers and Compose. | Deterministic installs, health checks, migration ordering, build and smoke pass. |
-| DLV-004 | Mandatory CI for application, migration, schema, container, security, Terraform, and whitespace gates. | GitHub Actions definitions and local equivalent gates pass. |
+| DLV-004 | Mandatory CI for application, migration, schema, container, live transport, security, Terraform, format and whitespace gates. | Exact-tree GitHub Actions pass and main branch protection/rulesets require every current job. |
 | DLV-005 | Validatable Terraform for bootstrap and isolated environments. | `fmt`, `init`, `validate`, provider locks, variables/outputs, and no embedded credentials. |
 | DLV-006 | Executable eval harness with structured results. | Deterministic, functional, security, reliability, and drift results are recorded. |
 | DLV-007 | Operational documentation matches executed reality. | Setup, API, migration, deployment, rollback, incident, sandbox, and limitations docs. |
-| DLV-008 | Deploy workflow uses distinct build/read-only-plan/apply GitHub OIDC/WIF identities and environment gates, never service-account keys. | Workflow inspection and Terraform bindings scoped to exact owner/repository/ref/direct workflow/phase environment. |
+| DLV-008 | Deploy workflow uses distinct build/read-only-plan/apply GitHub OIDC/WIF identities and environment gates, never service-account keys. | Workflow inspection and Terraform bindings scoped to immutable numeric owner/repository IDs plus exact names/ref/direct workflow/phase environment. |
 
 ## GCP requirements
 
@@ -115,13 +117,13 @@ Approval produces only a sandbox package with `publication_performed=false`. Rej
 | GCP-000 | Terraform is the source of truth; only bootstrap and dev may be applied. | Execution-mode record; staging/prod definitions cannot be selected accidentally. |
 | GCP-001 | Complete non-mutating account, ADC, hierarchy, billing, project, policy, quota, region, and existing-resource discovery. | Masked discovery report with ambiguities. |
 | GCP-002 | Verify granular project, billing, API, IAM, WIF, registry, Run, SQL, secrets, state, storage, and budget permissions. | Permission preflight evidence; broad role names alone are insufficient. |
-| GCP-003 | Isolate bootstrap/dev projects and define, but do not apply, staging/prod. | Variable non-personal project IDs and environment guards. |
+| GCP-003 | Isolate bootstrap/dev projects and define, but do not apply, staging/prod. | Distinct non-personal project IDs; every existing project requires versioned evidence and a Terraform import. |
 | GCP-004 | Bootstrap versioned uniform-access remote state and GitHub WIF without keys. | Saved plan/apply, state migration, backend proof, no state in Git. |
 | GCP-005 | Provision only dev resources mapped to an implemented behavior and cost. | Requirement-to-resource map, saved plan, and cost envelope. |
 | GCP-006 | Produce and inspect saved plan plus JSON after fmt/init/validate. | No unauthorized destroy/replace, public access, broad IAM, keys, secrets, wrong region, or stage/prod resources. |
 | GCP-007 | Cloud critique, security review, and independent evaluator all allow the exact plan. | Zero open CRITICAL/HIGH and `ALLOW_DEV_APPLY`. |
 | GCP-008 | Apply only the evaluated saved dev plan. | Plan hash/source hash and apply record. |
-| GCP-009 | Verify health, database/migrations, authorized/denied access, logs, labels, budget, smoke, and integration behavior. | Post-apply evidence report. |
+| GCP-009 | Verify health, database/migrations, authorized/denied access, logs, labels, budget, named image provenance, foundation authority, one protected predecessor digest, smoke, and integration behavior. | Fail-closed post-apply evidence report plus rollback candidate/tag proof. |
 | GCP-010 | A second plan has no unexpected changes. | Saved no-change plan or repaired/re-evaluated drift. |
 | GCP-011 | Record non-sensitive resource and cost evidence. | Masked billing, project IDs, region, results, ongoing cost, rollback; no secrets. |
 | GCP-012 | Preserve human gates for staging, production, public access, spend, billing, destruction, publication, and ads. | Environment/workflow/Terraform guards. |

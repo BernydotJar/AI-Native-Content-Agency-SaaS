@@ -1,53 +1,53 @@
 requirement_id,scope,status,owner,authoritative_evidence
-APP-001,application,PASS,TASK-BACKEND-001,FastAPI tests and canonical OpenAPI
-APP-002,application,PASS,TASK-BACKEND-001,Alembic repository lifecycle tests and restart smoke
-APP-003,application,PASS,TASK-BACKEND-001,run-start integration and sandbox tool evidence tests
-APP-004,application,PASS,TASK-BACKEND-001,tenant isolation composite foreign keys and evidence identity tests
-APP-005,application,PASS,TASK-BACKEND-001,pre-approval rejection risk and stale-manifest tests
-APP-006,application,PASS,TASK-BACKEND-001,approval rejection durability and container restore smoke
-APP-007,application,PASS,TASK-BACKEND-001,canonical manifest and TOCTOU rollback tests
-APP-008,application,PASS,TASK-BACKEND-001,idempotency replay first-identity and approval concurrency tests
-APP-009,application,PASS,TASK-WEB-001,persisted polling restore stale-response and terminal-stop guards
-APP-010,application,PASS,TASK-WEB-001,integrated UI and client tests
-APP-011,application,PASS,TASK-WEB-001,runtime-mode boundary tests
-APP-012,application,PASS,TASK-BACKEND-001,OpenAPI generation and frontend contract gate
-APP-013,application,PASS,TASK-BACKEND-001,ADRs structured failures and rollback tests
-APP-014,application,PASS,TASK-BACKEND-001,structured request tool and approval log tests
-APP-015,application,PASS,TASK-BACKEND-001,sandbox adapter boundary evidence
-SEC-001,security,PASS,TASK-SEC-REVIEW-001,identity cross-tenant and Cloud Run IAM-private controls
-SEC-002,security,PASS,TASK-BACKEND-001,production auth SQLite and schema fail-closed tests
-SEC-003,security,PASS,TASK-BACKEND-001,byte-count limit CORS security headers malformed and extra-field tests
-SEC-004,security,PASS,TASK-SEC-REVIEW-001,safe exception DB outage rollback lifecycle and log-redaction probes
-SEC-005,security,PASS_CI,TASK-SEC-REVIEW-001,npm and both exact Python lock audits report zero known vulnerabilities
-SEC-006,security,PASS_ROLE_SEPARATED,TASK-SEC-REVIEW-001,threat model finding closure and CI integrity scan
-SEC-007,security,PASS,TASK-BACKEND-001,zero external effects and sandbox package evidence
-DLV-001,delivery,PASS,TASK-PLATFORM-001,live integrated HTTP smoke
-DLV-002,delivery,PASS_CI,TASK-PLATFORM-001,44 backend and 47 frontend tests
-DLV-003,delivery,PASS,TASK-PLATFORM-001,non-root image Compose migration health and persistence smoke
-DLV-004,delivery,PASS_CI,TASK-PLATFORM-001,GitHub Actions run 29672546616 passed four of four jobs
-DLV-005,delivery,PASS,TASK-PLATFORM-001,nine Terraform roots and three mock tests
-DLV-006,delivery,PASS,TASK-PLATFORM-001,46 of 46 platform controls with DENY_APPLY
-DLV-007,delivery,PASS,root,README architecture ADR threat model and runbooks
-DLV-008,delivery,PASS_STATIC,TASK-CRITIQUE-001,WIF exact scope split identities state boundary custom role and attestation inspection
-GCP-000,gcp,PASS,root,explicit project environment and apply guards
-GCP-001,gcp,PARTIAL_BLOCKED_EXTERNAL,TASK-GCP-DISC-001,masked discovery and ADC refresh evidence
-GCP-002,gcp,BLOCKED_EXTERNAL,root,no selected eligible hierarchy project or open billing
-GCP-003,gcp,PARTIAL,TASK-PLATFORM-001,parameterized hierarchy design but no real target
-GCP-004,gcp,BLOCKED_EXTERNAL,root,no authorized target remote state or bootstrap plan
-GCP-005,gcp,PASS_STATIC,TASK-PLATFORM-001,dev Terraform requirement resource map and three mock tests
-GCP-006,gcp,BLOCKED_EXTERNAL,root,no real saved plan JSON
-GCP-007,gcp,BLOCKED_EXTERNAL,TASK-CRITIQUE-001,no exact real plan and no independent plan evaluator
-GCP-008,gcp,BLOCKED_EXTERNAL,root,DENY_APPLY and no ALLOW_DEV_APPLY
-GCP-009,gcp,BLOCKED_EXTERNAL,root,no deployed endpoint
-GCP-010,gcp,BLOCKED_EXTERNAL,root,no applied state for no-change plan
-GCP-011,gcp,BLOCKED_EXTERNAL,root,no real plan apply or measured cost
-GCP-012,gcp,PASS,root,manual workflow exact-plan attestation and independent veto controls
-GCP-013,gcp,PASS,root,GCP discovery report current state and exact resume condition
-GOV-001,governance,PASS,root,docs/specs/production-foundation-v1.md
-GOV-002,governance,PASS,root,current task evidence risk and finding artifacts
-GOV-003,governance,PASS,root,task graph ledger and reproducible locks
-GOV-004,governance,PARTIAL_ROLE_SEPARATED,root,producer critic evaluator sequence completed but independent actor unavailable and cloud phases blocked
-GOV-005,governance,UNSATISFIED_INDEPENDENCE,EVAL-INC-001,draft PR requires a different reviewer and cloud apply remains denied
-GOV-006,governance,PASS,root,agent/decision-log.md
-GOV-007,governance,PASS,root,issue 1 focused commits pushed branch and draft PR 2
-GOV-008,governance,PASS,root,final truthfulness audit and explicit limitations
+APP-001,application,PASS,TASK-BACKEND-PRODUCER-003,Versioned mission endpoint strict identity validation and idempotency tests
+APP-002,application,PASS,TASK-BACKEND-PRODUCER-003,Repository ports Alembic 0001 through 0003 restart persistence and PostgreSQL integration
+APP-003,application,PASS,TASK-BACKEND-PRODUCER-003,API start command persists eight stations and awaiting Greenlight state
+APP-004,application,PASS,TASK-BACKEND-PRODUCER-003,Restart recovery PostgreSQL cross-tenant denial and persisted query tests
+APP-005,application,PASS,TASK-BACKEND-PRODUCER-003,Risk and Publisher transition tests with zero external effects
+APP-006,application,PASS,TASK-BACKEND-PRODUCER-003,Approval decision reviewer note timestamp direct idempotency key and audit linkage
+APP-007,application,PASS,TASK-BACKEND-PRODUCER-003,Manifest mutation wrong hash wrong policy missing Risk and nonexistent-run tests
+APP-008,application,PASS,TASK-BACKEND-RACE-EVALUATOR-010,Pre-provider tenant-key ownership 24 repeated races bounded timeout negatives and fresh real PostgreSQL single-execution gate
+APP-009,application,PASS,TASK-E2E-CI-PRODUCER-003,Live Playwright reload and explicit refresh reconstruct the same persisted run
+APP-010,application,PASS,TASK-E2E-CI-PRODUCER-003,Two real-network SPA FastAPI PostgreSQL approval and rejection scenarios
+APP-011,application,PASS,TASK-WEB-001,Integrated mode default and explicit tested demo isolation
+APP-012,application,PASS,TASK-BACKEND-PRODUCER-003,Versioned identity endpoint canonical OpenAPI and generated TypeScript contract gate
+APP-013,application,PASS,TASK-BACKEND-PRODUCER-003,Inline command-boundary model provider timeout rollback and no mid-step durability claim
+APP-014,application,PASS,TASK-BACKEND-RACE-EVALUATOR-010,Exactly seven safe sandbox telemetry records serve two simultaneous compatible starts in repeated and real PostgreSQL gates
+APP-015,application,PASS,TASK-BACKEND-PRODUCER-003,Provider-neutral ports and sandbox evidence with external_side_effect false
+SEC-001,security,PASS,TASK-BACKEND-PRODUCER-003,Missing identity SQLite isolation and real PostgreSQL cross-tenant denial
+SEC-002,security,PASS,TASK-BACKEND-001,Production startup rejects development auth and SQLite
+SEC-003,security,PASS,TASK-BACKEND-001,Bounded body malformed JSON source scheme CORS and security-header tests
+SEC-004,security,PASS,TASK-BACKEND-PRODUCER-003,Typed settings redacted structured logs timeout and database-outage rollback
+SEC-005,security,PARTIAL,TASK-EVAL-HARNESS-003,Scans exist but current repaired tree still needs exact CI and generated eval evidence
+SEC-006,security,PASS,TASK-BACKEND-CRITIC-003,Current threat model plus cross-tenant replay injection malformed input auth concurrency and cloud-drift adversarial gates
+SEC-007,security,PASS,TASK-BACKEND-PRODUCER-003,Sandbox package and evidence assert no publication spend or external effects
+DLV-001,delivery,PASS,TASK-E2E-CI-PRODUCER-003,Documented Compose smoke fresh PostgreSQL gate and three live Playwright approval rejection restart flows
+DLV-002,delivery,PASS,TASK-E2E-RESTART-FIXER-014,Current 58 pytest seven legacy unittests 47 frontend tests real PostgreSQL and fresh three-scenario browser suite pass locally
+DLV-003,delivery,PASS,TASK-POSTGRES-GATE-FIXER-013,UID 10001 locked runtime isolated test stage Compose health migration ordering restart and exact cleanup
+DLV-004,delivery,PARTIAL,TASK-GITHUB-GATES-004,Main requires the exact four jobs and review controls but the repaired tree still lacks exact CI and the workflow is not on main
+DLV-005,delivery,PASS,TASK-TERRAFORM-REVIEWER-015,Nine roots 24 Terraform tests 65 script tests and 61 controls cover exact identities roles images rollback drift and notification gates
+DLV-006,delivery,PARTIAL,TASK-EVAL-HARNESS-003,Executable harness and catalog are in progress and current eval results are not yet final
+DLV-007,delivery,PASS,TASK-GOVERNANCE-WRITER-004,Setup API migration deployment bounded rollback incident sandbox and limitation docs match fresh executable evidence
+DLV-008,delivery,PARTIAL,TASK-GITHUB-GATES-004,Protected phase environments and immutable split OIDC exist but the workflow is not on main variables are absent and no distinct reviewer is eligible
+GCP-000,gcp,PASS,TASK-TERRAFORM-FIXER-003,Terraform-managed create or explicit import paths with dev-only executable roots and DENY_APPLY
+GCP-001,gcp,PARTIAL,TASK-GCP-DISC-001,ADC billing hierarchy and candidate discovery are current but target-specific policy quota and region remain unavailable
+GCP-002,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GCP-DISC-001,No open billing account selected parent region or eligible granular target preflight
+GCP-003,gcp,PARTIAL,TASK-TERRAFORM-FIXER-003,Code enforces distinct bootstrap and dev IDs while real projects and roles are unselected
+GCP-004,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,APPLY-DEV-001,No authorized bootstrap target saved plan apply state bucket or state migration
+GCP-005,gcp,PARTIAL,TASK-TERRAFORM-FIXER-003,Requirement resource mapping is static without a target plan or reviewed price envelope
+GCP-006,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-TERRAFORM-CRITIC-004,No real saved plan JSON exists for destruction public IAM region or cost inspection
+GCP-007,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,EVAL-INC-004,No eligible exact plan for cloud critique security review and independent ALLOW_DEV_APPLY
+GCP-008,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,APPLY-DEV-001,DENY_APPLY remains active and no saved plan was applied
+GCP-009,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,VERIFY-DEV-001,No deployed dev resources or endpoint exist for post-apply verification
+GCP-010,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,VERIFY-DEV-001,No applied state exists for a second no-change plan
+GCP-011,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GCP-DISC-001,No real resource inventory exact price or ongoing measured cost exists
+GCP-012,gcp,PARTIAL,TASK-GITHUB-GATES-004,Protected environments and fail-closed Terraform guards exist while the only collaborator cannot satisfy distinct review and no cloud variables exist
+GCP-013,gcp,PASS,TASK-GCP-DISC-001,Exact billing authorization adoption region permission plan and reviewer resume conditions are recorded
+GOV-001,governance,PASS,TASK-GOVERNANCE-WRITER-004,Versioned specification and exact-ID traceability matrix
+GOV-002,governance,PARTIAL,TASK-EVAL-HARNESS-003,Governance artifacts exist but root-owned eval results and active critic outcomes are pending
+GOV-003,governance,PASS,TASK-GOVERNANCE-WRITER-004,Full mandatory contracts and referential task graph are versioned
+GOV-004,governance,PARTIAL,EVAL-INC-004,Repair producers completed but critics final evaluator apply and post-apply gates are incomplete
+GOV-005,governance,PARTIAL,TASK-GITHUB-GATES-004,Independent vetoes were honored and prevent-self-review is live but no distinct eligible reviewer or final evaluation exists
+GOV-006,governance,PASS,TASK-GOVERNANCE-WRITER-004,Nine required ADRs and decision records remain versioned
+GOV-007,governance,PARTIAL,TASK-GITHUB-GATES-004,Issue draft PR and main protection exist but the repaired tree is not committed pushed or validated by exact checks
+GOV-008,governance,PASS,TASK-GOVERNANCE-WRITER-004,Current records distinguish sandbox local producer static cloud blocked and unverified states

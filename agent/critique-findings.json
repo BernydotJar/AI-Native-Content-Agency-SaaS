@@ -1,159 +1,405 @@
 {
-  "schema_version": 1,
-  "updated_at": "2026-07-19T03:59:19Z",
-  "review_provenance": "Sequential role-separated producer, critic and evaluator passes; not independent review.",
+  "schema_version": 2,
+  "updated_at": "2026-07-19T05:45:42Z",
+  "release_recommendation": "DENY_RELEASE",
+  "apply_recommendation": "DENY_APPLY",
+  "review_provenance": "Prior requirements, release and cloud audits were performed by independent subagents and their vetoes remain active. Backend and Terraform repair critics are in progress; no final evaluator result is claimed.",
   "findings": [
     {
       "finding_id": "BASE-CRIT-001",
       "severity": "CRITICAL",
-      "status": "CLOSED_ROLE_SEPARATED",
+      "status": "CLOSED",
       "target": "runtime architecture",
-      "description": "The UI and Python runtime had no shared authoritative control plane.",
-      "evidence": "Default API-backed UI, 44 backend tests, 47 frontend tests, live HTTP persistence smoke and green CI."
+      "description": "The baseline UI and Python runtime had no shared authoritative control plane.",
+      "evidence": "The default UI now consumes persisted FastAPI responses and live Playwright reaches the PostgreSQL-backed control plane.",
+      "source_task": "TASK-BACKEND-001"
     },
     {
       "finding_id": "BASE-CRIT-002",
       "severity": "HIGH",
-      "status": "CLOSED_ROLE_SEPARATED",
+      "status": "CLOSED",
       "target": "Greenlight and durability",
-      "description": "Run and approval state was process-local and not tenant, hash, policy or idempotency bound.",
-      "evidence": "Tenancy, replay, concurrency, manifest-TOCTOU and restart-persistence probes passed."
+      "description": "Baseline run and approval state was process-local and not tenant, hash, policy or command bound.",
+      "evidence": "SQL persistence, canonical manifest checks, migration 0003, audit linkage, replay/concurrency and restart tests cover the boundary.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "SEC-DEP-001",
+      "finding_id": "LIVE-TRANSPORT-001",
+      "severity": "HIGH",
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "browser to API to PostgreSQL transport",
+      "description": "The audited prior tree had only mocked frontend fetch tests and an API smoke that bypassed the UI.",
+      "required_fix": "Independently rerun both Playwright scenarios against the live Compose stack and inspect that no transport interception exists.",
+      "evidence": "Producer ran two approval/rejection Playwright cases twice with persisted reload/refresh and no route interception.",
+      "source_task": "TASK-REQ-AUDIT-002"
+    },
+    {
+      "finding_id": "APP-APPROVAL-KEY-001",
       "severity": "MEDIUM",
-      "status": "CLOSED",
-      "target": "Python runtime lock",
-      "description": "setuptools 81.0.0 was affected by PYSEC-2026-3447.",
-      "evidence": "Runtime lock pins setuptools 83.0.0; exact hash audit reports no known vulnerabilities."
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "approval provenance",
+      "description": "Approval rows did not directly carry the idempotency key and audit linkage relied on inference.",
+      "required_fix": "Verify migration 0003 backfill/fail-closed behavior and direct response/audit linkage.",
+      "evidence": "Approval contract, row and audit payload now carry the key; migration tests cover safe legacy linkage and orphan failure.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "PLAT-COMPOSE-001",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "target": "local integrated topology",
-      "description": "An app attached only to an internal Compose network did not publish its declared loopback port.",
-      "evidence": "Separated edge and internal networks; localhost smoke and CI Compose gate pass."
+      "finding_id": "APP-NEGATIVE-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "Greenlight negative cases",
+      "description": "Wrong-policy and nonexistent-run approval behavior lacked direct tests.",
+      "required_fix": "Independently rerun explicit wrong-policy and nonexistent-run tests.",
+      "evidence": "Focused tests now assert validation failure for greenlight.v0 and not-found for a missing run.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "CLOUD-IAM-001",
-      "severity": "HIGH",
-      "status": "CLOSED_STATIC",
-      "target": "runtime deployment identity",
-      "description": "A broad Cloud Run admin role and missing explicit image-read boundary exceeded runtime deployment needs.",
-      "evidence": "Exact 19-permission custom Cloud Run role, no roles/run.admin, repository-scoped Artifact Registry reader, preflight and post-apply evidence tests."
+      "finding_id": "APP-IDENTITY-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "versioned tenant and principal contracts",
+      "description": "Tenant and principal identity existed only as request headers and database rows without direct versioned response schemas.",
+      "required_fix": "Verify the strict identity endpoint and frontend OpenAPI drift mapping.",
+      "evidence": "GET /api/v1/identity returns strict v1 tenant/principal schemas and denies missing development identity.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "STATE-IAM-001",
-      "severity": "HIGH",
-      "status": "CLOSED_STATIC",
-      "target": "Terraform state identities",
-      "description": "The plan identity could mutate durable Terraform state through an object-admin grant.",
-      "evidence": "Foundation and runtime states are split; plan can read state and manage only disposable runtime lock objects; apply is runtime-prefix scoped."
+      "finding_id": "REL-EVIDENCE-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "reliability evidence",
+      "description": "Provider timeout, duplicate delivery/event replay and failed migration cases were not explicit enough in the audited prior evidence.",
+      "required_fix": "Independently inspect rollback/event counts and migration fail-closed assertions.",
+      "evidence": "Timeout rollback, duplicate run delivery without duplicate events, migration orphan failure and startup migration failure coverage now exists.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
       "finding_id": "DB-TENANT-001",
       "severity": "HIGH",
       "status": "CLOSED",
       "target": "database tenant integrity",
-      "description": "Foreign keys did not force dependent records to share their parent's tenant.",
-      "evidence": "Migration 0002 adds composite tenant foreign keys and a PostgreSQL cross-tenant negative test."
+      "description": "Earlier foreign keys did not force dependent rows to share the parent tenant.",
+      "evidence": "Migration 0002 adds composite tenant ownership constraints and current PostgreSQL integration denies cross-tenant read and approval.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "OBS-DELIVERY-001",
+      "finding_id": "HTTP-COUNT-001",
       "severity": "MEDIUM",
-      "status": "CLOSED_STATIC",
-      "target": "alerts and budget delivery",
-      "description": "Arbitrary notification channel identifiers could select disabled or unverified destinations.",
-      "evidence": "Channels are selected by exact display name, must be enabled, and email delivery must be VERIFIED."
+      "status": "FIXED_PENDING_CRITIC",
+      "target": "integrated HTTP smoke",
+      "description": "The smoke printed artifact/evidence counts but did not fail when either count differed from eight.",
+      "required_fix": "Rerun unit and live smoke checks with exact count assertions.",
+      "evidence": "verify_run now rejects any result not containing exactly eight artifacts and eight evidence records.",
+      "source_task": "TASK-BACKEND-PRODUCER-003"
     },
     {
-      "finding_id": "ATT-COMMIT-001",
+      "finding_id": "EVAL-REPRO-001",
       "severity": "HIGH",
-      "status": "CLOSED_STATIC",
-      "target": "deployment attestation",
-      "description": "Attestation verification could omit the actual checked-out HEAD and complete tracked-tree binding.",
-      "evidence": "Workflow verifies commit, full tracked tree, saved plan and immutable image before cloud authentication."
+      "status": "FIXED_PENDING_CI",
+      "target": "documented frozen validation environment",
+      "description": "The documented uv sync --frozen environment lacked PyYAML although validate_platform invokes YAML parsing.",
+      "required_fix": "Run the documented frozen setup and platform command in current CI.",
+      "evidence": "PyYAML is now a locked development dependency and validate_platform chooses the reproducible backend interpreter when available.",
+      "source_task": "EVAL-INC-002"
     },
     {
-      "finding_id": "ALEMBIC-LOG-001",
-      "severity": "MEDIUM",
-      "status": "CLOSED",
-      "target": "migration process logging",
-      "description": "Alembic configuration could disable existing application loggers.",
-      "evidence": "Migration logging preserves existing loggers and the platform test suite passes."
-    },
-    {
-      "finding_id": "DB-LIFECYCLE-001",
-      "severity": "MEDIUM",
-      "status": "CLOSED",
-      "target": "database resource lifecycle",
-      "description": "Application, OpenAPI and test engines could survive past their owning lifecycle.",
-      "evidence": "Application lifespan, canonical OpenAPI and engine fixtures dispose resources; strict ResourceWarning gates pass."
-    },
-    {
-      "finding_id": "TEST-CLIENT-001",
-      "severity": "MEDIUM",
-      "status": "CLOSED",
-      "target": "HTTP test client",
-      "description": "The compatibility client path emitted deprecation warnings and obscured the supported runtime floor.",
-      "evidence": "Project requires Python 3.10+, uses httpx2, and strict deprecation warnings pass on Python 3.13.5."
-    },
-    {
-      "finding_id": "CI-DB-001",
+      "finding_id": "CI-MANDATORY-001",
       "severity": "HIGH",
-      "status": "CLOSED",
-      "target": "backend CI database isolation",
-      "description": "A job-wide PostgreSQL URL contaminated hermetic SQLite migration tests.",
-      "evidence": "PostgreSQL URL is step-scoped; migration tests delete inherited configuration; contamination probe and CI pass."
+      "status": "OPEN",
+      "target": "mandatory CI enforcement",
+      "description": "Main now requires the exact four CI jobs and protected review controls, but the repaired tree has no exact GitHub Actions result and the updated workflow is not yet on main.",
+      "required_fix": "Commit and push the repair, obtain a green exact-tree run, keep the draft PR unmerged, and obtain an eligible non-self PR review before any later merge.",
+      "source_task": "TASK-REQ-AUDIT-002"
     },
     {
-      "finding_id": "WEB-POLL-001",
-      "severity": "MEDIUM",
-      "status": "CLOSED",
-      "target": "integrated UI polling",
-      "description": "setInterval could overlap a terminal refresh and issue an extra GET.",
-      "evidence": "Sequential recursive timeout cancels and stops on terminal response; eight focused repetitions and CI pass."
-    },
-    {
-      "finding_id": "SEC-PYTEST-001",
+      "finding_id": "EVAL-CONTRACT-001",
       "severity": "HIGH",
-      "status": "CLOSED",
-      "target": "CI dependency lock",
-      "description": "pytest 8.4.2 was affected by PYSEC-2026-1845.",
-      "evidence": "Python minimum is 3.10; exact lock resolves pytest 9.1.1; current local and CI audits pass."
+      "status": "IN_PROGRESS",
+      "target": "executable evaluation evidence",
+      "description": "The prior eval-results artifact did not satisfy the mandatory per-requirement schema or executable harness requirement.",
+      "required_fix": "Finish the root-owned catalog/result generation, validate exact traceability coverage and rerun it on the final tree.",
+      "source_task": "TASK-REQ-AUDIT-002"
     },
     {
-      "finding_id": "CI-WHITESPACE-001",
-      "severity": "LOW",
-      "status": "CLOSED",
-      "target": "complete tracked tree",
-      "description": "Historical trailing whitespace failed the complete-tree CI gate.",
-      "evidence": "Tracked text files were mechanically normalized; the exact empty-tree diff gate and CI pass."
+      "finding_id": "GATE-INDEPENDENCE-001",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "target": "reviewer and environment enforcement",
+      "description": "Protected dev-build/dev-plan/dev environments now exist and dev prevents self-review, but its configured reviewer is also the only collaborator, so no distinct actor/reviewer pair can satisfy the gate.",
+      "required_fix": "Add a distinct eligible reviewer/actor without weakening prevent-self-review, then read back the environment approval and protected attestation boundary.",
+      "source_task": "TASK-REQ-AUDIT-002"
+    },
+    {
+      "finding_id": "AUDIT-FINAL-001",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "target": "final independent evaluation",
+      "description": "Repair producers have not yet passed both focused critics and a new independent final evaluator.",
+      "required_fix": "Complete TASK-BACKEND-CRITIC-003 and TASK-TERRAFORM-CRITIC-004 then deploy EVAL-INC-004 against the committed exact tree.",
+      "source_task": "EVAL-INC-002"
+    },
+    {
+      "finding_id": "GCP-TRUTH-001",
+      "severity": "HIGH",
+      "status": "OPEN_EXTERNAL",
+      "target": "GCP project provenance",
+      "description": "An exact-name candidate project now exists but its creator, purpose and authorization for bootstrap or dev are unknown.",
+      "required_fix": "Obtain an explicit create/adopt decision bound to reviewed evidence and choose a distinct second project; do not infer adoption from the name.",
+      "evidence": "Candidate ai-native-content-agency-saas is ACTIVE but billing-disabled, unlabeled and outside Terraform state.",
+      "source_task": "TASK-GCP-DISC-001"
+    },
+    {
+      "finding_id": "CLOUD-ELIG-001",
+      "severity": "HIGH",
+      "status": "OPEN_EXTERNAL",
+      "target": "GCP target eligibility",
+      "description": "All six visible billing accounts are closed and no authorized parent or region exists.",
+      "required_fix": "Make an intended open billing account visible and explicitly authorize parent, distinct project roles and region before preflight.",
+      "source_task": "CLOUD-CRITIQUE-002"
+    },
+    {
+      "finding_id": "CLOUD-PLAN-001",
+      "severity": "HIGH",
+      "status": "OPEN_EXTERNAL",
+      "target": "real Terraform plan",
+      "description": "No saved target plan, plan JSON, source hash, image digest or exact attestation exists.",
+      "required_fix": "After eligibility and permission gates, produce the saved plans and inspect exact create/update/replace/destroy actions.",
+      "source_task": "CLOUD-CRITIQUE-002"
+    },
+    {
+      "finding_id": "CLOUD-PERM-001",
+      "severity": "HIGH",
+      "status": "OPEN_EXTERNAL",
+      "target": "granular GCP permissions",
+      "description": "A broad role name does not prove the required project, billing, API, IAM, WIF, state and resource permissions.",
+      "required_fix": "Run the granular target-specific preflight and record missing permissions without tokens.",
+      "source_task": "CLOUD-CRITIQUE-002"
+    },
+    {
+      "finding_id": "CLOUD-GHA-001",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "target": "GitHub cloud delivery configuration",
+      "description": "All three deployment environments exist with protected-branch rules and dev prevents self-review, but no Actions variables are configured, no distinct reviewer exists, and the repaired deploy workflow is not on main.",
+      "required_fix": "After current CI and a later authorized merge, add a distinct reviewer, populate the twelve variables only from reviewed foundation outputs, protect the exact attestation secret in dev, and read everything back.",
+      "source_task": "CLOUD-CRITIQUE-002"
+    },
+    {
+      "finding_id": "CLOUD-COST-001",
+      "severity": "HIGH",
+      "status": "OPEN_EXTERNAL",
+      "target": "GCP cost envelope",
+      "description": "No selected target region or real plan exists for an exact or defensible estimated monthly cost.",
+      "required_fix": "Price the inspected target plan and record assumptions before ALLOW_DEV_APPLY.",
+      "source_task": "CLOUD-CRITIQUE-002"
+    },
+    {
+      "finding_id": "CLOUD-WIF-001",
+      "severity": "HIGH",
+      "status": "FIXED_STATIC_PENDING_CRITIC",
+      "target": "GitHub WIF subject identity",
+      "description": "The prior WIF condition bound mutable owner and repository names but not immutable numeric IDs.",
+      "required_fix": "Independently verify OIDC mappings and negative Terraform tests for both immutable IDs.",
+      "evidence": "Current mappings and conditions check repository_owner_id and repository_id alongside names/ref/workflow/environment.",
+      "source_task": "TASK-TERRAFORM-FIXER-003"
+    },
+    {
+      "finding_id": "CLOUD-ADOPT-001",
+      "severity": "HIGH",
+      "status": "FIXED_STATIC_PENDING_REAL_DECISION",
+      "target": "existing GCP project adoption",
+      "description": "The prior create_project=false path referenced but did not manage or import an existing project.",
+      "required_fix": "Independently verify negative adoption tests and later bind the real decision to evidence before any target plan.",
+      "evidence": "CREATE_NEW or ADOPT_EXISTING is mandatory; adoption uses a versioned acknowledgement and Terraform import.",
+      "source_task": "TASK-TERRAFORM-FIXER-003"
+    },
+    {
+      "finding_id": "CLOUD-REGION-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_STATIC_PENDING_CRITIC",
+      "target": "foundation to runtime region binding",
+      "description": "The prior runtime root did not compare its region with the foundation output.",
+      "required_fix": "Rerun positive and negative foundation binding tests.",
+      "evidence": "Foundation exports region and runtime preconditions require an exact match.",
+      "source_task": "TASK-TERRAFORM-FIXER-003"
+    },
+    {
+      "finding_id": "CLOUD-ISOLATION-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_STATIC_PENDING_CRITIC",
+      "target": "bootstrap and dev project isolation",
+      "description": "The prior roots did not enforce that bootstrap and dev project IDs differ.",
+      "required_fix": "Rerun the negative same-project test and inspect runtime foundation checks.",
+      "evidence": "Dev and runtime gates require project_id to differ from bootstrap_project_id.",
+      "source_task": "TASK-TERRAFORM-FIXER-003"
+    },
+    {
+      "finding_id": "CLOUD-IAM-002",
+      "severity": "HIGH",
+      "status": "CLOSED_STATIC_BY_CRITIC_REPAIR",
+      "target": "routine runtime deploy role",
+      "description": "The prior role allowed Cloud Run service/job deletion and retained project-wide service IAM mutation.",
+      "required_fix": "Keep the exact 16-permission set synchronized and independently inspect any future role change.",
+      "evidence": "Delete and run.services.setIamPolicy are absent; foundation owns project-level roles/run.servicesInvoker rather than job-capable roles/run.invoker; runtime owns no service IAM member; 22 Terraform tests, seven post-apply tests and 58 static controls pass.",
+      "source_task": "TASK-TERRAFORM-IAM-FIXER-004"
+    },
+    {
+      "finding_id": "OBS-ADOPTION-001",
+      "severity": "MEDIUM",
+      "status": "FIXED_STATIC_PENDING_CRITIC_AND_REAL_EVIDENCE",
+      "target": "notification recipient provenance",
+      "description": "The earlier design treated a pre-existing verified email channel as a manually created dependency instead of a Terraform-owned resource.",
+      "required_fix": "Independently verify the two-phase create/import gate and later prove human verification and delivery against the exact managed channel.",
+      "evidence": "Terraform now owns gcp-notification-channel.v1 CREATE_NEW or ADOPT_EXISTING resources, sensitive email input, import/provenance, prevent_destroy and an enabled/VERIFIED evidence gate before costly resources; runtime binds its provenance digest.",
+      "source_task": "TASK-TERRAFORM-FIXER-003"
+    },
+    {
+      "finding_id": "APP-IDEMPOTENCY-RACE-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_INDEPENDENT_EVALUATOR",
+      "target": "concurrent identical Greenlight replay",
+      "description": "An independently repeated same-tenant same-key same-payload approval race returned one durable 200 and one APPROVAL_ALREADY_DECIDED 409 because the losing transaction did not re-read the idempotency record committed after its initial replay check.",
+      "required_fix": "After rollback of only the approval-already-decided race, re-read and return the exact durable idempotency response when tenant, key, operation and canonical hash match; add a deterministic concurrent regression and preserve incompatible conflicts.",
+      "evidence": "A fresh evaluator repeated the repaired identical approval race 12 times; every iteration returned two equal 200 bodies and exactly one approval, idempotency record and approval audit.",
+      "source_task": "TASK-BACKEND-RACE-EVALUATOR-010"
+    },
+    {
+      "finding_id": "APP-PROVIDER-DUPLICATE-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_INDEPENDENT_EVALUATOR",
+      "target": "concurrent same-key run start provider ownership",
+      "description": "Concurrent identical run.start calls persist and return one run but both execute all seven sandbox tools first, producing 14 tool logs and one rolled-back run identity.",
+      "required_fix": "Before any effectful adapter is enabled, add a cross-instance durable key ownership/lease or database advisory lock acquired before provider execution; meanwhile record the sandbox-only limitation and keep external_side_effects false.",
+      "evidence": "A fresh evaluator repeated the repaired identical start race 12 times; each returned equal 201 bodies with one run/command/audit and exactly seven tool evidence/log records for the one run ID.",
+      "source_task": "TASK-BACKEND-RACE-EVALUATOR-010"
+    },
+    {
+      "finding_id": "CLOUD-CRITIC-005-01",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_ROLE_SEPARATED_REVIEW",
+      "target": "post-apply runtime service-account IAM",
+      "description": "The post-apply verifier checked exact plan/deploy project roles but did not inspect project roles granted to the runtime service account, so a drifted broad role could pass.",
+      "required_fix": "Require exactly roles/cloudsql.client, roles/cloudsql.instanceUser, roles/logging.logWriter and roles/monitoring.metricWriter for the runtime member and reject every extra role.",
+      "evidence": "The post-apply verifier now requires the runtime member's exact four-role set; missing-role and extra-role negatives pass in the 65-test platform suite.",
+      "source_task": "TASK-TERRAFORM-REVIEWER-015"
+    },
+    {
+      "finding_id": "CLOUD-CRITIC-005-02",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_ROLE_SEPARATED_REVIEW",
+      "target": "runtime container image provenance",
+      "description": "Runtime checked digest syntax but did not require the application image to use the foundation Artifact Registry prefix or constrain the proxy to an explicitly trusted registry.",
+      "required_fix": "Bind the application image to the foundation repository and constrain the proxy registry, with wrong-registry negative tests.",
+      "evidence": "Runtime planning binds repository/app@sha256 to the foundation output and the proxy to one source-reviewed release/digest; post-apply verifies exact named service/job containers and wrong-source/name tests fail closed.",
+      "source_task": "TASK-TERRAFORM-REVIEWER-015"
+    },
+    {
+      "finding_id": "CLOUD-CRITIC-005-03",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_ROLE_SEPARATED_REVIEW",
+      "target": "rollback image availability",
+      "description": "Cleanup can delete versions older than seven days unless among the 20 newest while the runbook did not bound rollback to a digest that still exists.",
+      "required_fix": "Protect an explicit rollback retention convention or require executable digest-existence proof before producing a rollback plan and document the bounded window.",
+      "evidence": "Plan and protected apply jobs prove the desired/current digest, bind the candidate, and move one rollback-current KEEP tag only after exact attestation and permission preflight using a two-permission tag role; ordering and negative tests pass.",
+      "source_task": "TASK-TERRAFORM-REVIEWER-015"
+    },
+    {
+      "finding_id": "CLOUD-CRITIC-005-04",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_ROLE_SEPARATED_REVIEW",
+      "target": "bootstrap and foundation authority drift",
+      "description": "Post-apply evidence did not verify live WIF claims, state-bucket authority, phase impersonation bindings, repository roles or the deployed custom-role permission set.",
+      "required_fix": "Add fail-closed foundation post-apply evidence for every identity and state authority boundary.",
+      "evidence": "Post-apply now compares all three WIF providers and impersonation policies, plan/apply state bindings, complete repository IAM, exact runtime and rollback custom roles, and immutable repository claims; drift negatives pass.",
+      "source_task": "TASK-TERRAFORM-REVIEWER-015"
+    },
+    {
+      "finding_id": "CLOUD-CRITIC-005-05",
+      "severity": "HIGH",
+      "status": "BLOCKED_BY_EXTERNAL_DEPENDENCY",
+      "target": "external apply eligibility",
+      "description": "No open billing account, authorized parent/region/targets, saved plan, cost evidence, deployment variables or distinct reviewer path exists.",
+      "required_fix": "Authorize eligible cloud targets and an independent reviewer, then produce and critique exact saved plans without mutating the unrelated active project.",
+      "source_task": "TASK-TERRAFORM-CRITIC-004"
+    },
+    {
+      "finding_id": "EVAL-RESULT-TAMPER-001",
+      "severity": "CRITICAL",
+      "status": "CLOSED_LOCAL_BY_NEGATIVE_TESTS_PENDING_GENERATION",
+      "target": "checked-in evaluation result validation",
+      "description": "The result checker accepted a fabricated 52-item all-PASS/INFO report because it did not bind top-level source/catalog/aggregate fields or canonical per-requirement fields to the catalog.",
+      "required_fix": "Validate exact report metadata, current source tree provenance, recomputed aggregates/hard gates and every catalog-bound evaluation field, with tamper-negative tests.",
+      "evidence": "Nineteen evaluator/governance tests now reject forged all-PASS, catalog field, aggregate, gate, source and commit-provenance tampering; stale checked-in results correctly exit 2.",
+      "source_task": "TASK-EVAL-HARNESS-FIXER-009"
+    },
+    {
+      "finding_id": "EVAL-POSTGRES-GATE-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_REAL_POSTGRESQL_GATE",
+      "target": "local PostgreSQL evaluation coverage",
+      "description": "The local harness did not execute scripts/postgres_integration.py, so same-key concurrency and cross-tenant PostgreSQL evidence existed only in CI outside the catalog.",
+      "required_fix": "Add a hermetic fresh PostgreSQL catalog gate and map APP-002 APP-004 APP-008 SEC-001 and the complete-suite requirement to it.",
+      "evidence": "A root rerun built the isolated locked test stage, migrated fresh PostgreSQL through 0003, returned two equal 201 responses with one durable run and seven tool records, denied cross-tenant access, recreated the application, and removed the exact volume.",
+      "source_task": "TASK-POSTGRES-GATE-FIXER-013"
+    },
+    {
+      "finding_id": "EVAL-POSTGRES-RUNNER-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_REAL_POSTGRESQL_GATE",
+      "target": "hermetic PostgreSQL integration runner dependencies",
+      "description": "The first catalog runner executed TestClient inside the deployed runtime image, whose intentionally minimal dependency lock omits httpx2, so the real gate failed before its API probes.",
+      "required_fix": "Use a separate locked ephemeral integration-test image/stage with CI test dependencies while leaving the production runtime image unchanged, then rerun the fresh gate.",
+      "evidence": "The Dockerfile now has a non-deployed postgres-integration stage with the existing hash-locked CI requirements; the production runtime still omits httpx2 and the fresh real gate passes as UID 10001.",
+      "source_task": "TASK-POSTGRES-GATE-FIXER-013"
+    },
+    {
+      "finding_id": "GOV-TASK-GRAPH-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_NEGATIVE_TESTS",
+      "target": "task ownership and ordered phase governance",
+      "description": "Governance validation accepted blank task roles/objectives/owners, nonsense statuses, dependency cycles and therefore could falsely certify producer-to-evaluator ordering.",
+      "required_fix": "Require typed non-empty task contracts, declared dependencies, an acyclic graph, ordered critical path/mandatory phases and no overlapping active write locks.",
+      "evidence": "Governance 14/14 passes on 34 typed tasks, an acyclic graph, 19 ordered critical edges, mandatory phase chain and non-overlapping active locks; blank/cycle/order/conflict negatives pass.",
+      "source_task": "TASK-EVAL-HARNESS-FIXER-009"
+    },
+    {
+      "finding_id": "EVAL-POSTGRES-FRESHNESS-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_FRESH_DOCKER_EXECUTION",
+      "target": "repeatable integration database freshness",
+      "description": "The local Compose E2E preserves its volume and the PostgreSQL script used fixed keys, allowing a later run to pass through old durable replay without exercising contention.",
+      "required_fix": "Use an isolated fresh per-run database/project or unique namespace while retaining a separate explicit restart-persistence scenario.",
+      "evidence": "Fresh executions used generated owned projects and UUID command namespaces; PostgreSQL contention passed, three browser scenarios passed including restart persistence, and both exact volumes were removed.",
+      "source_task": "TASK-EVAL-HARNESS-FIXER-009"
+    },
+    {
+      "finding_id": "APP-IDEMPOTENCY-LOCK-TIMEOUT-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_INDEPENDENT_EVALUATOR",
+      "target": "PostgreSQL duplicate-command lock availability",
+      "description": "The transaction advisory lock has no explicit lock or statement timeout, so a same-key waiter can block indefinitely if the holder or inline provider stalls.",
+      "required_fix": "Set a bounded transaction-local PostgreSQL lock timeout before advisory acquisition, roll back on timeout and return the existing safe structured 503 without weakening ownership.",
+      "evidence": "The evaluator verified READ COMMITTED then transaction-local 5000ms lock_timeout then advisory acquisition; six focused cases proved rollback and redacted 503 behavior.",
+      "source_task": "TASK-BACKEND-RACE-EVALUATOR-010"
+    },
+    {
+      "finding_id": "EVAL-RESTART-RUNNER-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED_LOCAL_BY_FRESH_DOCKER_EXECUTION",
+      "target": "browser restart persistence process control",
+      "description": "The first fresh three-scenario run restored the durable row after restart but failed because docker compose start app also traversed the completed one-shot migration dependency and returned nonzero.",
+      "required_fix": "Restart only the already-created application service, retain readiness and exact-row assertions, and rerun the complete fresh stack.",
+      "evidence": "The test now uses app-only docker compose restart; lint/typecheck pass and a fresh owned stack completed all three browser scenarios in five seconds before exact volume cleanup.",
+      "source_task": "TASK-E2E-RESTART-FIXER-014"
     },
     {
       "finding_id": "VISUAL-QA-001",
-      "severity": "LIMITATION",
+      "severity": "MEDIUM",
       "status": "OPEN_ENVIRONMENT",
-      "target": "interactive browser verification",
-      "description": "The required in-app browser runtime exposed no browser instances.",
-      "required_fix": "Repeat interactive desktop and narrow-viewport QA when an in-app browser instance is available."
-    },
-    {
-      "finding_id": "AUDIT-INDEPENDENCE-001",
-      "severity": "LIMITATION",
-      "status": "OPEN_PROCESS",
-      "target": "review independence",
-      "description": "Collaboration credits were exhausted, so the final critic and evaluator passes were sequential roles performed by the primary agent.",
-      "required_fix": "Obtain review from a different human or independent agent before merge and before any exact cloud-plan approval."
-    },
-    {
-      "finding_id": "GCP-BLOCK-001",
-      "severity": "BLOCKER",
-      "status": "OPEN_EXTERNAL",
-      "target": "GCP dev plan and apply",
-      "description": "Zero visible open billing accounts and no authorized target project or region prevent a real saved plan or apply.",
-      "required_fix": "Satisfy the exact resume conditions in agent/reports/gcp-discovery-2026-07-18.md."
+      "target": "interactive visual and accessibility review",
+      "description": "The required in-app browser exposed no browser instances, so manual desktop/narrow viewport and accessibility QA is unproven.",
+      "required_fix": "Repeat interactive inspection when an in-app browser instance is available; do not substitute Playwright behavioral evidence for manual visual evidence.",
+      "source_task": "TASK-E2E-CI-PRODUCER-003"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 Control plane durable para una agencia de contenido AI-native de ocho pasos. La experiencia predeterminada integra React con FastAPI y SQL; conserva misiones, corridas, artefactos, evidencia, eventos, auditoría y decisiones Greenlight. Todos los adaptadores de proveedor siguen siendo sandbox: no publican, no renderizan media, no modifican GitHub y no gastan presupuesto.
 
-Estado al 18 de julio de 2026:
+Estado al 19 de julio de 2026:
 
 - el modo integrado UI → API es el predeterminado;
 - SQLite sirve para desarrollo/pruebas aisladas y PostgreSQL 15 para Compose y el diseño cloud;
@@ -19,6 +19,7 @@ React 19 / TypeScript / Vite
        └─ FastAPI
             ├─ identidad de headers sólo para test/desarrollo
             ├─ Greenlight ligado a hash SHA-256 + greenlight.v1
+            ├─ lock transaccional tenant/clave antes de ejecutar proveedores
             ├─ orquestador sandbox de ocho pasos
             └─ SQLAlchemy + Alembic
                  ├─ SQLite (local/test)
@@ -113,9 +114,12 @@ npm run typecheck
 npm test
 npm run build
 npm run check:api-contract
+npm run test:e2e
+npm run test:e2e:stack
 
 cd backend
 uv run ruff check .
+uv run ruff format --check . ../scripts
 uv run mypy --config-file pyproject.toml control_plane
 uv run pytest tests
 uv run python -m control_plane.openapi --output openapi.json --check
@@ -124,11 +128,11 @@ cd ..
 scripts/validate_platform.sh
 ```
 
-La última orden valida formato/configuración Terraform, pruebas mock, YAML, políticas estáticas y Compose; no autoriza un plan ni un apply real.
+`npm run test:e2e` requiere Chromium (`npx playwright install chromium`) y el stack integrado activo en `http://127.0.0.1:8080`. `npm run test:e2e:stack` es la variante reproducible: detiene el proyecto local ordinario sin borrar su base, crea un proyecto Compose y volumen frescos, recorre aprobación, rechazo y reinicio exclusivo de la API contra la SPA, FastAPI y PostgreSQL reales, confirma la restauración del run persistido y elimina únicamente ese proyecto/volumen generado. `bash e2e/postgres-integration.sh` usa otro proyecto desechable y una etapa de imagen no desplegable con dependencias de prueba bloqueadas; el runtime final conserva sólo dependencias de producción. La validación de plataforma cubre formato/configuración Terraform, pruebas mock, YAML, políticas estáticas y Compose; no autoriza un plan ni un apply real.
 
 ## GCP dev
 
-Terraform define un bootstrap opcional y separa el entorno `dev` en una foundation administrada fuera del flujo rutinario y un estado runtime estrecho. La foundation contiene APIs/IAM, Artifact Registry, Cloud SQL PostgreSQL 15 con connector enforcement e IAM DB auth, canales de alerta y presupuesto. El runtime sólo administra Cloud Run privado, la migración y su invocador. Tres identidades WIF distintas —build, plan de recursos en sólo lectura y apply— exigen owner/repositorio/`main`/workflow/environment exactos. Plan sólo puede leer los estados requeridos y crear/borrar el `.tflock` runtime; apply sólo puede mutar el prefijo de estado runtime y usa un rol custom exacto más lectura del repositorio de imágenes, nunca `roles/run.admin`. No contiene claves de servicio ni passwords cloud.
+Terraform define un bootstrap opcional y separa el entorno `dev` en una foundation administrada fuera del flujo rutinario y un estado runtime estrecho. La foundation contiene APIs/IAM, Artifact Registry, Cloud SQL PostgreSQL 15 con connector enforcement e IAM DB auth, canales de alerta y presupuesto. El runtime sólo administra Cloud Run privado, la migración y su invocador. Tres identidades WIF distintas —build, plan de recursos en sólo lectura y apply— exigen owner/repositorio/`main`/workflow/environment exactos. Plan sólo puede leer los estados requeridos y crear/borrar el `.tflock` runtime; apply sólo puede mutar el prefijo de estado runtime y usa un rol Cloud Run de 16 permisos, lectura del repositorio y un rol separado de dos permisos que crea/mueve `rollback-current` únicamente después de la atestación y el preflight. La imagen de aplicación debe pertenecer al repositorio foundation y el proxy está fijado a una release/digest exacta. Nunca se concede `roles/run.admin`, claves de servicio ni passwords cloud.
 
 La ejecución real está bloqueada. Las seis cuentas de facturación visibles estaban cerradas y el proyecto activo de `gcloud` es ajeno a este repositorio. No debe adoptarse ni modificarse. El proceso de reanudación está en [el runbook de GCP dev](docs/runbooks/gcp-dev-deployment.md) y exige un plan runtime guardado y una atestación independiente `ALLOW_DEV_APPLY` ligada al hash del plan, árbol Git completo, commit, imagen inmutable, workflow, actor, revisor y ejecución. Se verifica antes de autenticar y sólo entonces podría aplicarse ese archivo exacto.
 
@@ -136,6 +140,7 @@ La ejecución real está bloqueada. Las seis cuentas de facturación visibles es
 
 - `development_headers` sólo identifica tenant/principal en test y desarrollo; producción falla cerrada hasta que exista un adaptador de identidad verificado.
 - La corrida completa se confirma en una transacción de comando. No existe cola/outbox ni reanudación durable a mitad de agente.
+- Llamadas concurrentes con el mismo tenant, clave y payload se serializan en base de datos antes de ejecutar el sandbox; SQLite local/test serializa todos los comandos mutables y PostgreSQL serializa sólo la clave coincidente, con un límite transaccional de espera de cinco segundos y error 503 redactado al agotarlo.
 - Los adaptadores de Meta Ads, plataformas sociales, navegador, GitHub, Context7 y media son fixtures deterministas.
 - Cloud Run dev es IAM-private. Para UI interactiva se necesita un proxy/túnel autenticado; no se añade `allUsers`.
 - No hay despliegue, prueba de permisos/cuotas/costo regional, conectividad Cloud SQL IAM ni segunda planificación sin cambios mientras continúe el bloqueo externo.
