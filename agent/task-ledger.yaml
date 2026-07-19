@@ -1,6 +1,6 @@
 schema_version: 2
 iteration: production-foundation-v1
-updated_at: 2026-07-19T05:55:09Z
+updated_at: 2026-07-19T20:08:49Z
 tasks:
   - task_id: TASK-MAP-001
     role: Repository Mapper
@@ -1209,6 +1209,45 @@ tasks:
     status: PASS
     owner: orchestrator_role_separated_cloud_reviewer_015
 
+  - task_id: TASK-HARNESS-RUFF-FIXER-016
+    role: Strict Harness Parity Fixer
+    objective: Repair the canonical Ruff configuration mismatch exposed only by the first source-commit evaluation run.
+    inputs:
+      - source commit 4ff72a462251c9e6626b9c65a9de9885d44ff236
+      - strict harness BACKEND-LINT and BACKEND-FORMAT failures
+      - backend/pyproject.toml Ruff policy
+    dependencies:
+      - TASK-EVAL-HARNESS-REVIEWER-012
+      - TASK-GITHUB-GATES-004
+    allowed_paths:
+      - scripts Python sources and tests
+      - agent governance evidence
+    read_only_paths:
+      - backend/pyproject.toml
+      - first strict harness result in temporary storage
+    write_lock:
+      - scripts Python formatting and explicit zip strictness
+      - harness-parity governance evidence
+    expected_outputs:
+      - explicit strict semantics for unequal zip iterables
+      - canonical formatting for every backend and script Python file
+      - a new committed source tree eligible for full reevaluation
+    acceptance_criteria:
+      - Ruff lint passes with backend/pyproject.toml applied to backend and scripts
+      - Ruff format reports all 58 files formatted
+      - evaluator governance and complete source-only platform gates pass
+    validation:
+      - backend/.venv/bin/python -m ruff check backend scripts --config backend/pyproject.toml
+      - backend/.venv/bin/python -m ruff format --check backend scripts --config backend/pyproject.toml
+      - 19 evaluator and governance tests
+      - 24 Terraform tests 65 script tests and 61 static controls
+    prohibited_actions:
+      - weaken or suppress Ruff policy
+      - install or commit generated evaluation results before the source commit
+      - mutate GitHub or GCP
+    status: PASS
+    owner: root_strict_harness_fixer_016
+
   - task_id: EVAL-INC-004
     role: Independent Production Readiness Evaluator
     objective: Evaluate the complete repaired increment and issue the final release/apply veto or recommendation.
@@ -1230,6 +1269,7 @@ tasks:
       - TASK-POSTGRES-GATE-FIXER-013
       - TASK-E2E-RESTART-FIXER-014
       - TASK-TERRAFORM-REVIEWER-015
+      - TASK-HARNESS-RUFF-FIXER-016
     dependencies:
       - TASK-BACKEND-CRITIC-003
       - TASK-TERRAFORM-CRITIC-004
@@ -1248,6 +1288,7 @@ tasks:
       - TASK-POSTGRES-GATE-FIXER-013
       - TASK-E2E-RESTART-FIXER-014
       - TASK-TERRAFORM-REVIEWER-015
+      - TASK-HARNESS-RUFF-FIXER-016
     allowed_paths:
       - repository read-only
       - agent/reports/eval-inc-004.md

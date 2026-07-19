@@ -1,10 +1,10 @@
 # Production Foundation V1 — Readiness Audit
 
-Audit timestamp: 2026-07-19T19:08:21Z
+Audit timestamp: 2026-07-19T20:08:49Z
 
-Committed HEAD: `34c3489ac39f5a69a3b782cde9171486d3e8be91`
+Latest committed implementation repair: `06a13b21989a44e75db31b41e1c460ae24e01d7f`
 
-Working state: repaired source increment remains uncommitted
+Working state: focused source commits exist locally; this refreshed governance audit is pending its source commit
 
 Draft PR: `#2`; tracking issue: `#1`
 
@@ -15,7 +15,7 @@ Draft PR: `#2`; tracking issue: `#1`
 | Local application implementation | `PASS_LOCAL` | Backend, contracts, migrations, frontend and live transport gates are green. |
 | Real PostgreSQL boundary | `PASS_LOCAL` | Fresh migrations, same-key single execution, cross-tenant denial and application recreation passed. |
 | Terraform code and policy | `PASS_LOCAL` / `DENY_APPLY` | Four critic code findings are repaired and role-separated review is green; no eligible target or real plan exists. |
-| Executable evaluation evidence | `PASS_REPAIR`; final result pending | Tamper/governance negatives and Docker gates pass; checked-in results remain intentionally stale until the final source commit. |
+| Executable evaluation evidence | `FAIL_FOUND_AND_REPAIRED`; full rerun pending | The first committed-source harness passed every non-style local domain but caught canonical Ruff parity; focused repair gates are green and checked-in results remain intentionally stale. |
 | Current-tree GitHub CI | `NOT_RUN` | The prior green run evaluates only `34c3489`, not this source tree. |
 | GitHub deploy eligibility | `FAIL_CLOSED` | Required checks/environments exist, but variables are absent and the sole collaborator cannot satisfy non-self review. |
 | GCP dev deployment | `BLOCKED_BY_EXTERNAL_DEPENDENCY` / `DENY_APPLY` | Six billing accounts are closed; targets, parent, region, plan, cost and reviewer evidence are absent. |
@@ -55,12 +55,14 @@ This audit approves neither merge nor release nor cloud apply.
 
 - Nineteen eval/governance tests reject fabricated all-PASS reports, altered catalog/source/aggregate/gate claims, stale commits, blank ownership, cycles, phase disorder and active write conflicts.
 - The catalog maps all 52 requirements to 28 executable gates, including the fresh PostgreSQL and live UI/API/PostgreSQL gates.
-- Governance currently validates 38 typed tasks, a 23-edge ordered critical path, 41 unique findings, 67 evidence items, 31 risks, the mandatory phase chain and zero active write-lock conflicts.
+- The first full committed-source harness passed live Docker/Playwright, fresh PostgreSQL, functional backend, image, platform, repository-integrity and dependency gates. It failed closed on three B905 findings and 20 scripts outside canonical backend formatting; six external gates remained blocked.
+- `TASK-HARNESS-RUFF-FIXER-016` made all unequal `zip` calls explicitly `strict=False` and applied the canonical backend Ruff configuration. Exact lint/58-file formatting, 19 evaluator/governance tests and the complete source-only platform gate now pass.
+- Governance currently validates 39 typed tasks, a 24-edge ordered critical path, 42 unique findings, 71 evidence items, 31 risks, the mandatory phase chain and zero active write-lock conflicts.
 - `agent/eval-results.json` is intentionally not current. The required lifecycle is: commit source; run the full harness against that source commit; add only the generated result; validate and commit that result separately.
 
 ## External and process blockers
 
-1. The repaired source tree is not committed or pushed; run `29672994585` is historical only.
+1. The repaired source tree has focused local commits but is not pushed; run `29672994585` is historical only.
 2. Exact-tree GitHub Actions and `EVAL-INC-004` have not run.
 3. The deploy workflow is not on `main`, all required Actions variables are absent, and the one collaborator cannot be both dispatcher and protected reviewer.
 4. Interactive visual/accessibility QA is unavailable because the required in-app browser exposed no browser instance; Playwright behavior does not close that manual gate.
@@ -69,7 +71,7 @@ This audit approves neither merge nor release nor cloud apply.
 
 ## Exact next gates
 
-1. Finish documentation/trace updates and commit source without `agent/eval-results.json`.
+1. Commit this formatter-finding governance update without `agent/eval-results.json`.
 2. Run the full strict harness against that source commit; every local gate must pass even though external requirements remain blocked.
 3. Commit only the bound eval result, push, and obtain the exact four required GitHub checks.
 4. Run the final evaluator on the exact committed/CI tree, preserving `DENY_RELEASE` and `DENY_APPLY` wherever external evidence is absent.

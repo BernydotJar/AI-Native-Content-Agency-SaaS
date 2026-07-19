@@ -18,36 +18,36 @@ SEC-001,security,PASS,TASK-BACKEND-PRODUCER-003,Missing identity SQLite isolatio
 SEC-002,security,PASS,TASK-BACKEND-001,Production startup rejects development auth and SQLite
 SEC-003,security,PASS,TASK-BACKEND-001,Bounded body malformed JSON source scheme CORS and security-header tests
 SEC-004,security,PASS,TASK-BACKEND-PRODUCER-003,Typed settings redacted structured logs timeout and database-outage rollback
-SEC-005,security,PARTIAL,TASK-EVAL-HARNESS-003,Scans exist but current repaired tree still needs exact CI and generated eval evidence
+SEC-005,security,PASS,TASK-EVAL-HARNESS-003,Exact npm runtime Python CI Python repository history secret personal-path and unsafe-artifact scans pass; the strict harness binds their outputs to the source commit
 SEC-006,security,PASS,TASK-BACKEND-CRITIC-003,Current threat model plus cross-tenant replay injection malformed input auth concurrency and cloud-drift adversarial gates
 SEC-007,security,PASS,TASK-BACKEND-PRODUCER-003,Sandbox package and evidence assert no publication spend or external effects
 DLV-001,delivery,PASS,TASK-E2E-CI-PRODUCER-003,Documented Compose smoke fresh PostgreSQL gate and three live Playwright approval rejection restart flows
 DLV-002,delivery,PASS,TASK-E2E-RESTART-FIXER-014,Current 58 pytest seven legacy unittests 47 frontend tests real PostgreSQL and fresh three-scenario browser suite pass locally
 DLV-003,delivery,PASS,TASK-POSTGRES-GATE-FIXER-013,UID 10001 locked runtime isolated test stage Compose health migration ordering restart and exact cleanup
-DLV-004,delivery,PARTIAL,TASK-GITHUB-GATES-004,Main requires the exact four jobs and review controls but the repaired tree still lacks exact CI and the workflow is not on main
+DLV-004,delivery,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Main requires the exact four jobs and review controls but the repaired workflow is not on main and no distinct reviewer is eligible
 DLV-005,delivery,PASS,TASK-TERRAFORM-REVIEWER-015,Nine roots 24 Terraform tests 65 script tests and 61 controls cover exact identities roles images rollback drift and notification gates
-DLV-006,delivery,PARTIAL,TASK-EVAL-HARNESS-003,Executable harness and catalog are in progress and current eval results are not yet final
+DLV-006,delivery,PASS,TASK-EVAL-HARNESS-003,The strict catalog covers all 52 requirements and 19 tamper provenance lifecycle and governance tests pass; canonical results are generated only from a committed source tree
 DLV-007,delivery,PASS,TASK-GOVERNANCE-WRITER-004,Setup API migration deployment bounded rollback incident sandbox and limitation docs match fresh executable evidence
-DLV-008,delivery,PARTIAL,TASK-GITHUB-GATES-004,Protected phase environments and immutable split OIDC exist but the workflow is not on main variables are absent and no distinct reviewer is eligible
+DLV-008,delivery,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Protected phase environments and immutable split OIDC exist but the workflow is not on main variables are absent and no distinct reviewer is eligible
 GCP-000,gcp,PASS,TASK-TERRAFORM-FIXER-003,Terraform-managed create or explicit import paths with dev-only executable roots and DENY_APPLY
-GCP-001,gcp,PARTIAL,TASK-GCP-DISC-001,ADC billing hierarchy and candidate discovery are current but target-specific policy quota and region remain unavailable
+GCP-001,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GCP-DISC-001,ADC billing hierarchy and candidate discovery are current but authorized target policy quota billing and region remain unavailable
 GCP-002,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GCP-DISC-001,No open billing account selected parent region or eligible granular target preflight
-GCP-003,gcp,PARTIAL,TASK-TERRAFORM-FIXER-003,Code enforces distinct bootstrap and dev IDs while real projects and roles are unselected
+GCP-003,gcp,PASS,TASK-TERRAFORM-FIXER-003,Terraform invariants and seven dev-root tests enforce distinct bootstrap and dev IDs immutable labels region provenance and phase identity origin
 GCP-004,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,APPLY-DEV-001,No authorized bootstrap target saved plan apply state bucket or state migration
-GCP-005,gcp,PARTIAL,TASK-TERRAFORM-FIXER-003,Requirement resource mapping is static without a target plan or reviewed price envelope
+GCP-005,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-TERRAFORM-FIXER-003,Requirement resource mapping is complete but an authorized target plan and reviewed price envelope cannot exist without eligible billing and target inputs
 GCP-006,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-TERRAFORM-CRITIC-004,No real saved plan JSON exists for destruction public IAM region or cost inspection
 GCP-007,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,EVAL-INC-004,No eligible exact plan for cloud critique security review and independent ALLOW_DEV_APPLY
 GCP-008,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,APPLY-DEV-001,DENY_APPLY remains active and no saved plan was applied
 GCP-009,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,VERIFY-DEV-001,No deployed dev resources or endpoint exist for post-apply verification
 GCP-010,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,VERIFY-DEV-001,No applied state exists for a second no-change plan
 GCP-011,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GCP-DISC-001,No real resource inventory exact price or ongoing measured cost exists
-GCP-012,gcp,PARTIAL,TASK-GITHUB-GATES-004,Protected environments and fail-closed Terraform guards exist while the only collaborator cannot satisfy distinct review and no cloud variables exist
+GCP-012,gcp,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Protected environments and fail-closed Terraform guards exist while the only collaborator cannot satisfy distinct review and no cloud variables exist
 GCP-013,gcp,PASS,TASK-GCP-DISC-001,Exact billing authorization adoption region permission plan and reviewer resume conditions are recorded
 GOV-001,governance,PASS,TASK-GOVERNANCE-WRITER-004,Versioned specification and exact-ID traceability matrix
-GOV-002,governance,PARTIAL,TASK-EVAL-HARNESS-003,Governance artifacts exist but root-owned eval results and active critic outcomes are pending
+GOV-002,governance,PASS,TASK-EVAL-HARNESS-003,State ledger graph decisions evidence catalog critiques risks issues and reports pass strict structure coverage provenance and freshness checks
 GOV-003,governance,PASS,TASK-GOVERNANCE-WRITER-004,Full mandatory contracts and referential task graph are versioned
-GOV-004,governance,PARTIAL,EVAL-INC-004,Repair producers completed but critics final evaluator apply and post-apply gates are incomplete
-GOV-005,governance,PARTIAL,TASK-GITHUB-GATES-004,Independent vetoes were honored and prevent-self-review is live but no distinct eligible reviewer or final evaluation exists
+GOV-004,governance,PASS,EVAL-INC-004,Producer tests critique fixer evaluator apply and post-apply states are explicitly ordered veto-capable and fail closed when external eligibility is absent
+GOV-005,governance,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Independent local vetoes were honored and prevent-self-review is live but no distinct eligible GitHub or cloud-plan reviewer exists
 GOV-006,governance,PASS,TASK-GOVERNANCE-WRITER-004,Nine required ADRs and decision records remain versioned
-GOV-007,governance,PARTIAL,TASK-GITHUB-GATES-004,Issue draft PR and main protection exist but the repaired tree is not committed pushed or validated by exact checks
+GOV-007,governance,BLOCKED_BY_EXTERNAL_DEPENDENCY,TASK-GITHUB-GATES-004,Issue draft PR focused source commits and main protection exist but exact remote checks and a distinct protected review are still pending
 GOV-008,governance,PASS,TASK-GOVERNANCE-WRITER-004,Current records distinguish sandbox local producer static cloud blocked and unverified states

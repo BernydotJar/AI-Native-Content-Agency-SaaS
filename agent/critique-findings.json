@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-07-19T05:45:42Z",
+  "updated_at": "2026-07-19T20:08:49Z",
   "release_recommendation": "DENY_RELEASE",
   "apply_recommendation": "DENY_APPLY",
-  "review_provenance": "Prior requirements, release and cloud audits were performed by independent subagents and their vetoes remain active. Backend and Terraform repair critics are in progress; no final evaluator result is claimed.",
+  "review_provenance": "Requirements, backend, Terraform and evaluation-harness critiques were performed by role-separated agents where available; their external vetoes remain active. Focused repairs pass their local reviewer gates, but no final exact-tree evaluator, distinct GitHub reviewer or real cloud-plan reviewer result is claimed.",
   "findings": [
     {
       "finding_id": "BASE-CRIT-001",
@@ -391,6 +391,16 @@
       "required_fix": "Restart only the already-created application service, retain readiness and exact-row assertions, and rerun the complete fresh stack.",
       "evidence": "The test now uses app-only docker compose restart; lint/typecheck pass and a fresh owned stack completed all three browser scenarios in five seconds before exact volume cleanup.",
       "source_task": "TASK-E2E-RESTART-FIXER-014"
+    },
+    {
+      "finding_id": "EVAL-RUFF-CONFIG-PARITY-001",
+      "severity": "HIGH",
+      "status": "CLOSED_LOCAL_BY_FOCUSED_VALIDATION_PENDING_FULL_RERUN",
+      "target": "strict harness Python lint and format parity",
+      "description": "The first source-commit harness run exposed that root-level Ruff checks did not apply backend/pyproject.toml to scripts, so the stricter backend-cwd gates found three B905 violations and 20 unformatted scripts.",
+      "required_fix": "Declare the intended strictness for unequal zip iterables, format backend and scripts with the canonical backend configuration, and rerun the exact lint, format, governance and platform gates before regenerating results.",
+      "evidence": "All three loops now declare strict=False; the canonical Ruff lint and 58-file format check pass, 19 evaluator/governance tests pass, and the complete source-only platform gate passes 24 Terraform tests, 65 script tests and 61 static controls.",
+      "source_task": "TASK-HARNESS-RUFF-FIXER-016"
     },
     {
       "finding_id": "VISUAL-QA-001",
