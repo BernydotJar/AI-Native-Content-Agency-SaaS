@@ -9,7 +9,7 @@ Status: PARTIAL — discovery complete enough to identify an external billing bl
 - Console browser session: not observable from CLI
 - ADC override environment variable: unset
 - ADC well-known file: present
-- ADC refresh: independently verified after discovery with token output redirected to `/dev/null`; no token was printed or recorded
+- ADC refresh: verified in a separate read-only check with token output redirected to `/dev/null`; no token was printed or recorded
 - gcloud: 574.0.0
 - Terraform: 1.15.8, installed after the discovery agent reported it absent
 - Docker engine: 28.5.1, started after baseline

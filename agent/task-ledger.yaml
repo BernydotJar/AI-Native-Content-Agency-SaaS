@@ -1,6 +1,6 @@
 schema_version: 1
 iteration: production-foundation-v1
-updated_at: 2026-07-18T23:45:35Z
+updated_at: 2026-07-19T03:59:19Z
 tasks:
   - task_id: TASK-MAP-001
     role: Repository Mapper
@@ -35,10 +35,11 @@ tasks:
       - FastAPI control plane
       - durable repository and migrations
       - Greenlight idempotency concurrency and error tests
+      - composite tenant database integrity
     validations:
-      - 40 backend tests passed on Python 3.13 and independently on Python 3.9
-      - 16 legacy Python tests passed
-      - ruff mypy Alembic and OpenAPI passed
+      - 44 strict backend tests passed on Python 3.13.5
+      - ruff mypy Alembic canonical OpenAPI and PostgreSQL integration passed
+      - application and test database engines are explicitly disposed
   - task_id: TASK-WEB-001
     role: Frontend Integration Producer
     status: PASS
@@ -49,10 +50,12 @@ tasks:
       - typed API client
       - backend-driven UI
       - explicit demo isolation
+      - sequential non-overlapping polling
     validations:
-      - 45 frontend tests passed
+      - 47 frontend tests passed
+      - focused polling regression passed eight consecutive runs
       - lint typecheck build and OpenAPI contract passed
-      - stable retry keys and stale-poll guards independently verified
+      - stable retry keys and stale-response guards passed role-separated verification
   - task_id: TASK-PLATFORM-001
     role: Platform and Terraform Producer
     status: PASS_LOCAL
@@ -64,39 +67,61 @@ tasks:
     outputs:
       - non-root combined image and Compose
       - CI and gated dev workflow
-      - Terraform bootstrap and dev environment
+      - split Terraform foundation and runtime state
+      - exact custom runtime deploy role
       - static plan and platform veto gates
     validations:
-      - exact Python lock install and advisory scan passed
-      - live Compose migration HTTP and restart persistence passed
-      - eight Terraform roots validate with multi-platform locks
-      - two Terraform mock tests and 30 static checks passed
+      - exact frontend container and CI Python locks report zero known vulnerabilities
+      - live Compose migration HTTP and restart persistence passed on validation-final5
+      - nine Terraform roots validate with multi-platform locks
+      - three Terraform mock tests 25 script tests and 46 static checks passed
+      - GitHub Actions run 29672546616 passed all four jobs
   - task_id: TASK-SEC-REVIEW-001
-    role: Independent Security and Reliability Reviewer
-    status: REAUDIT_PENDING
-    owner: docs_closure
+    role: Security and Reliability Critic
+    status: PASS_ROLE_SEPARATED
+    owner: root_sequential_critic
     dependencies:
       - TASK-BACKEND-001
       - TASK-WEB-001
       - TASK-PLATFORM-001
-    blocker: initial medium dependency finding repaired; final exact-tree review pending
+    outputs:
+      - exact lock audits
+      - closed security and reliability findings
+    validations:
+      - npm and both Python lock audits report zero known vulnerabilities
+      - CI security integrity and complete-tree whitespace gate passed
+    limitation: sequential role separation is not independent review
   - task_id: TASK-CRITIQUE-001
-    role: Independent Cloud Infrastructure Critique
-    status: IN_PROGRESS
-    owner: agent_knowledge
+    role: Cloud Infrastructure Critic
+    status: PASS_STATIC_ROLE_SEPARATED
+    owner: root_sequential_critic
     dependencies:
       - TASK-PLATFORM-001
     outputs:
-      - read-only cloud finding report and apply recommendation
+      - closed static IAM state attestation notification and migration findings
+      - DENY_APPLY recommendation
+    limitation: no real GCP target plan exists and the critic was not an independent actor
   - task_id: EVAL-INC-001
-    role: Independent Production Readiness Evaluator
-    status: TODO
-    owner: unassigned
+    role: Production Readiness Evaluator
+    status: PASS_LOCAL_READY_FOR_REVIEW
+    owner: root_sequential_evaluator
     dependencies:
       - TASK-SEC-REVIEW-001
       - TASK-CRITIQUE-001
     outputs:
-      - application release and cloud apply recommendations
+      - local application READY_FOR_REVIEW recommendation
+      - cloud DENY_APPLY recommendation
+    limitation: independent evaluator gate remains unsatisfied
+  - task_id: TASK-GOV-001
+    role: Delivery and Evidence Custodian
+    status: PASS
+    owner: root
+    dependencies:
+      - EVAL-INC-001
+    outputs:
+      - tracking issue 1
+      - draft PR 2
+      - decision evidence risk and readiness records
   - task_id: APPLY-DEV-001
     role: Exact Saved Plan Apply
     status: BLOCKED_EXTERNAL
@@ -104,7 +129,7 @@ tasks:
     dependencies:
       - EVAL-INC-001
     gate: exact_plan_recommendation == ALLOW_DEV_APPLY
-    blocker: no open billing account target hierarchy project region or real saved plan
+    blocker: no open billing account target hierarchy project region real saved plan or independent approval
   - task_id: VERIFY-DEV-001
     role: Post-apply Verification
     status: BLOCKED_EXTERNAL

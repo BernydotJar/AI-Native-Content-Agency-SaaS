@@ -1,13 +1,13 @@
 requirement_id,scope,status,owner,authoritative_evidence
 APP-001,application,PASS,TASK-BACKEND-001,FastAPI tests and canonical OpenAPI
-APP-002,application,PASS,TASK-BACKEND-001,Alembic repository and restart tests
+APP-002,application,PASS,TASK-BACKEND-001,Alembic repository lifecycle tests and restart smoke
 APP-003,application,PASS,TASK-BACKEND-001,run-start integration and sandbox tool evidence tests
-APP-004,application,PASS,TASK-BACKEND-001,tenant isolation and evidence identity tests
+APP-004,application,PASS,TASK-BACKEND-001,tenant isolation composite foreign keys and evidence identity tests
 APP-005,application,PASS,TASK-BACKEND-001,pre-approval rejection risk and stale-manifest tests
-APP-006,application,PASS,TASK-BACKEND-001,approval/rejection durability and container restore smoke
+APP-006,application,PASS,TASK-BACKEND-001,approval rejection durability and container restore smoke
 APP-007,application,PASS,TASK-BACKEND-001,canonical manifest and TOCTOU rollback tests
 APP-008,application,PASS,TASK-BACKEND-001,idempotency replay first-identity and approval concurrency tests
-APP-009,application,PASS,TASK-WEB-001,persisted polling restore and stale-response guards
+APP-009,application,PASS,TASK-WEB-001,persisted polling restore stale-response and terminal-stop guards
 APP-010,application,PASS,TASK-WEB-001,integrated UI and client tests
 APP-011,application,PASS,TASK-WEB-001,runtime-mode boundary tests
 APP-012,application,PASS,TASK-BACKEND-001,OpenAPI generation and frontend contract gate
@@ -17,37 +17,37 @@ APP-015,application,PASS,TASK-BACKEND-001,sandbox adapter boundary evidence
 SEC-001,security,PASS,TASK-SEC-REVIEW-001,identity cross-tenant and Cloud Run IAM-private controls
 SEC-002,security,PASS,TASK-BACKEND-001,production auth SQLite and schema fail-closed tests
 SEC-003,security,PASS,TASK-BACKEND-001,byte-count limit CORS security headers malformed and extra-field tests
-SEC-004,security,PASS,TASK-SEC-REVIEW-001,safe exception DB outage rollback and log-redaction probes
-SEC-005,security,PASS_LOCAL,TASK-PLATFORM-001,npm audit zero and exact Python lock audit zero known vulnerabilities
-SEC-006,security,IN_PROGRESS,TASK-SEC-REVIEW-001,threat model adversarial review and final re-audit
+SEC-004,security,PASS,TASK-SEC-REVIEW-001,safe exception DB outage rollback lifecycle and log-redaction probes
+SEC-005,security,PASS_CI,TASK-SEC-REVIEW-001,npm and both exact Python lock audits report zero known vulnerabilities
+SEC-006,security,PASS_ROLE_SEPARATED,TASK-SEC-REVIEW-001,threat model finding closure and CI integrity scan
 SEC-007,security,PASS,TASK-BACKEND-001,zero external effects and sandbox package evidence
 DLV-001,delivery,PASS,TASK-PLATFORM-001,live integrated HTTP smoke
-DLV-002,delivery,PASS,TASK-PLATFORM-001,40 pytest 16 unittest and 45 frontend tests
+DLV-002,delivery,PASS_CI,TASK-PLATFORM-001,44 backend and 47 frontend tests
 DLV-003,delivery,PASS,TASK-PLATFORM-001,non-root image Compose migration health and persistence smoke
-DLV-004,delivery,PASS_LOCAL,TASK-PLATFORM-001,CI workflow validation and all local equivalents
-DLV-005,delivery,PASS,TASK-PLATFORM-001,Terraform fmt readonly init validate and mock tests
-DLV-006,delivery,PASS,TASK-PLATFORM-001,30 of 30 platform eval checks with DENY_APPLY
+DLV-004,delivery,PASS_CI,TASK-PLATFORM-001,GitHub Actions run 29672546616 passed four of four jobs
+DLV-005,delivery,PASS,TASK-PLATFORM-001,nine Terraform roots and three mock tests
+DLV-006,delivery,PASS,TASK-PLATFORM-001,46 of 46 platform controls with DENY_APPLY
 DLV-007,delivery,PASS,root,README architecture ADR threat model and runbooks
-DLV-008,delivery,PASS_LOCAL,TASK-CRITIQUE-001,WIF exact owner repository branch and manual gated deploy inspection
+DLV-008,delivery,PASS_STATIC,TASK-CRITIQUE-001,WIF exact scope split identities state boundary custom role and attestation inspection
 GCP-000,gcp,PASS,root,explicit project environment and apply guards
 GCP-001,gcp,PARTIAL_BLOCKED_EXTERNAL,TASK-GCP-DISC-001,masked discovery and ADC refresh evidence
 GCP-002,gcp,BLOCKED_EXTERNAL,root,no selected eligible hierarchy project or open billing
 GCP-003,gcp,PARTIAL,TASK-PLATFORM-001,parameterized hierarchy design but no real target
 GCP-004,gcp,BLOCKED_EXTERNAL,root,no authorized target remote state or bootstrap plan
-GCP-005,gcp,PASS_STATIC,TASK-PLATFORM-001,dev Terraform requirement resource map and mock plan
+GCP-005,gcp,PASS_STATIC,TASK-PLATFORM-001,dev Terraform requirement resource map and three mock tests
 GCP-006,gcp,BLOCKED_EXTERNAL,root,no real saved plan JSON
-GCP-007,gcp,IN_PROGRESS,TASK-CRITIQUE-001,independent cloud critique security review and evaluator
+GCP-007,gcp,BLOCKED_EXTERNAL,TASK-CRITIQUE-001,no exact real plan and no independent plan evaluator
 GCP-008,gcp,BLOCKED_EXTERNAL,root,DENY_APPLY and no ALLOW_DEV_APPLY
 GCP-009,gcp,BLOCKED_EXTERNAL,root,no deployed endpoint
 GCP-010,gcp,BLOCKED_EXTERNAL,root,no applied state for no-change plan
 GCP-011,gcp,BLOCKED_EXTERNAL,root,no real plan apply or measured cost
-GCP-012,gcp,PASS,root,manual workflow exact-plan and independent veto controls
-GCP-013,gcp,PASS,root,GCP discovery report current state and resume conditions
+GCP-012,gcp,PASS,root,manual workflow exact-plan attestation and independent veto controls
+GCP-013,gcp,PASS,root,GCP discovery report current state and exact resume condition
 GOV-001,governance,PASS,root,docs/specs/production-foundation-v1.md
 GOV-002,governance,PASS,root,current task evidence risk and finding artifacts
 GOV-003,governance,PASS,root,task graph ledger and reproducible locks
-GOV-004,governance,IN_PROGRESS,root,final independent gate reports pending
-GOV-005,governance,TODO,EVAL-INC-001,independent production readiness veto evidence
+GOV-004,governance,PARTIAL_ROLE_SEPARATED,root,producer critic evaluator sequence completed but independent actor unavailable and cloud phases blocked
+GOV-005,governance,UNSATISFIED_INDEPENDENCE,EVAL-INC-001,draft PR requires a different reviewer and cloud apply remains denied
 GOV-006,governance,PASS,root,agent/decision-log.md
-GOV-007,governance,IN_PROGRESS,root,issue exists commits push and draft PR pending
-GOV-008,governance,IN_PROGRESS,root,final truthfulness audit pending evaluator
+GOV-007,governance,PASS,root,issue 1 focused commits pushed branch and draft PR 2
+GOV-008,governance,PASS,root,final truthfulness audit and explicit limitations

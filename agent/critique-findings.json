@@ -1,30 +1,31 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-07-18T23:45:35Z",
+  "updated_at": "2026-07-19T03:59:19Z",
+  "review_provenance": "Sequential role-separated producer, critic and evaluator passes; not independent review.",
   "findings": [
     {
       "finding_id": "BASE-CRIT-001",
       "severity": "CRITICAL",
-      "status": "CLOSED_INDEPENDENTLY_VERIFIED",
+      "status": "CLOSED_ROLE_SEPARATED",
       "target": "runtime architecture",
       "description": "The UI and Python runtime had no shared authoritative control plane.",
-      "evidence": "Default API-backed UI, 40 backend tests, 45 frontend tests and live HTTP persistence smoke."
+      "evidence": "Default API-backed UI, 44 backend tests, 47 frontend tests, live HTTP persistence smoke and green CI."
     },
     {
       "finding_id": "BASE-CRIT-002",
       "severity": "HIGH",
-      "status": "CLOSED_INDEPENDENTLY_VERIFIED",
+      "status": "CLOSED_ROLE_SEPARATED",
       "target": "Greenlight and durability",
-      "description": "Run/approval state was process-local and not tenant/hash/policy/idempotency bound.",
-      "evidence": "Independent adversarial tenancy, replay, concurrency and manifest-TOCTOU probes passed."
+      "description": "Run and approval state was process-local and not tenant, hash, policy or idempotency bound.",
+      "evidence": "Tenancy, replay, concurrency, manifest-TOCTOU and restart-persistence probes passed."
     },
     {
       "finding_id": "SEC-DEP-001",
       "severity": "MEDIUM",
-      "status": "REPAIRED_AWAITING_FINAL_REAUDIT",
+      "status": "CLOSED",
       "target": "Python runtime lock",
       "description": "setuptools 81.0.0 was affected by PYSEC-2026-3447.",
-      "evidence": "Both locks now pin 83.0.0; exact hash install, pip check and pip-audit report no known vulnerabilities."
+      "evidence": "Runtime lock pins setuptools 83.0.0; exact hash audit reports no known vulnerabilities."
     },
     {
       "finding_id": "PLAT-COMPOSE-001",
@@ -32,14 +33,126 @@
       "status": "CLOSED",
       "target": "local integrated topology",
       "description": "An app attached only to an internal Compose network did not publish its declared loopback port.",
-      "evidence": "Separated edge/internal networks; localhost probes and full HTTP smoke pass; CI regression added."
+      "evidence": "Separated edge and internal networks; localhost smoke and CI Compose gate pass."
+    },
+    {
+      "finding_id": "CLOUD-IAM-001",
+      "severity": "HIGH",
+      "status": "CLOSED_STATIC",
+      "target": "runtime deployment identity",
+      "description": "A broad Cloud Run admin role and missing explicit image-read boundary exceeded runtime deployment needs.",
+      "evidence": "Exact 19-permission custom Cloud Run role, no roles/run.admin, repository-scoped Artifact Registry reader, preflight and post-apply evidence tests."
+    },
+    {
+      "finding_id": "STATE-IAM-001",
+      "severity": "HIGH",
+      "status": "CLOSED_STATIC",
+      "target": "Terraform state identities",
+      "description": "The plan identity could mutate durable Terraform state through an object-admin grant.",
+      "evidence": "Foundation and runtime states are split; plan can read state and manage only disposable runtime lock objects; apply is runtime-prefix scoped."
+    },
+    {
+      "finding_id": "DB-TENANT-001",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "target": "database tenant integrity",
+      "description": "Foreign keys did not force dependent records to share their parent's tenant.",
+      "evidence": "Migration 0002 adds composite tenant foreign keys and a PostgreSQL cross-tenant negative test."
+    },
+    {
+      "finding_id": "OBS-DELIVERY-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED_STATIC",
+      "target": "alerts and budget delivery",
+      "description": "Arbitrary notification channel identifiers could select disabled or unverified destinations.",
+      "evidence": "Channels are selected by exact display name, must be enabled, and email delivery must be VERIFIED."
+    },
+    {
+      "finding_id": "ATT-COMMIT-001",
+      "severity": "HIGH",
+      "status": "CLOSED_STATIC",
+      "target": "deployment attestation",
+      "description": "Attestation verification could omit the actual checked-out HEAD and complete tracked-tree binding.",
+      "evidence": "Workflow verifies commit, full tracked tree, saved plan and immutable image before cloud authentication."
+    },
+    {
+      "finding_id": "ALEMBIC-LOG-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "target": "migration process logging",
+      "description": "Alembic configuration could disable existing application loggers.",
+      "evidence": "Migration logging preserves existing loggers and the platform test suite passes."
+    },
+    {
+      "finding_id": "DB-LIFECYCLE-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "target": "database resource lifecycle",
+      "description": "Application, OpenAPI and test engines could survive past their owning lifecycle.",
+      "evidence": "Application lifespan, canonical OpenAPI and engine fixtures dispose resources; strict ResourceWarning gates pass."
+    },
+    {
+      "finding_id": "TEST-CLIENT-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "target": "HTTP test client",
+      "description": "The compatibility client path emitted deprecation warnings and obscured the supported runtime floor.",
+      "evidence": "Project requires Python 3.10+, uses httpx2, and strict deprecation warnings pass on Python 3.13.5."
+    },
+    {
+      "finding_id": "CI-DB-001",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "target": "backend CI database isolation",
+      "description": "A job-wide PostgreSQL URL contaminated hermetic SQLite migration tests.",
+      "evidence": "PostgreSQL URL is step-scoped; migration tests delete inherited configuration; contamination probe and CI pass."
+    },
+    {
+      "finding_id": "WEB-POLL-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED",
+      "target": "integrated UI polling",
+      "description": "setInterval could overlap a terminal refresh and issue an extra GET.",
+      "evidence": "Sequential recursive timeout cancels and stops on terminal response; eight focused repetitions and CI pass."
+    },
+    {
+      "finding_id": "SEC-PYTEST-001",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "target": "CI dependency lock",
+      "description": "pytest 8.4.2 was affected by PYSEC-2026-1845.",
+      "evidence": "Python minimum is 3.10; exact lock resolves pytest 9.1.1; current local and CI audits pass."
+    },
+    {
+      "finding_id": "CI-WHITESPACE-001",
+      "severity": "LOW",
+      "status": "CLOSED",
+      "target": "complete tracked tree",
+      "description": "Historical trailing whitespace failed the complete-tree CI gate.",
+      "evidence": "Tracked text files were mechanically normalized; the exact empty-tree diff gate and CI pass."
+    },
+    {
+      "finding_id": "VISUAL-QA-001",
+      "severity": "LIMITATION",
+      "status": "OPEN_ENVIRONMENT",
+      "target": "interactive browser verification",
+      "description": "The required in-app browser runtime exposed no browser instances.",
+      "required_fix": "Repeat interactive desktop and narrow-viewport QA when an in-app browser instance is available."
+    },
+    {
+      "finding_id": "AUDIT-INDEPENDENCE-001",
+      "severity": "LIMITATION",
+      "status": "OPEN_PROCESS",
+      "target": "review independence",
+      "description": "Collaboration credits were exhausted, so the final critic and evaluator passes were sequential roles performed by the primary agent.",
+      "required_fix": "Obtain review from a different human or independent agent before merge and before any exact cloud-plan approval."
     },
     {
       "finding_id": "GCP-BLOCK-001",
       "severity": "BLOCKER",
       "status": "OPEN_EXTERNAL",
-      "target": "GCP dev plan/apply",
-      "description": "Zero visible open billing accounts and no authorized target project/region prevent a real saved plan or apply.",
+      "target": "GCP dev plan and apply",
+      "description": "Zero visible open billing accounts and no authorized target project or region prevent a real saved plan or apply.",
       "required_fix": "Satisfy the exact resume conditions in agent/reports/gcp-discovery-2026-07-18.md."
     }
   ]

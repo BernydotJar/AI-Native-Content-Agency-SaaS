@@ -1,48 +1,74 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-07-18T23:45:35Z",
+  "updated_at": "2026-07-19T03:59:19Z",
   "evaluations": [
     {
       "eval_id": "EVAL-BASELINE-001",
       "target": "pre-change repository",
-      "evaluator": "deterministic",
+      "evaluator": "deterministic baseline mapper",
       "status": "PASS",
       "evidence": "EVD-BASE-001 through EVD-BASE-006",
       "actual": "Existing prototype gates passed and its duplicate-state architecture was recorded."
     },
     {
       "eval_id": "EVAL-APPLICATION-001",
-      "target": "integrated application exact tree",
-      "evaluator": "deterministic plus independent adversarial reviewer",
-      "status": "PASS_LOCAL",
-      "evidence": "EVD-APP-001 through EVD-APP-007 and EVD-WEB-001 through EVD-WEB-005",
-      "actual": "API database UI contracts retries Greenlight rollback and restart persistence pass; browser visual inspection remains unavailable."
+      "target": "integrated application at 2513be1019a675426a6b3c27c0309137bea5c433",
+      "evaluator": "deterministic tests plus sequential role-separated verifier",
+      "status": "PASS_LOCAL_READY_FOR_REVIEW",
+      "release_recommendation": "READY_FOR_REVIEW",
+      "evidence": "EVD-APP-006 through EVD-APP-008 and EVD-WEB-005 through EVD-WEB-006",
+      "actual": "API, database, UI, contracts, retries, Greenlight, rollback, resource lifecycle and restart persistence pass; browser visual inspection remains unavailable."
     },
     {
       "eval_id": "EVAL-SECURITY-001",
-      "target": "dependency and application security",
-      "evaluator": "independent security reviewer",
-      "status": "REPAIRED_REAUDIT_PENDING",
-      "evidence": "EVD-SEC-001 and EVD-SEC-002",
-      "actual": "The initial setuptools finding was valid; fixed locks now produce zero known vulnerabilities."
+      "target": "dependency application and repository security",
+      "evaluator": "pip-audit npm audit deterministic policy scans and sequential security critic",
+      "status": "PASS_ROLE_SEPARATED",
+      "evidence": "EVD-SEC-001 through EVD-SEC-003 and EVD-CI-002",
+      "actual": "Earlier setuptools and pytest findings are closed; both Python locks and npm report zero known vulnerabilities; CI security and integrity gate passes.",
+      "limitation": "The critic was not an independent actor."
     },
     {
       "eval_id": "EVAL-PLATFORM-001",
       "target": "container Compose CI and static Terraform",
-      "evaluator": "deterministic plus independent mechanical audit",
+      "evaluator": "deterministic validators plus sequential cloud critic",
       "status": "PASS_STATIC",
       "apply_recommendation": "DENY_APPLY",
-      "evidence": "EVD-PLAT-001 through EVD-PLAT-005",
-      "actual": "Local delivery and static cloud definitions pass; no real target or saved GCP plan exists."
+      "evidence": "EVD-PLAT-001 through EVD-PLAT-007 and EVD-CI-002",
+      "actual": "Nine Terraform roots, three mock tests, 25 script tests, 46 static controls, the final image and CI pass; no real target or saved GCP plan exists."
+    },
+    {
+      "eval_id": "EVAL-GOVERNANCE-001",
+      "target": "traceability and delivery",
+      "evaluator": "sequential evidence custodian plus GitHub Actions",
+      "status": "PASS_DRAFT_REVIEW",
+      "evidence": "EVD-GOV-001 through EVD-GOV-002 and EVD-CI-002",
+      "actual": "Issue 1, draft PR 2, focused commits, decisions, findings, risks, evidence and a readiness report exist; the PR remains unmerged."
+    },
+    {
+      "eval_id": "EVAL-VISUAL-001",
+      "target": "interactive UI visual QA",
+      "evaluator": "in-app browser capability probe",
+      "status": "BLOCKED_ENVIRONMENT",
+      "evidence": "EVD-BROWSER-001",
+      "actual": "No browser instance was available."
+    },
+    {
+      "eval_id": "EVAL-INDEPENDENCE-001",
+      "target": "independent critique and evaluator gate",
+      "evaluator": "capability audit",
+      "status": "UNSATISFIED",
+      "evidence": "EVD-AUDIT-001",
+      "actual": "Collaboration credits were exhausted; producer, critic and evaluator work was separated sequentially but was not independent."
     },
     {
       "eval_id": "EVAL-GCP-001",
       "target": "GCP dev deployment",
-      "evaluator": "read-only discovery",
+      "evaluator": "read-only discovery and static apply gate",
       "status": "BLOCKED_EXTERNAL",
       "apply_recommendation": "DENY_APPLY",
-      "evidence": "EVD-GCP-001 through EVD-GCP-003",
-      "actual": "All six visible billing accounts are closed and no related project or region is authorized."
+      "evidence": "EVD-GCP-001 through EVD-GCP-004",
+      "actual": "All six visible billing accounts are closed; no related project, region, real saved plan or independent approval exists; no GCP mutation occurred."
     }
   ]
 }
