@@ -52,31 +52,53 @@ def main() -> None:
             summary["update"] += 1
         elif "delete" in actions and "create" in actions:
             summary["replace"] += 1
-            findings.append({"severity": "HIGH", "target": address, "description": "replacement requires explicit review"})
+            findings.append(
+                {
+                    "severity": "HIGH",
+                    "target": address,
+                    "description": "replacement requires explicit review",
+                }
+            )
         elif "delete" in actions:
             summary["destroy"] += 1
-            findings.append({"severity": "HIGH", "target": address, "description": "destruction is not authorized"})
+            findings.append(
+                {
+                    "severity": "HIGH",
+                    "target": address,
+                    "description": "destruction is not authorized",
+                }
+            )
         if resource_type in FORBIDDEN_RESOURCE_TYPES:
-            findings.append({"severity": "CRITICAL", "target": address, "description": "forbidden secret/key-generating resource"})
+            findings.append(
+                {
+                    "severity": "CRITICAL",
+                    "target": address,
+                    "description": "forbidden secret/key-generating resource",
+                }
+            )
 
     serialized = json.dumps(plan, sort_keys=True)
     for pattern, description in (
         (r'"allUsers"|"allAuthenticatedUsers"', "public IAM principal"),
-        (r'roles/(?:owner|editor)\b', "basic Owner/Editor role"),
+        (r"roles/(?:owner|editor)\b", "basic Owner/Editor role"),
         (
-            r'roles/(?:artifactregistry\.admin|cloudsql\.admin|iam\.serviceAccountAdmin|monitoring\.admin|resourcemanager\.projectIamAdmin|run\.admin|serviceusage\.serviceUsageAdmin)\b',
+            r"roles/(?:artifactregistry\.admin|cloudsql\.admin|iam\.serviceAccountAdmin|monitoring\.admin|resourcemanager\.projectIamAdmin|run\.admin|serviceusage\.serviceUsageAdmin)\b",
             "forbidden broad deployment role",
         ),
         (r'"invoker_iam_disabled"\s*:\s*true', "Cloud Run invoker IAM check disabled"),
         (r'"authorized_networks"\s*:\s*\[(?!\s*\])', "Cloud SQL authorized network"),
     ):
         if re.search(pattern, serialized, re.IGNORECASE):
-            findings.append({"severity": "CRITICAL", "target": "plan", "description": description})
+            findings.append(
+                {"severity": "CRITICAL", "target": "plan", "description": description}
+            )
 
     result = {
         "task_id": "CLOUD-STATIC-PRECHECK",
         "status": "FAIL" if findings else "PASS",
-        "apply_recommendation": "DENY_APPLY" if findings else "REQUIRES_INDEPENDENT_REVIEW",
+        "apply_recommendation": "DENY_APPLY"
+        if findings
+        else "REQUIRES_INDEPENDENT_REVIEW",
         "plan_summary": summary,
         "findings": findings,
         "limitations": [

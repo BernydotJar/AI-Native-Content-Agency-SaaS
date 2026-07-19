@@ -99,13 +99,16 @@ def scan(paths: Iterable[Path]) -> list[dict[str, str]]:
 
 
 def scan_history() -> tuple[int, list[dict[str, str]]]:
-    commit_count = int(subprocess.run(
-        ["git", "rev-list", "--all", "--count"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip() or "0")
+    commit_count = int(
+        subprocess.run(
+            ["git", "rev-list", "--all", "--count"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        or "0"
+    )
     names = subprocess.run(
         ["git", "log", "--all", "--name-only", "--format=", "-z"],
         cwd=ROOT,
@@ -119,7 +122,9 @@ def scan_history() -> tuple[int, list[dict[str, str]]]:
             continue
         filename_rule = _unsafe_filename(relative)
         if filename_rule:
-            findings.append({"path": "git-history:{}".format(relative), "rule": filename_rule})
+            findings.append(
+                {"path": "git-history:{}".format(relative), "rule": filename_rule}
+            )
     patches = subprocess.run(
         ["git", "log", "--all", "-p", "--no-ext-diff", "--no-renames", "--format="],
         cwd=ROOT,

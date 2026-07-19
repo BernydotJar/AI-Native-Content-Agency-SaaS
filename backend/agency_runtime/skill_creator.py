@@ -67,16 +67,12 @@ class DynamicSkillCreator:
     ) -> SkillDocument:
         normalized_slug = self._validate_slug(slug)
         normalized_title = self._validate_text(title, "title", 120)
-        normalized_description = self._validate_text(
-            description, "description", 500
-        )
+        normalized_description = self._validate_text(description, "description", 500)
         normalized_instructions = self._validate_instructions(instructions)
         destination = self._safe_destination(normalized_slug)
         existed = destination.exists() or destination.is_symlink()
         if existed and not overwrite:
-            raise SkillAlreadyExistsError(
-                "skill already exists: {}".format(destination.name)
-            )
+            raise SkillAlreadyExistsError("skill already exists: {}".format(destination.name))
 
         markdown = self._render(
             normalized_slug,
@@ -140,9 +136,7 @@ class DynamicSkillCreator:
         values = tuple(instructions)
         if not values or len(values) > 50:
             raise SkillCreationError("instructions must contain between 1 and 50 items")
-        return tuple(
-            cls._validate_text(value, "instruction", 2000) for value in values
-        )
+        return tuple(cls._validate_text(value, "instruction", 2000) for value in values)
 
     @staticmethod
     def _render(

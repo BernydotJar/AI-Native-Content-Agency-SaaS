@@ -132,9 +132,7 @@ class AgencyOrchestrator:
         run = self.get_run(run_id)
         if run.status is not RunStatus.AWAITING_GREENLIGHT:
             raise GreenlightError(
-                "run {} is not awaiting Greenlight (status={})".format(
-                    run_id, run.status.value
-                )
+                "run {} is not awaiting Greenlight (status={})".format(run_id, run.status.value)
             )
         risk_report = run.artifact("risk_report")
         if risk_report.payload.get("passed") is not True:
@@ -427,9 +425,7 @@ class AgencyOrchestrator:
         self._begin(run, AgentRole.WRITER, "Writing platform variants")
         variants = {
             platform.value: {
-                "hook": "{} — made clear for {}.".format(
-                    run.brief.title, run.brief.audience
-                ),
+                "hook": "{} — made clear for {}.".format(run.brief.title, run.brief.audience),
                 "body": run.brief.objective,
                 "cta": "Explore the sandbox concept",
             }
@@ -449,9 +445,7 @@ class AgencyOrchestrator:
         self._remember(
             run,
             AgentRole.WRITER,
-            "Drafted {} platform copy variants; claims remain unapproved.".format(
-                len(variants)
-            ),
+            "Drafted {} platform copy variants; claims remain unapproved.".format(len(variants)),
             confidence=0.91,
             tags=("copy", "draft"),
             artifact=artifact,
@@ -637,9 +631,7 @@ class AgencyOrchestrator:
         trace_id = run.trace[-1].sequence if run.trace else 0
         provenance = Provenance(
             source="agency_run",
-            locator="sandbox://runs/{}/artifacts/{}".format(
-                run.run_id, artifact.artifact_id
-            ),
+            locator="sandbox://runs/{}/artifacts/{}".format(run.run_id, artifact.artifact_id),
             observed_at=self._clock(),
             tool=evidence.tool if evidence is not None else "agency_runtime",
             trace_id="{}:{}".format(run.run_id, trace_id),

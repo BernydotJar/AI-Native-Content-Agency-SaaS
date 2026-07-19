@@ -8,6 +8,17 @@ export TF_IN_AUTOMATION=1
 export TF_INPUT=0
 export PYTHONPYCACHEPREFIX="${TMPDIR:-/tmp}/agency-platform-pycache"
 
+if [[ -x "${PLATFORM_ROOT}/backend/.venv/bin/python" ]]; then
+  PLATFORM_PYTHON="${PLATFORM_ROOT}/backend/.venv/bin/python"
+else
+  PLATFORM_PYTHON="${PYTHON:-python3}"
+fi
+
+if ! command -v "${PLATFORM_PYTHON}" >/dev/null 2>&1; then
+  printf 'platform_validation=FAIL missing_python=%s\n' "${PLATFORM_PYTHON}" >&2
+  exit 1
+fi
+
 terraform fmt -check -recursive infra
 
 TERRAFORM_CONFIGS=(
@@ -30,29 +41,43 @@ done
 terraform -chdir=infra/bootstrap test
 terraform -chdir=infra/environments/dev test
 terraform -chdir=infra/environments/dev_runtime test
+terraform -chdir=infra/modules/artifact_registry test
+terraform -chdir=infra/modules/observability test
 
-python3 -m py_compile \
+"${PLATFORM_PYTHON}" -m py_compile \
   scripts/check_yaml.py \
   scripts/dev_apply_gate.py \
+  scripts/eval_harness.py \
   scripts/gcp_permission_preflight.py \
   scripts/generate_ts_contracts.py \
+  scripts/governance_eval.py \
   scripts/http_smoke.py \
   scripts/platform_eval.py \
   scripts/post_apply_verify.py \
   scripts/repository_integrity.py \
+  scripts/rollback_image_gate.py \
   scripts/run_cloud_migrations.py \
   scripts/start_container.py \
   scripts/terraform_plan_gate.py
-python3 -m unittest \
+"${PLATFORM_PYTHON}" -m unittest \
   scripts.test_dev_apply_gate \
+  scripts.test_eval_harness \
   scripts.test_gcp_permission_preflight \
+  scripts.test_governance_eval \
   scripts.test_http_smoke \
   scripts.test_post_apply_verify \
   scripts.test_repository_integrity \
+  scripts.test_rollback_image_gate \
   scripts.test_start_container
-python3 scripts/check_yaml.py
-python3 scripts/platform_eval.py
-python3 scripts/repository_integrity.py
+"${PLATFORM_PYTHON}" scripts/check_yaml.py
+"${PLATFORM_PYTHON}" scripts/platform_eval.py
+"${PLATFORM_PYTHON}" scripts/repository_integrity.py
+if [[ "${PLATFORM_SKIP_EVAL_RESULTS:-0}" == "1" ]]; then
+  "${PLATFORM_PYTHON}" -m scripts.governance_eval --skip-eval-results
+else
+  "${PLATFORM_PYTHON}" -m scripts.governance_eval
+  "${PLATFORM_PYTHON}" scripts/eval_harness.py --check-results agent/eval-results.json
+fi
 
 POSTGRES_PASSWORD=compose-validation-only docker compose config --quiet
 

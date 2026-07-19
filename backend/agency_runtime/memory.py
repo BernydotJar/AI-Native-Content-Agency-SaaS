@@ -149,9 +149,7 @@ class SQLiteMemory:
         require_confidence(min_confidence)
         if limit < 1 or limit > 100:
             raise ValueError("limit must be between 1 and 100")
-        tokens = tuple(
-            dict.fromkeys(token for token in query.lower().split() if token.strip())
-        )
+        tokens = tuple(dict.fromkeys(token for token in query.lower().split() if token.strip()))
         if not tokens:
             raise ValueError("query must not be empty")
 
@@ -180,9 +178,7 @@ class SQLiteMemory:
             exact_tag_bonus = 0.1 if any(token in tags for token in tokens) else 0.0
             score = min(
                 1.0,
-                record.confidence * 0.55
-                + (matched / len(tokens)) * 0.35
-                + exact_tag_bonus,
+                record.confidence * 0.55 + (matched / len(tokens)) * 0.35 + exact_tag_bonus,
             )
             results.append(MemorySearchResult(record=record, score=round(score, 4)))
         return tuple(sorted(results, key=lambda item: (-item.score, item.record.memory_id)))

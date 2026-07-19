@@ -25,13 +25,13 @@ variable "container_image" {
 }
 
 variable "cloud_sql_proxy_image" {
-  description = "Pinned Cloud SQL Auth Proxy image with automatic IAM database authentication."
+  description = "Exact source-reviewed Cloud SQL Auth Proxy repository, release and digest."
   type        = string
   nullable    = false
 
   validation {
-    condition     = can(regex("^[^[:space:]]+@sha256:[0-9a-f]{64}$", var.cloud_sql_proxy_image))
-    error_message = "cloud_sql_proxy_image must be pinned by sha256 digest."
+    condition     = var.cloud_sql_proxy_image == "gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.18.2@sha256:fc224915ef435afeb5b2a9421260a0d31986d5c8b7c7f5783c7f5d5885700cd2"
+    error_message = "cloud_sql_proxy_image must equal the exact source-reviewed proxy release and digest."
   }
 }
 
@@ -62,20 +62,6 @@ variable "cors_origins" {
   validation {
     condition     = length(var.cors_origins) > 0 && !contains(var.cors_origins, "*")
     error_message = "cors_origins must be explicit and cannot contain a wildcard."
-  }
-}
-
-variable "invoker_members" {
-  description = "Explicit authenticated principals only; no public principals are accepted."
-  type        = set(string)
-  default     = []
-
-  validation {
-    condition = alltrue([
-      for member in var.invoker_members :
-      member != "allUsers" && member != "allAuthenticatedUsers"
-    ])
-    error_message = "Public Cloud Run invoker members are forbidden."
   }
 }
 

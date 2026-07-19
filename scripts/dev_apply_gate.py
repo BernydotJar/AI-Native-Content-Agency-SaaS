@@ -128,7 +128,9 @@ def source_tree_sha256(repository: Path) -> str:
         if mode == b"160000":
             content = b"submodule:" + object_id
         else:
-            content = _run_git(resolved, ["cat-file", "blob", object_id.decode("ascii")])
+            content = _run_git(
+                resolved, ["cat-file", "blob", object_id.decode("ascii")]
+            )
         _hash_field(hasher, b"path", path)
         _hash_field(hasher, b"mode", mode)
         _hash_field(hasher, b"content", content)
@@ -169,10 +171,14 @@ def build_metadata(
     workflow_ref: str,
 ) -> Dict[str, str]:
     _validate_binding_values(source_commit, image_reference, workflow_ref)
-    actual_commit = _run_git(
-        repository.resolve(),
-        ["rev-parse", "--verify", "HEAD"],
-    ).decode("ascii", errors="strict").strip()
+    actual_commit = (
+        _run_git(
+            repository.resolve(),
+            ["rev-parse", "--verify", "HEAD"],
+        )
+        .decode("ascii", errors="strict")
+        .strip()
+    )
     if actual_commit != source_commit:
         raise GateError("source_commit does not match the checked-out HEAD")
     return {
@@ -225,12 +231,16 @@ def parse_attestation(raw: str) -> Dict[str, str]:
     if result["environment"] != "dev":
         raise GateError("attestation environment is not dev")
     try:
-        reviewed_at = datetime.fromisoformat(result["reviewed_at"].replace("Z", "+00:00"))
+        reviewed_at = datetime.fromisoformat(
+            result["reviewed_at"].replace("Z", "+00:00")
+        )
     except ValueError as error:
         raise GateError("reviewed_at is not an RFC3339 timestamp") from error
     if reviewed_at.tzinfo is None:
         raise GateError("reviewed_at must include a timezone")
-    result["reviewed_at"] = reviewed_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    result["reviewed_at"] = (
+        reviewed_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
     if result["workflow_actor"].casefold() == result["reviewer"].casefold():
         raise GateError("attestation reviewer must differ from the workflow actor")
     return result
@@ -265,7 +275,9 @@ def verify_attestation(
     )
     attestation = parse_attestation(raw_attestation)
     repository_name = workflow_ref.split("/.github/workflows/", 1)[0]
-    evidence_url = "https://github.com/{}/actions/runs/{}".format(repository_name, run_id)
+    evidence_url = "https://github.com/{}/actions/runs/{}".format(
+        repository_name, run_id
+    )
     expected = {
         "plan_sha256": metadata["plan_sha256"],
         "source_tree_sha256": metadata["source_tree_sha256"],
@@ -280,11 +292,15 @@ def verify_attestation(
         if attestation[field] != value:
             raise GateError("attestation does not match {}".format(field))
     current_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    reviewed_at = datetime.fromisoformat(attestation["reviewed_at"].replace("Z", "+00:00"))
+    reviewed_at = datetime.fromisoformat(
+        attestation["reviewed_at"].replace("Z", "+00:00")
+    )
     if reviewed_at > current_time + timedelta(minutes=5):
         raise GateError("attestation review timestamp is in the future")
     if reviewed_at < current_time - timedelta(hours=24):
-        raise GateError("attestation review timestamp is older than the plan retention window")
+        raise GateError(
+            "attestation review timestamp is older than the plan retention window"
+        )
     canonical = _canonical_json(attestation).encode("utf-8")
     return {
         "result": "VERIFIED",

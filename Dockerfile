@@ -27,7 +27,7 @@ COPY backend /src/backend
 RUN python -m pip install --no-deps --no-build-isolation /src/backend
 
 
-FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419 AS runtime
+FROM python:3.13.5-slim-bookworm@sha256:4c2cf9917bd1cbacc5e9b07320025bdb7cdf2df7b0ceaccb55e9dd7e30987419 AS runtime-base
 ARG APP_UID=10001
 ARG APP_GID=10001
 
@@ -55,3 +55,23 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
   CMD ["python", "-c", "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/healthz' % os.environ.get('PORT','8080'), timeout=2).read()"]
 
 CMD ["python", "/app/scripts/start_container.py"]
+
+
+# This opt-in stage is an isolated integration-test runner. Its CI-only
+# dependencies never enter the deployable runtime target below.
+FROM runtime-base AS postgres-integration
+ARG APP_UID=10001
+ARG APP_GID=10001
+
+USER root
+COPY scripts/requirements-ci.lock /tmp/requirements-ci.lock
+RUN python -m pip install --no-cache-dir --require-hashes --no-deps -r /tmp/requirements-ci.lock
+COPY --chown=${APP_UID}:${APP_GID} scripts/postgres_integration.py /app/scripts/postgres_integration.py
+
+USER ${APP_UID}:${APP_GID}
+CMD ["python", "/app/scripts/postgres_integration.py"]
+
+
+# Keep the deployable runtime as the default/final target. It inherits only
+# runtime-base and therefore cannot inherit the integration-test dependency layer.
+FROM runtime-base AS runtime

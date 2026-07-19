@@ -41,6 +41,7 @@ export function runFixture(
     ? {
         schema_version: "v1" as const,
         approval_id: `approval-${decision}`,
+        idempotency_key: `fixture-approval-${decision}`,
         decision,
         reviewer: "operator-a",
         note: decision === "approved" ? "Ship the sandbox manifest." : "Revise the claims.",

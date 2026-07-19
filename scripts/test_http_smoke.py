@@ -4,7 +4,22 @@ import io
 import unittest
 from unittest.mock import patch
 
-from scripts.http_smoke import request_json
+from scripts.http_smoke import request_json, verify_run
+
+
+def completed_smoke_run() -> dict[str, object]:
+    return {
+        "status": "completed",
+        "external_side_effects": False,
+        "artifacts": [
+            {
+                "kind": "campaign_package",
+                "payload": {"publication_performed": False},
+            },
+            *[{"kind": "draft", "payload": {}} for _ in range(7)],
+        ],
+        "evidence": [{"sandbox": True} for _ in range(8)],
+    }
 
 
 class _Response(io.BytesIO):
@@ -16,6 +31,23 @@ class _Response(io.BytesIO):
 
 
 class HttpSmokeTest(unittest.TestCase):
+    def test_accepts_exactly_eight_artifacts_and_evidence(self) -> None:
+        verify_run(completed_smoke_run())
+
+    def test_rejects_inexact_workflow_counts(self) -> None:
+        for field, message in (
+            ("artifacts", "exactly eight artifacts"),
+            ("evidence", "exactly eight evidence records"),
+        ):
+            with self.subTest(field=field):
+                run = completed_smoke_run()
+                values = run[field]
+                self.assertIsInstance(values, list)
+                assert isinstance(values, list)
+                values.pop()
+                with self.assertRaisesRegex(RuntimeError, message):
+                    verify_run(run)
+
     def test_short_lived_identity_token_is_sent_as_bearer_header(self) -> None:
         captured_headers: dict[str, str] = {}
 

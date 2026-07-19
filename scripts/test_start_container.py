@@ -24,9 +24,14 @@ class StartContainerTest(unittest.TestCase):
         migration_module.main = lambda: calls.append("migration")  # type: ignore[attr-defined]
 
         with (
-            patch.dict(os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "true", "PORT": "8080"}),
+            patch.dict(
+                os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "true", "PORT": "8080"}
+            ),
             patch.dict(sys.modules, {"run_cloud_migrations": migration_module}),
-            patch("scripts.start_container.uvicorn.run", side_effect=lambda *_args, **_kwargs: calls.append("server")),
+            patch(
+                "scripts.start_container.uvicorn.run",
+                side_effect=lambda *_args, **_kwargs: calls.append("server"),
+            ),
         ):
             main()
 
@@ -35,12 +40,37 @@ class StartContainerTest(unittest.TestCase):
     def test_local_container_skips_cloud_migration(self) -> None:
         calls: list[str] = []
         with (
-            patch.dict(os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "false", "PORT": "8080"}),
-            patch("scripts.start_container.uvicorn.run", side_effect=lambda *_args, **_kwargs: calls.append("server")),
+            patch.dict(
+                os.environ, {"AGENCY_RUN_MIGRATIONS_ON_START": "false", "PORT": "8080"}
+            ),
+            patch(
+                "scripts.start_container.uvicorn.run",
+                side_effect=lambda *_args, **_kwargs: calls.append("server"),
+            ),
         ):
             main()
 
         self.assertEqual(calls, ["server"])
+
+    def test_failed_cloud_migration_prevents_server_start(self) -> None:
+        migration_module = types.ModuleType("run_cloud_migrations")
+
+        def migration_failure() -> None:
+            raise RuntimeError("migration failed")
+
+        migration_module.main = migration_failure  # type: ignore[attr-defined]
+        with (
+            patch.dict(
+                os.environ,
+                {"AGENCY_RUN_MIGRATIONS_ON_START": "true", "PORT": "8080"},
+            ),
+            patch.dict(sys.modules, {"run_cloud_migrations": migration_module}),
+            patch("scripts.start_container.uvicorn.run") as server,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "migration failed"):
+                main()
+
+        server.assert_not_called()
 
 
 if __name__ == "__main__":

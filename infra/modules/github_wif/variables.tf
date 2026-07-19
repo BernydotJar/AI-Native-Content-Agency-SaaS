@@ -68,6 +68,17 @@ variable "github_repository_owner" {
   }
 }
 
+variable "github_repository_owner_id" {
+  description = "Immutable numeric GitHub owner ID from the OIDC repository_owner_id claim."
+  type        = string
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_owner_id))
+    error_message = "github_repository_owner_id must be the immutable numeric GitHub owner ID."
+  }
+}
+
 variable "github_repository" {
   type     = string
   nullable = false
@@ -75,6 +86,17 @@ variable "github_repository" {
   validation {
     condition     = can(regex("^[A-Za-z0-9_.-]+$", var.github_repository))
     error_message = "github_repository must be the repository name without an owner."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric GitHub repository ID from the OIDC repository_id claim."
+  type        = string
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[1-9][0-9]*$", var.github_repository_id))
+    error_message = "github_repository_id must be the immutable numeric GitHub repository ID."
   }
 }
 

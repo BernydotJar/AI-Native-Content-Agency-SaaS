@@ -12,7 +12,9 @@ from scripts.gcp_permission_preflight import (
 
 class GcpPermissionPreflightTest(unittest.TestCase):
     def test_each_phase_has_distinct_bounded_targets(self) -> None:
-        build = permission_targets("build", "agency-dev-test", "us-central1", None, None)
+        build = permission_targets(
+            "build", "agency-dev-test", "us-central1", None, None
+        )
         plan = permission_targets(
             "plan", "agency-dev-test", "us-central1", "agency-state-test", None
         )
@@ -24,17 +26,20 @@ class GcpPermissionPreflightTest(unittest.TestCase):
             "agency-runtime-dev@agency-dev-test.iam.gserviceaccount.com",
         )
 
-        self.assertEqual([target.name for target in build], ["artifact_registry"])
+        self.assertEqual(
+            [target.name for target in build],
+            ["project_runtime_read", "artifact_registry"],
+        )
         self.assertEqual(
             [target.name for target in plan],
-            ["project_runtime", "terraform_state"],
+            ["project_runtime", "terraform_state", "artifact_registry_read"],
         )
         self.assertEqual(
             [target.name for target in apply],
             [
                 "project_runtime",
                 "terraform_state",
-                "artifact_registry_read",
+                "artifact_registry_read_and_rollback_tag",
                 "runtime_service_account",
             ],
         )
@@ -45,12 +50,27 @@ class GcpPermissionPreflightTest(unittest.TestCase):
         self.assertIn("run.operations.get", serialized)
         self.assertIn("artifactregistry.repositories.downloadArtifacts", serialized)
         self.assertEqual(
+            set(apply[2].permissions),
+            {
+                "artifactregistry.repositories.downloadArtifacts",
+                "artifactregistry.repositories.get",
+                "artifactregistry.tags.create",
+                "artifactregistry.tags.update",
+            },
+        )
+        self.assertNotIn("artifactregistry.tags.delete", apply[2].permissions)
+        self.assertNotIn(
+            "artifactregistry.repositories.deleteArtifacts", apply[2].permissions
+        )
+        self.assertNotIn(
+            "artifactregistry.repositories.uploadArtifacts", apply[2].permissions
+        )
+        self.assertEqual(
             set(apply[0].permissions),
             {
                 "resourcemanager.projects.get",
                 "run.executions.get",
                 "run.jobs.create",
-                "run.jobs.delete",
                 "run.jobs.get",
                 "run.jobs.getIamPolicy",
                 "run.jobs.list",
@@ -60,14 +80,16 @@ class GcpPermissionPreflightTest(unittest.TestCase):
                 "run.locations.list",
                 "run.operations.get",
                 "run.services.create",
-                "run.services.delete",
                 "run.services.get",
                 "run.services.getIamPolicy",
                 "run.services.list",
-                "run.services.setIamPolicy",
                 "run.services.update",
             },
         )
+        self.assertNotIn("run.jobs.delete", apply[0].permissions)
+        self.assertNotIn("run.services.delete", apply[0].permissions)
+        self.assertNotIn("run.services.setIamPolicy", apply[0].permissions)
+        self.assertEqual(len(apply[0].permissions), 16)
 
     def test_evaluate_fails_closed_on_one_missing_permission(self) -> None:
         targets = permission_targets(
@@ -81,17 +103,22 @@ class GcpPermissionPreflightTest(unittest.TestCase):
             evaluate(targets, missing_last)
 
     def test_evaluate_reports_counts_without_tokens_or_policy_payloads(self) -> None:
-        targets = permission_targets("build", "agency-dev-test", "us-central1", None, None)
+        targets = permission_targets(
+            "build", "agency-dev-test", "us-central1", None, None
+        )
         report = evaluate(
             targets,
             lambda target: {"permissions": list(target.permissions)},
         )
 
         self.assertEqual(report["status"], "PASS")
-        self.assertEqual(report["targets"][0]["required_permission_count"], 3)
+        self.assertEqual(report["targets"][0]["required_permission_count"], 2)
+        self.assertEqual(report["targets"][1]["required_permission_count"], 3)
         self.assertNotIn("token", repr(report).lower())
 
-    def test_state_probe_reads_foundation_and_only_mutates_disposable_lock(self) -> None:
+    def test_state_probe_reads_foundation_and_only_mutates_disposable_lock(
+        self,
+    ) -> None:
         methods = []
 
         def transport(request):

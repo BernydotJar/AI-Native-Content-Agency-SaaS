@@ -13,6 +13,19 @@ output "attribute_condition" {
   value       = { for phase, provider in google_iam_workload_identity_pool_provider.phase : phase => provider.attribute_condition }
 }
 
+output "attribute_mapping" {
+  description = "Auditable phase mappings, including immutable GitHub owner and repository IDs."
+  value       = { for phase, provider in google_iam_workload_identity_pool_provider.phase : phase => provider.attribute_mapping }
+}
+
 output "workflow_ref" {
   value = local.workflow_ref
+}
+
+output "immutable_repository_identity" {
+  description = "Immutable GitHub IDs required by every phase provider condition."
+  value = {
+    repository_id       = var.github_repository_id
+    repository_owner_id = var.github_repository_owner_id
+  }
 }

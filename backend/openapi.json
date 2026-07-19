@@ -98,6 +98,10 @@
           "decision": {
             "$ref": "#/components/schemas/ApprovalDecision"
           },
+          "idempotency_key": {
+            "title": "Idempotency Key",
+            "type": "string"
+          },
           "note": {
             "title": "Note",
             "type": "string"
@@ -124,6 +128,7 @@
         "required": [
           "schema_version",
           "approval_id",
+          "idempotency_key",
           "decision",
           "reviewer",
           "note",
@@ -314,6 +319,29 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "IdentityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "principal": {
+            "$ref": "#/components/schemas/PrincipalIdentityResponse"
+          },
+          "schema_version": {
+            "const": "v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantIdentityResponse"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant",
+          "principal"
+        ],
+        "title": "IdentityResponse",
+        "type": "object"
+      },
       "MissionCreate": {
         "additionalProperties": false,
         "properties": {
@@ -469,6 +497,36 @@
         ],
         "title": "Platform",
         "type": "string"
+      },
+      "PrincipalIdentityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "auth_mode": {
+            "title": "Auth Mode",
+            "type": "string"
+          },
+          "principal_id": {
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "principal_id",
+          "auth_mode"
+        ],
+        "title": "PrincipalIdentityResponse",
+        "type": "object"
       },
       "RunEventResponse": {
         "additionalProperties": false,
@@ -735,6 +793,26 @@
         "title": "RunStepResponse",
         "type": "object"
       },
+      "TenantIdentityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id"
+        ],
+        "title": "TenantIdentityResponse",
+        "type": "object"
+      },
       "ToolEvidenceResponse": {
         "additionalProperties": false,
         "properties": {
@@ -804,6 +882,79 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/identity": {
+      "get": {
+        "operationId": "get_identity_endpoint_api_v1_identity_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Tenant-ID",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "title": "X-Tenant-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Principal-ID",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+              "title": "X-Principal-Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Validation Failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "summary": "Get Identity Endpoint",
+        "tags": [
+          "identity"
+        ]
+      }
+    },
     "/api/v1/missions": {
       "post": {
         "operationId": "create_mission_endpoint_api_v1_missions_post",

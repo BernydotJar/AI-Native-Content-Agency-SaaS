@@ -1,6 +1,12 @@
-project_id        = "agency-dev-unique"
-region            = "us-central1"
-state_bucket_name = "agency-bootstrap-unique-tfstate"
+project_id           = "agency-dev-unique"
+bootstrap_project_id = "agency-bootstrap-unique"
+region               = "us-central1"
+state_bucket_name    = "agency-bootstrap-unique-tfstate"
+
+foundation_project_provenance_sha256            = "replace-with-dev-foundation-output"
+foundation_notification_channel_provenance_sha256 = "replace-with-dev-foundation-output"
 
 runtime_deployer_service_account_email = "github-deploy-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+github_repository_owner_id              = "12345678"
+github_repository_id                    = "87654321"
 container_image = "us-central1-docker.pkg.dev/agency-dev-unique/agency-images/app@sha256:replace-with-64-hex-digest"

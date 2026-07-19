@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
 from typing import Dict, Optional, Tuple, get_type_hints
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,8 +18,14 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from agency_runtime.tools import MockContext7DocsTool
 from agency_runtime.utils import stable_id
 from control_plane.api import MAX_REQUEST_BYTES, create_app
+from control_plane.auth import IdentityContext
+from control_plane.contracts import MissionResponse
 from control_plane.database import build_engine
-from control_plane.repository import SqlAlchemyRepository
+from control_plane.repository import (
+    POSTGRES_IDEMPOTENCY_LOCK_TIMEOUT_MS,
+    SqlAlchemyRepository,
+    idempotency_lock_token,
+)
 from control_plane.ports import ControlPlaneRepository
 from control_plane import service as service_module
 from control_plane.service import ControlPlaneService
@@ -30,7 +37,9 @@ from control_plane.storage import (
     IdempotencyRow,
     MissionRow,
     PrincipalRow,
+    RunEventRow,
     RunRow,
+    RunStepRow,
     TenantRow,
     ToolEvidenceRow,
 )
@@ -93,6 +102,147 @@ def test_application_service_uses_the_repository_port_only(tmp_path: Path) -> No
     service_source = inspect.getsource(service_module.ControlPlaneService)
     assert "SqlAlchemyRepository" not in service_source
     assert ".session" not in service_source
+
+
+def test_idempotency_lock_token_is_stable_tenant_scoped_and_signed() -> None:
+    token = idempotency_lock_token("tenant-alpha", "command-key")
+
+    assert token == idempotency_lock_token("tenant-alpha", "command-key")
+    assert -(2**63) <= token < 2**63
+    assert token != idempotency_lock_token("tenant-beta", "command-key")
+    assert idempotency_lock_token("a", "bc") != idempotency_lock_token("ab", "c")
+
+
+@pytest.mark.parametrize(
+    ("dialect", "expected_statements"),
+    [
+        ("sqlite", ["BEGIN IMMEDIATE"]),
+        (
+            "postgresql",
+            [
+                "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",
+                "SELECT set_config('lock_timeout', :lock_timeout, true)",
+                "SELECT pg_advisory_xact_lock(:lock_token)",
+            ],
+        ),
+    ],
+)
+def test_idempotency_lock_uses_first_statement_transaction_primitives(
+    dialect: str,
+    expected_statements: list[str],
+) -> None:
+    session = Mock()
+    bind = Mock()
+    bind.dialect.name = dialect
+    session.get_bind.return_value = bind
+    session.in_transaction.return_value = False
+    repository = SqlAlchemyRepository(session)
+
+    repository.acquire_idempotency_lock("tenant-alpha", "command-key")
+
+    assert [str(item.args[0]) for item in session.execute.call_args_list] == expected_statements
+    if dialect == "postgresql":
+        assert session.execute.call_args_list[1].args[1] == {
+            "lock_timeout": "{}ms".format(POSTGRES_IDEMPOTENCY_LOCK_TIMEOUT_MS)
+        }
+        assert session.execute.call_args_list[2].args[1] == {
+            "lock_token": idempotency_lock_token("tenant-alpha", "command-key")
+        }
+
+
+def test_idempotency_lock_rejects_late_or_unsupported_acquisition() -> None:
+    session = Mock()
+    session.in_transaction.return_value = True
+    repository = SqlAlchemyRepository(session)
+    with pytest.raises(RuntimeError, match="before database access"):
+        repository.acquire_idempotency_lock("tenant-alpha", "command-key")
+    session.execute.assert_not_called()
+
+    session.reset_mock()
+    session.in_transaction.return_value = False
+    bind = Mock()
+    bind.dialect.name = "mysql"
+    session.get_bind.return_value = bind
+    with pytest.raises(RuntimeError, match="unsupported control-plane database dialect"):
+        repository.acquire_idempotency_lock("tenant-alpha", "command-key")
+    session.execute.assert_not_called()
+
+
+def test_lock_timeout_rolls_back_immediately_and_returns_safe_503(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = build_test_app(tmp_path / "lock-acquisition-failure.sqlite3")
+    original_rollback = SqlAlchemyRepository.rollback
+    rollback_states: list[Tuple[bool, bool]] = []
+
+    def fail_after_transaction_starts(
+        repository: SqlAlchemyRepository,
+        _tenant_id: str,
+        _key: str,
+    ) -> None:
+        repository.session.execute(select(1)).scalar_one()
+        raise OperationalError(
+            "SELECT pg_advisory_xact_lock",
+            {"lock_token": "sensitive-internal-token"},
+            RuntimeError("canceling statement due to lock timeout: internal detail"),
+        )
+
+    def track_rollback(repository: SqlAlchemyRepository) -> None:
+        before = repository.session.in_transaction()
+        original_rollback(repository)
+        rollback_states.append((before, repository.session.in_transaction()))
+
+    monkeypatch.setattr(
+        SqlAlchemyRepository,
+        "acquire_idempotency_lock",
+        fail_after_transaction_starts,
+    )
+    monkeypatch.setattr(SqlAlchemyRepository, "rollback", track_rollback)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/missions",
+            json=mission_payload(),
+            headers=command_headers("lock-acquisition-failure"),
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "schema_version": "v1",
+        "error": {
+            "code": "DATABASE_UNAVAILABLE",
+            "message": "The control-plane database is unavailable",
+            "correlation_id": "test-correlation",
+            "details": {},
+        },
+    }
+    assert "pg_advisory_xact_lock" not in response.text
+    assert "sensitive-internal-token" not in response.text
+    assert "lock timeout" not in response.text
+    assert rollback_states == [(True, False)]
+
+
+def test_recovery_lock_acquisition_failure_rolls_back_again() -> None:
+    repository = Mock(spec=ControlPlaneRepository)
+    repository.acquire_idempotency_lock.side_effect = RuntimeError("lock failed")
+    service = ControlPlaneService(repository)
+    identity = IdentityContext(
+        tenant_id="tenant-alpha",
+        principal_id="principal-owner",
+        auth_mode="development_headers",
+    )
+
+    with pytest.raises(RuntimeError, match="lock failed"):
+        service._recover_optional_replay(
+            identity,
+            "command-key",
+            "mission.create",
+            "request-hash",
+            MissionResponse,
+        )
+
+    assert repository.rollback.call_count == 2
 
 
 def test_database_rejects_cross_tenant_run_children(tmp_path: Path) -> None:
@@ -162,7 +312,27 @@ def test_health_readiness_security_headers_and_openapi(tmp_path: Path) -> None:
         assert health.headers["x-correlation-id"].startswith("corr-")
         document = client.get("/openapi.json").json()
         assert document["info"]["version"] == "1.0.0"
+        assert "/api/v1/identity" in document["paths"]
         assert "/api/v1/runs/{run_id}/approvals" in document["paths"]
+
+        identity = client.get("/api/v1/identity", headers=IDENTITY_HEADERS)
+        assert identity.status_code == 200
+        assert identity.json() == {
+            "schema_version": "v1",
+            "tenant": {
+                "schema_version": "v1",
+                "tenant_id": "tenant-alpha",
+            },
+            "principal": {
+                "schema_version": "v1",
+                "tenant_id": "tenant-alpha",
+                "principal_id": "principal-owner",
+                "auth_mode": "development_headers",
+            },
+        }
+        denied_identity = client.get("/api/v1/identity")
+        assert denied_identity.status_code == 401
+        assert denied_identity.json()["error"]["code"] == "INVALID_DEVELOPMENT_IDENTITY"
 
 
 def test_app_lifespan_disposes_database_engine(
@@ -201,9 +371,7 @@ def test_integrated_run_survives_restart_and_approves_exact_manifest(tmp_path: P
 
     restarted_app = build_test_app(database)
     with TestClient(restarted_app) as restarted_client:
-        restored = restarted_client.get(
-            "/api/v1/runs/{}".format(run_id), headers=IDENTITY_HEADERS
-        )
+        restored = restarted_client.get("/api/v1/runs/{}".format(run_id), headers=IDENTITY_HEADERS)
         assert restored.status_code == 200
         assert restored.json()["artifact_manifest_hash"] == started["artifact_manifest_hash"]
         approved = restarted_client.post(
@@ -216,11 +384,13 @@ def test_integrated_run_survives_restart_and_approves_exact_manifest(tmp_path: P
         assert body["status"] == "completed"
         assert body["external_side_effects"] is False
         assert body["approval"]["decision"] == "approved"
+        assert body["approval"]["idempotency_key"] == "approval-1"
         assert body["approval"]["artifact_manifest_hash"] == started["artifact_manifest_hash"]
         assert [item["action"] for item in body["audit_events"]] == [
             "run.started",
             "run.approval",
         ]
+        assert body["audit_events"][-1]["payload"]["idempotency_key"] == "approval-1"
         package = next(item for item in body["artifacts"] if item["kind"] == "campaign_package")
         assert package["payload"]["publication_performed"] is False
         assert body["steps"][-1]["status"] == "ready"
@@ -266,8 +436,7 @@ def test_evidence_identity_is_scoped_to_each_sequential_run_and_tenant(tmp_path:
         beta_run = beta_run_response.json()
 
         evidence_sets = [
-            {item["evidence_id"] for item in run["evidence"]}
-            for run in (*alpha_runs, beta_run)
+            {item["evidence_id"] for item in run["evidence"]} for run in (*alpha_runs, beta_run)
         ]
         assert evidence_sets[0] == evidence_sets[1] == evidence_sets[2]
         assert len(evidence_sets[0]) == 7
@@ -310,6 +479,14 @@ def test_idempotent_replay_and_incompatible_reuse(tmp_path: Path) -> None:
         assert incompatible.status_code == 409
         assert incompatible.json()["error"]["code"] == "IDEMPOTENCY_KEY_REUSED"
 
+        cross_operation = client.post(
+            "/api/v1/missions/{}/runs".format(first.json()["mission_id"]),
+            json={"schema_version": "v1"},
+            headers=headers,
+        )
+        assert cross_operation.status_code == 409
+        assert cross_operation.json()["error"]["code"] == "IDEMPOTENCY_KEY_REUSED"
+
         run_first = client.post(
             "/api/v1/missions/{}/runs".format(first.json()["mission_id"]),
             json={"schema_version": "v1"},
@@ -346,6 +523,170 @@ def test_idempotent_replay_and_incompatible_reuse(tmp_path: Path) -> None:
         assert incompatible_replay.json()["error"]["code"] == "IDEMPOTENCY_KEY_REUSED"
 
 
+def test_concurrent_identical_run_start_executes_sandbox_once(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    caplog.set_level(logging.INFO, logger="agency.control_plane")
+    app = build_test_app(tmp_path / "concurrent-identical-run.sqlite3")
+    idempotency_key = "run-concurrent-identical"
+    lock_attempt_barrier = Barrier(2)
+    lock_attempts: list[str] = []
+    original_acquire = SqlAlchemyRepository.acquire_idempotency_lock
+
+    with TestClient(app) as client:
+        mission_response = client.post(
+            "/api/v1/missions",
+            json=mission_payload(),
+            headers=command_headers("concurrent-run-mission"),
+        )
+        assert mission_response.status_code == 201, mission_response.text
+        mission_id = mission_response.json()["mission_id"]
+        caplog.clear()
+
+        def synchronize_lock_attempts(
+            repository: SqlAlchemyRepository,
+            tenant_id: str,
+            key: str,
+        ) -> None:
+            if tenant_id == IDENTITY_HEADERS["X-Tenant-ID"] and key == idempotency_key:
+                lock_attempts.append(key)
+                lock_attempt_barrier.wait(timeout=5)
+            original_acquire(repository, tenant_id, key)
+
+        monkeypatch.setattr(
+            SqlAlchemyRepository,
+            "acquire_idempotency_lock",
+            synchronize_lock_attempts,
+        )
+
+        def start() -> Tuple[int, Dict[str, object]]:
+            response = client.post(
+                "/api/v1/missions/{}/runs".format(mission_id),
+                json={"schema_version": "v1"},
+                headers=command_headers(idempotency_key),
+            )
+            return response.status_code, response.json()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: start(), range(2)))
+
+    assert [status for status, _ in results] == [201, 201]
+    assert len(lock_attempts) == 2
+    assert results[0][1] == results[1][1]
+    run_id = str(results[0][1]["run_id"])
+    tool_records = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agency.control_plane"
+        and record.getMessage().startswith("{")
+        and json.loads(record.getMessage()).get("event") == "sandbox_tool_call"
+    ]
+    assert len(tool_records) == 7
+    assert {record["run_id"] for record in tool_records} == {run_id}
+    assert all(record["sandbox"] is True for record in tool_records)
+
+    with app.state.session_factory() as session:
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(RunRow)
+                .where(RunRow.tenant_id == IDENTITY_HEADERS["X-Tenant-ID"])
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(IdempotencyRow)
+                .where(
+                    IdempotencyRow.tenant_id == IDENTITY_HEADERS["X-Tenant-ID"],
+                    IdempotencyRow.idempotency_key == idempotency_key,
+                )
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(AuditEventRow)
+                .where(
+                    AuditEventRow.tenant_id == IDENTITY_HEADERS["X-Tenant-ID"],
+                    AuditEventRow.run_id == run_id,
+                    AuditEventRow.action == "run.started",
+                )
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(ToolEvidenceRow)
+                .where(
+                    ToolEvidenceRow.tenant_id == IDENTITY_HEADERS["X-Tenant-ID"],
+                    ToolEvidenceRow.run_id == run_id,
+                )
+            )
+            == 7
+        )
+
+
+def test_duplicate_run_delivery_after_restart_does_not_duplicate_events(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "duplicate-delivery.sqlite3"
+    first_app = build_test_app(database)
+    with TestClient(first_app) as client:
+        mission_response = client.post(
+            "/api/v1/missions",
+            json=mission_payload(),
+            headers=command_headers("duplicate-delivery-mission"),
+        )
+        assert mission_response.status_code == 201, mission_response.text
+        mission_id = mission_response.json()["mission_id"]
+        first = client.post(
+            "/api/v1/missions/{}/runs".format(mission_id),
+            json={"schema_version": "v1"},
+            headers=command_headers("duplicate-delivery-run"),
+        )
+        assert first.status_code == 201, first.text
+        first_payload = first.json()
+
+    counted_rows = (
+        RunRow,
+        RunStepRow,
+        ArtifactRow,
+        ToolEvidenceRow,
+        RunEventRow,
+        AuditEventRow,
+        IdempotencyRow,
+    )
+    with first_app.state.session_factory() as session:
+        before = {
+            row.__tablename__: session.scalar(select(func.count()).select_from(row))
+            for row in counted_rows
+        }
+    first_app.state.engine.dispose()
+
+    restarted_app = build_test_app(database)
+    with TestClient(restarted_app) as client:
+        replay = client.post(
+            "/api/v1/missions/{}/runs".format(mission_id),
+            json={"schema_version": "v1"},
+            headers=command_headers("duplicate-delivery-run"),
+        )
+        assert replay.status_code == 201, replay.text
+        assert replay.json() == first_payload
+
+    with restarted_app.state.session_factory() as session:
+        after = {
+            row.__tablename__: session.scalar(select(func.count()).select_from(row))
+            for row in counted_rows
+        }
+    assert after == before
+
+
 def test_wrong_tenant_is_denied_without_resource_disclosure(tmp_path: Path) -> None:
     app = build_test_app(tmp_path / "tenant.sqlite3")
     wrong_identity = {
@@ -354,9 +695,7 @@ def test_wrong_tenant_is_denied_without_resource_disclosure(tmp_path: Path) -> N
     }
     with TestClient(app) as client:
         _, run = create_mission_and_run(client)
-        hidden = client.get(
-            "/api/v1/runs/{}".format(run["run_id"]), headers=wrong_identity
-        )
+        hidden = client.get("/api/v1/runs/{}".format(run["run_id"]), headers=wrong_identity)
         assert hidden.status_code == 404
         denied = client.post(
             "/api/v1/runs/{}/approvals".format(run["run_id"]),
@@ -386,6 +725,52 @@ def test_stale_artifact_manifest_is_rejected(tmp_path: Path) -> None:
         )
         assert stale.status_code == 409
         assert stale.json()["error"]["code"] == "STALE_ARTIFACT_MANIFEST"
+
+
+def test_wrong_manifest_hash_and_policy_version_are_rejected(tmp_path: Path) -> None:
+    app = build_test_app(tmp_path / "wrong-approval-binding.sqlite3")
+    with TestClient(app) as client:
+        _, run = create_mission_and_run(client)
+
+        wrong_hash = approval_payload(run)
+        wrong_hash["artifact_manifest_hash"] = "0" * 64
+        hash_response = client.post(
+            "/api/v1/runs/{}/approvals".format(run["run_id"]),
+            json=wrong_hash,
+            headers=command_headers("wrong-manifest-hash"),
+        )
+        assert hash_response.status_code == 409
+        assert hash_response.json()["error"]["code"] == "STALE_ARTIFACT_MANIFEST"
+
+        wrong_policy = approval_payload(run)
+        wrong_policy["policy_version"] = "greenlight.v0"
+        policy_response = client.post(
+            "/api/v1/runs/{}/approvals".format(run["run_id"]),
+            json=wrong_policy,
+            headers=command_headers("wrong-policy-version"),
+        )
+        assert policy_response.status_code == 422
+        assert policy_response.json()["error"]["code"] == "REQUEST_VALIDATION_FAILED"
+
+
+def test_nonexistent_run_approval_is_not_found(tmp_path: Path) -> None:
+    app = build_test_app(tmp_path / "missing-approval-run.sqlite3")
+    missing_run = {
+        "schema_version": "v1",
+        "decision": "approved",
+        "reviewer": "human-owner",
+        "note": "No run exists for this decision.",
+        "artifact_manifest_hash": "0" * 64,
+        "policy_version": "greenlight.v1",
+    }
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/runs/run-does-not-exist/approvals",
+            json=missing_run,
+            headers=command_headers("missing-run-approval"),
+        )
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
 
 
 def test_manifest_change_inside_approval_transaction_is_rolled_back(
@@ -487,15 +872,76 @@ def test_concurrent_approval_allows_exactly_one_decision(tmp_path: Path) -> None
             return response.status_code, response.json().get("error", {}).get("code", "ok")
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(
-                executor.map(decide, ("approval-concurrent-a", "approval-concurrent-b"))
-            )
+            results = list(executor.map(decide, ("approval-concurrent-a", "approval-concurrent-b")))
         assert sorted(status for status, _ in results) == [200, 409]
         assert next(code for status, code in results if status == 409) == (
             "APPROVAL_ALREADY_DECIDED"
         )
         with app.state.session_factory() as session:
             assert session.scalar(select(func.count()).select_from(ApprovalRow)) == 1
+
+
+def test_concurrent_identical_approval_replays_the_committed_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = build_test_app(tmp_path / "concurrent-identical-approval.sqlite3")
+    idempotency_key = "approval-concurrent-identical"
+    lock_attempt_barrier = Barrier(2)
+    lock_attempts: list[str] = []
+    original_acquire = SqlAlchemyRepository.acquire_idempotency_lock
+
+    def synchronize_lock_attempts(
+        repository: SqlAlchemyRepository,
+        tenant_id: str,
+        key: str,
+    ) -> None:
+        if tenant_id == IDENTITY_HEADERS["X-Tenant-ID"] and key == idempotency_key:
+            lock_attempts.append(key)
+            lock_attempt_barrier.wait(timeout=5)
+        original_acquire(repository, tenant_id, key)
+
+    with TestClient(app) as client:
+        _, run = create_mission_and_run(client)
+        monkeypatch.setattr(
+            SqlAlchemyRepository,
+            "acquire_idempotency_lock",
+            synchronize_lock_attempts,
+        )
+
+        def decide() -> Tuple[int, Dict[str, object]]:
+            response = client.post(
+                "/api/v1/runs/{}/approvals".format(run["run_id"]),
+                json=approval_payload(run),
+                headers=command_headers(idempotency_key),
+            )
+            return response.status_code, response.json()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: decide(), range(2)))
+
+        assert [status for status, _ in results] == [200, 200]
+        assert len(lock_attempts) == 2
+        assert results[0][1] == results[1][1]
+        assert results[0][1]["status"] == "completed"
+        with app.state.session_factory() as session:
+            assert session.scalar(select(func.count()).select_from(ApprovalRow)) == 1
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(IdempotencyRow)
+                    .where(IdempotencyRow.idempotency_key == idempotency_key)
+                )
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(AuditEventRow)
+                    .where(AuditEventRow.action == "run.approval")
+                )
+                == 1
+            )
 
 
 def test_concurrent_first_commands_upsert_one_identity_without_transient_failure(
@@ -524,22 +970,33 @@ def test_concurrent_first_commands_upsert_one_identity_without_transient_failure
 
         assert sorted(results) == [(201, "ok"), (201, "ok")]
         with app.state.session_factory() as session:
-            assert session.scalar(
-                select(func.count()).select_from(TenantRow).where(
-                    TenantRow.tenant_id == identity["X-Tenant-ID"]
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(TenantRow)
+                    .where(TenantRow.tenant_id == identity["X-Tenant-ID"])
                 )
-            ) == 1
-            assert session.scalar(
-                select(func.count()).select_from(PrincipalRow).where(
-                    PrincipalRow.tenant_id == identity["X-Tenant-ID"],
-                    PrincipalRow.principal_id == identity["X-Principal-ID"],
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(PrincipalRow)
+                    .where(
+                        PrincipalRow.tenant_id == identity["X-Tenant-ID"],
+                        PrincipalRow.principal_id == identity["X-Principal-ID"],
+                    )
                 )
-            ) == 1
-            assert session.scalar(
-                select(func.count()).select_from(MissionRow).where(
-                    MissionRow.tenant_id == identity["X-Tenant-ID"]
+                == 1
+            )
+            assert (
+                session.scalar(
+                    select(func.count())
+                    .select_from(MissionRow)
+                    .where(MissionRow.tenant_id == identity["X-Tenant-ID"])
                 )
-            ) == 2
+                == 2
+            )
 
 
 def test_structured_logs_include_safe_context_and_sandbox_evidence(
@@ -567,7 +1024,10 @@ def test_structured_logs_include_safe_context_and_sandbox_evidence(
     assert all(record["success"] is True for record in tool_records)
     assert all(record["retry_count"] == 0 for record in tool_records)
     assert all(record["latency_ms"] >= 0 for record in tool_records)
-    assert all(record["step"] in {"research", "strategist", "growth", "media", "risk", "publisher"} for record in tool_records)
+    assert all(
+        record["step"] in {"research", "strategist", "growth", "media", "risk", "publisher"}
+        for record in tool_records
+    )
     assert all(record["role"] == record["step"] for record in tool_records)
     assert all(
         record["step_id"] == stable_id("step", run["run_id"], record["role"])
@@ -619,13 +1079,14 @@ def test_prompt_injection_remains_data_and_cannot_forge_logs_or_greenlight(
         assert run["status"] == "awaiting_greenlight"
         assert run["approval"] is None
         assert next(step for step in run["steps"] if step["role"] == "risk")["status"] == "ready"
-        assert next(step for step in run["steps"] if step["role"] == "publisher")["status"] == "waiting_greenlight"
+        assert (
+            next(step for step in run["steps"] if step["role"] == "publisher")["status"]
+            == "waiting_greenlight"
+        )
         assert all(artifact["kind"] != "campaign_package" for artifact in run["artifacts"])
 
     serialized_logs = "\n".join(
-        record.getMessage()
-        for record in caplog.records
-        if record.name == "agency.control_plane"
+        record.getMessage() for record in caplog.records if record.name == "agency.control_plane"
     )
     parsed_records = [
         json.loads(record.getMessage())
@@ -688,6 +1149,48 @@ def test_tool_failure_logs_prior_calls_latency_and_safe_failure_metadata(
         assert session.scalar(select(func.count()).select_from(RunRow)) == 0
 
 
+def test_provider_timeout_is_safe_and_rolls_back_run(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    caplog.set_level(logging.INFO, logger="agency.control_plane")
+    app = build_test_app(tmp_path / "provider-timeout.sqlite3")
+    with TestClient(app) as client:
+        mission = client.post(
+            "/api/v1/missions",
+            json=mission_payload(),
+            headers=command_headers("provider-timeout-mission"),
+        ).json()
+        caplog.clear()
+
+        def time_out(*_args, **_kwargs):
+            raise TimeoutError("provider deadline exceeded with private context")
+
+        monkeypatch.setattr(MockContext7DocsTool, "lookup", time_out)
+        response = client.post(
+            "/api/v1/missions/{}/runs".format(mission["mission_id"]),
+            json={"schema_version": "v1"},
+            headers=command_headers("provider-timeout-run"),
+        )
+        assert response.status_code == 500
+        assert response.json()["error"]["code"] == "INTERNAL_SERVER_ERROR"
+        assert "provider deadline" not in response.text
+
+    records = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agency.control_plane" and record.getMessage().startswith("{")
+    ]
+    tool_records = [record for record in records if record.get("event") == "sandbox_tool_call"]
+    assert tool_records[-1]["success"] is False
+    assert tool_records[-1]["error_type"] == "TimeoutError"
+    assert tool_records[-1]["retry_count"] == 0
+    assert "provider deadline" not in json.dumps(records)
+    with app.state.session_factory() as session:
+        assert session.scalar(select(func.count()).select_from(RunRow)) == 0
+
+
 def test_structured_identity_idempotency_size_and_contract_errors(tmp_path: Path) -> None:
     app = build_test_app(tmp_path / "errors.sqlite3")
     with TestClient(app) as client:
@@ -737,26 +1240,26 @@ def test_structured_identity_idempotency_size_and_contract_errors(tmp_path: Path
                 outbound.append(message)
 
             scope = {
-                    "type": "http",
-                    "asgi": {"version": "3.0", "spec_version": "2.3"},
-                    "http_version": "1.1",
-                    "method": "POST",
-                    "scheme": "http",
-                    "path": "/api/v1/missions",
-                    "raw_path": b"/api/v1/missions",
-                    "query_string": b"",
-                    "root_path": "",
-                    "headers": [
-                        (b"host", b"testserver"),
-                        (b"content-type", b"application/json"),
-                        (b"transfer-encoding", b"chunked"),
-                        (b"x-tenant-id", b"tenant-alpha"),
-                        (b"x-principal-id", b"principal-owner"),
-                        (b"idempotency-key", b"chunked-oversized"),
-                    ],
-                    "client": ("127.0.0.1", 50000),
-                    "server": ("testserver", 80),
-                }
+                "type": "http",
+                "asgi": {"version": "3.0", "spec_version": "2.3"},
+                "http_version": "1.1",
+                "method": "POST",
+                "scheme": "http",
+                "path": "/api/v1/missions",
+                "raw_path": b"/api/v1/missions",
+                "query_string": b"",
+                "root_path": "",
+                "headers": [
+                    (b"host", b"testserver"),
+                    (b"content-type", b"application/json"),
+                    (b"transfer-encoding", b"chunked"),
+                    (b"x-tenant-id", b"tenant-alpha"),
+                    (b"x-principal-id", b"principal-owner"),
+                    (b"idempotency-key", b"chunked-oversized"),
+                ],
+                "client": ("127.0.0.1", 50000),
+                "server": ("testserver", 80),
+            }
             await app(
                 scope,
                 receive,
@@ -904,9 +1407,7 @@ def test_database_outage_is_structured_and_rolls_back_partial_identity(
 
         assert response.status_code == 503
         assert response.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
-        assert response.json()["error"]["message"] == (
-            "The control-plane database is unavailable"
-        )
+        assert response.json()["error"]["message"] == ("The control-plane database is unavailable")
         assert "credential" not in response.text
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["x-frame-options"] == "DENY"
@@ -1024,3 +1525,11 @@ def test_audit_and_idempotency_records_are_durable(tmp_path: Path) -> None:
         assert session.scalar(select(func.count()).select_from(AuditEventRow)) >= 3
         assert session.scalar(select(func.count()).select_from(IdempotencyRow)) == 3
         assert session.scalar(select(func.count()).select_from(ApprovalRow)) == 1
+        approval = session.scalar(select(ApprovalRow))
+        assert approval is not None
+        assert approval.idempotency_key == "audit-approval"
+        approval_audit = session.scalar(
+            select(AuditEventRow).where(AuditEventRow.action == "run.approval")
+        )
+        assert approval_audit is not None
+        assert approval_audit.payload["idempotency_key"] == "audit-approval"

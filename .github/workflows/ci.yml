@@ -69,7 +69,9 @@ jobs:
           python -m pip install --require-hashes --no-deps -r scripts/requirements-ci.lock
           python -m pip install --no-deps --no-build-isolation -e backend
       - name: Lint Python
-        run: ruff check backend scripts
+        run: |
+          ruff check backend scripts
+          ruff format --check backend scripts
       - name: Type-check control plane
         run: mypy --config-file backend/pyproject.toml backend/control_plane
       - name: Run Python tests
@@ -107,8 +109,17 @@ jobs:
           python-version: 3.13.5
           cache: pip
           cache-dependency-path: scripts/requirements-ci.lock
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.4.1
+          cache: npm
       - name: Install platform validation dependencies
-        run: python -m pip install --require-hashes --no-deps -r scripts/requirements-ci.lock
+        run: |
+          python -m pip install --require-hashes --no-deps -r scripts/requirements-ci.lock
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install the locked Chromium runtime
+        run: npx playwright install --with-deps chromium
       - name: Run Terraform and static platform gates
         run: scripts/validate_platform.sh
       - name: Set up Buildx
@@ -126,15 +137,20 @@ jobs:
         run: test "$(docker image inspect ai-native-content-agency:ci --format '{{.Config.User}}')" = "10001:10001"
       - name: Verify Compose migrations and same-origin HTTP flow
         env:
+          COMPOSE_PROJECT_NAME: agency-e2e-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          E2E_RESTART_PERSISTENCE: "1"
           IMAGE_TAG: ci
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
           POSTGRES_PASSWORD: ci-compose-only
         run: |
           cleanup() {
-            docker compose down
+            docker compose down --remove-orphans --volumes
           }
           trap cleanup EXIT
+          cleanup
           docker compose up --detach --wait --no-build
           python scripts/http_smoke.py --base-url http://127.0.0.1:8080
+          npm run test:e2e
 
   security:
     name: Dependency, secret, and repository integrity gates
@@ -170,7 +186,9 @@ jobs:
         run: python scripts/platform_eval.py
       - name: Scan the repository and Git history for secrets and personal paths
         run: |
-          python -m unittest scripts.test_repository_integrity scripts.test_http_smoke
+          python -m unittest scripts.test_eval_harness scripts.test_governance_eval scripts.test_repository_integrity scripts.test_http_smoke
           python scripts/repository_integrity.py
+          python -m scripts.governance_eval
+          python scripts/eval_harness.py --check-results agent/eval-results.json
       - name: Check whitespace across the complete tracked tree
         run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD

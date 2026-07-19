@@ -47,8 +47,12 @@ class ControlPlaneService:
     ) -> MissionResponse:
         operation = "mission.create"
         request_hash = self._request_hash(operation, request)
-        replay = self._replay(
-            identity, idempotency_key, operation, request_hash, MissionResponse
+        replay = self._acquire_and_replay(
+            identity,
+            idempotency_key,
+            operation,
+            request_hash,
+            MissionResponse,
         )
         if replay is not None:
             return replay
@@ -83,6 +87,9 @@ class ControlPlaneService:
                 MissionResponse,
                 error,
             )
+        except Exception:
+            self.repository.rollback()
+            raise
 
     def start_run(
         self,
@@ -96,7 +103,13 @@ class ControlPlaneService:
         payload = request.model_dump(mode="json")
         payload["mission_id"] = mission_id
         request_hash = request_payload_hash(operation, payload)
-        replay = self._replay(identity, idempotency_key, operation, request_hash, RunResponse)
+        replay = self._acquire_and_replay(
+            identity,
+            idempotency_key,
+            operation,
+            request_hash,
+            RunResponse,
+        )
         if replay is not None:
             return replay
         now = utc_now()
@@ -150,6 +163,9 @@ class ControlPlaneService:
                 RunResponse,
                 error,
             )
+        except Exception:
+            self.repository.rollback()
+            raise
         finally:
             memory.close()
 
@@ -168,7 +184,13 @@ class ControlPlaneService:
         payload = request.model_dump(mode="json")
         payload["run_id"] = run_id
         request_hash = request_payload_hash(operation, payload)
-        replay = self._replay(identity, idempotency_key, operation, request_hash, RunResponse)
+        replay = self._acquire_and_replay(
+            identity,
+            idempotency_key,
+            operation,
+            request_hash,
+            RunResponse,
+        )
         if replay is not None:
             return replay
         now = utc_now()
@@ -209,9 +231,7 @@ class ControlPlaneService:
                     policy_version=run.policy_version,
                 )
             next_status = (
-                "completed"
-                if request.decision is ApprovalDecision.APPROVED
-                else "rejected"
+                "completed" if request.decision is ApprovalDecision.APPROVED else "rejected"
             )
             claimed = self.repository.claim_approval_transition(
                 identity.tenant_id,
@@ -229,6 +249,7 @@ class ControlPlaneService:
             approval = self.repository.add_approval(
                 identity,
                 run_id,
+                idempotency_key,
                 request.decision,
                 request.reviewer,
                 request.note,
@@ -259,6 +280,7 @@ class ControlPlaneService:
                 operation,
                 {
                     "approval_id": approval.approval_id,
+                    "idempotency_key": approval.idempotency_key,
                     "decision": request.decision.value,
                     "manifest_hash": current_hash,
                     "policy_version": request.policy_version,
@@ -288,6 +310,7 @@ class ControlPlaneService:
                     "principal_id": identity.principal_id,
                     "run_id": run_id,
                     "decision": request.decision.value,
+                    "idempotency_key": approval.idempotency_key,
                     "artifact_manifest_hash": current_hash,
                     "policy_version": request.policy_version,
                     "external_side_effects": False,
@@ -306,7 +329,21 @@ class ControlPlaneService:
                 "Another Greenlight decision already completed for this run",
                 run_id=run_id,
             ) from error
-        except ControlPlaneError:
+        except ControlPlaneError as error:
+            if error.code == "APPROVAL_ALREADY_DECIDED":
+                replay_after_decision = self._recover_optional_replay(
+                    identity,
+                    idempotency_key,
+                    operation,
+                    request_hash,
+                    RunResponse,
+                )
+                if replay_after_decision is not None:
+                    return replay_after_decision
+            else:
+                self.repository.rollback()
+            raise
+        except Exception:
             self.repository.rollback()
             raise
 
@@ -385,6 +422,24 @@ class ControlPlaneService:
         _, payload = replay
         return model.model_validate(payload)
 
+    def _acquire_and_replay(
+        self,
+        identity: IdentityContext,
+        key: str,
+        operation: str,
+        request_hash: str,
+        model: Type[ResponseModel],
+    ) -> Optional[ResponseModel]:
+        try:
+            self.repository.acquire_idempotency_lock(identity.tenant_id, key)
+            replay = self._replay(identity, key, operation, request_hash, model)
+        except Exception:
+            self.repository.rollback()
+            raise
+        if replay is not None:
+            self.repository.rollback()
+        return replay
+
     def _record(
         self,
         identity: IdentityContext,
@@ -428,7 +483,11 @@ class ControlPlaneService:
         model: Type[ResponseModel],
     ) -> Optional[ResponseModel]:
         self.repository.rollback()
-        return self._replay(identity, key, operation, request_hash, model)
+        try:
+            self.repository.acquire_idempotency_lock(identity.tenant_id, key)
+            return self._replay(identity, key, operation, request_hash, model)
+        finally:
+            self.repository.rollback()
 
     @staticmethod
     def _request_hash(operation: str, request: BaseModel) -> str:

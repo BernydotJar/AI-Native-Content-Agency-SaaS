@@ -6,6 +6,31 @@ output "project_id" {
   value = var.project_id
 }
 
+output "bootstrap_project_id" {
+  value = var.bootstrap_project_id
+}
+
+output "region" {
+  value = var.region
+}
+
+output "project_provisioning_mode" {
+  value = var.project_provisioning_mode
+}
+
+output "project_provenance_sha256" {
+  description = "Digest of the reviewed project create/adopt provenance."
+  value       = sha256(jsonencode(local.project_provenance))
+}
+
+output "github_repository_owner_id" {
+  value = var.github_repository_owner_id
+}
+
+output "github_repository_id" {
+  value = var.github_repository_id
+}
+
 output "project_number" {
   value = data.google_project.target.number
 }
@@ -44,4 +69,8 @@ output "budget_enabled" {
 
 output "notification_channel_ids" {
   value = module.observability.notification_channel_ids
+}
+
+output "notification_channel_provenance_sha256" {
+  value = module.observability.notification_channel_provenance_sha256
 }

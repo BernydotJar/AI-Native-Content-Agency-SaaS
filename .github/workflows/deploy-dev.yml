@@ -61,7 +61,6 @@ jobs:
         run: |
           reference="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_DEV_PROJECT_ID }}/agency-images/app@${IMAGE_DIGEST}"
           printf 'reference=%s\n' "${reference}" >> "${GITHUB_OUTPUT}"
-
   plan_runtime:
     name: Produce the exact dev-runtime plan
     needs: build_image
@@ -81,7 +80,12 @@ jobs:
     env:
       TF_IN_AUTOMATION: "1"
       TF_INPUT: "0"
+      TF_VAR_bootstrap_project_id: ${{ vars.GCP_BOOTSTRAP_PROJECT_ID }}
       TF_VAR_container_image: ${{ needs.build_image.outputs.image }}
+      TF_VAR_foundation_notification_channel_provenance_sha256: ${{ vars.GCP_FOUNDATION_NOTIFICATION_CHANNEL_PROVENANCE_SHA256 }}
+      TF_VAR_foundation_project_provenance_sha256: ${{ vars.GCP_FOUNDATION_PROJECT_PROVENANCE_SHA256 }}
+      TF_VAR_github_repository_id: ${{ github.repository_id }}
+      TF_VAR_github_repository_owner_id: ${{ github.repository_owner_id }}
       TF_VAR_project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_runtime_deployer_service_account_email: ${{ vars.GCP_RUNTIME_DEPLOYER_SERVICE_ACCOUNT }}
@@ -117,6 +121,17 @@ jobs:
           -input=false
           -backend-config="bucket=${TF_VAR_state_bucket_name}"
           -backend-config="prefix=environments/dev-runtime"
+      - name: Prove the desired digest and bind the rollback candidate
+        working-directory: infra/environments/dev_runtime
+        run: |
+          artifact_repository="${TF_VAR_region}-docker.pkg.dev/${TF_VAR_project_id}/agency-images"
+          python ../../../scripts/rollback_image_gate.py inspect \
+            --artifact-repository "${artifact_repository}" \
+            --desired-image "${TF_VAR_container_image}" \
+            --project-id "${TF_VAR_project_id}" \
+            --region "${TF_VAR_region}" \
+            --service-name agency-control-plane-dev \
+            --output rollback-evidence.json
       - name: Produce and statically inspect the exact plan
         working-directory: infra/environments/dev_runtime
         run: |
@@ -153,6 +168,7 @@ jobs:
             infra/environments/dev_runtime/tfplan
             infra/environments/dev_runtime/tfplan.json
             infra/environments/dev_runtime/plan-metadata.json
+            infra/environments/dev_runtime/rollback-evidence.json
           if-no-files-found: error
           retention-days: 1
 
@@ -169,7 +185,12 @@ jobs:
     env:
       TF_IN_AUTOMATION: "1"
       TF_INPUT: "0"
+      TF_VAR_bootstrap_project_id: ${{ vars.GCP_BOOTSTRAP_PROJECT_ID }}
       TF_VAR_container_image: ${{ needs.plan_runtime.outputs.image }}
+      TF_VAR_foundation_notification_channel_provenance_sha256: ${{ vars.GCP_FOUNDATION_NOTIFICATION_CHANNEL_PROVENANCE_SHA256 }}
+      TF_VAR_foundation_project_provenance_sha256: ${{ vars.GCP_FOUNDATION_PROJECT_PROVENANCE_SHA256 }}
+      TF_VAR_github_repository_id: ${{ github.repository_id }}
+      TF_VAR_github_repository_owner_id: ${{ github.repository_owner_id }}
       TF_VAR_project_id: ${{ vars.GCP_DEV_PROJECT_ID }}
       TF_VAR_region: ${{ vars.GCP_REGION }}
       TF_VAR_runtime_deployer_service_account_email: ${{ vars.GCP_RUNTIME_DEPLOYER_SERVICE_ACCOUNT }}
@@ -226,6 +247,23 @@ jobs:
           -input=false
           -backend-config="bucket=${TF_VAR_state_bucket_name}"
           -backend-config="prefix=environments/dev-runtime"
+      - name: Revalidate and protect the reviewed rollback candidate
+        working-directory: infra/environments/dev_runtime
+        run: |
+          evidence_dir="${RUNNER_TEMP}/dev-post-apply"
+          artifact_repository="${TF_VAR_region}-docker.pkg.dev/${TF_VAR_project_id}/agency-images"
+          mkdir -p "${evidence_dir}"
+          python ../../../scripts/rollback_image_gate.py inspect \
+            --artifact-repository "${artifact_repository}" \
+            --desired-image "${TF_VAR_container_image}" \
+            --project-id "${TF_VAR_project_id}" \
+            --region "${TF_VAR_region}" \
+            --service-name agency-control-plane-dev \
+            --baseline-report rollback-evidence.json \
+            --output "${evidence_dir}/revalidated-rollback-candidate.json"
+          python ../../../scripts/rollback_image_gate.py protect \
+            --baseline-report "${evidence_dir}/revalidated-rollback-candidate.json" \
+            --output "${evidence_dir}/pre-apply-rollback-report.json"
       - name: Apply only the attested saved plan
         working-directory: infra/environments/dev_runtime
         run: terraform apply -input=false tfplan
@@ -251,6 +289,7 @@ jobs:
       - name: Collect and verify non-sensitive runtime evidence
         working-directory: infra/environments/dev_runtime
         env:
+          IMAGE_PUSHER_SERVICE_ACCOUNT: ${{ vars.GCP_IMAGE_PUSHER_SERVICE_ACCOUNT }}
           PLAN_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_PLAN_SERVICE_ACCOUNT }}
         run: |
           evidence_dir="${RUNNER_TEMP}/dev-post-apply"
@@ -258,6 +297,7 @@ jobs:
           service_name="$(terraform output -raw cloud_run_service_name)"
           migration_job="$(terraform output -raw migration_job_name)"
           runtime_service_account="$(terraform output -raw runtime_service_account_email)"
+          artifact_repository="$(terraform output -raw foundation_artifact_repository)"
           connection_name="$(terraform output -raw cloud_sql_connection_name)"
           sql_instance="${connection_name##*:}"
           gcloud run services describe "${service_name}" --project "${TF_VAR_project_id}" --region "${TF_VAR_region}" --format=json > "${evidence_dir}/service.json"
@@ -266,6 +306,15 @@ jobs:
           gcloud sql instances describe "${sql_instance}" --project "${TF_VAR_project_id}" --format=json > "${evidence_dir}/sql.json"
           gcloud projects get-iam-policy "${TF_VAR_project_id}" --format=json > "${evidence_dir}/project-iam.json"
           gcloud artifacts repositories get-iam-policy agency-images --project "${TF_VAR_project_id}" --location "${TF_VAR_region}" --format=json > "${evidence_dir}/artifact-iam.json"
+          gcloud iam workload-identity-pools providers describe github-build --workload-identity-pool github-actions --project "${TF_VAR_bootstrap_project_id}" --location global --format=json > "${evidence_dir}/wif-provider-build.json"
+          gcloud iam workload-identity-pools providers describe github-plan --workload-identity-pool github-actions --project "${TF_VAR_bootstrap_project_id}" --location global --format=json > "${evidence_dir}/wif-provider-plan.json"
+          gcloud iam workload-identity-pools providers describe github-apply --workload-identity-pool github-actions --project "${TF_VAR_bootstrap_project_id}" --location global --format=json > "${evidence_dir}/wif-provider-apply.json"
+          gcloud iam service-accounts get-iam-policy "${IMAGE_PUSHER_SERVICE_ACCOUNT}" --project "${TF_VAR_bootstrap_project_id}" --format=json > "${evidence_dir}/build-service-account-iam.json"
+          gcloud iam service-accounts get-iam-policy "${PLAN_SERVICE_ACCOUNT}" --project "${TF_VAR_bootstrap_project_id}" --format=json > "${evidence_dir}/plan-service-account-iam.json"
+          gcloud iam service-accounts get-iam-policy "${TF_VAR_runtime_deployer_service_account_email}" --project "${TF_VAR_bootstrap_project_id}" --format=json > "${evidence_dir}/apply-service-account-iam.json"
+          gcloud storage buckets get-iam-policy "gs://${TF_VAR_state_bucket_name}" --format=json > "${evidence_dir}/state-bucket-iam.json"
+          gcloud iam roles describe agencyRuntimeDeployer --project "${TF_VAR_project_id}" --format=json > "${evidence_dir}/runtime-custom-role.json"
+          gcloud iam roles describe agencyRollbackTagOperator --project "${TF_VAR_project_id}" --format=json > "${evidence_dir}/rollback-custom-role.json"
           terraform output -json > "${evidence_dir}/outputs.json"
           for attempt in 1 2 3 4 5 6; do
             gcloud logging read \
@@ -283,11 +332,28 @@ jobs:
             --project-iam "${evidence_dir}/project-iam.json" \
             --artifact-iam "${evidence_dir}/artifact-iam.json" \
             --outputs "${evidence_dir}/outputs.json" \
+            --wif-provider-build "${evidence_dir}/wif-provider-build.json" \
+            --wif-provider-plan "${evidence_dir}/wif-provider-plan.json" \
+            --wif-provider-apply "${evidence_dir}/wif-provider-apply.json" \
+            --build-service-account-iam "${evidence_dir}/build-service-account-iam.json" \
+            --plan-service-account-iam "${evidence_dir}/plan-service-account-iam.json" \
+            --apply-service-account-iam "${evidence_dir}/apply-service-account-iam.json" \
+            --state-bucket-iam "${evidence_dir}/state-bucket-iam.json" \
+            --runtime-custom-role "${evidence_dir}/runtime-custom-role.json" \
+            --rollback-custom-role "${evidence_dir}/rollback-custom-role.json" \
+            --rollback-report "${evidence_dir}/pre-apply-rollback-report.json" \
             --expected-image "${TF_VAR_container_image}" \
             --runtime-service-account "${runtime_service_account}" \
             --plan-service-account "${PLAN_SERVICE_ACCOUNT}" \
             --deploy-service-account "${TF_VAR_runtime_deployer_service_account_email}" \
             --project-id "${TF_VAR_project_id}" \
+            --bootstrap-project-id "${TF_VAR_bootstrap_project_id}" \
+            --state-bucket-name "${TF_VAR_state_bucket_name}" \
+            --artifact-repository "${artifact_repository}" \
+            --image-pusher-service-account "${IMAGE_PUSHER_SERVICE_ACCOUNT}" \
+            --github-repository "${GITHUB_REPOSITORY}" \
+            --github-repository-owner-id "${TF_VAR_github_repository_owner_id}" \
+            --github-repository-id "${TF_VAR_github_repository_id}" \
             --output "${evidence_dir}/post-apply-report.json"
       - name: Require a no-change second plan
         working-directory: infra/environments/dev_runtime
@@ -305,6 +371,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dev-post-apply-${{ github.run_id }}
-          path: ${{ runner.temp }}/dev-post-apply/post-apply-report.json
+          path: |
+            ${{ runner.temp }}/dev-post-apply/post-apply-report.json
+            ${{ runner.temp }}/dev-post-apply/pre-apply-rollback-report.json
           if-no-files-found: error
           retention-days: 30

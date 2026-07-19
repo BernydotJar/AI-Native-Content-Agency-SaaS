@@ -150,57 +150,49 @@ class CampaignPackage:
 class MultiPlatformTrendsTool(Protocol):
     sandbox: bool
 
-    def collect(self, request: TrendsRequest) -> ToolResponse[TrendsReport]:
-        ...
+    def collect(self, request: TrendsRequest) -> ToolResponse[TrendsReport]: ...
 
 
 class MetaAdsMcpTool(Protocol):
     sandbox: bool
 
-    def forecast(self, request: MetaAdsRequest) -> ToolResponse[MetaAdsForecast]:
-        ...
+    def forecast(self, request: MetaAdsRequest) -> ToolResponse[MetaAdsForecast]: ...
 
 
 class PuppeteerBrowserTool(Protocol):
     sandbox: bool
 
-    def observe(self, request: BrowserRequest) -> ToolResponse[BrowserObservation]:
-        ...
+    def observe(self, request: BrowserRequest) -> ToolResponse[BrowserObservation]: ...
 
 
 class GitHubCodebaseTool(Protocol):
     sandbox: bool
 
-    def inspect(self, request: GitHubRequest) -> ToolResponse[CodebaseInspection]:
-        ...
+    def inspect(self, request: GitHubRequest) -> ToolResponse[CodebaseInspection]: ...
 
 
 class Context7DocsTool(Protocol):
     sandbox: bool
 
-    def lookup(self, request: Context7Request) -> ToolResponse[DocsFinding]:
-        ...
+    def lookup(self, request: Context7Request) -> ToolResponse[DocsFinding]: ...
 
 
 class VideoOptimizerTool(Protocol):
     sandbox: bool
 
-    def plan(self, request: VideoOptimizationRequest) -> ToolResponse[VideoOptimizationPlan]:
-        ...
+    def plan(self, request: VideoOptimizationRequest) -> ToolResponse[VideoOptimizationPlan]: ...
 
 
 class ImageToVideoTool(Protocol):
     sandbox: bool
 
-    def plan(self, request: ImageToVideoRequest) -> ToolResponse[ImageToVideoPlan]:
-        ...
+    def plan(self, request: ImageToVideoRequest) -> ToolResponse[ImageToVideoPlan]: ...
 
 
 class CampaignPackagerTool(Protocol):
     sandbox: bool
 
-    def package(self, request: CampaignPackageRequest) -> ToolResponse[CampaignPackage]:
-        ...
+    def package(self, request: CampaignPackageRequest) -> ToolResponse[CampaignPackage]: ...
 
 
 def _evidence(tool: str, operation: str, summary: str, result: object) -> ToolEvidence:

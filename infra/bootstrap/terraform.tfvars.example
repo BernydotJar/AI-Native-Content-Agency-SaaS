@@ -1,14 +1,27 @@
 # Examples only. Do not copy a billing account until it is open and explicitly selected.
-project_id        = "agency-bootstrap-unique"
-create_project    = false
-region            = "us-central1"
-state_bucket_name = "agency-bootstrap-unique-tfstate"
+project_id                = "agency-bootstrap-unique"
+project_provisioning_mode = "CREATE_NEW"
+billing_account           = "AAAAAA-BBBBBB-CCCCCC"
+region                    = "us-central1"
+state_bucket_name         = "agency-bootstrap-unique-tfstate"
 
-github_repository_owner = "repository-owner"
-github_repository       = "repository-name"
-github_allowed_ref      = "refs/heads/main"
-github_workflow_path    = ".github/workflows/deploy-dev.yml"
+github_repository_owner    = "repository-owner"
+github_repository_owner_id = "12345678"
+github_repository          = "repository-name"
+github_repository_id       = "87654321"
+github_allowed_ref         = "refs/heads/main"
+github_workflow_path       = ".github/workflows/deploy-dev.yml"
 
-# billing_account = "AAAAAA-BBBBBB-CCCCCC"
 # organization_id = "000000000000"
 # folder_id       = "000000000000"
+
+# To manage an already discovered project, select ADOPT_EXISTING and bind the
+# import block to reviewed evidence. Never use placeholder evidence in a plan.
+# project_provisioning_mode = "ADOPT_EXISTING"
+# existing_project_adoption = {
+#   schema_version     = "gcp-project-adoption.v1"
+#   project_id         = "agency-bootstrap-unique"
+#   evidence_sha256    = "replace-with-64-lowercase-hex-characters"
+#   decision_reference = "https://github.com/owner/repository/issues/issue-number"
+#   acknowledgement   = "I_ACKNOWLEDGE_TERRAFORM_WILL_MANAGE_THIS_EXISTING_PROJECT"
+# }

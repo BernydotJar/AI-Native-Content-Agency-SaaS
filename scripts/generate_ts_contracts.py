@@ -24,7 +24,7 @@ def _reference_name(reference: str) -> str:
     prefix = "#/components/schemas/"
     if not reference.startswith(prefix):
         raise ValueError("unsupported OpenAPI reference: {}".format(reference))
-    return reference[len(prefix):]
+    return reference[len(prefix) :]
 
 
 def _typescript_type(schema: Dict[str, Any]) -> str:
@@ -107,10 +107,12 @@ def generate(document: Dict[str, Any]) -> str:
                 )
             lines.extend(["}", ""])
         else:
-            lines.extend([
-                "export type {} = {};".format(name, _typescript_type(schema)),
-                "",
-            ])
+            lines.extend(
+                [
+                    "export type {} = {};".format(name, _typescript_type(schema)),
+                    "",
+                ]
+            )
     return "\n".join(lines).rstrip() + "\n"
 
 

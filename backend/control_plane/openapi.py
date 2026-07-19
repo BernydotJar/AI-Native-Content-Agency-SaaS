@@ -19,12 +19,15 @@ def canonical_openapi() -> str:
         )
     )
     try:
-        return json.dumps(
-            application.openapi(),
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        ) + "\n"
+        return (
+            json.dumps(
+                application.openapi(),
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
     finally:
         application.state.engine.dispose()
 

@@ -29,6 +29,7 @@ export interface ApprovalResponse {
   artifact_manifest_hash: string;
   decided_at: string;
   decision: ApprovalDecision;
+  idempotency_key: string;
   note: string;
   policy_version: GreenlightPolicyVersion;
   principal_id: string;
@@ -75,6 +76,12 @@ export interface HealthResponse {
   status: "ok" | "ready";
 }
 
+export interface IdentityResponse {
+  principal: PrincipalIdentityResponse;
+  schema_version: SchemaVersion;
+  tenant: TenantIdentityResponse;
+}
+
 export interface MissionCreate {
   audience: string;
   budget_cents?: number;
@@ -103,6 +110,13 @@ export interface MissionResponse {
 }
 
 export type Platform = "x" | "facebook" | "tiktok" | "instagram";
+
+export interface PrincipalIdentityResponse {
+  auth_mode: string;
+  principal_id: string;
+  schema_version: SchemaVersion;
+  tenant_id: string;
+}
 
 export interface RunEventResponse {
   action: string;
@@ -152,6 +166,11 @@ export interface RunStepResponse {
   status: AgentStatus;
   step_id: string;
   updated_at: string;
+}
+
+export interface TenantIdentityResponse {
+  schema_version: SchemaVersion;
+  tenant_id: string;
 }
 
 export interface ToolEvidenceResponse {

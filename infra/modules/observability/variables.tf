@@ -34,22 +34,54 @@ variable "monthly_budget_usd" {
   }
 }
 
-variable "notification_channel_display_names" {
-  description = "Explicit display names of pre-existing verified Monitoring email channels used for 5xx and budget delivery."
-  type        = list(string)
-  nullable    = false
+variable "notification_channels" {
+  description = "Sensitive, versioned create/adopt configuration for Terraform-managed Monitoring email channels."
+  type = list(object({
+    schema_version        = string
+    key                   = string
+    provisioning_mode     = string
+    project_id            = string
+    display_name          = string
+    email_address         = string
+    existing_channel_name = optional(string)
+    evidence_sha256       = optional(string)
+    decision_reference    = optional(string)
+    acknowledgement       = string
+  }))
+  nullable  = false
+  sensitive = true
 
   validation {
     condition = (
-      length(var.notification_channel_display_names) > 0
-      && length(var.notification_channel_display_names) <= 5
-      && length(distinct(var.notification_channel_display_names)) == length(var.notification_channel_display_names)
+      length(var.notification_channels) > 0
+      && length(var.notification_channels) <= 5
+      && length(distinct([
+        for channel in var.notification_channels : channel.key
+      ])) == length(var.notification_channels)
       && alltrue([
-        for display_name in var.notification_channel_display_names :
-        can(regex("^[A-Za-z0-9][A-Za-z0-9 _.-]{0,62}[A-Za-z0-9]$", display_name))
+        for channel in var.notification_channels :
+        channel.schema_version == "gcp-notification-channel.v1"
+        && contains(["CREATE_NEW", "ADOPT_EXISTING"], channel.provisioning_mode)
+        && channel.project_id == var.project_id
+        && can(regex("^[a-z][a-z0-9_-]{1,30}[a-z0-9]$", channel.key))
+        && can(regex("^[A-Za-z0-9][A-Za-z0-9 _.-]{0,62}[A-Za-z0-9]$", channel.display_name))
+        && can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", channel.email_address))
+        && (channel.evidence_sha256 == null || can(regex("^[0-9a-f]{64}$", channel.evidence_sha256)))
+        && (channel.decision_reference == null || can(regex("^https://[^[:space:]]+$", channel.decision_reference)))
+        && (
+          channel.provisioning_mode == "CREATE_NEW" ? (
+            channel.existing_channel_name == null
+            && channel.acknowledgement == "I_ACKNOWLEDGE_TERRAFORM_WILL_CREATE_AND_MANAGE_THIS_EMAIL_CHANNEL"
+            ) : (
+            can(regex("^projects/${var.project_id}/notificationChannels/[0-9]+$", channel.existing_channel_name))
+            && channel.evidence_sha256 != null
+            && channel.decision_reference != null
+            && channel.acknowledgement == "I_ACKNOWLEDGE_TERRAFORM_WILL_IMPORT_AND_MANAGE_THIS_VERIFIED_EMAIL_CHANNEL"
+          )
+        )
       ])
     )
-    error_message = "Provide one to five distinct explicit Monitoring email channel display names."
+    error_message = "Provide one to five distinct gcp-notification-channel.v1 CREATE_NEW or ADOPT_EXISTING records bound to this project; adopted channels require an exact channel name and reviewed evidence."
   }
 }
 

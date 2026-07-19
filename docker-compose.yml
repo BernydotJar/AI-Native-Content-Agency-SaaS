@@ -54,6 +54,23 @@ services:
       - agency-internal
     restart: "no"
 
+  postgres-integration:
+    <<: *app-security
+    profiles:
+      - integration
+    build:
+      context: .
+      target: postgres-integration
+    image: ai-native-content-agency-integration:${IMAGE_TAG:-local}
+    command: ["python", "/app/scripts/postgres_integration.py"]
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - agency-internal
+    restart: "no"
+
   app:
     <<: *app-security
     build:

@@ -7,6 +7,7 @@ const documentPath = resolve(
 );
 
 const expectedPaths = {
+  "/api/v1/identity": ["get"],
   "/api/v1/missions": ["post"],
   "/api/v1/missions/{mission_id}/runs": ["post"],
   "/api/v1/runs/{run_id}": ["get"],
@@ -16,6 +17,12 @@ const expectedPaths = {
 };
 
 const expectedResponses = {
+  "GET /api/v1/identity": {
+    200: "IdentityResponse",
+    401: "ErrorResponse",
+    422: "ErrorResponse",
+    500: "ErrorResponse",
+  },
   "GET /healthz": {
     200: "HealthResponse",
     500: "ErrorResponse",
@@ -90,6 +97,7 @@ const expectedSchemaProperties = {
     "artifact_manifest_hash",
     "decided_at",
     "decision",
+    "idempotency_key",
     "note",
     "policy_version",
     "principal_id",
@@ -110,6 +118,7 @@ const expectedSchemaProperties = {
   ErrorBody: ["code", "correlation_id", "details", "message"],
   ErrorResponse: ["error", "schema_version"],
   HealthResponse: ["schema_version", "status"],
+  IdentityResponse: ["principal", "schema_version", "tenant"],
   MissionCreate: [
     "audience",
     "budget_cents",
@@ -134,6 +143,12 @@ const expectedSchemaProperties = {
     "tenant_id",
     "title",
     "version",
+  ],
+  PrincipalIdentityResponse: [
+    "auth_mode",
+    "principal_id",
+    "schema_version",
+    "tenant_id",
   ],
   RunEventResponse: [
     "action",
@@ -188,6 +203,7 @@ const expectedSchemaProperties = {
     "summary",
     "tool",
   ],
+  TenantIdentityResponse: ["schema_version", "tenant_id"],
 };
 
 const expectedEnums = {
@@ -201,6 +217,10 @@ const expectedEnums = {
 const identityPattern = "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$";
 const idempotencyPattern = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$";
 const expectedHeaders = {
+  "GET /api/v1/identity": {
+    "X-Principal-ID": identityPattern,
+    "X-Tenant-ID": identityPattern,
+  },
   "GET /api/v1/runs/{run_id}": {
     "X-Principal-ID": identityPattern,
     "X-Tenant-ID": identityPattern,
@@ -325,6 +345,8 @@ for (const [name, expectedValues] of Object.entries(expectedEnums)) {
 
 for (const [schemaName, propertyName, expectedRef] of [
   ["ArtifactResponse", "created_by", "AgentRole"],
+  ["IdentityResponse", "principal", "PrincipalIdentityResponse"],
+  ["IdentityResponse", "tenant", "TenantIdentityResponse"],
   ["RunEventResponse", "role", "AgentRole"],
   ["RunEventResponse", "status", "AgentStatus"],
   ["RunResponse", "status", "RunStatus"],

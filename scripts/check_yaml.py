@@ -26,7 +26,10 @@ def _walk_steps(node: object) -> list[dict]:
 
 
 def main() -> None:
-    targets = [ROOT / "docker-compose.yml", *sorted((ROOT / ".github/workflows").glob("*.yml"))]
+    targets = [
+        ROOT / "docker-compose.yml",
+        *sorted((ROOT / ".github/workflows").glob("*.yml")),
+    ]
     if len(targets) < 3:
         raise SystemExit("Expected Compose plus CI and deploy workflow YAML")
     for target in targets:
@@ -38,8 +41,14 @@ def main() -> None:
                 raise SystemExit(f"{target.relative_to(ROOT)} has no jobs")
             for step in _walk_steps(payload):
                 action = step.get("uses")
-                if action and not str(action).startswith("docker://") and not ACTION_PIN.fullmatch(str(action)):
-                    raise SystemExit(f"Unpinned action in {target.relative_to(ROOT)}: {action}")
+                if (
+                    action
+                    and not str(action).startswith("docker://")
+                    and not ACTION_PIN.fullmatch(str(action))
+                ):
+                    raise SystemExit(
+                        f"Unpinned action in {target.relative_to(ROOT)}: {action}"
+                    )
     print(f"yaml_validation=PASS files={len(targets)}")
 
 

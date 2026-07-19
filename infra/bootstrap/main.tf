@@ -1,4 +1,16 @@
 locals {
+  required_labels = {
+    application = "ai-native-content-agency"
+    environment = "bootstrap"
+    managed_by  = "terraform"
+  }
+  effective_labels = merge(var.additional_labels, local.required_labels)
+  project_provenance = {
+    schema_version    = "gcp-project-provenance.v1"
+    provisioning_mode = var.project_provisioning_mode
+    project_id        = var.project_id
+    adoption          = var.project_provisioning_mode == "ADOPT_EXISTING" ? var.existing_project_adoption : null
+  }
   required_services = toset([
     "cloudresourcemanager.googleapis.com",
     "iam.googleapis.com",
@@ -7,6 +19,15 @@ locals {
     "sts.googleapis.com",
     "storage.googleapis.com",
   ])
+  foundation_evidence_reader_permissions = toset([
+    "iam.serviceAccounts.get",
+    "iam.serviceAccounts.getIamPolicy",
+    "iam.workloadIdentityPoolProviders.get",
+    "iam.workloadIdentityPools.get",
+    "resourcemanager.projects.get",
+    "storage.buckets.get",
+    "storage.buckets.getIamPolicy",
+  ])
 }
 
 resource "terraform_data" "authorization_gate" {
@@ -14,8 +35,13 @@ resource "terraform_data" "authorization_gate" {
 
   lifecycle {
     precondition {
-      condition     = !var.create_project || var.billing_account != null
-      error_message = "Creating the bootstrap project requires one explicitly selected open billing account."
+      condition = var.project_provisioning_mode == "CREATE_NEW" ? (
+        var.existing_project_adoption == null
+        ) : (
+        var.existing_project_adoption != null
+        && var.existing_project_adoption.project_id == var.project_id
+      )
+      error_message = "CREATE_NEW forbids adoption metadata; ADOPT_EXISTING requires metadata bound to the exact project_id."
     }
 
     precondition {
@@ -26,18 +52,23 @@ resource "terraform_data" "authorization_gate" {
 }
 
 resource "google_project" "bootstrap" {
-  count = var.create_project ? 1 : 0
-
   project_id          = var.project_id
   name                = "AI Native Agency Bootstrap"
   billing_account     = var.billing_account
   org_id              = var.organization_id
   folder_id           = var.folder_id
   auto_create_network = false
-  labels              = var.labels
+  labels              = local.effective_labels
   deletion_policy     = "PREVENT"
 
   depends_on = [terraform_data.authorization_gate]
+}
+
+import {
+  for_each = var.project_provisioning_mode == "ADOPT_EXISTING" ? toset([var.project_id]) : toset([])
+
+  to = google_project.bootstrap
+  id = each.value
 }
 
 module "services" {
@@ -56,7 +87,7 @@ resource "google_storage_bucket" "terraform_state" {
   force_destroy               = false
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
-  labels                      = var.labels
+  labels                      = local.effective_labels
 
   versioning {
     enabled = true
@@ -64,11 +95,6 @@ resource "google_storage_bucket" "terraform_state" {
 
   soft_delete_policy {
     retention_duration_seconds = 604800
-  }
-
-  retention_policy {
-    is_locked        = false
-    retention_period = 86400
   }
 
   lifecycle_rule {
@@ -91,12 +117,14 @@ resource "google_storage_bucket" "terraform_state" {
 module "github_wif" {
   source = "../modules/github_wif"
 
-  project_id              = var.project_id
-  github_repository_owner = var.github_repository_owner
-  github_repository       = var.github_repository
-  github_allowed_ref      = var.github_allowed_ref
-  github_workflow_path    = var.github_workflow_path
-  labels                  = var.labels
+  project_id                 = var.project_id
+  github_repository_owner    = var.github_repository_owner
+  github_repository_owner_id = var.github_repository_owner_id
+  github_repository          = var.github_repository
+  github_repository_id       = var.github_repository_id
+  github_allowed_ref         = var.github_allowed_ref
+  github_workflow_path       = var.github_workflow_path
+  labels                     = local.effective_labels
 
   depends_on = [module.services]
 }
@@ -132,6 +160,22 @@ resource "google_project_iam_custom_role" "terraform_state_locker" {
   ]
 
   depends_on = [module.services]
+}
+
+resource "google_project_iam_custom_role" "foundation_evidence_reader" {
+  project     = var.project_id
+  role_id     = "foundationEvidenceReader"
+  title       = "Foundation drift evidence reader"
+  description = "Reads only the WIF, service-account and state-bucket policy evidence required after a dev apply."
+  permissions = local.foundation_evidence_reader_permissions
+
+  depends_on = [module.services]
+}
+
+resource "google_project_iam_member" "foundation_evidence_reader" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.foundation_evidence_reader.name
+  member  = "serviceAccount:${module.github_wif.service_account_emails.apply}"
 }
 
 resource "google_storage_bucket_iam_member" "terraform_state_list" {

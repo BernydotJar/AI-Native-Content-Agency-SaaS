@@ -34,6 +34,7 @@ class RunRecord:
 @dataclass(frozen=True)
 class ApprovalRecord:
     approval_id: str
+    idempotency_key: str
 
 
 @runtime_checkable
@@ -44,6 +45,8 @@ class ControlPlaneRepository(Protocol):
     def rollback(self) -> None: ...
     def flush(self) -> None: ...
     def ping(self) -> None: ...
+
+    def acquire_idempotency_lock(self, tenant_id: str, key: str) -> None: ...
 
     def ensure_identity(self, identity: IdentityContext, now: datetime) -> None: ...
 
@@ -113,6 +116,7 @@ class ControlPlaneRepository(Protocol):
         self,
         identity: IdentityContext,
         run_id: str,
+        idempotency_key: str,
         decision: ApprovalDecision,
         reviewer: str,
         note: str,

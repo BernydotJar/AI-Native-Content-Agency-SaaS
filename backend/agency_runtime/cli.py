@@ -141,9 +141,7 @@ def _demo_report(arguments: argparse.Namespace) -> dict:
             "memory_cycle": {
                 "records": memory.count(),
                 "search_query": "greenlight",
-                "search_result_ids": [
-                    item.record.memory_id for item in search_results
-                ],
+                "search_result_ids": [item.record.memory_id for item in search_results],
                 "recalled": {
                     "memory_id": recalled.memory_id,
                     "confidence": recalled.confidence,
@@ -170,13 +168,9 @@ def _print_human(report: dict) -> None:
     print("AGENCY RUNTIME · SANDBOX DEMO")
     print(SAFETY_NOTICE)
     print("run: {}".format(report["run_id"]))
-    print("gate: {} -> {}".format(
-        report["pre_greenlight_status"], report["final_status"]
-    ))
+    print("gate: {} -> {}".format(report["pre_greenlight_status"], report["final_status"]))
     print("greenlight: {}".format(decision))
-    print("agents: {}".format(
-        " -> ".join(item["role"] for item in report["agents"])
-    ))
+    print("agents: {}".format(" -> ".join(item["role"] for item in report["agents"])))
     print("artifacts: {}".format(", ".join(report["artifact_kinds"])))
     print("sandbox evidence records: {}".format(len(report["evidence"])))
     print("persistent memory records: {}".format(report["memory_cycle"]["records"]))

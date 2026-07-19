@@ -9,3 +9,8 @@ output "budget_enabled" {
 output "notification_channel_ids" {
   value = local.notification_channel_ids
 }
+
+output "notification_channel_provenance_sha256" {
+  description = "Digest of the exact versioned channel create/adopt provenance records."
+  value       = local.notification_channel_provenance_sha256
+}

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, cast
 
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import Select, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.engine import CursorResult
@@ -47,6 +48,9 @@ from .storage import (
 )
 
 
+POSTGRES_IDEMPOTENCY_LOCK_TIMEOUT_MS = 5_000
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -59,6 +63,16 @@ def as_utc(value: datetime) -> datetime:
 
 def parse_runtime_timestamp(value: str) -> datetime:
     return as_utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
+
+
+def idempotency_lock_token(tenant_id: str, key: str) -> int:
+    """Return the stable signed bigint used by PostgreSQL advisory locks."""
+
+    tenant_bytes = tenant_id.encode("utf-8")
+    key_bytes = key.encode("utf-8")
+    material = len(tenant_bytes).to_bytes(4, "big") + tenant_bytes + key_bytes
+    digest = hashlib.sha256(material).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
 
 
 class SqlAlchemyRepository:
@@ -79,6 +93,34 @@ class SqlAlchemyRepository:
     def ping(self) -> None:
         self.session.execute(select(1)).scalar_one()
 
+    def acquire_idempotency_lock(self, tenant_id: str, key: str) -> None:
+        """Serialize one tenant-global command key for the current transaction."""
+
+        if self.session.in_transaction():
+            raise RuntimeError("idempotency lock must be acquired before database access")
+        dialect = self.session.get_bind().dialect.name
+        if dialect == "sqlite":
+            # SQLite has no keyed advisory lock. BEGIN IMMEDIATE is the cross-process
+            # primitive that prevents two command transactions from both observing a miss.
+            self.session.execute(text("BEGIN IMMEDIATE"))
+            return
+        if dialect == "postgresql":
+            # READ COMMITTED gives a waiter a new statement snapshot after the winner
+            # commits and releases its transaction-scoped advisory lock. Keep the lock
+            # wait transaction-local so a stalled holder cannot block a request forever
+            # or leak the timeout into a pooled connection's next transaction.
+            self.session.execute(text("SET TRANSACTION ISOLATION LEVEL READ COMMITTED"))
+            self.session.execute(
+                text("SELECT set_config('lock_timeout', :lock_timeout, true)"),
+                {"lock_timeout": "{}ms".format(POSTGRES_IDEMPOTENCY_LOCK_TIMEOUT_MS)},
+            )
+            self.session.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_token)"),
+                {"lock_token": idempotency_lock_token(tenant_id, key)},
+            )
+            return
+        raise RuntimeError("unsupported control-plane database dialect: {}".format(dialect))
+
     def ensure_identity(self, identity: IdentityContext, now: datetime) -> None:
         values = {
             "tenant_id": identity.tenant_id,
@@ -94,8 +136,10 @@ class SqlAlchemyRepository:
         tenant_insert: Any
         principal_insert: Any
         if dialect == "sqlite":
-            tenant_insert = sqlite_insert(TenantRow).values(**values).on_conflict_do_nothing(
-                index_elements=[TenantRow.tenant_id]
+            tenant_insert = (
+                sqlite_insert(TenantRow)
+                .values(**values)
+                .on_conflict_do_nothing(index_elements=[TenantRow.tenant_id])
             )
             principal_insert = (
                 sqlite_insert(PrincipalRow)
@@ -105,9 +149,11 @@ class SqlAlchemyRepository:
                 )
             )
         elif dialect == "postgresql":
-            tenant_insert = postgresql_insert(TenantRow).values(
-                **values
-            ).on_conflict_do_nothing(index_elements=[TenantRow.tenant_id])
+            tenant_insert = (
+                postgresql_insert(TenantRow)
+                .values(**values)
+                .on_conflict_do_nothing(index_elements=[TenantRow.tenant_id])
+            )
             principal_insert = (
                 postgresql_insert(PrincipalRow)
                 .values(**principal_values)
@@ -441,9 +487,7 @@ class SqlAlchemyRepository:
         )
         if for_update:
             statement = statement.with_for_update()
-        rows = list(
-            self.session.scalars(statement)
-        )
+        rows = list(self.session.scalars(statement))
         return [
             {
                 "artifact_id": item.artifact_id,
@@ -522,6 +566,7 @@ class SqlAlchemyRepository:
         self,
         identity: IdentityContext,
         run_id: str,
+        idempotency_key: str,
         decision: ApprovalDecision,
         reviewer: str,
         note: str,
@@ -534,6 +579,7 @@ class SqlAlchemyRepository:
             run_id=run_id,
             tenant_id=identity.tenant_id,
             principal_id=identity.principal_id,
+            idempotency_key=idempotency_key,
             decision=decision.value,
             reviewer=reviewer,
             note=note,
@@ -542,11 +588,12 @@ class SqlAlchemyRepository:
             decided_at=now,
         )
         self.session.add(row)
-        return ApprovalRecord(approval_id=row.approval_id)
+        return ApprovalRecord(
+            approval_id=row.approval_id,
+            idempotency_key=row.idempotency_key,
+        )
 
-    def finalize_publisher_rejection(
-        self, tenant_id: str, run_id: str, now: datetime
-    ) -> None:
+    def finalize_publisher_rejection(self, tenant_id: str, run_id: str, now: datetime) -> None:
         self.session.execute(
             update(RunStepRow)
             .where(
@@ -579,14 +626,17 @@ class SqlAlchemyRepository:
         evidence: Mapping[str, object],
         now: datetime,
     ) -> None:
-        next_ordinal = int(
-            self.session.scalar(
-                select(func.coalesce(func.max(ArtifactRow.ordinal), 0)).where(
-                    ArtifactRow.run_id == run_id
+        next_ordinal = (
+            int(
+                self.session.scalar(
+                    select(func.coalesce(func.max(ArtifactRow.ordinal), 0)).where(
+                        ArtifactRow.run_id == run_id
+                    )
                 )
+                or 0
             )
-            or 0
-        ) + 1
+            + 1
+        )
         self.session.add(
             ArtifactRow(
                 artifact_id=artifact.artifact_id,
@@ -653,14 +703,17 @@ class SqlAlchemyRepository:
         artifact_ids: Sequence[str] = (),
         evidence_ids: Sequence[str] = (),
     ) -> None:
-        sequence = int(
-            self.session.scalar(
-                select(func.coalesce(func.max(RunEventRow.sequence), 0)).where(
-                    RunEventRow.run_id == run_id
+        sequence = (
+            int(
+                self.session.scalar(
+                    select(func.coalesce(func.max(RunEventRow.sequence), 0)).where(
+                        RunEventRow.run_id == run_id
+                    )
                 )
+                or 0
             )
-            or 0
-        ) + 1
+            + 1
+        )
         self.session.add(
             RunEventRow(
                 event_id=stable_id("evt", run_id, sequence, action),
@@ -799,6 +852,7 @@ class SqlAlchemyRepository:
         return ApprovalResponse(
             schema_version=SCHEMA_VERSION,
             approval_id=row.approval_id,
+            idempotency_key=row.idempotency_key,
             decision=ApprovalDecision(row.decision),
             reviewer=row.reviewer,
             note=row.note,

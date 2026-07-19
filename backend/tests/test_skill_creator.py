@@ -54,13 +54,9 @@ class DynamicSkillCreatorTests(unittest.TestCase):
     def test_overwrite_is_opt_in_and_atomic(self):
         with tempfile.TemporaryDirectory() as directory:
             creator = DynamicSkillCreator(Path(directory) / "skills")
-            original = creator.create(
-                "safe-skill", "Safe Skill", "First version", ("First step",)
-            )
+            original = creator.create("safe-skill", "Safe Skill", "First version", ("First step",))
             with self.assertRaises(SkillAlreadyExistsError):
-                creator.create(
-                    "safe-skill", "Safe Skill", "Second version", ("Second step",)
-                )
+                creator.create("safe-skill", "Safe Skill", "Second version", ("Second step",))
             replaced = creator.create(
                 "safe-skill",
                 "Safe Skill",
@@ -70,9 +66,7 @@ class DynamicSkillCreatorTests(unittest.TestCase):
             )
             self.assertTrue(replaced.overwritten)
             self.assertNotEqual(original.sha256, replaced.sha256)
-            self.assertIn(
-                "Second version", replaced.path.read_text(encoding="utf-8")
-            )
+            self.assertIn("Second version", replaced.path.read_text(encoding="utf-8"))
 
     def test_symlink_escape_is_rejected_even_when_overwrite_is_requested(self):
         with tempfile.TemporaryDirectory() as directory:

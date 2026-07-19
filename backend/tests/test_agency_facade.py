@@ -19,9 +19,7 @@ class AgencyFacadeTests(unittest.TestCase):
         self.assertFalse(AGENCY.EXTERNAL_FRAMEWORK_REQUIRED)
         self.assertEqual(AGENCY.RUNTIME_MODE, "deterministic_sandbox")
         self.assertEqual(len(AGENCY.AGENT_SEQUENCE), 8)
-        orchestrator = AGENCY.build_orchestrator(
-            clock=lambda: "2026-07-17T12:00:00+00:00"
-        )
+        orchestrator = AGENCY.build_orchestrator(clock=lambda: "2026-07-17T12:00:00+00:00")
         try:
             self.assertEqual(len(orchestrator.tools.__dict__), 8)
         finally:

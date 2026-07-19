@@ -30,7 +30,10 @@ def upgrade() -> None:
         sa.Column("auth_mode", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenants.tenant_id"], name=op.f("fk_principals_tenant_id_tenants"), ondelete="CASCADE"
+            ["tenant_id"],
+            ["tenants.tenant_id"],
+            name=op.f("fk_principals_tenant_id_tenants"),
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("tenant_id", "principal_id", name=op.f("pk_principals")),
     )
@@ -74,10 +77,16 @@ def upgrade() -> None:
         sa.Column("version", sa.Integer(), nullable=False),
         sa.CheckConstraint("version >= 1", name=op.f("ck_runs_version_positive")),
         sa.ForeignKeyConstraint(
-            ["mission_id"], ["missions.mission_id"], name=op.f("fk_runs_mission_id_missions"), ondelete="CASCADE"
+            ["mission_id"],
+            ["missions.mission_id"],
+            name=op.f("fk_runs_mission_id_missions"),
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenants.tenant_id"], name=op.f("fk_runs_tenant_id_tenants"), ondelete="CASCADE"
+            ["tenant_id"],
+            ["tenants.tenant_id"],
+            name=op.f("fk_runs_tenant_id_tenants"),
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("run_id", name=op.f("pk_runs")),
     )
@@ -94,7 +103,9 @@ def upgrade() -> None:
         sa.Column("progress", sa.Integer(), nullable=False),
         sa.Column("detail", sa.Text(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("progress >= 0 AND progress <= 100", name=op.f("ck_run_steps_progress_range")),
+        sa.CheckConstraint(
+            "progress >= 0 AND progress <= 100", name=op.f("ck_run_steps_progress_range")
+        ),
         sa.ForeignKeyConstraint(
             ["run_id"], ["runs.run_id"], name=op.f("fk_run_steps_run_id_runs"), ondelete="CASCADE"
         ),
@@ -136,12 +147,17 @@ def upgrade() -> None:
         sa.Column("references", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["run_id"], ["runs.run_id"], name=op.f("fk_tool_evidence_run_id_runs"), ondelete="CASCADE"
+            ["run_id"],
+            ["runs.run_id"],
+            name=op.f("fk_tool_evidence_run_id_runs"),
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("run_id", "evidence_id", name=op.f("pk_tool_evidence")),
     )
     op.create_index(op.f("ix_tool_evidence_run_id"), "tool_evidence", ["run_id"], unique=False)
-    op.create_index(op.f("ix_tool_evidence_tenant_id"), "tool_evidence", ["tenant_id"], unique=False)
+    op.create_index(
+        op.f("ix_tool_evidence_tenant_id"), "tool_evidence", ["tenant_id"], unique=False
+    )
     op.create_table(
         "run_events",
         sa.Column("event_id", sa.String(length=64), nullable=False),
@@ -193,7 +209,10 @@ def upgrade() -> None:
         sa.Column("correlation_id", sa.String(length=128), nullable=False),
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["run_id"], ["runs.run_id"], name=op.f("fk_audit_events_run_id_runs"), ondelete="CASCADE"
+            ["run_id"],
+            ["runs.run_id"],
+            name=op.f("fk_audit_events_run_id_runs"),
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("audit_id", name=op.f("pk_audit_events")),
     )

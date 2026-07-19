@@ -47,9 +47,9 @@ def request_json(
             result = json.load(response)
     except HTTPError as error:
         failure = error.read(2048).decode("utf-8", errors="replace")
-        raise RuntimeError("HTTP smoke request failed with status {}: {}".format(
-            error.code, failure
-        )) from error
+        raise RuntimeError(
+            "HTTP smoke request failed with status {}: {}".format(error.code, failure)
+        ) from error
     if not isinstance(result, dict):
         raise RuntimeError("HTTP smoke response was not a JSON object")
     return result
@@ -63,12 +63,22 @@ def verify_run(run: Dict[str, object]) -> None:
     artifacts = run.get("artifacts")
     if not isinstance(artifacts, list):
         raise RuntimeError("smoke run omitted artifacts")
+    if len(artifacts) != 8:
+        raise RuntimeError("smoke run did not produce exactly eight artifacts")
+    evidence = run.get("evidence")
+    if not isinstance(evidence, list):
+        raise RuntimeError("smoke run omitted evidence")
+    if len(evidence) != 8:
+        raise RuntimeError("smoke run did not produce exactly eight evidence records")
     packages = [
         artifact
         for artifact in artifacts
         if isinstance(artifact, dict) and artifact.get("kind") == "campaign_package"
     ]
-    if len(packages) != 1 or packages[0].get("payload", {}).get("publication_performed") is not False:
+    if (
+        len(packages) != 1
+        or packages[0].get("payload", {}).get("publication_performed") is not False
+    ):
         raise RuntimeError("smoke run did not produce exactly one sandbox-only package")
 
 
@@ -103,7 +113,9 @@ def main() -> int:
             identity_token=identity_token,
         )
         verify_run(run)
-        print(json.dumps({"result": "PASS", "mode": "restore", "run_id": run["run_id"]}))
+        print(
+            json.dumps({"result": "PASS", "mode": "restore", "run_id": run["run_id"]})
+        )
         return 0
 
     command_scope = uuid.uuid4().hex

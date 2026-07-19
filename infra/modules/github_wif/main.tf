@@ -32,19 +32,27 @@ resource "google_iam_workload_identity_pool_provider" "phase" {
   workload_identity_pool_provider_id = var.phase_provider_ids[each.key]
   display_name                       = "GitHub ${each.key} provider"
 
-  attribute_mapping = {
-    "google.subject"             = "assertion.sub"
-    "attribute.repository"       = "assertion.repository"
-    "attribute.repository_owner" = "assertion.repository_owner"
-    "attribute.ref"              = "assertion.ref"
-    "attribute.ref_type"         = "assertion.ref_type"
-    "attribute.environment"      = "assertion.environment"
-    "attribute.workflow_ref"     = "assertion.workflow_ref"
-  }
+  attribute_mapping = merge(
+    {
+      "google.subject"             = "assertion.sub"
+      "attribute.repository"       = "assertion.repository"
+      "attribute.repository_owner" = "assertion.repository_owner"
+      "attribute.ref"              = "assertion.ref"
+      "attribute.ref_type"         = "assertion.ref_type"
+      "attribute.environment"      = "assertion.environment"
+      "attribute.workflow_ref"     = "assertion.workflow_ref"
+    },
+    {
+      "attribute.repository_id"       = "assertion.repository_id"
+      "attribute.repository_owner_id" = "assertion.repository_owner_id"
+    },
+  )
 
   attribute_condition = join(" && ", [
     "assertion.repository_owner == '${var.github_repository_owner}'",
+    "assertion.repository_owner_id == '${var.github_repository_owner_id}'",
     "assertion.repository == '${local.repository}'",
+    "assertion.repository_id == '${var.github_repository_id}'",
     "assertion.ref == '${var.github_allowed_ref}'",
     "assertion.ref_type == 'branch'",
     "assertion.environment == '${each.value}'",

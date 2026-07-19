@@ -210,12 +210,18 @@ class ApprovalRow(Base):
             ondelete="RESTRICT",
         ),
         UniqueConstraint("run_id", name="uq_approvals_run_id"),
+        UniqueConstraint(
+            "tenant_id",
+            "idempotency_key",
+            name="uq_approvals_tenant_idempotency_key",
+        ),
     )
 
     approval_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     run_id: Mapped[str] = mapped_column(String(64), nullable=False)
     tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     principal_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
     decision: Mapped[str] = mapped_column(String(20), nullable=False)
     reviewer: Mapped[str] = mapped_column(String(160), nullable=False)
     note: Mapped[str] = mapped_column(Text, nullable=False)

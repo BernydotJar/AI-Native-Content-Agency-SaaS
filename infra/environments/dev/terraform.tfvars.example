@@ -1,13 +1,41 @@
 # All identifiers are placeholders. Never use the unrelated active gcloud project.
-project_id     = "agency-dev-unique"
-create_project = false
-billing_account = "AAAAAA-BBBBBB-CCCCCC"
-region          = "us-central1"
+project_id                = "agency-dev-unique"
+bootstrap_project_id      = "agency-bootstrap-unique"
+project_provisioning_mode = "CREATE_NEW"
+billing_account           = "AAAAAA-BBBBBB-CCCCCC"
+region                    = "us-central1"
 
 image_pusher_service_account_email     = "github-image-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
 runtime_plan_service_account_email     = "github-plan-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
 runtime_deployer_service_account_email = "github-deploy-dev@agency-bootstrap-unique.iam.gserviceaccount.com"
+github_repository_owner_id              = "12345678"
+github_repository_id                    = "87654321"
 
-notification_channel_display_names = ["Agency dev operators"]
+notification_channels = [{
+  schema_version    = "gcp-notification-channel.v1"
+  key               = "operators"
+  provisioning_mode = "CREATE_NEW"
+  project_id        = "agency-dev-unique"
+  display_name      = "Agency dev operators"
+  email_address     = "replace-with-operator-email@example.com"
+  # Add these only after the Terraform-created channel is human-verified:
+  # evidence_sha256    = "replace-with-64-lowercase-hex-characters"
+  # decision_reference = "https://github.com/owner/repository/issues/issue-number"
+  acknowledgement = "I_ACKNOWLEDGE_TERRAFORM_WILL_CREATE_AND_MANAGE_THIS_EMAIL_CHANNEL"
+}]
 
 monthly_budget_usd = 50
+
+# For a reviewed existing project, select ADOPT_EXISTING and provide:
+# existing_project_adoption = {
+#   schema_version     = "gcp-project-adoption.v1"
+#   project_id         = "agency-dev-unique"
+#   evidence_sha256    = "replace-with-64-lowercase-hex-characters"
+#   decision_reference = "https://github.com/owner/repository/issues/issue-number"
+#   acknowledgement   = "I_ACKNOWLEDGE_TERRAFORM_WILL_MANAGE_THIS_EXISTING_PROJECT"
+# }
+
+# To import a reviewed existing email channel, set provisioning_mode to
+# ADOPT_EXISTING and also provide its exact projects/.../notificationChannels/...
+# name, verification evidence and this acknowledgement:
+# acknowledgement = "I_ACKNOWLEDGE_TERRAFORM_WILL_IMPORT_AND_MANAGE_THIS_VERIFIED_EMAIL_CHANNEL"

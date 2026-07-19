@@ -1,15 +1,44 @@
-data "google_monitoring_notification_channel" "delivery" {
-  for_each = toset(var.notification_channel_display_names)
-
-  project      = var.project_id
-  display_name = each.value
-  type         = "email"
+locals {
+  notification_channels_by_key = {
+    for channel in var.notification_channels : nonsensitive(channel.key) => channel
+  }
+  notification_channel_keys = toset(nonsensitive([
+    for channel in var.notification_channels : channel.key
+  ]))
+  notification_channel_ids = sort([
+    for channel in google_monitoring_notification_channel.delivery : channel.name
+  ])
+  notification_channel_provenance_sha256 = nonsensitive(sha256(jsonencode(sort([
+    for channel in var.notification_channels : jsonencode({
+      schema_version        = channel.schema_version
+      key                   = channel.key
+      provisioning_mode     = channel.provisioning_mode
+      project_id            = channel.project_id
+      display_name          = channel.display_name
+      email_address         = channel.email_address
+      existing_channel_name = channel.existing_channel_name
+      evidence_sha256       = channel.evidence_sha256
+      decision_reference    = channel.decision_reference
+      acknowledgement       = channel.acknowledgement
+    })
+  ]))))
 }
 
-locals {
-  notification_channel_ids = sort([
-    for channel in data.google_monitoring_notification_channel.delivery : channel.name
-  ])
+resource "google_monitoring_notification_channel" "delivery" {
+  for_each = local.notification_channel_keys
+
+  project      = var.project_id
+  display_name = local.notification_channels_by_key[each.key].display_name
+  type         = "email"
+  enabled      = true
+  force_delete = false
+  labels = {
+    email_address = local.notification_channels_by_key[each.key].email_address
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "terraform_data" "notification_delivery_gate" {
@@ -18,10 +47,20 @@ resource "terraform_data" "notification_delivery_gate" {
   lifecycle {
     precondition {
       condition = alltrue([
-        for channel in data.google_monitoring_notification_channel.delivery :
-        channel.enabled && channel.verification_status == "VERIFIED"
+        for key, channel in google_monitoring_notification_channel.delivery :
+        channel.enabled
+        && channel.verification_status == "VERIFIED"
+        && startswith(channel.name, "projects/${var.project_id}/notificationChannels/")
+        && channel.type == "email"
+        && channel.labels["email_address"] == local.notification_channels_by_key[key].email_address
+        && can(regex("^[0-9a-f]{64}$", local.notification_channels_by_key[key].evidence_sha256))
+        && can(regex("^https://[^[:space:]]+$", local.notification_channels_by_key[key].decision_reference))
+        && (
+          local.notification_channels_by_key[key].provisioning_mode == "CREATE_NEW"
+          || channel.name == local.notification_channels_by_key[key].existing_channel_name
+        )
       ])
-      error_message = "Every alert/budget channel must be an enabled and VERIFIED Monitoring email channel."
+      error_message = "Every Terraform-managed channel must resolve inside the dev project as an enabled and VERIFIED email channel with reviewed evidence before alerts or budget are created."
     }
   }
 }

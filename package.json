@@ -10,6 +10,8 @@
     "check:api-contract": "python3 scripts/generate_ts_contracts.py --check && node src/api/check-openapi.mjs",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:stack": "bash e2e/compose-stack.sh",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +22,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

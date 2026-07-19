@@ -21,11 +21,14 @@ from .contracts import (
     ApprovalCreate,
     ErrorResponse,
     HealthResponse,
+    IdentityResponse,
     MissionCreate,
     MissionResponse,
+    PrincipalIdentityResponse,
     RunResponse,
     RunStart,
     SCHEMA_VERSION,
+    TenantIdentityResponse,
 )
 from .database import build_engine, build_session_factory, create_schema
 from .errors import ControlPlaneError
@@ -198,7 +201,9 @@ def enforce_request_size(request: Request) -> None:
     try:
         content_length = int(value)
     except ValueError as error:
-        raise ControlPlaneError(400, "INVALID_CONTENT_LENGTH", "Content-Length is invalid") from error
+        raise ControlPlaneError(
+            400, "INVALID_CONTENT_LENGTH", "Content-Length is invalid"
+        ) from error
     if content_length < 0 or content_length > MAX_REQUEST_BYTES:
         raise ControlPlaneError(
             413,
@@ -288,11 +293,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         }
         identity_headers = {"x-tenant-id", "x-principal-id"}
         if invalid_headers & identity_headers:
-            field = (
-                "X-Tenant-ID"
-                if "x-tenant-id" in invalid_headers
-                else "X-Principal-ID"
-            )
+            field = "X-Tenant-ID" if "x-tenant-id" in invalid_headers else "X-Principal-ID"
             return JSONResponse(
                 status_code=401,
                 content=_error_payload(
@@ -326,9 +327,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def handle_http_error(
-        request: Request, error: StarletteHTTPException
-    ) -> JSONResponse:
+    async def handle_http_error(request: Request, error: StarletteHTTPException) -> JSONResponse:
         code, message = {
             404: ("RESOURCE_NOT_FOUND", "API route was not found"),
             405: ("METHOD_NOT_ALLOWED", "HTTP method is not allowed for this route"),
@@ -394,6 +393,29 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             payload,
             idempotency_key,
             _correlation_id(request),
+        )
+
+    @app.get(
+        "/api/v1/identity",
+        response_model=IdentityResponse,
+        responses=documented_errors(401, 422, 500),
+        tags=["identity"],
+    )
+    def get_identity_endpoint(
+        identity: IdentityContext = Depends(development_identity),
+    ) -> IdentityResponse:
+        return IdentityResponse(
+            schema_version=SCHEMA_VERSION,
+            tenant=TenantIdentityResponse(
+                schema_version=SCHEMA_VERSION,
+                tenant_id=identity.tenant_id,
+            ),
+            principal=PrincipalIdentityResponse(
+                schema_version=SCHEMA_VERSION,
+                tenant_id=identity.tenant_id,
+                principal_id=identity.principal_id,
+                auth_mode=identity.auth_mode,
+            ),
         )
 
     @app.post(

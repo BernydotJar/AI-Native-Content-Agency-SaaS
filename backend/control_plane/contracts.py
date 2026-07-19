@@ -190,6 +190,7 @@ class AuditEventResponse(StrictContract):
 class ApprovalResponse(StrictContract):
     schema_version: Literal["v1"]
     approval_id: str
+    idempotency_key: str
     decision: ApprovalDecision
     reviewer: str
     note: str
@@ -197,6 +198,24 @@ class ApprovalResponse(StrictContract):
     policy_version: Literal["greenlight.v1"]
     principal_id: str
     decided_at: datetime
+
+
+class TenantIdentityResponse(StrictContract):
+    schema_version: Literal["v1"]
+    tenant_id: str
+
+
+class PrincipalIdentityResponse(StrictContract):
+    schema_version: Literal["v1"]
+    tenant_id: str
+    principal_id: str
+    auth_mode: str
+
+
+class IdentityResponse(StrictContract):
+    schema_version: Literal["v1"]
+    tenant: TenantIdentityResponse
+    principal: PrincipalIdentityResponse
 
 
 class RunResponse(StrictContract):
