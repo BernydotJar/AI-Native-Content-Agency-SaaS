@@ -58,6 +58,27 @@ run "dev_is_private_passwordless_and_bounded" {
   assert {
     condition = (
       toset(google_project_iam_custom_role.runtime_deployer.permissions) == local.runtime_deployer_permissions
+      && local.runtime_deployer_permissions == toset([
+        "resourcemanager.projects.get",
+        "run.executions.get",
+        "run.jobs.create",
+        "run.jobs.delete",
+        "run.jobs.get",
+        "run.jobs.getIamPolicy",
+        "run.jobs.list",
+        "run.jobs.run",
+        "run.jobs.update",
+        "run.locations.get",
+        "run.locations.list",
+        "run.operations.get",
+        "run.services.create",
+        "run.services.delete",
+        "run.services.get",
+        "run.services.getIamPolicy",
+        "run.services.list",
+        "run.services.setIamPolicy",
+        "run.services.update",
+      ])
       && google_artifact_registry_repository_iam_member.runtime_deployer_reader.role == "roles/artifactregistry.reader"
       && !contains(keys(google_project_iam_member.runtime_deployer), "roles/run.admin")
     )

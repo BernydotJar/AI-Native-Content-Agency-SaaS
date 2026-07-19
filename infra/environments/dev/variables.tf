@@ -74,7 +74,7 @@ variable "runtime_plan_service_account_email" {
 }
 
 variable "runtime_deployer_service_account_email" {
-  description = "Apply-phase WIF identity; limited to Cloud Run administration and runtime-SA use."
+  description = "Apply-phase WIF identity; exact Cloud Run operations, repository image read, and runtime-SA use."
   type        = string
   nullable    = false
 

@@ -44,6 +44,30 @@ class GcpPermissionPreflightTest(unittest.TestCase):
         self.assertNotIn("run.admin", serialized)
         self.assertIn("run.operations.get", serialized)
         self.assertIn("artifactregistry.repositories.downloadArtifacts", serialized)
+        self.assertEqual(
+            set(apply[0].permissions),
+            {
+                "resourcemanager.projects.get",
+                "run.executions.get",
+                "run.jobs.create",
+                "run.jobs.delete",
+                "run.jobs.get",
+                "run.jobs.getIamPolicy",
+                "run.jobs.list",
+                "run.jobs.run",
+                "run.jobs.update",
+                "run.locations.get",
+                "run.locations.list",
+                "run.operations.get",
+                "run.services.create",
+                "run.services.delete",
+                "run.services.get",
+                "run.services.getIamPolicy",
+                "run.services.list",
+                "run.services.setIamPolicy",
+                "run.services.update",
+            },
+        )
 
     def test_evaluate_fails_closed_on_one_missing_permission(self) -> None:
         targets = permission_targets(

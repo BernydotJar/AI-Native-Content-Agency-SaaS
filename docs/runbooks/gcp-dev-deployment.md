@@ -35,10 +35,12 @@ If any item is absent, remain in static/mock validation mode.
 ## Dev foundation and narrow runtime
 
 1. Create ignored `infra/environments/dev/backend.hcl` and `terraform.tfvars` from their examples. Supply one to five exact Monitoring channel display names. Terraform must resolve each to exactly one enabled, `VERIFIED` email channel before it can plan the foundation under `environments/dev`. With a separately authorized human/bootstrap administrator, review project/services, runtime IAM, phase-specific IAM, repository, SQL tier/disk/backups/deletion protection, notification delivery, budget and zero public principals.
-2. Do not grant a GitHub identity `projectIamAdmin`, `serviceAccountAdmin`, `serviceUsageAdmin`, Artifact Registry admin, Cloud SQL admin or Monitoring admin. The foundation grants only:
+2. Do not grant a GitHub identity `projectIamAdmin`, `serviceAccountAdmin`, `serviceUsageAdmin`, `roles/run.admin`, Artifact Registry admin, Cloud SQL admin or Monitoring admin. The foundation grants only:
    - build: repository-level `roles/artifactregistry.writer`;
    - plan: project `roles/run.viewer`, reads only the foundation/runtime state content, and may create/delete only a disposable `.tflock` below `environments/dev-runtime`;
-   - apply: `roles/run.admin` plus read-only SQL/logging/monitoring/IAM review, foundation-state read, state mutation only below `environments/dev-runtime`, and `iam.serviceAccountUser` on the one runtime identity.
+   - apply: project custom role `projects/PROJECT_ID/roles/agencyRuntimeDeployer`, repository-level `roles/artifactregistry.reader`, read-only SQL/logging/monitoring/IAM review, foundation-state read, state mutation only below `environments/dev-runtime`, and `roles/iam.serviceAccountUser` on the one runtime identity.
+
+   The custom runtime role contains exactly `resourcemanager.projects.get`; `run.executions.get`; `run.locations.get/list`; `run.operations.get`; service `create/delete/get/getIamPolicy/list/setIamPolicy/update`; and job `create/delete/get/getIamPolicy/list/run/update`. It deliberately excludes `run.jobs.runWithOverrides`, job IAM mutation, project/foundation IAM mutation, and every predefined Cloud Run administration role.
 3. Apply the independently evaluated foundation plan only after its own `ALLOW_DEV_APPLY`. Verify the remote outputs before allowing routine deployment.
 4. Configure `infra/environments/dev_runtime/backend.hcl` with the same bucket and distinct `environments/dev-runtime` prefix. That root consumes foundation outputs and owns only Cloud Run, its migration job and the private invoker binding.
 5. Create protected GitHub environments `dev-build`, `dev-plan`, and `dev`. Bind each to its phase-specific WIF provider/account. Protect `dev` with required reviewers, prevent self-review, restrict it to `main`, and expose `DEV_APPLY_ATTESTATION_JSON` only there.
@@ -73,6 +75,7 @@ Require all of the following before calling dev usable:
 - unauthenticated invocation is denied;
 - the intended principal can invoke through IAM;
 - app and migration identities have only reviewed roles;
+- the deploy identity has exactly the custom runtime project role, reviewed viewer roles, and repository-scoped Artifact Registry Reader; `roles/run.admin` is absent;
 - Cloud SQL direct/password access is absent and IAM connector access works;
 - mission/start/get/decision/restart flow passes with external effects false;
 - logs/alerts/budget exist and contain no secrets;
