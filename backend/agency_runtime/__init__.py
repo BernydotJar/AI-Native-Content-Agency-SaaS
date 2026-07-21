@@ -1,10 +1,17 @@
 """Typed, deterministic sandbox runtime for the AI-native content agency."""
 
-from .auth import TenantAuthenticator, TenantPrincipal
+from .auth import (
+    AuthConfigurationError,
+    AuthenticationError,
+    AuthorizationError,
+    TenantAuthenticator,
+    TenantPrincipal,
+)
 from .memory import SQLiteMemory
 from .persistence import (
     AuditEvent,
     AuditWrite,
+    AuthenticationRateLimitError,
     SessionAuthenticationError,
     SessionCsrfError,
     SessionIssue,
@@ -57,6 +64,10 @@ __all__ = [
     "AGENT_SEQUENCE",
     "AuditEvent",
     "AuditWrite",
+    "AuthConfigurationError",
+    "AuthenticationError",
+    "AuthenticationRateLimitError",
+    "AuthorizationError",
     "TenantAuthenticator",
     "TenantPrincipal",
     "SQLiteRunStore",

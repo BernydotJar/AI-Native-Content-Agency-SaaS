@@ -69,6 +69,7 @@ class RuntimeMetrics:
         self._runs_started = 0
         self._greenlights: Counter[str] = Counter()
         self._sessions: Counter[str] = Counter()
+        self._authentication: Counter[str] = Counter()
 
     def record_http(
         self,
@@ -99,6 +100,12 @@ class RuntimeMetrics:
         with self._lock:
             self._sessions[action] += 1
 
+    def authentication_attempt(self, outcome: str) -> None:
+        if outcome not in {"succeeded", "failed", "rate_limited"}:
+            raise ValueError("unsupported authentication outcome")
+        with self._lock:
+            self._authentication[outcome] += 1
+
     def render(self) -> str:
         with self._lock:
             requests = dict(self._requests)
@@ -107,11 +114,12 @@ class RuntimeMetrics:
             runs_started = self._runs_started
             greenlights = dict(self._greenlights)
             sessions = dict(self._sessions)
+            authentication = dict(self._authentication)
 
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
             "# TYPE agency_runtime_info gauge",
-            'agency_runtime_info{mode="deterministic_sandbox",version="0.5.0"} 1',
+            'agency_runtime_info{mode="deterministic_sandbox",version="0.6.0"} 1',
             "# HELP agency_http_requests_total HTTP requests by method, route template, and status.",
             "# TYPE agency_http_requests_total counter",
         ]
@@ -177,6 +185,18 @@ class RuntimeMetrics:
             lines.append(
                 "agency_browser_sessions_total{} {}".format(
                     _labels({"action": action}), value
+                )
+            )
+        lines.extend(
+            [
+                "# HELP agency_authentication_attempts_total Authentication results without identity labels.",
+                "# TYPE agency_authentication_attempts_total counter",
+            ]
+        )
+        for outcome, value in sorted(authentication.items()):
+            lines.append(
+                "agency_authentication_attempts_total{} {}".format(
+                    _labels({"outcome": outcome}), value
                 )
             )
         return "\n".join(lines) + "\n"

@@ -16,6 +16,9 @@ describe("runtime API client", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({
         tenant_id: "tenant-alpha",
+        subject_id: "operator@example.com",
+        role: "operator",
+        key_id: "operator-v2",
         csrf_token: "csrf-token-123",
         expires_at: "2026-07-21T20:00:00+00:00",
       }, 201))
@@ -57,6 +60,9 @@ describe("runtime API client", () => {
   it("resumes an HttpOnly session without a browser-stored API key", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
       tenant_id: "tenant-alpha",
+      subject_id: "operator@example.com",
+      role: "operator",
+      key_id: "operator-v2",
       csrf_token: "rotated-csrf-token",
       expires_at: "2026-07-21T21:00:00+00:00",
     }));
@@ -64,6 +70,9 @@ describe("runtime API client", () => {
 
     await expect(api.resumeSession()).resolves.toEqual(expect.objectContaining({
       tenant_id: "tenant-alpha",
+      subject_id: "operator@example.com",
+      role: "operator",
+      key_id: "operator-v2",
       csrf_token: "rotated-csrf-token",
     }));
     expect(fetchMock).toHaveBeenCalledWith(

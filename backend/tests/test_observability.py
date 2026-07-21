@@ -140,7 +140,7 @@ class ObservabilityTests(unittest.TestCase):
             )
             self.assertEqual({item["tenant_id"] for item in events}, {"tenant-alpha"})
             self.assertTrue(
-                all(item["actor"].startswith("tenant-key:") for item in events)
+                all(item["actor"] == "api-key:tenant:tenant-alpha" for item in events)
             )
             self.assertNotIn(ALPHA_KEY, audit.text)
             self.assertNotIn("audit-duplicate-0001", audit.text)

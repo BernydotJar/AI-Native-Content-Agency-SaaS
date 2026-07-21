@@ -7,6 +7,9 @@ import type { RuntimeApi, RuntimeAuditEvent, RuntimeRun } from "../lib/runtimeAp
 
 const session = {
   tenant_id: "tenant-alpha",
+  subject_id: "operator@example.com",
+  role: "admin" as const,
+  key_id: "operator-v2",
   csrf_token: "csrf-session-value",
   expires_at: "2026-07-21T20:00:00+00:00",
 };
@@ -20,7 +23,7 @@ const auditEvents: RuntimeAuditEvent[] = [
     resource_type: "browser_session",
     resource_id: "session-1",
     occurred_at: "2026-07-21T12:00:00+00:00",
-    actor: "tenant-key:fingerprint",
+    actor: "api-key:operator@example.com",
     payload: {},
   },
 ];
@@ -118,7 +121,8 @@ describe("ProductionRuntimePanel", () => {
 
     expect(api.createSession).toHaveBeenCalledWith("one-time-browser-api-key-value");
     expect(screen.queryByLabelText(/Tenant API key/i)).not.toBeInTheDocument();
-    expect(screen.getByText("tenant-alpha")).toBeInTheDocument();
+    expect(screen.getByText("operator@example.com")).toBeInTheDocument();
+    expect(screen.getByText(/tenant-alpha · admin · operator-v2/i)).toBeInTheDocument();
     expect(storageSpy).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: /Run governed campaign/i }));

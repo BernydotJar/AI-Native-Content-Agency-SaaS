@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
@@ -13,7 +14,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from .auth import AuthenticationError, TenantAuthenticator, TenantPrincipal
+from .auth import (
+    AuthenticationError,
+    AuthorizationError,
+    TenantAuthenticator,
+    TenantPrincipal,
+)
 from .memory import SQLiteMemory
 from .models import ExecutionRun, MissionBrief, Platform
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
@@ -21,6 +27,7 @@ from .orchestrator import AgencyOrchestrator, GreenlightError
 from .persistence import (
     AuditEvent,
     AuditWrite,
+    AuthenticationRateLimitError,
     SQLiteRunStore,
     SessionAuthenticationError,
     SessionCsrfError,
@@ -97,6 +104,9 @@ class RuntimeService:
         with self._lock:
             return self.run_store.create_session(
                 tenant_id=principal.tenant_id,
+                subject_id=principal.subject_id,
+                role=principal.role,
+                key_id=principal.key_id,
                 credential_fingerprint=principal.credential_fingerprint,
                 ttl_seconds=ttl_seconds,
                 request_id=request_id,
@@ -106,6 +116,20 @@ class RuntimeService:
     def authenticate_browser_session(self, session_token: str) -> SessionRecord:
         with self._lock:
             return self.run_store.authenticate_session(session_token)
+
+    def enforce_authentication_rate_limit(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
+        with self._lock:
+            self.run_store.enforce_authentication_rate_limit(
+                bucket_limits, window_seconds
+            )
+
+    def record_authentication_failure(self, bucket_hashes: Tuple[str, ...]) -> None:
+        with self._lock:
+            self.run_store.record_authentication_failure(bucket_hashes)
 
     def verify_browser_csrf(self, session_id: str, csrf_token: str) -> None:
         with self._lock:
@@ -245,8 +269,8 @@ def _run_document(run: ExecutionRun, tenant_id: str) -> Dict[str, object]:
 
 
 def _actor(principal: TenantPrincipal) -> str:
-    prefix = "browser-session" if principal.auth_method == "session" else "tenant-key"
-    return "{}:{}".format(prefix, principal.credential_fingerprint)
+    prefix = "browser-session" if principal.auth_method == "session" else "api-key"
+    return "{}:{}".format(prefix, principal.subject_id)
 
 
 def _environment_bool(name: str, default: bool) -> bool:
@@ -265,8 +289,12 @@ def create_app(
     database_path: Optional[str] = None,
     static_dir: Optional[Path] = None,
     tenant_api_keys: Optional[Mapping[str, str]] = None,
+    identity_credentials: Optional[Sequence[Mapping[str, object]]] = None,
     session_cookie_secure: Optional[bool] = None,
     session_ttl_seconds: Optional[int] = None,
+    login_max_failures: Optional[int] = None,
+    login_source_max_failures: Optional[int] = None,
+    login_window_seconds: Optional[int] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     cookie_name = os.environ.get("AGENCY_SESSION_COOKIE_NAME", "agency_session")
@@ -282,14 +310,42 @@ def create_app(
     )
     if ttl_seconds < 300 or ttl_seconds > 86400:
         raise ValueError("session ttl must be between 300 and 86400 seconds")
+    max_failures = (
+        int(os.environ.get("AGENCY_LOGIN_MAX_FAILURES", "5"))
+        if login_max_failures is None
+        else login_max_failures
+    )
+    source_max_failures = (
+        int(os.environ.get("AGENCY_LOGIN_SOURCE_MAX_FAILURES", "50"))
+        if login_source_max_failures is None
+        else login_source_max_failures
+    )
+    rate_window_seconds = (
+        int(os.environ.get("AGENCY_LOGIN_WINDOW_SECONDS", "300"))
+        if login_window_seconds is None
+        else login_window_seconds
+    )
+    if max_failures < 1 or max_failures > 100:
+        raise ValueError("login max failures must be between 1 and 100")
+    if source_max_failures < max_failures or source_max_failures > 10000:
+        raise ValueError(
+            "login source max failures must be between login max failures and 10000"
+        )
+    if rate_window_seconds < 10 or rate_window_seconds > 86400:
+        raise ValueError("login window must be between 10 and 86400 seconds")
 
     service = RuntimeService(db_path)
     metrics = RuntimeMetrics()
-    authenticator = (
-        TenantAuthenticator(tenant_api_keys)
-        if tenant_api_keys is not None
-        else TenantAuthenticator.from_json(os.environ.get("AGENCY_TENANT_API_KEYS_JSON"))
-    )
+    if tenant_api_keys is not None or identity_credentials is not None:
+        authenticator = TenantAuthenticator(
+            tenant_api_keys=tenant_api_keys,
+            identity_credentials=identity_credentials,
+        )
+    else:
+        authenticator = TenantAuthenticator.from_environment(
+            os.environ.get("AGENCY_TENANT_API_KEYS_JSON"),
+            os.environ.get("AGENCY_IDENTITY_CREDENTIALS_JSON"),
+        )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -300,10 +356,11 @@ def create_app(
 
     app = FastAPI(
         title="AI Native Content Agency API",
-        version="0.5.0",
+        version="0.6.0",
         description=(
-            "Tenant-scoped deterministic sandbox with HttpOnly browser sessions "
-            "and durable audit evidence. No endpoint publishes content, spends "
+            "Tenant-scoped deterministic sandbox with individual RBAC, durable "
+            "rate limiting, HttpOnly browser sessions and audit evidence. No endpoint "
+            "publishes content, spends "
             "budget, renders media, or contacts external services."
         ),
         lifespan=lifespan,
@@ -342,6 +399,49 @@ def create_app(
             if response is not None:
                 response.headers["X-Request-ID"] = request_id
 
+    def _authentication_buckets(
+        request: Request, api_key: str
+    ) -> Tuple[Tuple[str, int], ...]:
+        source = request.client.host if request.client is not None else "unknown"
+        credential_value = "credential:{}".format(
+            TenantAuthenticator.fingerprint(api_key)
+        )
+        source_value = "source:{}".format(source)
+        return (
+            (
+                hashlib.sha256(credential_value.encode("utf-8")).hexdigest(),
+                max_failures,
+            ),
+            (
+                hashlib.sha256(source_value.encode("utf-8")).hexdigest(),
+                source_max_failures,
+            ),
+        )
+
+    def _rate_limited_authenticate(request: Request, api_key: str) -> TenantPrincipal:
+        buckets = _authentication_buckets(request, api_key)
+        try:
+            service.enforce_authentication_rate_limit(
+                buckets, rate_window_seconds
+            )
+        except AuthenticationRateLimitError as error:
+            metrics.authentication_attempt("rate_limited")
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="authentication temporarily rate limited",
+                headers={"Retry-After": str(error.retry_after_seconds)},
+            ) from error
+        try:
+            principal = authenticator.authenticate(api_key)
+        except AuthenticationError:
+            service.record_authentication_failure(
+                tuple(bucket_hash for bucket_hash, _ in buckets)
+            )
+            metrics.authentication_attempt("failed")
+            raise
+        metrics.authentication_attempt("succeeded")
+        return principal
+
     def require_principal(
         request: Request,
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
@@ -359,7 +459,9 @@ def create_app(
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             try:
-                principal = authenticator.authenticate(credentials.credentials)
+                principal = _rate_limited_authenticate(
+                    request, credentials.credentials
+                )
             except AuthenticationError as error:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -370,19 +472,22 @@ def create_app(
             session_token = request.cookies.get(cookie_name, "")
             try:
                 session = service.authenticate_browser_session(session_token)
-            except SessionAuthenticationError as error:
+                principal = authenticator.resolve_active_session(
+                    tenant_id=session.tenant_id,
+                    subject_id=session.subject_id,
+                    key_id=session.key_id,
+                    credential_fingerprint=session.credential_fingerprint,
+                    session_id=session.session_id,
+                )
+            except (SessionAuthenticationError, AuthenticationError) as error:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=str(error),
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from error
-            principal = TenantPrincipal(
-                tenant_id=session.tenant_id,
-                credential_fingerprint=session.credential_fingerprint,
-                auth_method="session",
-                session_id=session.session_id,
-            )
         request.state.tenant_id = principal.tenant_id
+        request.state.subject_id = principal.subject_id
+        request.state.role = principal.role
         request.state.auth_method = principal.auth_method
         request.state.session_id = principal.session_id
         return principal
@@ -402,6 +507,40 @@ def create_app(
                 ) from error
         return principal
 
+    def _authorize(principal: TenantPrincipal, permission: str) -> TenantPrincipal:
+        try:
+            principal.require(permission)
+        except AuthorizationError as error:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=str(error)
+            ) from error
+        return principal
+
+    def require_identity_reader(
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> TenantPrincipal:
+        return _authorize(principal, "identity:read")
+
+    def require_run_reader(
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> TenantPrincipal:
+        return _authorize(principal, "runs:read")
+
+    def require_audit_reader(
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> TenantPrincipal:
+        return _authorize(principal, "audit:read")
+
+    def require_run_creator(
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        return _authorize(principal, "runs:create")
+
+    def require_greenlight_approver(
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        return _authorize(principal, "greenlight:decide")
+
     @app.get("/healthz", tags=["operations"])
     def healthz() -> Dict[str, object]:
         return {
@@ -409,6 +548,7 @@ def create_app(
             "runtime_mode": "deterministic_sandbox",
             "external_side_effects_enabled": False,
             "auth_configured": authenticator.configured,
+            "individual_identity_configured": authenticator.individual_identity_configured,
         }
 
     @app.get("/readyz", tags=["operations"])
@@ -422,6 +562,12 @@ def create_app(
             "status": "ready",
             "auth_configured": True,
             "durable_run_store": db_path != ":memory:",
+            "individual_identity_configured": authenticator.individual_identity_configured,
+            "login_rate_limit": {
+                "credential_max_failures": max_failures,
+                "source_max_failures": source_max_failures,
+                "window_seconds": rate_window_seconds,
+            },
         }
 
     @app.get("/metrics", tags=["operations"], include_in_schema=False)
@@ -447,13 +593,15 @@ def create_app(
                 detail="tenant authentication is not configured",
             )
         try:
-            principal = authenticator.authenticate(session_request.api_key)
+            principal = _rate_limited_authenticate(request, session_request.api_key)
         except AuthenticationError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="invalid session credential",
             ) from error
         request.state.tenant_id = principal.tenant_id
+        request.state.subject_id = principal.subject_id
+        request.state.role = principal.role
         issue = service.create_browser_session(
             principal=principal,
             ttl_seconds=ttl_seconds,
@@ -471,6 +619,9 @@ def create_app(
         metrics.session_changed("created")
         return {
             "tenant_id": issue.tenant_id,
+            "subject_id": issue.subject_id,
+            "role": issue.role,
+            "key_id": issue.key_id,
             "csrf_token": issue.csrf_token,
             "expires_at": issue.expires_at,
         }
@@ -492,6 +643,9 @@ def create_app(
             ) from error
         return {
             "tenant_id": issue.tenant_id,
+            "subject_id": principal.subject_id,
+            "role": principal.role,
+            "key_id": principal.key_id,
             "csrf_token": issue.csrf_token,
             "expires_at": issue.expires_at,
         }
@@ -523,16 +677,20 @@ def create_app(
 
     @app.get("/api/v1/me", tags=["authentication"])
     def current_tenant(
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_identity_reader),
     ) -> Dict[str, object]:
         return {
             "tenant_id": principal.tenant_id,
+            "subject_id": principal.subject_id,
+            "role": principal.role,
+            "key_id": principal.key_id,
+            "permissions": list(principal.permissions),
             "auth_method": principal.auth_method,
         }
 
     @app.get("/api/v1/audit-events", tags=["audit"])
     def list_audit_events(
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_audit_reader),
         after_sequence: int = Query(default=0, ge=0),
         limit: int = Query(default=100, ge=1, le=200),
     ) -> Dict[str, object]:
@@ -550,7 +708,7 @@ def create_app(
     def create_run(
         request: Request,
         brief_request: BriefRequest,
-        principal: TenantPrincipal = Depends(require_mutation_principal),
+        principal: TenantPrincipal = Depends(require_run_creator),
     ) -> Dict[str, object]:
         try:
             run = service.start(
@@ -567,7 +725,7 @@ def create_app(
     @app.get("/api/v1/runs/{run_id}", tags=["runs"])
     def get_run(
         run_id: str,
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_run_reader),
     ) -> Dict[str, object]:
         try:
             return _run_document(
@@ -583,7 +741,7 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
-        principal: TenantPrincipal = Depends(require_mutation_principal),
+        principal: TenantPrincipal = Depends(require_greenlight_approver),
     ) -> Dict[str, object]:
         try:
             run = service.approve(
@@ -607,7 +765,7 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
-        principal: TenantPrincipal = Depends(require_mutation_principal),
+        principal: TenantPrincipal = Depends(require_greenlight_approver),
     ) -> Dict[str, object]:
         try:
             run = service.reject(
@@ -654,6 +812,7 @@ def run() -> None:
         host=os.environ.get("AGENCY_HOST", "0.0.0.0"),
         port=int(os.environ.get("PORT", "8080")),
         proxy_headers=True,
+        forwarded_allow_ips=os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1"),
     )
 
 

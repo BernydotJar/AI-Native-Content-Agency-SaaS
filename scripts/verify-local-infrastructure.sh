@@ -82,6 +82,11 @@ replica_count                    = 1
 persistence_enabled              = false
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
+runtime_auth_identity_credentials_key = "identity-credentials.json"
+login_max_failures               = 5
+login_source_max_failures        = 50
+login_window_seconds             = 300
+forwarded_allow_ips              = "127.0.0.1"
 session_cookie_secure            = false
 helm_wait                        = false
 helm_timeout_seconds             = 60
@@ -143,6 +148,7 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" create namespace "$NAMESPACE" >/dev/null
 kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   ai-native-content-agency-runtime \
   --from-literal='tenant-api-keys.json={"local-validation":"local-kubernetes-verification-key-2026"}' \
+  --from-literal='identity-credentials.json=[{"tenant_id":"local-validation","subject_id":"infra-validator","role":"admin","key_id":"infra-v1","api_key":"local-identity-verification-key-2026","active":true}]' \
   >/dev/null
 
 log "validating Terraform and planning Helm release"
@@ -189,19 +195,35 @@ helm template ai-native-content-agency "$BASE/infra/helm/ai-native-content-agenc
   --namespace "$NAMESPACE" --set persistence.enabled=false \
   | kubectl --kubeconfig "$KUBECONFIG_PATH" apply --dry-run=server -f - >/dev/null
 
-image=$(kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get deployment \
-  ai-native-content-agency-ai-native-content-agency \
-  -o jsonpath='{.spec.template.spec.containers[0].image}')
-secret_name=$(kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get deployment \
-  ai-native-content-agency-ai-native-content-agency \
-  -o jsonpath='{.spec.template.spec.containers[0].env[1].valueFrom.secretKeyRef.name}')
-readiness=$(kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get deployment \
-  ai-native-content-agency-ai-native-content-agency \
-  -o jsonpath='{.spec.template.spec.containers[0].readinessProbe.httpGet.path}')
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get deployment \
+  ai-native-content-agency-ai-native-content-agency -o json > "$BASE/deployment.json"
+python3 - "$BASE/deployment.json" "$IMAGE_REPOSITORY:$IMAGE_TAG" <<'PY'
+import json
+import sys
 
-[ "$image" = "$IMAGE_REPOSITORY:$IMAGE_TAG" ]
-[ "$secret_name" = "ai-native-content-agency-runtime" ]
-[ "$readiness" = "/readyz" ]
+with open(sys.argv[1], encoding="utf-8") as handle:
+    deployment = json.load(handle)
+container = deployment["spec"]["template"]["spec"]["containers"][0]
+environment = {item["name"]: item for item in container["env"]}
+assert container["image"] == sys.argv[2]
+assert container["readinessProbe"]["httpGet"]["path"] == "/readyz"
+legacy = environment["AGENCY_TENANT_API_KEYS_JSON"]["valueFrom"]["secretKeyRef"]
+identity = environment["AGENCY_IDENTITY_CREDENTIALS_JSON"]["valueFrom"]["secretKeyRef"]
+assert legacy == {
+    "name": "ai-native-content-agency-runtime",
+    "key": "tenant-api-keys.json",
+    "optional": True,
+}
+assert identity == {
+    "name": "ai-native-content-agency-runtime",
+    "key": "identity-credentials.json",
+}
+assert environment["AGENCY_LOGIN_MAX_FAILURES"]["value"] == "5"
+assert environment["AGENCY_LOGIN_SOURCE_MAX_FAILURES"]["value"] == "50"
+assert environment["AGENCY_LOGIN_WINDOW_SECONDS"]["value"] == "300"
+assert environment["FORWARDED_ALLOW_IPS"]["value"] == "127.0.0.1"
+print("identity_rbac_configuration=pass")
+PY
 
 log "destroying Terraform-managed release"
 TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" destroy \
@@ -219,5 +241,6 @@ printf 'k3s_version=%s\n' "$(k3s --version | head -n 1 | awk '{print $3}')"
 printf 'kubernetes_api=pass\n'
 printf 'helm_server_dry_run=pass\n'
 printf 'terraform_plan_apply_destroy=pass\n'
+printf 'identity_rbac_configuration=pass\n'
 printf 'workload_execution=not_validated_agentless_control_plane\n'
 printf 'cleanup=pass\n'

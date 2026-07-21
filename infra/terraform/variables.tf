@@ -47,7 +47,7 @@ variable "persistence_enabled" {
 }
 
 variable "runtime_auth_existing_secret" {
-  description = "Name of a pre-provisioned Kubernetes Secret containing tenant API key JSON. Secret values are never stored in Terraform state."
+  description = "Name of a pre-provisioned Kubernetes Secret containing required individual identity JSON and optional legacy tenant keys. Secret values are never stored in Terraform state."
   type        = string
   default     = "ai-native-content-agency-runtime"
 
@@ -58,13 +58,68 @@ variable "runtime_auth_existing_secret" {
 }
 
 variable "runtime_auth_tenant_api_keys_key" {
-  description = "Key within the existing Secret that contains the tenant-to-API-key JSON object."
+  description = "Optional Secret key containing the legacy tenant-to-API-key JSON object. Use an empty string to disable legacy credentials."
   type        = string
   default     = "tenant-api-keys.json"
 
   validation {
-    condition     = length(trimspace(var.runtime_auth_tenant_api_keys_key)) > 0
-    error_message = "runtime_auth_tenant_api_keys_key must not be empty."
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.runtime_auth_tenant_api_keys_key))
+    error_message = "runtime_auth_tenant_api_keys_key must be empty or a valid Secret data key."
+  }
+}
+
+variable "runtime_auth_identity_credentials_key" {
+  description = "Required key within the existing Secret containing individual identity credentials and RBAC roles."
+  type        = string
+  default     = "identity-credentials.json"
+
+  validation {
+    condition     = length(trimspace(var.runtime_auth_identity_credentials_key)) > 0
+    error_message = "runtime_auth_identity_credentials_key must not be empty."
+  }
+}
+
+variable "login_max_failures" {
+  description = "Maximum failed authentication attempts for one credential fingerprint within the configured window."
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.login_max_failures >= 1 && var.login_max_failures <= 100 && floor(var.login_max_failures) == var.login_max_failures
+    error_message = "login_max_failures must be an integer between 1 and 100."
+  }
+}
+
+variable "login_source_max_failures" {
+  description = "Higher failure threshold for a network source across distinct credential fingerprints."
+  type        = number
+  default     = 50
+
+  validation {
+    condition     = var.login_source_max_failures >= 1 && var.login_source_max_failures <= 10000 && floor(var.login_source_max_failures) == var.login_source_max_failures
+    error_message = "login_source_max_failures must be an integer between 1 and 10000."
+  }
+}
+
+variable "forwarded_allow_ips" {
+  description = "Comma-separated trusted proxy IPs/CIDRs used by Uvicorn when resolving the authentication source. Never use * unless the edge removes untrusted forwarding headers."
+  type        = string
+  default     = "127.0.0.1"
+
+  validation {
+    condition     = length(trimspace(var.forwarded_allow_ips)) > 0
+    error_message = "forwarded_allow_ips must not be empty."
+  }
+}
+
+variable "login_window_seconds" {
+  description = "Durable authentication failure window in seconds."
+  type        = number
+  default     = 300
+
+  validation {
+    condition     = var.login_window_seconds >= 10 && var.login_window_seconds <= 86400 && floor(var.login_window_seconds) == var.login_window_seconds
+    error_message = "login_window_seconds must be an integer between 10 and 86400."
   }
 }
 

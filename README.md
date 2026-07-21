@@ -12,7 +12,7 @@ Webapp cinematográfica y sandbox local para representar una agencia de contenid
 - Runtime TypeScript puro y determinista para mezclar señales mock de X, Facebook, TikTok e Instagram, aplicar skills y empaquetar artefactos de campaña sandbox.
 - Inspector accesible por agente, outputs, progreso y Greenlight manual.
 - Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
-- FastAPI con bearer auth para máquinas y sesiones HttpOnly + CSRF para navegador, `/readyz`, aislamiento cross-tenant y restauración de ejecuciones después de reiniciar el servicio.
+- FastAPI con identidad individual, RBAC (`viewer`, `operator`, `approver`, `admin`), bearer auth para máquinas, sesiones HttpOnly + CSRF para navegador, rate limiting durable y aislamiento cross-tenant.
 - Consola React de producción para ejecutar briefs, inspeccionar Scholar/artefactos, decidir Greenlight y consultar auditoría durable.
 - `DynamicSkillCreator` para crear borradores Markdown locales dentro de una raíz explícita, con validación de slug, protección contra traversal/symlinks y overwrite opt-in.
 - Biblioteca local con instrucciones por agente, base de conocimiento y skills editoriales/de plataforma.
@@ -31,8 +31,9 @@ agency.py + FastAPI
 └── backend/agency_runtime
     ├── orquestador secuencial de ocho agentes
     ├── Greenlight ligado a IDs y hashes de artefactos
-    ├── bearer auth con identidad tenant derivada del servidor
-    ├── SQLite durable: runs, approvals y memoria por tenant
+    ├── identidad individual + RBAC y rotación superpuesta de credenciales
+    ├── rate limiting durable por credencial y por origen confiable
+    ├── SQLite durable: runs, approvals, sesiones y memoria por tenant
     ├── adaptadores deterministas sandbox
     └── creador seguro de borradores de skill
 
@@ -147,8 +148,8 @@ Las siguientes capacidades son contratos mock o representaciones visuales, no co
 - APIs de X, LinkedIn, Facebook, TikTok, Instagram o cualquier publisher;
 - navegador/Puppeteer, GitHub y Context7 durante el runtime de producto;
 - generación, edición o lectura real de video e imagen;
-- transporte frontend→FastAPI y streaming SSE/WebSocket;
-- identidad de usuario final, RBAC y proveedor externo de autenticación;
+- streaming SSE/WebSocket;
+- proveedor administrado de identidad, SSO y MFA;
 - PostgreSQL, almacenamiento de objetos y sincronización cloud;
 - ingestión automática de `agents/`, `knowledge/` y `skills/` por el orquestador.
 
@@ -184,12 +185,20 @@ python3 -m venv /tmp/agency-runtime
 /tmp/agency-runtime/bin/python -m pip install --require-hashes   -r backend/requirements.lock
 /tmp/agency-runtime/bin/python -m pip install --no-deps /tmp/agency-wheels/*.whl
 export AGENCY_MEMORY_DB=/tmp/agency-runtime.sqlite3
-export AGENCY_TENANT_API_KEYS_JSON='{"local-tenant":"replace-with-a-strong-local-key"}'
+export AGENCY_IDENTITY_CREDENTIALS_JSON='[
+  {"tenant_id":"local-tenant","subject_id":"operator-1","role":"admin","key_id":"operator-1-v1","api_key":"replace-with-a-strong-local-key","active":true}
+]'
+export AGENCY_LOGIN_MAX_FAILURES=5
+export AGENCY_LOGIN_SOURCE_MAX_FAILURES=50
+export AGENCY_LOGIN_WINDOW_SECONDS=300
+export FORWARDED_ALLOW_IPS=127.0.0.1
 export AGENCY_SESSION_COOKIE_SECURE=false  # sólo para HTTP local
 /tmp/agency-runtime/bin/agency-api
 ```
 
 No uses una instalación editable como sustituto del gate reproducible. `./scripts/verify-python-locks.sh` automatiza el build, `pip check` y las pruebas en entornos efímeros.
+
+Para rotar una credencial, publica una nueva entrada activa con otro `key_id`, actualiza los clientes y luego marca la anterior `active=false`. El siguiente reinicio/redeploy rechaza tanto la bearer key anterior como las sesiones creadas con ella. Configura `FORWARDED_ALLOW_IPS` únicamente con proxies conocidos; nunca confíes en `*` si el edge no elimina headers reenviados del cliente.
 
 Endpoints iniciales:
 
@@ -206,11 +215,11 @@ Endpoints iniciales:
 - `POST /api/v1/runs/{run_id}/greenlight/approve`
 - `POST /api/v1/runs/{run_id}/greenlight/reject`
 
-Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant se deriva de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente.
+Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant, sujeto, rol y `key_id` se derivan de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente. `viewer` puede leer runs/auditoría, `operator` también crea runs, `approver` decide Greenlight y `admin` reúne ambos permisos. La configuración legacy `AGENCY_TENANT_API_KEYS_JSON` sigue disponible sólo para migración y puede desactivarse en Helm.
 
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
-El servicio persiste runs, trazas, evidencia, artefactos y Greenlights en SQLite por `(tenant_id, run_id)`, y también particiona la memoria por tenant. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, identidad individual y RBAC siguen siendo requisitos para escalamiento horizontal o un piloto público.
+El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones y contadores de abuso en SQLite por tenant. Las credenciales, cookies y CSRF nunca se persisten en claro. La rotación admite claves superpuestas por sujeto y revoca bearer/sesiones derivados cuando una clave deja de estar activa. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, un IdP administrado, SSO/MFA y almacenamiento de objetos siguen siendo requisitos para escalamiento horizontal o un piloto público.
 
 ## Consola de producción
 
@@ -257,7 +266,7 @@ HELM_BIN=/home/agent/.local/bin/helm \
 ./scripts/verify-production-package.sh
 ```
 
-La verificación lint/renderiza Helm, construye el wheel y la imagen multi-stage con locks hash-verified, inicia el artefacto como usuario no root y prueba health, readiness, SPA, sesión HttpOnly, CSRF, API, artefactos, Greenlight, auditoría, métricas y revocación. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
+La verificación lint/renderiza Helm, prueba guards negativos de identidad y rate limiting, construye el wheel y la imagen multi-stage con locks hash-verified, inicia el artefacto como usuario no root y prueba identidad individual, separación RBAC, health, readiness, SPA, sesión HttpOnly, CSRF, API, artefactos, Greenlight, auditoría, métricas y revocación. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
 
 ## Verificación de supply chain
 

@@ -1,6 +1,6 @@
 # ADR 0001: Tenant authentication and durable SQLite runtime state
 
-- Status: accepted
+- Status: accepted; amended by ADR 0006
 - Date: 2026-07-21
 
 ## Context

@@ -1,6 +1,18 @@
 {{- if and .Values.persistence.enabled (gt (int .Values.replicaCount) 1) }}
 {{- fail "persistence.enabled with SQLite requires replicaCount=1; use a shared database before scaling replicas" }}
 {{- end }}
+{{- if not .Values.runtime.auth.identityCredentialsKey }}
+{{- fail "runtime.auth.identityCredentialsKey is required for individual identity and RBAC" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginMaxFailures) 1) (gt (int .Values.runtime.auth.loginMaxFailures) 100) }}
+{{- fail "runtime.auth.loginMaxFailures must be between 1 and 100" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginSourceMaxFailures) (int .Values.runtime.auth.loginMaxFailures)) (gt (int .Values.runtime.auth.loginSourceMaxFailures) 10000) }}
+{{- fail "runtime.auth.loginSourceMaxFailures must be between loginMaxFailures and 10000" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginWindowSeconds) 10) (gt (int .Values.runtime.auth.loginWindowSeconds) 86400) }}
+{{- fail "runtime.auth.loginWindowSeconds must be between 10 and 86400" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,11 +54,27 @@ spec:
           env:
             - name: AGENCY_MEMORY_DB
               value: {{ .Values.runtime.databasePath | quote }}
+{{- if .Values.runtime.auth.tenantApiKeysKey }}
             - name: AGENCY_TENANT_API_KEYS_JSON
               valueFrom:
                 secretKeyRef:
                   name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
-                  key: {{ required "runtime.auth.tenantApiKeysKey is required" .Values.runtime.auth.tenantApiKeysKey | quote }}
+                  key: {{ .Values.runtime.auth.tenantApiKeysKey | quote }}
+                  optional: true
+{{- end }}
+            - name: AGENCY_IDENTITY_CREDENTIALS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
+                  key: {{ .Values.runtime.auth.identityCredentialsKey | quote }}
+            - name: AGENCY_LOGIN_MAX_FAILURES
+              value: {{ .Values.runtime.auth.loginMaxFailures | quote }}
+            - name: AGENCY_LOGIN_SOURCE_MAX_FAILURES
+              value: {{ .Values.runtime.auth.loginSourceMaxFailures | quote }}
+            - name: AGENCY_LOGIN_WINDOW_SECONDS
+              value: {{ .Values.runtime.auth.loginWindowSeconds | quote }}
+            - name: FORWARDED_ALLOW_IPS
+              value: {{ .Values.runtime.proxy.forwardedAllowIps | quote }}
             - name: AGENCY_SESSION_COOKIE_NAME
               value: {{ .Values.runtime.session.cookieName | quote }}
             - name: AGENCY_SESSION_COOKIE_SECURE

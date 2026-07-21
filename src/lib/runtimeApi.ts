@@ -2,6 +2,9 @@ export type RuntimePlatform = "x" | "facebook" | "tiktok" | "instagram";
 
 export interface BrowserRuntimeSession {
   tenant_id: string;
+  subject_id: string;
+  role: "viewer" | "operator" | "approver" | "admin";
+  key_id: string;
   csrf_token: string;
   expires_at: string;
 }

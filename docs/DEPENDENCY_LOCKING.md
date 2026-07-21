@@ -76,7 +76,7 @@ This prevents `pip install ./backend` from resolving a different graph during im
 
 The current verified core includes:
 
-- `agency-runtime==0.4.0`;
+- `agency-runtime==0.6.0`;
 - `fastapi==0.139.2`;
 - `starlette==1.3.1`;
 - `uvicorn==0.51.0`;

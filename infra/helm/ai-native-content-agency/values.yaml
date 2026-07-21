@@ -11,7 +11,16 @@ runtime:
   databasePath: "/var/lib/agency/runtime.sqlite3"
   auth:
     existingSecret: "ai-native-content-agency-runtime"
+    # Legacy tenant-level keys can overlap during migration. Set to "" to disable.
     tenantApiKeysKey: "tenant-api-keys.json"
+    # Individual identity JSON is required by the production chart.
+    identityCredentialsKey: "identity-credentials.json"
+    loginMaxFailures: 5
+    loginSourceMaxFailures: 50
+    loginWindowSeconds: 300
+  proxy:
+    # Trust only known proxy addresses/CIDRs so source-based limits cannot be spoofed.
+    forwardedAllowIps: "127.0.0.1"
   session:
     cookieName: "agency_session"
     cookieSecure: true

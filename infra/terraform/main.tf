@@ -56,7 +56,39 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.auth.identityCredentialsKey"
+    value = var.runtime_auth_identity_credentials_key
+  }
+
+  set {
+    name  = "runtime.auth.loginMaxFailures"
+    value = tostring(var.login_max_failures)
+  }
+
+  set {
+    name  = "runtime.auth.loginSourceMaxFailures"
+    value = tostring(var.login_source_max_failures)
+  }
+
+  set {
+    name  = "runtime.auth.loginWindowSeconds"
+    value = tostring(var.login_window_seconds)
+  }
+
+  set {
+    name  = "runtime.proxy.forwardedAllowIps"
+    value = var.forwarded_allow_ips
+  }
+
+  set {
     name  = "runtime.session.cookieSecure"
     value = tostring(var.session_cookie_secure)
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.login_source_max_failures >= var.login_max_failures
+      error_message = "login_source_max_failures must be greater than or equal to login_max_failures."
+    }
   }
 }

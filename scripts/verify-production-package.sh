@@ -7,7 +7,11 @@ IMAGE_TAG=${IMAGE_TAG:-ai-native-content-agency:production-readiness-local}
 HOST_PORT=${HOST_PORT:-18080}
 CONTAINER_BUILDER=${CONTAINER_BUILDER:-auto}
 AUTH_KEY=${AUTH_KEY:-local-production-verification-key-2026}
-AUTH_JSON=$(AUTH_KEY="$AUTH_KEY" python3 -c 'import json, os; print(json.dumps({"local-verification": os.environ["AUTH_KEY"]}))')
+VIEWER_KEY=${VIEWER_KEY:-local-viewer-verification-key-2026}
+IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import json, os; print(json.dumps([
+    {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True},
+    {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
+]))')
 HELM_BIN=${HELM_BIN:-helm}
 TMP_DIR=$(mktemp -d)
 RUNTIME_KIND=""
@@ -56,6 +60,29 @@ grep -q 'path: /healthz' "$TMP_DIR/rendered.yaml"
 grep -q 'path: /readyz' "$TMP_DIR/rendered.yaml"
 grep -q 'prometheus.io/scrape' "$TMP_DIR/rendered.yaml"
 grep -q 'containerPort: 8080' "$TMP_DIR/rendered.yaml"
+grep -q 'name: AGENCY_IDENTITY_CREDENTIALS_JSON' "$TMP_DIR/rendered.yaml"
+grep -q 'name: AGENCY_LOGIN_SOURCE_MAX_FAILURES' "$TMP_DIR/rendered.yaml"
+grep -q 'name: FORWARDED_ALLOW_IPS' "$TMP_DIR/rendered.yaml"
+
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.auth.tenantApiKeysKey='' > "$TMP_DIR/identity-only.yaml"
+if grep -q 'name: AGENCY_TENANT_API_KEYS_JSON' "$TMP_DIR/identity-only.yaml"; then
+  printf 'identity-only render unexpectedly retained legacy tenant credentials\n' >&2
+  exit 3
+fi
+grep -q 'name: AGENCY_IDENTITY_CREDENTIALS_JSON' "$TMP_DIR/identity-only.yaml"
+
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.auth.identityCredentialsKey='' >/dev/null 2>&1; then
+  printf 'Helm identity requirement guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.auth.loginMaxFailures=5 \
+  --set runtime.auth.loginSourceMaxFailures=4 >/dev/null 2>&1; then
+  printf 'Helm source rate-limit guard did not fail\n' >&2
+  exit 3
+fi
 
 build_with_docker() {
   require_command docker
@@ -64,7 +91,10 @@ build_with_docker() {
   RUNTIME_KIND=docker
   RUNTIME_ID=$(docker run -d --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
     -e "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
-    -e "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" \
+    -e "AGENCY_IDENTITY_CREDENTIALS_JSON=$IDENTITY_JSON" \
+    -e "AGENCY_LOGIN_MAX_FAILURES=3" \
+    -e "AGENCY_LOGIN_SOURCE_MAX_FAILURES=10" \
+    -e "AGENCY_LOGIN_WINDOW_SECONDS=60" \
     -e "AGENCY_SESSION_COOKIE_SECURE=false" \
     -e "AGENCY_SESSION_TTL_SECONDS=600" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
@@ -84,7 +114,10 @@ build_with_buildah() {
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs config --env "PORT=$HOST_PORT" \
     --env "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
-    --env "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" \
+    --env "AGENCY_IDENTITY_CREDENTIALS_JSON=$IDENTITY_JSON" \
+    --env "AGENCY_LOGIN_MAX_FAILURES=3" \
+    --env "AGENCY_LOGIN_SOURCE_MAX_FAILURES=10" \
+    --env "AGENCY_LOGIN_WINDOW_SECONDS=60" \
     --env "AGENCY_SESSION_COOKIE_SECURE=false" \
     --env "AGENCY_SESSION_TTL_SECONDS=600" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
@@ -146,6 +179,10 @@ fi
 
 curl -fsS "http://127.0.0.1:${HOST_PORT}/readyz" > "$TMP_DIR/ready.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/" > "$TMP_DIR/index.html"
+set +e
+viewer_create_status=$(curl -sS -o "$TMP_DIR/viewer-denied.json" -w '%{http_code}'   -H 'Content-Type: application/json'   -H "Authorization: Bearer $VIEWER_KEY"   -H 'X-Request-ID: package-viewer-denied-0001'   -d '{"title":"Viewer must not create","objective":"Verify least privilege","audience":"reviewers","platforms":["x"],"budget_cents":0,"campaign_goal":"verification"}'   "http://127.0.0.1:${HOST_PORT}/api/v1/runs")
+set -e
+[ "$viewer_create_status" = "403" ]
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
   -H 'Content-Type: application/json' \
   -H 'X-Request-ID: package-session-0001' \
@@ -185,7 +222,7 @@ set -e
 python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/session.json" \
   "$TMP_DIR/resumed-session.json" "$TMP_DIR/run.json" "$TMP_DIR/approved.json" "$TMP_DIR/audit.json" \
   "$TMP_DIR/metrics.txt" "$TMP_DIR/session.headers" "$TMP_DIR/run.headers" \
-  "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status" <<'PYCHECK'
+  "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status"   "$TMP_DIR/viewer-denied.json" "$viewer_create_status" <<'PYCHECK'
 import json
 import sys
 
@@ -214,18 +251,37 @@ with open(sys.argv[11], encoding="utf-8") as handle:
 with open(sys.argv[12], encoding="utf-8") as handle:
     revoked = json.load(handle)
 post_revoke_status = sys.argv[13]
+with open(sys.argv[14], encoding="utf-8") as handle:
+    viewer_denied = json.load(handle)
+viewer_create_status = sys.argv[15]
 
 assert health == {
     "status": "ok",
     "runtime_mode": "deterministic_sandbox",
     "external_side_effects_enabled": False,
     "auth_configured": True,
+    "individual_identity_configured": True,
 }
 assert ready["status"] == "ready"
 assert ready["auth_configured"] is True
+assert ready["individual_identity_configured"] is True
+assert "credential_count" not in ready
+assert ready["login_rate_limit"] == {
+    "credential_max_failures": 3,
+    "source_max_failures": 10,
+    "window_seconds": 60,
+}
+assert viewer_create_status == "403"
+assert "runs:create" in viewer_denied["detail"]
 assert session["tenant_id"] == "local-verification"
+assert session["subject_id"] == "package-admin"
+assert session["role"] == "admin"
+assert session["key_id"] == "package-admin-v1"
 assert session["csrf_token"]
 assert resumed_session["tenant_id"] == "local-verification"
+assert resumed_session["subject_id"] == "package-admin"
+assert resumed_session["role"] == "admin"
+assert resumed_session["key_id"] == "package-admin-v1"
 assert resumed_session["csrf_token"]
 assert resumed_session["csrf_token"] != session["csrf_token"]
 assert "httponly" in session_headers
@@ -255,9 +311,15 @@ assert [item["request_id"] for item in audit["events"]] == [
     "package-create-0001",
     "package-approve-0001",
 ]
+assert [item["actor"] for item in audit["events"]] == [
+    "api-key:package-admin",
+    "browser-session:package-admin",
+    "browser-session:package-admin",
+]
 assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
 assert 'agency_browser_sessions_total{action="created"} 1' in metrics
+assert 'agency_authentication_attempts_total{outcome="succeeded"} 2' in metrics
 assert "x-request-id: package-session-0001" in session_headers
 assert "x-request-id: package-create-0001" in run_headers
 assert "x-request-id: package-approve-0001" in approval_headers
@@ -266,6 +328,7 @@ assert post_revoke_status == "401"
 print("health=pass")
 print("readiness=pass")
 print("spa=pass")
+print("individual_identity_rbac=pass")
 print("http_only_session=pass")
 print("csrf_rotation=pass")
 print("csrf_protection=pass")
@@ -279,7 +342,7 @@ print("session_revocation=pass")
 print("external_side_effects_enabled=false")
 PYCHECK
 
-if [ -f "$TMP_DIR/runtime.log" ] && grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null; then
+if [ -f "$TMP_DIR/runtime.log" ] && { grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null || grep -F "$VIEWER_KEY" "$TMP_DIR/runtime.log" >/dev/null; }; then
   printf 'runtime logs leaked the bearer credential\n' >&2
   exit 5
 fi

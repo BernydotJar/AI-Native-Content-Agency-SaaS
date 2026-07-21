@@ -236,7 +236,10 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
             <div className="space-y-5">
               <div className="rounded-xl border border-emerald-300/15 bg-emerald-300/[0.05] p-4">
                 <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-emerald-300">Authenticated tenant</p>
-                <p className="mt-2 break-all text-sm font-bold text-zinc-100">{session.tenant_id}</p>
+                <p className="mt-2 break-all text-sm font-bold text-zinc-100">{session.subject_id}</p>
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  {session.tenant_id} · {session.role} · {session.key_id}
+                </p>
                 <p className="mt-1 text-[11px] text-zinc-500">
                   Session expires {new Date(session.expires_at).toLocaleString()}.
                 </p>

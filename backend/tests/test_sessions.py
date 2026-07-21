@@ -60,10 +60,12 @@ class BrowserSessionTests(unittest.TestCase):
 
             me = client.get("/api/v1/me")
             self.assertEqual(me.status_code, 200)
-            self.assertEqual(
-                me.json(),
-                {"tenant_id": "browser-tenant", "auth_method": "session"},
-            )
+            self.assertEqual(me.json()["tenant_id"], "browser-tenant")
+            self.assertEqual(me.json()["subject_id"], "tenant:browser-tenant")
+            self.assertEqual(me.json()["role"], "admin")
+            self.assertEqual(me.json()["key_id"], "legacy:browser-tenant")
+            self.assertEqual(me.json()["auth_method"], "session")
+            self.assertIn("greenlight:decide", me.json()["permissions"])
             resumed = client.get("/api/v1/sessions/current")
             self.assertEqual(resumed.status_code, 200)
             rotated_csrf = resumed.json()["csrf_token"]

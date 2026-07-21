@@ -52,6 +52,8 @@ class ApiVerticalSliceTests(unittest.TestCase):
             ready = client.get("/readyz")
             self.assertEqual(ready.status_code, 200)
             self.assertTrue(ready.json()["durable_run_store"])
+            self.assertFalse(ready.json()["individual_identity_configured"])
+            self.assertNotIn("credential_count", ready.json())
 
             self.assertEqual(client.get("/api/v1/me").status_code, 401)
             self.assertEqual(

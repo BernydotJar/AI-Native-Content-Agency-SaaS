@@ -1,6 +1,6 @@
 # ADR 0003: Browser session boundary with HttpOnly cookies and CSRF rotation
 
-- Status: accepted
+- Status: accepted; amended by ADR 0006
 - Date: 2026-07-21
 
 ## Context

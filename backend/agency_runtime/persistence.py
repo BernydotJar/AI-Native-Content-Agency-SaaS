@@ -58,6 +58,9 @@ class SessionIssue:
     session_token: str
     csrf_token: str
     tenant_id: str
+    subject_id: str
+    role: str
+    key_id: str
     credential_fingerprint: str
     expires_at: str
 
@@ -66,6 +69,9 @@ class SessionIssue:
 class SessionRecord:
     session_id: str
     tenant_id: str
+    subject_id: str
+    role: str
+    key_id: str
     credential_fingerprint: str
     created_at: str
     expires_at: str
@@ -78,6 +84,12 @@ class SessionAuthenticationError(PermissionError):
 
 class SessionCsrfError(PermissionError):
     pass
+
+
+class AuthenticationRateLimitError(PermissionError):
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__("authentication rate limit exceeded")
+        self.retry_after_seconds = max(1, retry_after_seconds)
 
 
 class SQLiteRunStore:
@@ -139,6 +151,9 @@ class SQLiteRunStore:
                     session_token_hash TEXT NOT NULL UNIQUE,
                     csrf_token_hash TEXT NOT NULL,
                     credential_fingerprint TEXT NOT NULL,
+                    subject_id TEXT NOT NULL DEFAULT '',
+                    role TEXT NOT NULL DEFAULT 'admin',
+                    key_id TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL,
                     expires_at TEXT NOT NULL,
                     revoked_at TEXT
@@ -148,8 +163,51 @@ class SQLiteRunStore:
                     ON runtime_sessions(tenant_id, expires_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_runtime_sessions_active
                     ON runtime_sessions(session_token_hash, revoked_at, expires_at);
+
+                CREATE TABLE IF NOT EXISTS authentication_failures (
+                    bucket_hash TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_authentication_failures_bucket_time
+                    ON authentication_failures(bucket_hash, occurred_at ASC);
                 """
             )
+            self._ensure_session_identity_columns_locked()
+
+    def _ensure_session_identity_columns_locked(self) -> None:
+        columns = {
+            str(row["name"])
+            for row in self._connection.execute(
+                "PRAGMA table_info(runtime_sessions)"
+            ).fetchall()
+        }
+        additions = {
+            "subject_id": "TEXT NOT NULL DEFAULT ''",
+            "role": "TEXT NOT NULL DEFAULT 'admin'",
+            "key_id": "TEXT NOT NULL DEFAULT ''",
+        }
+        for name, declaration in additions.items():
+            if name not in columns:
+                self._connection.execute(
+                    "ALTER TABLE runtime_sessions ADD COLUMN {} {}".format(
+                        name, declaration
+                    )
+                )
+        self._connection.execute(
+            """
+            UPDATE runtime_sessions
+            SET subject_id = 'tenant:' || tenant_id
+            WHERE subject_id = ''
+            """
+        )
+        self._connection.execute(
+            """
+            UPDATE runtime_sessions
+            SET key_id = 'legacy:' || tenant_id
+            WHERE key_id = ''
+            """
+        )
 
     def _append_audit_locked(self, tenant_id: str, audit: AuditWrite) -> None:
         self._connection.execute(
@@ -310,7 +368,12 @@ class SQLiteRunStore:
         ttl_seconds: int,
         request_id: str,
         actor: str,
+        subject_id: str = "",
+        role: str = "admin",
+        key_id: str = "",
     ) -> SessionIssue:
+        subject_id = subject_id or "tenant:{}".format(tenant_id)
+        key_id = key_id or "legacy:{}".format(tenant_id)
         if ttl_seconds < 300 or ttl_seconds > 86400:
             raise ValueError("session ttl must be between 300 and 86400 seconds")
         created_at = self._clock()
@@ -325,8 +388,9 @@ class SQLiteRunStore:
                 """
                 INSERT INTO runtime_sessions(
                     session_id, tenant_id, session_token_hash, csrf_token_hash,
-                    credential_fingerprint, created_at, expires_at, revoked_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+                    credential_fingerprint, subject_id, role, key_id,
+                    created_at, expires_at, revoked_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
                 """,
                 (
                     session_id,
@@ -334,6 +398,9 @@ class SQLiteRunStore:
                     self._token_hash(session_token),
                     self._token_hash(csrf_token),
                     credential_fingerprint,
+                    subject_id,
+                    role,
+                    key_id,
                     created_at,
                     expires_at,
                 ),
@@ -348,6 +415,9 @@ class SQLiteRunStore:
                     actor=actor,
                     payload={
                         "auth_method": "http_only_cookie",
+                        "subject_id": subject_id,
+                        "role": role,
+                        "key_id": key_id,
                         "expires_at": expires_at,
                     },
                 ),
@@ -357,6 +427,9 @@ class SQLiteRunStore:
             session_token=session_token,
             csrf_token=csrf_token,
             tenant_id=tenant_id,
+            subject_id=subject_id,
+            role=role,
+            key_id=key_id,
             credential_fingerprint=credential_fingerprint,
             expires_at=expires_at,
         )
@@ -411,6 +484,9 @@ class SQLiteRunStore:
             session_token="",
             csrf_token=csrf_token,
             tenant_id=str(row["tenant_id"]),
+            subject_id=str(row["subject_id"]),
+            role=str(row["role"]),
+            key_id=str(row["key_id"]),
             credential_fingerprint=str(row["credential_fingerprint"]),
             expires_at=str(row["expires_at"]),
         )
@@ -469,6 +545,56 @@ class SQLiteRunStore:
                 ),
             )
 
+    def enforce_authentication_rate_limit(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
+        if not bucket_limits:
+            raise ValueError("at least one authentication bucket is required")
+        if any(max_failures < 1 for _, max_failures in bucket_limits):
+            raise ValueError("max_failures must be positive")
+        if window_seconds < 1:
+            raise ValueError("window_seconds must be positive")
+        now = datetime.fromisoformat(self._clock())
+        cutoff = (now - timedelta(seconds=window_seconds)).isoformat()
+        with self._lock, self._connection:
+            self._connection.execute(
+                "DELETE FROM authentication_failures WHERE occurred_at < ?",
+                (cutoff,),
+            )
+            for bucket_hash, max_failures in bucket_limits:
+                rows = self._connection.execute(
+                    """
+                    SELECT occurred_at
+                    FROM authentication_failures
+                    WHERE bucket_hash = ? AND occurred_at >= ?
+                    ORDER BY occurred_at ASC
+                    """,
+                    (bucket_hash, cutoff),
+                ).fetchall()
+                if len(rows) >= max_failures:
+                    earliest = datetime.fromisoformat(str(rows[0]["occurred_at"]))
+                    retry_at = earliest + timedelta(seconds=window_seconds)
+                    retry_after = int((retry_at - now).total_seconds()) + 1
+                    raise AuthenticationRateLimitError(retry_after)
+
+    def record_authentication_failure(self, bucket_hashes: Tuple[str, ...]) -> None:
+        occurred_at = self._clock()
+        with self._lock, self._connection:
+            self._connection.executemany(
+                "INSERT INTO authentication_failures(bucket_hash, occurred_at) VALUES (?, ?)",
+                tuple((bucket_hash, occurred_at) for bucket_hash in bucket_hashes),
+            )
+
+    def authentication_failure_count(self, bucket_hash: str) -> int:
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT COUNT(*) AS total FROM authentication_failures WHERE bucket_hash = ?",
+                (bucket_hash,),
+            ).fetchone()
+        return int(row["total"])
+
     def session_count(self, tenant_id: str, include_revoked: bool = False) -> int:
         sql = "SELECT COUNT(*) AS total FROM runtime_sessions WHERE tenant_id = ?"
         parameters: Tuple[object, ...] = (tenant_id,)
@@ -492,6 +618,9 @@ class SQLiteRunStore:
         return SessionRecord(
             session_id=str(row["session_id"]),
             tenant_id=str(row["tenant_id"]),
+            subject_id=str(row["subject_id"]),
+            role=str(row["role"]),
+            key_id=str(row["key_id"]),
             credential_fingerprint=str(row["credential_fingerprint"]),
             created_at=str(row["created_at"]),
             expires_at=str(row["expires_at"]),
