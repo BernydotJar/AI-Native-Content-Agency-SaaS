@@ -28,3 +28,6 @@ Known documentation repairs in `INC-001`:
 | `docs/privacy/data-classification-retention.md` | data inventory and retention decision register | no policy or destructive execution is authorized |
 | `program/reports/inc-003-review.md` | bounded security/privacy review | historical bounded review at `a9f063f`; its PostgreSQL residual was subsequently closed by INC-012 at `1002d07` |
 | `program/reports/inc-012-progress.md` | PostgreSQL authority implementation checkpoint | completion evidence at `1002d07` with eight-job exact-head CI run `29868899218`; persistent staging remains external |
+| `docs/adr/0008-durable-command-idempotency-and-greenlight-fencing.md` | inbound command replay and effect fencing decision | exact local implementation/evidence; future external providers still require outbound receipts |
+| `specs/004-durable-idempotency/` | INC-004 operational specification | implementation and local gates pass; push and CI pending |
+| `program/reports/inc-004-progress.md` | INC-004 bounded review | exact local evidence at `f3fb67d`; not remote evidence yet |

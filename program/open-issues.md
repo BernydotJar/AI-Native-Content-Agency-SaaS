@@ -22,9 +22,9 @@ Executable work remains and is assigned to `INC-002`. Persistent production rest
 
 ## OI-004 — Idempotency and Greenlight revocation
 
-Category: code / data correctness
+Category: delivery / data correctness
 
-Mutable API requests lack durable idempotency keys; approved Greenlight cannot be revoked before a future effect. Implement before any effectful adapter.
+Exact local commit `f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546` passes durable replay, incompatible-conflict, cross-replica provider-once, authenticated-subject and Greenlight revocation/fencing gates. Push and exact-head CI remain executable work. External provider activation still requires a separate outbound outbox/idempotency/receipt contract.
 
 ## OI-005 — Accessibility manual gate
 

@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T21:13:03Z
+Updated: 2026-07-21T21:43:50Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,12 +9,12 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Branch: `agent/production-readiness`
-- Exact remotely verified PR head: `1002d077564618623fe00f27ffae23c2b410aca8`
-- GitHub Actions run: `29868899218`, eight of eight jobs successful
-- Draft PR: `#3`, base `main`, head `agent/production-readiness`
-- PR mergeability: mergeable; review is required by repository policy
-- Merge: explicitly authorized by the user, but not yet performed
+- Active branch: `agent/inc-004-idempotency`
+- Stacked base: `agent/production-readiness@c52684b66da42e11af11ecdf3a48ea1d9ae7b818`
+- Exact locally verified INC-004 implementation: `f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546`
+- Active branch remote: absent; push pending after the checkpoint commit containing this document
+- PR `#3`: ready, eight of eight jobs green at `c52684b`, normal merge blocked by `REVIEW_REQUIRED`
+- Merge: authorized by the user, attempted normally, not performed; no admin bypass or auto-merge was used
 - Deployment, persistent infrastructure, package publication and spend: not authorized and not performed
 
 ## Completed checkpoint
@@ -22,41 +22,65 @@ Cloud recommendation: `DENY_APPLY`
 ### INC-012 — PostgreSQL migration/runtime authority separation
 
 Status: `done`
-Owner: Security Reviewer / Data Engineer
+
+Exact published head `c52684b` and GitHub Actions run `29869283309` preserve the non-owner PostgreSQL runtime boundary. `F-009` is closed. Persistent environment observation remains separate under `F-004`, `SEC-013` and `BLK-GCP-001`.
+
+## Active increment
+
+### INC-004 — Durable command idempotency and Greenlight fencing
+
+Status: `review`
+Owner: Backend Engineer / Security Critic
 External effects: none
 
-The exact published head proves:
+Exact local commit `f3fb67d` implements:
 
-- application runtime accepts only schema `validate`; only the explicit operator CLI has `initialize` authority;
-- initialization DDL, metadata and validation share one transaction and incompatible initialization rolls back partial DDL;
-- schema validation checks relation types, required columns, sequence and exact schema version;
-- application connections fix `search_path=pg_catalog,public` and reject caller control;
-- migration and runtime use distinct non-superuser roles;
-- runtime owns no database, schema, table, sequence or view and lacks database `TEMPORARY`, schema `CREATE` and role escalation;
-- runtime receives only exact table and sequence grants;
-- permanent/temporary CREATE, ALTER, DROP, TRUNCATE, metadata mutation, GRANT escalation and SET ROLE are denied or ineffective;
-- migration, replay protection and both restore paths use migration authority and remain runtime-readable;
-- Helm and Terraform force validate-only application pods and do not mount migration credentials.
+- required bounded `Idempotency-Key` for run create and Greenlight approve/reject/revoke;
+- tenant- and operation-scoped deterministic command receipt IDs derived from a SHA-256 key digest;
+- canonical request fingerprints binding operation, resource, authenticated subject and payload;
+- exact committed-response replay without persisting or returning the raw key;
+- uniform `409 idempotency_conflict` for incompatible key reuse;
+- transactional mutation plus receipt in SQLite and PostgreSQL;
+- PostgreSQL advisory locking on a dedicated connection, outside the application pool transaction;
+- compatible and incompatible cross-replica race handling with provider/package execution once;
+- authenticated subject binding for decision/revocation identity, ignoring client attribution text;
+- Greenlight revocation, fencing-token increment, Publisher blocking and stale-effect rejection;
+- exact future-effect guard over Greenlight ID, token, artifact IDs/hashes, channel and budget;
+- browser retry-key retention after ambiguous failures and invalidation after brief changes;
+- accessible Greenlight revocation state/control;
+- OpenAPI header and revoke endpoint contracts;
+- ADR, operator documentation, threat-model and spec updates.
 
-## Verification
+## Exact local verification at `f3fb67d`
 
 ```text
-Local PostgreSQL gate                    PASS — 85/85
-Locked Python wheel                      PASS — 85 tests, 8 expected PostgreSQL skips
-Program state                            PASS — 0.7.0, 79 requirements, 12 tasks
-Frontend lint/tests/build                PASS — 0 findings, 33/33, build
-Production package                       PASS — Buildah non-root live smoke
-Helm/Terraform/K3s                       PASS — both storage modes
-Workflow lint and secret scans           PASS
-Supply chain                             PASS — SBOM, Grype/license policy, provenance, Cosign offline
-GitHub Actions run 29868899218           PASS — 8/8 at 1002d07
+Focused idempotency/fencing                 PASS — 9/9
+Locked Python wheel                         PASS — 97 tests, 11 PostgreSQL-only skips
+PostgreSQL multi-replica/recovery            PASS — 97/97
+Frontend lint/tests/build                    PASS — 0 findings, 35/35, build
+Production package                          PASS — Buildah non-root live smoke
+Helm/Terraform/K3s                          PASS — both storage modes
+Workflow lint                               PASS
+Gitleaks worktree                           PASS — no leaks
+Supply chain                                PASS — clean source, SBOM, policy, provenance, Cosign offline
+TypeScript/Python/shell static validation    PASS
+Whitespace                                  PASS
 ```
 
-`F-009` is CLOSED. Persistent staging/cloud observation remains separate under `F-004`, `SEC-013` and `BLK-GCP-001`; therefore `SEC-013` remains `weak_evidence` for production despite complete code and delivery evidence.
+Evidence limitations:
+
+- the active branch is not yet pushed and has no exact-head CI;
+- session issuance is deliberately not idempotent because replay would require recoverable session/CSRF secrets;
+- a crash before the transactional receipt may repeat deterministic local sandbox work; no external effect exists today;
+- any future external provider requires a durable outbox, provider idempotency token, receipt and revocation contract;
+- receipt snapshots increase audit-ledger growth and retention load;
+- no persistent database, cloud resource, traffic or external provider was changed.
+
+`F-002` remains HIGH/IN_PROGRESS until the published exact head passes CI. `ENG-005` and `SEC-012` are `weak_evidence` pending remote verification.
 
 ## Open global HIGH release findings
 
-1. **F-002 — Durable command idempotency and Greenlight revocation/fencing.** Owner: `INC-004`.
+1. **F-002 — Durable command idempotency and Greenlight revocation/fencing.** Local remediation verified; push and exact CI pending.
 2. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; externally gated.
 3. **F-007 — Manual accessibility evidence.** Owner: `INC-008`.
 4. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Owner: `INC-005`.
@@ -65,28 +89,22 @@ GitHub Actions run 29868899218           PASS — 8/8 at 1002d07
 
 Open CRITICAL findings: zero.
 
-## Non-blocking maintenance observation
-
-GitHub Actions emitted Node.js 20 deprecation annotations for several pinned third-party actions that GitHub currently forces onto Node.js 24. The run passed; action upgrades require a separately reviewed supply-chain maintenance slice.
-
-## Material gaps
-
-- PostgreSQL RLS is not implemented; tenant isolation remains application-enforced with tenant-leading/composite keys and negative tests.
-- Audit is transactional but not hash-chained, signed or immutably exported.
-- General authenticated quotas, SLOs, alert exercises, tracing decision, incident response, capacity and failover evidence remain incomplete.
-- Managed identity, SSO/MFA, recovery and lifecycle provisioning are absent.
-- TLS/HSTS/CSP and proxy/platform/database telemetry are not observed in staging.
-- Complete operator states, political themes, premium entitlement and manual accessibility evidence remain incomplete.
-- `browser-use/video-use`, real model/media providers, publishing, ads and spend remain disabled.
-
 ## Exact blockers
+
+### BLK-PR-REVIEW-001
+
+- Category: human decision / repository policy
+- Evidence: PR `#3` is mergeable and 8/8 green, but GitHub reports `REVIEW_REQUIRED`; no eligible review exists.
+- Attempted resolution: normal merge after explicit user authorization; GitHub rejected it.
+- Independent work remaining: yes; INC-004 is executing on a stacked branch.
+- Resume condition: an eligible independent reviewer approves PR `#3`, then the authorized normal merge may proceed.
 
 ### BLK-GCP-001
 
 - Category: credential / permission / infrastructure / human decision
-- Evidence: no authorized cloud target, billing, reviewed saved plan/apply or runtime endpoint.
+- Evidence: no authorized target, billing, reviewed saved plan/apply or runtime endpoint.
 - Independent work remaining: yes.
-- Resume condition: explicit authorized target, billing, granular preflight, reviewed saved plan, independent approval and explicit spend/apply authorization.
+- Resume condition: explicit authorized target, billing, preflight, reviewed saved plan, independent approval and spend/apply authorization.
 
 ### BLK-PRIVACY-001
 
@@ -95,20 +113,13 @@ GitHub Actions emitted Node.js 20 deprecation annotations for several pinned thi
 - Independent work remaining: yes.
 - Resume condition: identified jurisdiction/entity/customer, approved source/version/effective date and accountable privacy/legal, security and business reviewers.
 
-### BLK-PR-REVIEW-001
-
-- Category: human decision / repository policy
-- Evidence: PR `#3` is mergeable with all checks green, but GitHub reports `REVIEW_REQUIRED`.
-- Independent work remaining: yes.
-- Resume condition: an eligible independent reviewer approves PR `#3`, after which the already authorized normal merge may proceed.
-
 ## Ready work
 
-1. Publish this closure checkpoint and require exact-head CI for the documentation-only change.
-2. Mark PR `#3` ready for review and attempt the authorized normal merge without bypassing repository policy.
-3. Begin `INC-004` durable idempotency and Greenlight revocation/fencing on a new feature branch when branch ownership permits.
-4. Continue `INC-005`, `INC-010` and `INC-008` independently of external blockers.
+1. Commit this INC-004 checkpoint, push `agent/inc-004-idempotency`, verify remote SHA and create a stacked draft PR against `agent/production-readiness`.
+2. Require all eight exact-head CI jobs and repair failures.
+3. Close `F-002`, `ENG-005`, `SEC-012` and INC-004 only after exact-head CI passes.
+4. Continue `INC-005`, `INC-010` and `INC-008` independently of review/cloud/privacy blockers.
 
 ## Exact continuation condition
 
-Push the closure checkpoint, verify remote equality, require exact-head CI, mark PR `#3` ready and attempt a normal merge. Do not use an admin bypass for the required independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY` after merge because six HIGH findings and external gates remain.
+Resume from the checkpoint commit directly above `f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546`. Push normally, verify the remote ref, create the stacked draft PR with base `agent/production-readiness`, inspect all exact-head checks and repair every failure. Do not retarget or merge the stacked PR until PR `#3` is merged. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.

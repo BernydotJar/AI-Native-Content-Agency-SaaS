@@ -118,9 +118,37 @@
       "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
       "result": "PASS",
       "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC004-IDEMPOTENCY-UNIT",
+      "observed": "agency-runtime 0.7.0; 97 tests; 11 PostgreSQL-only skips; digest-only receipts, restart replay, conflicts, revocation/fencing and authorization negatives PASS",
+      "result": "PASS",
+      "scope": "SQLite/API durable command behavior"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC004-POSTGRESQL-CONCURRENCY",
+      "observed": "PostgreSQL 15.18; 97/97; compatible create/approve races replay exactly, incompatible same-key race yields one success/one sanitized 409, provider package and audit commit once; migration/replay/restores PASS",
+      "result": "PASS",
+      "scope": "PostgreSQL multi-replica idempotency and recovery"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build",
+      "id": "INC004-FRONTEND",
+      "observed": "zero lint findings; 35/35 tests; retry preserves key, brief edits invalidate key, Greenlight revoke control and production build PASS",
+      "result": "PASS",
+      "scope": "browser idempotency and revocation contract"
+    },
+    {
+      "command": "verify-production-package, verify-local-infrastructure, actionlint, Gitleaks, verify-supply-chain",
+      "id": "INC004-PACKAGE-INFRA-SUPPLY",
+      "observed": "Buildah runtime smoke PASS; Terraform/Helm/K3s both storage modes PASS; no secrets; clean-source SBOM, Grype/license, provenance and offline Cosign PASS",
+      "result": "PASS",
+      "scope": "package, infrastructure and supply-chain regression"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "1002d077564618623fe00f27ffae23c2b410aca8",
-  "updated_at": "2026-07-21T21:13:03Z"
+  "source_commit": "f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546",
+  "updated_at": "2026-07-21T21:43:50Z"
 }

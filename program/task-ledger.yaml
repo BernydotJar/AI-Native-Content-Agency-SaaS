@@ -163,7 +163,10 @@
       "acceptance_criteria": [
         "identical replay returns original response",
         "different payload returns uniform 409",
-        "provider work executes once"
+        "provider work executes once under concurrent replicas",
+        "raw idempotency key is absent from persistence and responses",
+        "authenticated subject is decision and revocation authority",
+        "revocation increments fencing token and stale effects fail"
       ],
       "allowed_paths": [
         "backend/**",
@@ -178,28 +181,43 @@
         "SQLite/PostgreSQL stores",
         "Greenlight invariants"
       ],
-      "context": "Current deterministic IDs reject duplicate delivery instead of replaying the committed response.",
+      "context": "Deterministic IDs previously rejected duplicate delivery. Exact local implementation now provides durable audit-ledger receipts, compatible replay, concurrent provider-once behavior and Greenlight revocation/fencing; push and exact-head CI remain pending.",
       "dependencies": [
         "INC-001",
         "INC-003"
       ],
       "expected_outputs": [
-        "idempotency ledger",
-        "race tests",
-        "API contract"
+        "durable digest-only command receipts",
+        "compatible exact replay and sanitized conflicts",
+        "SQLite restart and PostgreSQL cross-replica race tests",
+        "Greenlight revocation and effect fencing",
+        "browser retry-key lifecycle",
+        "API/operations/security documentation"
       ],
       "human_gates": [],
+      "implementation_commit": "f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546",
       "objective": "Add durable idempotency keys, compatible replay, conflict behavior, and structured errors for mutable APIs.",
       "prohibited_paths": [
         "external side effects"
       ],
+      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
       "read_only_paths": [],
       "role": "Backend Engineer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-004",
-      "validation_commands": [],
+      "validation_commands": [
+        "python -m unittest backend.tests.test_idempotency -v",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "gitleaks dir .",
+        "git diff --check"
+      ],
       "workstream_id": "WS-04",
-      "write_lock": "unclaimed"
+      "write_lock": "single writer: orchestrator"
     },
     {
       "acceptance_criteria": [
@@ -688,7 +706,7 @@
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "pending",
+      "status": "review",
       "validation": [],
       "write_locks": []
     },

@@ -9,12 +9,12 @@
       "status": "CLOSED"
     },
     {
-      "description": "Mutable commands lack durable idempotency-key replay.",
-      "evidence": "POST /runs returns duplicate 409; Greenlight accepts no idempotency key.",
+      "description": "Mutable commands required durable compatible replay, uniform incompatible conflicts and Greenlight revocation/fencing.",
+      "evidence": "Exact local commit f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546 implements tenant/operation-scoped digest receipts in the transactional audit ledger, exact response replay, uniform idempotency conflicts, authenticated decision identity, Greenlight revocation and fencing. Local gates pass: 97 PostgreSQL tests including cross-replica races, 97 locked-wheel tests with PostgreSQL-only skips, 35 frontend tests, package, K3s/Terraform, secret and supply-chain verification. Push and exact-head CI remain pending.",
       "id": "F-002",
       "owner": "INC-004",
       "severity": "HIGH",
-      "status": "OPEN"
+      "status": "IN_PROGRESS"
     },
     {
       "description": "Selected architecture lacks threat and privacy models.",
