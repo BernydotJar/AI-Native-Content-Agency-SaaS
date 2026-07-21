@@ -37,3 +37,5 @@ crash.log
 .venv/
 # Generated supply-chain evidence
 artifacts/supply-chain/generated/
+# Generated browser accessibility evidence
+artifacts/accessibility/generated/

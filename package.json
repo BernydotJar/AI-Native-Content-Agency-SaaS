@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "verify:accessibility-browser": "node scripts/verify-accessibility-browser.mjs",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview",

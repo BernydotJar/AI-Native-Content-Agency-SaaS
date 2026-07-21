@@ -1,9 +1,14 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { runtimeApi } from "./lib/runtimeApi";
 
 afterEach(() => {
   vi.useRealTimers();
+  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-theme-tier");
+  document.documentElement.removeAttribute("style");
+  vi.restoreAllMocks();
 });
 
 describe("campaign approval gate", () => {
@@ -84,5 +89,80 @@ describe("campaign approval gate", () => {
     fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
 
     expect(screen.getByText(/Memoria recuperada: Priorizar el hook/i)).toBeInTheDocument();
+  });
+});
+
+describe("accessible theme application", () => {
+  it("unlocks premium only from the server-issued session entitlement", async () => {
+    vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue({
+      tenant_id: "tenant-premium",
+      subject_id: "premium@example.com",
+      role: "viewer",
+      key_id: "premium-v1",
+      entitlements: ["theme:premium"],
+      csrf_token: "csrf-premium",
+      expires_at: "2026-07-22T00:00:00+00:00",
+    });
+    vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
+    vi.spyOn(runtimeApi, "currentIdentity").mockResolvedValue({
+      tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
+      key_id: "premium-v1", permissions: ["identity:read", "runs:read", "audit:read"],
+      entitlements: ["theme:premium"], auth_method: "session",
+    });
+    render(<App />);
+
+    await screen.findByText("premium@example.com");
+    const premium = screen.getByRole("button", { name: /Tema premium/i });
+    expect(premium).toHaveAttribute("aria-disabled", "false");
+    fireEvent.click(premium);
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "premium");
+    expect(document.documentElement).toHaveAttribute("data-theme-tier", "premium");
+  });
+
+  it("falls back to the free default when the server revokes premium", async () => {
+    vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue({
+      tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
+      key_id: "premium-v1", entitlements: ["theme:premium"], csrf_token: "csrf-premium",
+      expires_at: "2026-07-22T00:00:00+00:00",
+    });
+    vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
+    vi.spyOn(runtimeApi, "currentIdentity")
+      .mockResolvedValueOnce({
+        tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
+        key_id: "premium-v1", permissions: [], entitlements: ["theme:premium"], auth_method: "session",
+      })
+      .mockResolvedValueOnce({
+        tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
+        key_id: "premium-v1", permissions: [], entitlements: [], auth_method: "session",
+      });
+    render(<App />);
+
+    await screen.findByText("premium@example.com");
+    fireEvent.click(screen.getByRole("button", { name: /Tema premium/i }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "premium");
+    fireEvent.click(screen.getByRole("button", { name: /Refresh durable audit/i }));
+    await waitFor(() => expect(document.documentElement).toHaveAttribute("data-theme", "blue"));
+  });
+
+  it("keeps premium fail-closed without a server entitlement and stores nothing", () => {
+    const storageSpy = vi.spyOn(Storage.prototype, "setItem");
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Tema premium/i }));
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "blue");
+    expect(screen.getByText(/requiere un entitlement de pago/i)).toBeInTheDocument();
+    expect(storageSpy).not.toHaveBeenCalled();
+  });
+
+  it("applies a named free theme to semantic document tokens", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Tema naranja/i }));
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "orange");
+    expect(document.documentElement).toHaveAttribute("data-theme-tier", "free");
+    expect(document.documentElement.style.getPropertyValue("--primary-color")).toBe("#fdba74");
   });
 });

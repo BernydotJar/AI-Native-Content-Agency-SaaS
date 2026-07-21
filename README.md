@@ -213,7 +213,7 @@ Endpoints iniciales:
 - `POST /api/v1/runs/{run_id}/greenlight/reject`
 - `POST /api/v1/runs/{run_id}/greenlight/revoke`
 
-Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant, sujeto, rol y `key_id` se derivan de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente. `viewer` puede leer runs/auditoría, `operator` también crea runs, `approver` decide o revoca Greenlight y `admin` reúne ambos permisos. La configuración legacy `AGENCY_TENANT_API_KEYS_JSON` sigue disponible sólo para migración y puede desactivarse en Helm.
+Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant, sujeto, rol, `key_id` y cualquier entitlement allowlisted se derivan de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente. `viewer` puede leer runs/auditoría, `operator` también crea runs, `approver` decide o revoca Greenlight y `admin` reúne ambos permisos. La configuración legacy `AGENCY_TENANT_API_KEYS_JSON` sigue disponible sólo para migración y puede desactivarse en Helm.
 
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. Las mutaciones de runs y Greenlight requieren `Idempotency-Key`: un retry compatible devuelve el documento original, mientras que una reutilización incompatible falla con un 409 uniforme sin guardar la key cruda. El Greenlight conserva IDs/hashes exactos, canales, presupuesto y un fencing token; puede revocarse sin borrar evidencia, invalidando tokens anteriores. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
@@ -224,6 +224,8 @@ El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones 
 `ProductionRuntimePanel` usa `src/lib/runtimeApi.ts` contra el mismo origen. La API key no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; se limpia del formulario después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
 
 La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artefactos, aprobar/rechazar/revocar y consultar el ledger. Conserva una clave idempotente en memoria durante retries ambiguos y la invalida cuando cambia el comando. Sigue siendo sandbox respecto de research, media, ads y publicación externa. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
+
+La interfaz incluye temas accesibles azul, rojo, verde y naranja. El tema premium sólo se activa cuando la identidad activa entrega el entitlement exacto `theme:premium`; el selector falla cerrado, se revoca al refrescar la identidad y no usa `localStorage`. Esto no implementa checkout, facturación ni DRM: CSS y frontend siguen siendo inspeccionables, y el billing externo permanece fuera de alcance. Consulta [Accessible campaign themes](docs/design-system/accessibility-themes.md).
 
 ## Observabilidad y auditoría
 

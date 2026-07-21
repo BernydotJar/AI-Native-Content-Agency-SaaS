@@ -11,8 +11,6 @@
   font-weight: 400;
 
   color-scheme: dark;
-  background-color: #070708;
-  color: #f4f4f5;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -26,15 +24,20 @@
   --primary-color: hsl(var(--primary-hue), var(--primary-saturation), var(--primary-lightness));
   --primary-color-raw: rgba(96, 165, 250, 0.4);
   --primary-color-glow: rgba(96, 165, 250, 0.15);
+  --theme-accent-foreground: #09090b;
 
-  /* Obsidian theme colors */
-  --bg-obsidian: #070708;
-  --bg-panel: rgba(15, 15, 18, 0.6);
-  --bg-panel-solid: #0d0d10;
+  /* Semantic theme colors; App replaces these from the reviewed catalog. */
+  --bg-obsidian: #070b12;
+  --bg-panel: #0a101b;
+  --bg-panel-solid: #0b1220;
   --text-muted: #a1a1aa;
   --text-light: #f4f4f5;
-  --border-cyber: rgba(255, 255, 255, 0.06);
-  --border-cyber-focus: rgba(255, 255, 255, 0.15);
+  --theme-border: #334155;
+  --border-cyber: #334155;
+  --border-cyber-focus: #60a5fa;
+
+  background-color: var(--bg-obsidian);
+  color: var(--text-light);
 }
 
 body {
@@ -44,6 +47,10 @@ body {
   color: var(--text-light);
   overflow-x: hidden;
   font-family: 'Manrope Variable', sans-serif;
+}
+
+.app-header {
+  background: color-mix(in srgb, var(--bg-obsidian) 78%, transparent);
 }
 
 button,
@@ -73,7 +80,7 @@ textarea:focus-visible,
   top: 0.75rem;
   left: 0.75rem;
   padding: 0.65rem 0.9rem;
-  color: #070708;
+  color: var(--theme-accent-foreground);
   border-radius: 0.65rem;
   background: var(--primary-color);
   font-size: 0.78rem;
@@ -92,8 +99,8 @@ textarea:focus-visible,
   background:
     radial-gradient(circle at 78% 8%, color-mix(in srgb, var(--primary-color) 8%, transparent), transparent 27%),
     radial-gradient(circle at 14% 42%, rgba(124, 58, 237, 0.055), transparent 24%),
-    linear-gradient(90deg, rgba(7, 7, 8, 0.66), transparent 18%, transparent 82%, rgba(7, 7, 8, 0.66)),
-    linear-gradient(180deg, transparent 58%, #070708 100%);
+    linear-gradient(90deg, color-mix(in srgb, var(--bg-obsidian) 66%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--bg-obsidian) 66%, transparent)),
+    linear-gradient(180deg, transparent 58%, var(--bg-obsidian) 100%);
 }
 
 .scene-noise {

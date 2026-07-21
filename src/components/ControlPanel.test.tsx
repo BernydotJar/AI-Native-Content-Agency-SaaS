@@ -1,7 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ControlPanel } from "./ControlPanel";
+
+const originalMatchMedia = window.matchMedia;
+const originalStartViewTransition = document.startViewTransition;
+
+afterEach(() => {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: originalMatchMedia,
+  });
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    writable: true,
+    value: originalStartViewTransition,
+  });
+  vi.restoreAllMocks();
+});
 
 describe("ControlPanel", () => {
   it("launches the selected video mission with the uploaded filename", async () => {
@@ -12,7 +29,9 @@ describe("ControlPanel", () => {
       <ControlPanel
         onRunSimulation={onRunSimulation}
         isRunning={false}
-        onAccentChange={onAccentChange}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={onAccentChange}
       />,
     );
 
@@ -29,22 +48,99 @@ describe("ControlPanel", () => {
     });
   });
 
-  it("updates the accent with an accessible pressed state", async () => {
+  it("activates a named free theme with keyboard and accessible pressed state", async () => {
     const user = userEvent.setup();
-    const onAccentChange = vi.fn();
+    const onThemeChange = vi.fn();
+    const { rerender } = render(
+      <ControlPanel
+        onRunSimulation={vi.fn()}
+        isRunning={false}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={onThemeChange}
+      />,
+    );
+
+    const red = screen.getByRole("button", { name: /Tema rojo/i });
+    red.focus();
+    await user.keyboard("{Enter}");
+    expect(onThemeChange).toHaveBeenCalledWith("red");
+
+    rerender(
+      <ControlPanel
+        onRunSimulation={vi.fn()}
+        isRunning={false}
+        activeTheme="red"
+        premiumThemeEntitled={false}
+        onThemeChange={onThemeChange}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Tema rojo/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent(/Tema rojo activo/i);
+  });
+
+  it("keeps premium discoverable but fail-closed without entitlement", async () => {
+    const user = userEvent.setup();
+    const onThemeChange = vi.fn();
     render(
       <ControlPanel
         onRunSimulation={vi.fn()}
         isRunning={false}
-        onAccentChange={onAccentChange}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={onThemeChange}
       />,
     );
 
-    const violet = screen.getByRole("button", { name: /cambiar acento a neon violet/i });
-    await user.click(violet);
+    const premium = screen.getByRole("button", { name: /Tema premium/i });
+    expect(premium).toHaveAttribute("aria-disabled", "true");
+    await user.click(premium);
+    expect(onThemeChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(/requiere un entitlement de pago/i);
+  });
 
-    expect(onAccentChange).toHaveBeenCalledWith(260);
-    expect(violet).toHaveAttribute("aria-pressed", "true");
+  it("activates premium only when entitlement is present", async () => {
+    const user = userEvent.setup();
+    const onThemeChange = vi.fn();
+    render(
+      <ControlPanel
+        onRunSimulation={vi.fn()}
+        isRunning={false}
+        activeTheme="blue"
+        premiumThemeEntitled
+        onThemeChange={onThemeChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tema premium/i }));
+    expect(onThemeChange).toHaveBeenCalledWith("premium");
+  });
+
+  it("does not start a view transition when reduced motion is requested", async () => {
+    const user = userEvent.setup();
+    const onThemeChange = vi.fn();
+    const startViewTransition = vi.fn();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: true }),
+    });
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: startViewTransition,
+    });
+    render(
+      <ControlPanel
+        onRunSimulation={vi.fn()}
+        isRunning={false}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={onThemeChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tema verde/i }));
+    expect(onThemeChange).toHaveBeenCalledWith("green");
+    expect(startViewTransition).not.toHaveBeenCalled();
   });
 
   it("launches a full campaign with five channels and an explicit flight", async () => {
@@ -54,7 +150,9 @@ describe("ControlPanel", () => {
       <ControlPanel
         onRunSimulation={onRunSimulation}
         isRunning={false}
-        onAccentChange={vi.fn()}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={vi.fn()}
       />,
     );
 
@@ -73,7 +171,9 @@ describe("ControlPanel", () => {
       <ControlPanel
         onRunSimulation={vi.fn()}
         isRunning={false}
-        onAccentChange={vi.fn()}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={vi.fn()}
       />,
     );
 
@@ -90,7 +190,9 @@ describe("ControlPanel", () => {
       <ControlPanel
         onRunSimulation={vi.fn()}
         isRunning={false}
-        onAccentChange={vi.fn()}
+        activeTheme="blue"
+        premiumThemeEntitled={false}
+        onThemeChange={vi.fn()}
       />,
     );
 

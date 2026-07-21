@@ -1,8 +1,10 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { ComponentType, MouseEvent } from "react";
 import { flushSync } from "react-dom";
 import { CAMPAIGN_CHANNELS } from "../lib/simulationRuntime";
 import type { CampaignChannel } from "../lib/simulationRuntime";
+import { THEME_CATALOG, getTheme, isThemeAvailable } from "../lib/themeCatalog";
+import type { ThemeDefinition, ThemeId } from "../lib/themeCatalog";
 import {
   Aperture,
   ArrowUpRight,
@@ -39,15 +41,10 @@ export type UseCaseId = 1 | 2 | 3;
 interface ControlPanelProps {
   onRunSimulation: (useCaseId: UseCaseId, params: SimulationParams) => void;
   isRunning: boolean;
-  onAccentChange: (hue: number) => void;
+  activeTheme: ThemeId;
+  premiumThemeEntitled: boolean;
+  onThemeChange: (themeId: ThemeId) => void;
 }
-
-const ACCENT_COLORS = [
-  { name: "Ion Blue", hue: 200, color: "#38bdf8" },
-  { name: "Neon Violet", hue: 260, color: "#8b5cf6" },
-  { name: "Signal Green", hue: 145, color: "#22c55e" },
-  { name: "Ember Rose", hue: 350, color: "#f43f5e" },
-];
 
 const USE_CASES: Array<{
   id: UseCaseId;
@@ -64,11 +61,17 @@ const USE_CASES: Array<{
 export const ControlPanel = ({
   onRunSimulation,
   isRunning,
-  onAccentChange,
+  activeTheme,
+  premiumThemeEntitled,
+  onThemeChange,
 }: ControlPanelProps) => {
   const uid = useId().replace(/:/g, "");
   const [activeUseCase, setActiveUseCase] = useState<UseCaseId>(3);
-  const [activeAccent, setActiveAccent] = useState(200);
+  const [themeStatus, setThemeStatus] = useState(`${getTheme(activeTheme).label} activo.`);
+
+  useEffect(() => {
+    setThemeStatus(`${getTheme(activeTheme).label} activo.`);
+  }, [activeTheme]);
   const [videoParams, setVideoParams] = useState<VideoSimulationParams>({
     videoName: "entrevista_raw_final.mp4",
     platform: "TikTok",
@@ -86,12 +89,21 @@ export const ControlPanel = ({
     budget: 3500,
   });
 
-  const handleAccentSelect = (event: MouseEvent<HTMLButtonElement>, hue: number) => {
-    if (hue === activeAccent) return;
+  const handleThemeSelect = (event: MouseEvent<HTMLButtonElement>, theme: ThemeDefinition) => {
+    if (!isThemeAvailable(theme, premiumThemeEntitled)) {
+      setThemeStatus(
+        "Tema premium bloqueado: requiere un entitlement de pago emitido por el servidor.",
+      );
+      return;
+    }
+    if (theme.id === activeTheme) {
+      setThemeStatus(`${theme.label} activo.`);
+      return;
+    }
 
-    const applyAccent = () => {
-      setActiveAccent(hue);
-      onAccentChange(hue);
+    const applySelection = () => {
+      onThemeChange(theme.id);
+      setThemeStatus(`${theme.label} activo.`);
     };
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const startViewTransition = typeof document.startViewTransition === "function"
@@ -99,7 +111,7 @@ export const ControlPanel = ({
       : null;
 
     if (reduceMotion || !startViewTransition) {
-      applyAccent();
+      applySelection();
       return;
     }
 
@@ -109,7 +121,7 @@ export const ControlPanel = ({
       Math.max(originX, window.innerWidth - originX),
       Math.max(originY, window.innerHeight - originY),
     );
-    const transition = startViewTransition(() => flushSync(applyAccent));
+    const transition = startViewTransition(() => flushSync(applySelection));
 
     transition.ready.then(() => {
       document.documentElement.animate(
@@ -152,36 +164,53 @@ export const ControlPanel = ({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-black/20 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <fieldset className="rounded-xl border border-white/[0.07] bg-black/20 p-3">
+        <legend className="sr-only">Tema visual de campaña</legend>
+        <div className="flex items-start gap-2.5">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.035] text-[var(--primary-color)]">
             <Palette size={15} aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-zinc-200">Signal color</p>
-            <p className="font-mono text-[10px] text-zinc-500">VIEW TRANSITION / HSL</p>
+            <p className="text-xs font-semibold text-zinc-200">Tema visual de campaña</p>
+            <p className="mt-1 text-[10px] leading-4 text-zinc-500">
+              El color no cambia permisos, decisiones ni recomendaciones políticas.
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-1" aria-label="Seleccionar color de señal">
-          {ACCENT_COLORS.map((color) => (
-            <button
-              key={color.hue}
-              type="button"
-              onClick={(event) => handleAccentSelect(event, color.hue)}
-              aria-label={`Cambiar acento a ${color.name}`}
-              aria-pressed={activeAccent === color.hue}
-              title={color.name}
-              className="group grid h-11 w-11 place-items-center rounded-full"
-            >
-              <span
-                className={`block h-3.5 w-3.5 rounded-full border transition-[transform,opacity,box-shadow] duration-200 ${activeAccent === color.hue ? "scale-125 border-white opacity-100 shadow-[0_0_14px_currentColor]" : "border-white/20 opacity-65 group-hover:scale-110 group-hover:opacity-100"}`}
-                style={{ backgroundColor: color.color, color: color.color }}
-                aria-hidden="true"
-              />
-            </button>
-          ))}
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 2xl:grid-cols-3" aria-label="Seleccionar tema visual">
+          {THEME_CATALOG.map((theme) => {
+            const selected = activeTheme === theme.id;
+            const available = isThemeAvailable(theme, premiumThemeEntitled);
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={(event) => handleThemeSelect(event, theme)}
+                aria-label={theme.label}
+                aria-pressed={selected}
+                aria-disabled={!available}
+                aria-describedby={`${uid}-theme-${theme.id}-description`}
+                className={`min-h-16 rounded-xl border px-3 py-2.5 text-left transition-[border-color,background-color,transform] ${selected ? "border-[var(--primary-color)] bg-[var(--primary-color-glow)]" : "border-white/[0.08] bg-white/[0.025] hover:border-white/20"} ${available ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border border-black/40"
+                    style={{ backgroundColor: theme.accent }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-[11px] font-bold text-zinc-100">{theme.label}</span>
+                </span>
+                <span id={`${uid}-theme-${theme.id}-description`} className="mt-1 block text-[9px] leading-4 text-zinc-500">
+                  {theme.premium ? (available ? "Premium habilitado" : "Premium · pago requerido") : "Incluido"}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </div>
+        <p role="status" aria-live="polite" className="mt-3 min-h-5 text-[10px] leading-5 text-zinc-400">
+          {themeStatus}
+        </p>
+      </fieldset>
 
       <fieldset disabled={isRunning} className="space-y-2">
         <legend className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">

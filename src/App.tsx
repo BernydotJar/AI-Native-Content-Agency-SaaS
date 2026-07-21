@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CanvasBackground } from "./components/CanvasBackground";
 import { ControlPanel } from "./components/ControlPanel";
 import type {
@@ -23,6 +23,8 @@ import type { MetaAdsCampaign } from "./components/MetaAdsDashboard";
 import { ToolFabricPanel } from "./components/ToolFabricPanel";
 import { ProductionRuntimePanel } from "./components/ProductionRuntimePanel";
 import { packageCampaign } from "./lib/simulationRuntime";
+import { DEFAULT_THEME_ID, THEME_CATALOG, applyTheme, isThemeAvailable } from "./lib/themeCatalog";
+import type { ThemeId } from "./lib/themeCatalog";
 import { 
   Terminal, 
   Cpu, 
@@ -109,8 +111,9 @@ export default function App() {
     "War Room is awaiting a campaign brief. No live actions will be executed."
   ]);
 
-  // Accent Color Theme Hue state
-  const [accentHue, setAccentHue] = useState<number>(200);
+  const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
+  const [runtimeEntitlements, setRuntimeEntitlements] = useState<readonly string[]>([]);
+  const premiumThemeEntitled = runtimeEntitlements.includes("theme:premium");
   const scheduledWorkRef = useRef<number[]>([]);
   const deferredApprovalWorkRef = useRef<DeferredApprovalTask[]>([]);
   const approvalRef = useRef(false);
@@ -252,16 +255,21 @@ export default function App() {
     }
   ]);
 
-  // Effect to update CSS variable when accentHue shifts
   useEffect(() => {
-    document.documentElement.style.setProperty("--primary-hue", accentHue.toString());
-    const saturation = accentHue === 200 ? "80%" : accentHue === 260 ? "85%" : accentHue === 145 ? "75%" : "85%";
-    const lightness = accentHue === 200 ? "60%" : accentHue === 260 ? "65%" : accentHue === 145 ? "50%" : "60%";
-    document.documentElement.style.setProperty("--primary-saturation", saturation);
-    document.documentElement.style.setProperty("--primary-lightness", lightness);
-    document.documentElement.style.setProperty("--primary-color-raw", `hsla(${accentHue}, ${saturation}, ${lightness}, 0.46)`);
-    document.documentElement.style.setProperty("--primary-color-glow", `hsla(${accentHue}, ${saturation}, ${lightness}, 0.18)`);
-  }, [accentHue]);
+    applyTheme(themeId);
+  }, [themeId]);
+
+  useLayoutEffect(() => {
+    if (themeId === "premium" && !premiumThemeEntitled) {
+      setThemeId(DEFAULT_THEME_ID);
+    }
+  }, [premiumThemeEntitled, themeId]);
+
+  const changeTheme = (nextThemeId: ThemeId) => {
+    const theme = THEME_CATALOG.find((candidate) => candidate.id === nextThemeId);
+    if (!theme || !isThemeAvailable(theme, premiumThemeEntitled)) return;
+    setThemeId(nextThemeId);
+  };
 
   const addSystemLog = (msg: string) => {
     setSystemLogs(prev => [...prev.slice(-30), `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -1292,13 +1300,13 @@ export default function App() {
   const activeNodeName = activeStep ? nodeDataMap[activeStep]?.name : "Awaiting mission";
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-clip bg-[#070708] font-sans text-[#f4f4f5]">
+    <div className="relative min-h-screen w-full overflow-x-clip bg-[var(--bg-obsidian)] font-sans text-[var(--text-light)]">
       <a href="#main-content" className="skip-link">Saltar al contenido principal</a>
       <CanvasBackground />
       <div className="scene-vignette" aria-hidden="true" />
       <div className="scene-noise" aria-hidden="true" />
 
-      <header className="relative z-40 border-b border-white/[0.06] bg-[#070708]/75 backdrop-blur-xl">
+      <header className="app-header relative z-40 border-b border-white/[0.06] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <div className="brand-glyph" aria-hidden="true">
@@ -1328,7 +1336,7 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main-content" className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16">
+      <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16">
         <section aria-labelledby="hero-title" className="hero-stage">
           <div className="hero-copy">
             <div className="coordinate-tag">
@@ -1395,7 +1403,9 @@ export default function App() {
               <ControlPanel
                 onRunSimulation={handleRunSimulation}
                 isRunning={isRunning}
-                onAccentChange={setAccentHue}
+                activeTheme={themeId}
+                premiumThemeEntitled={premiumThemeEntitled}
+                onThemeChange={changeTheme}
               />
             </div>
 
@@ -1473,7 +1483,7 @@ export default function App() {
         </section>
 
         <div className="mt-10 lg:mt-14">
-          <ProductionRuntimePanel />
+          <ProductionRuntimePanel onEntitlementsChange={setRuntimeEntitlements} />
         </div>
 
         <div className="mt-10 lg:mt-14">
