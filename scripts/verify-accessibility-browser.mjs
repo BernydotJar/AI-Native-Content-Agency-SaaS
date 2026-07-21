@@ -1,35 +1,70 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
-const portOffset = process.pid % 1000;
-const previewPort = Number.parseInt(
-  process.env.ACCESSIBILITY_PREVIEW_PORT ?? String(41000 + portOffset),
-  10,
-);
-const debugPort = Number.parseInt(
-  process.env.ACCESSIBILITY_DEBUG_PORT ?? String(43000 + portOffset),
-  10,
-);
+const previewPort = process.env.ACCESSIBILITY_PREVIEW_PORT
+  ? Number.parseInt(process.env.ACCESSIBILITY_PREVIEW_PORT, 10)
+  : await availablePort();
+const requestedDebugPort = process.env.ACCESSIBILITY_DEBUG_PORT
+  ? Number.parseInt(process.env.ACCESSIBILITY_DEBUG_PORT, 10)
+  : 0;
 const chromiumBin = process.env.CHROMIUM_BIN ?? "chromium";
 const outputDirectory = resolve(
   repositoryRoot,
   process.env.ACCESSIBILITY_OUTPUT_DIR ?? "artifacts/accessibility/generated",
 );
 const previewUrl = `http://127.0.0.1:${previewPort}`;
-const debugUrl = `http://127.0.0.1:${debugPort}`;
 const processes = [];
+const temporaryDirectories = [];
+
+
+
+function availablePort() {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", rejectPromise);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        rejectPromise(new Error("Unable to reserve an ephemeral IPv4 port"));
+        return;
+      }
+      server.close((error) => {
+        if (error) rejectPromise(error);
+        else resolvePromise(address.port);
+      });
+    });
+  });
+}
+
+function childFailure(child, name) {
+  if (child.spawnError) {
+    return new Error(`${name} failed to start: ${child.spawnError.message}`);
+  }
+  if (child.exitCode === null && child.signalCode === null) return null;
+  const outcome = child.signalCode
+    ? `signal ${child.signalCode}`
+    : `exit code ${child.exitCode}`;
+  const diagnostic = child.diagnosticOutput?.trim();
+  return new Error(`${name} terminated before readiness (${outcome})${diagnostic ? `: ${diagnostic}` : ""}`);
+}
 
 function sleep(milliseconds) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
 }
 
-async function waitFor(url, attempts = 80) {
+async function waitFor(url, child, name, attempts = 80) {
   let lastError;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const failure = childFailure(child, name);
+    if (failure) throw failure;
     try {
       const response = await fetch(url);
       if (response.ok) return response;
@@ -42,6 +77,56 @@ async function waitFor(url, attempts = 80) {
   throw lastError ?? new Error(`Timed out waiting for ${url}`);
 }
 
+async function waitForPreview(child, attempts = 80) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const failure = childFailure(child, "Vite preview");
+    if (failure) throw failure;
+    try {
+      const response = await fetch(previewUrl);
+      const body = response.ok ? await response.text() : "";
+      const expectedBundle = body.includes(
+        "Native / War Room — Autonomous Campaign Intelligence",
+      )
+        && body.includes('id="root"')
+        && body.includes('/assets/')
+        && !body.includes('/src/main.tsx');
+      await sleep(50);
+      const postResponseFailure = childFailure(child, "Vite preview");
+      if (postResponseFailure) throw postResponseFailure;
+      if (response.ok && expectedBundle) return;
+      lastError = new Error(
+        response.ok
+          ? `${previewUrl} did not serve the expected application bundle`
+          : `${previewUrl} returned ${response.status}`,
+      );
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(200);
+  }
+  throw lastError ?? new Error(`Timed out waiting for the Vite preview at ${previewUrl}`);
+}
+
+async function waitForDevToolsPort(child, userDataDirectory, attempts = 120) {
+  const portFile = join(userDataDirectory, "DevToolsActivePort");
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const failure = childFailure(child, "Chromium");
+    if (failure) throw failure;
+    try {
+      const [portLine] = (await readFile(portFile, "utf8")).trim().split(/\r?\n/);
+      const port = Number.parseInt(portLine, 10);
+      if (Number.isInteger(port) && port > 0 && port <= 65535) return port;
+      lastError = new Error(`Chromium wrote an invalid DevTools port: ${portLine}`);
+    } catch (error) {
+      if (error?.code !== "ENOENT") lastError = error;
+    }
+    await sleep(250);
+  }
+  throw lastError ?? new Error("Timed out waiting for Chromium DevToolsActivePort");
+}
+
 function start(command, args, options = {}) {
   const child = spawn(command, args, {
     cwd: repositoryRoot,
@@ -50,9 +135,20 @@ function start(command, args, options = {}) {
     detached: true,
     ...options,
   });
+  child.diagnosticOutput = "";
+  child.spawnError = null;
+  child.on("error", (error) => {
+    child.spawnError = error;
+  });
   processes.push(child);
-  child.stdout.on("data", (chunk) => process.stderr.write(chunk));
-  child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+  child.stdout.on("data", (chunk) => {
+    child.diagnosticOutput = `${child.diagnosticOutput}${chunk}`.slice(-16000);
+    process.stderr.write(chunk);
+  });
+  child.stderr.on("data", (chunk) => {
+    child.diagnosticOutput = `${child.diagnosticOutput}${chunk}`.slice(-16000);
+    process.stderr.write(chunk);
+  });
   return child;
 }
 
@@ -67,6 +163,9 @@ async function stopProcesses() {
     if (child.exitCode === null && child.signalCode === null) {
       try { process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }
     }
+  }
+  for (const directory of temporaryDirectories) {
+    await rm(directory, { recursive: true, force: true });
   }
 }
 
@@ -174,22 +273,43 @@ function axProperty(node, name) {
 }
 
 async function run() {
+  await rm(outputDirectory, { recursive: true, force: true });
   await mkdir(outputDirectory, { recursive: true });
-  start("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", String(previewPort)]);
-  await waitFor(previewUrl);
+  const preview = start("npm", [
+    "run",
+    "preview",
+    "--",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(previewPort),
+    "--strictPort",
+  ]);
+  await waitForPreview(preview);
 
-  start(chromiumBin, [
+  const userDataDirectory = await mkdtemp(
+    join(tmpdir(), "agency-accessibility-chromium-"),
+  );
+  temporaryDirectories.push(userDataDirectory);
+  const chromium = start(chromiumBin, [
     "--headless=new",
     "--no-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
-    "--log-level=3",
-    `--remote-debugging-port=${debugPort}`,
-    `--user-data-dir=/tmp/agency-accessibility-chromium-${process.pid}`,
+    "--log-level=2",
+    `--remote-debugging-port=${requestedDebugPort}`,
+    `--user-data-dir=${userDataDirectory}`,
     "about:blank",
   ]);
-  await waitFor(`${debugUrl}/json/version`);
-  const targets = await (await waitFor(`${debugUrl}/json/list`)).json();
+  const debugPort = requestedDebugPort || await waitForDevToolsPort(
+    chromium,
+    userDataDirectory,
+  );
+  const debugUrl = `http://127.0.0.1:${debugPort}`;
+  await waitFor(`${debugUrl}/json/version`, chromium, "Chromium");
+  const targets = await (
+    await waitFor(`${debugUrl}/json/list`, chromium, "Chromium")
+  ).json();
   const pageTarget = targets.find((target) => target.type === "page");
   requireCondition(pageTarget?.webSocketDebuggerUrl, "No Chromium page target was available");
 
