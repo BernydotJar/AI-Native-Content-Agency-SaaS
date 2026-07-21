@@ -6,7 +6,7 @@
 | `program/constitution.md` | program principles | normative |
 | `program/current-state.md` | operational state | must be updated at every checkpoint |
 | `program/architecture.md` | selected architecture | must match code and tests |
-| `docs/IMPLEMENTATION_AUDIT.md` | historical implementation audit | reconciled through exact local INC-012 verification; remote CI remains pending |
+| `docs/IMPLEMENTATION_AUDIT.md` | historical implementation audit | reconciled through exact local and remote INC-012 verification at `1002d07`; not a production approval |
 | `docs/OPERATIONS.md` | runtime operations | alert section is recommendation, not exercised evidence |
 | `docs/POSTGRESQL_PERSISTENCE.md` | PostgreSQL behavior, schema modes and limits | implementation contract and exact local non-owner gate are verified; persistent provisioning, scheduling, encryption and failover remain external |
 | `docs/runbooks/postgresql-schema-rollout.md` | migration/runtime role rollout and rollback | executable operator contract; persistent role/schema/Secret/traffic mutations remain human-gated and unobserved |
@@ -26,5 +26,5 @@ Known documentation repairs in `INC-001`:
 | `docs/security/threat-model.md` | selected-runtime security model | records implemented controls and open HIGH production gates; not release approval |
 | `docs/privacy/privacy-model.md` | privacy architecture and uncertainty | jurisdiction/policy remain UNKNOWN and human-gated |
 | `docs/privacy/data-classification-retention.md` | data inventory and retention decision register | no policy or destructive execution is authorized |
-| `program/reports/inc-003-review.md` | bounded security/privacy review | committed/pushed at `a9f063f` with exact-head CI; its residual PostgreSQL HIGH remains assigned to INC-012 |
-| `program/reports/inc-012-progress.md` | PostgreSQL authority implementation checkpoint | exact local behavioral, package, infrastructure, secret and supply-chain evidence; push and exact-head CI remain pending |
+| `program/reports/inc-003-review.md` | bounded security/privacy review | historical bounded review at `a9f063f`; its PostgreSQL residual was subsequently closed by INC-012 at `1002d07` |
+| `program/reports/inc-012-progress.md` | PostgreSQL authority implementation checkpoint | completion evidence at `1002d07` with eight-job exact-head CI run `29868899218`; persistent staging remains external |

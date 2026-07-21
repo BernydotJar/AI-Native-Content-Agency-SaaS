@@ -65,12 +65,12 @@
       "status": "OPEN"
     },
     {
-      "description": "PostgreSQL migration and runtime authority are not separated; a non-owner least-privilege runtime role is not demonstrated.",
-      "evidence": "Exact local commit 612e03c1a90f644a8cd26fde785f3980491bab9d passed 85/85 PostgreSQL tests under a non-owner runtime role, zero ownership, exact grants, fixed search_path, atomic initialize rollback, negative DDL/TEMP/metadata/GRANT/SET ROLE checks, migration/replay and both restores. Locked-wheel, package, Helm/Terraform/K3s, frontend, program, workflow, secret and supply-chain gates also passed. Push, exact-head CI and authorized persistent-environment observation remain pending.",
+      "description": "PostgreSQL migration and runtime authority required separation and proof of a non-owner least-privilege runtime role.",
+      "evidence": "Exact published head 1002d077564618623fe00f27ffae23c2b410aca8 passed GitHub Actions run 29868899218 with all eight jobs successful, including PostgreSQL shared state, locked wheel, container, Helm, Terraform and supply chain. Local exact evidence additionally proved 85/85 under a non-owner role, zero ownership, exact grants, safe search_path, atomic rollback, negative DDL/TEMP/metadata/GRANT/SET ROLE checks, migration/replay and both restores. Persistent environment observation remains tracked by F-004 and SEC-013.",
       "id": "F-009",
       "owner": "INC-012",
       "severity": "HIGH",
-      "status": "IN_PROGRESS"
+      "status": "CLOSED"
     },
     {
       "description": "No approved retention, deletion, legal-hold or data-subject workflow exists for runs, memories, audit, telemetry and backups.",

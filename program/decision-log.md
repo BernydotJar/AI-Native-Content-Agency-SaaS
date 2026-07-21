@@ -61,21 +61,21 @@ Consequence: tenant audit is complete for proven-principal denials but is not a 
 ## D-008 — PostgreSQL migration and runtime authority must be separated
 
 Date: 2026-07-21
-Status: accepted; implementation present, exact-worktree verification pending in INC-012
+Status: accepted and verified at `1002d077564618623fe00f27ffae23c2b410aca8` in GitHub Actions run `29868899218`
 
 Decision: production-like PostgreSQL verification must use a migration/bootstrap role for schema authority and a non-owner runtime role with exact grants. The runtime must fail closed when schema is absent/incompatible and must not CREATE, ALTER, DROP or TRUNCATE runtime objects.
 
 Rationale: application SQL predicates are a primary tenant boundary; an overprivileged runtime credential turns an application compromise into schema/database control.
 
-Consequence: no production-ready claim until INC-012 passes negative ownership/DDL tests and full application/recovery regression.
+Consequence: INC-012 passed the negative ownership/DDL and full application/recovery gates. Production still requires authorized persistent-environment observation and the remaining global release findings to close.
 
 ## D-009 — Long-running PostgreSQL pods validate; they never migrate
 
 Date: 2026-07-21
-Status: accepted for INC-012; foundation `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`, effective local head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8`, behavioral verification pending
+Status: accepted and exact-head verified at `1002d077564618623fe00f27ffae23c2b410aca8`; GitHub Actions run `29868899218` passed eight of eight jobs
 
 Decision: `PostgresRuntimeDatabase` defaults to `validate`. Only the explicit `agency-runtime-schema initialize` operator command may run schema DDL. DDL, metadata insertion and validation share one advisory-locked transaction. Application connections fix `search_path=pg_catalog,public`. Helm and Terraform reject `initialize` for application pods and expose only the runtime-role URL to the Deployment.
 
 Rationale: application startup is horizontally concurrent and continuously exposed. Giving every replica schema ownership or implicit migration authority expands compromise impact and makes rollout/rollback nondeterministic.
 
-Consequence: a new or upgraded database must be initialized and granted before application rollout. Missing, incomplete or incompatible schema fails startup/readiness instead of being repaired implicitly. Exact-commit execution evidence is still required before the HIGH finding closes.
+Consequence: a new or upgraded database must be initialized and granted before application rollout. Missing, incomplete or incompatible schema fails startup/readiness instead of being repaired implicitly. The code/delivery HIGH is closed; persistent environment observation remains a separate production gate.

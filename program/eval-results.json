@@ -111,9 +111,16 @@
       "observed": "Helm validate-only schema mode; Buildah non-root runtime smoke; Terraform 1.15.8 plan/apply/destroy for SQLite and PostgreSQL against agentless K3s; database URL absent from state; workload scheduling not claimed",
       "result": "PASS",
       "scope": "Helm/Terraform/package runtime boundary"
+    },
+    {
+      "command": "gh run view 29868899218",
+      "id": "INC012-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "612e03c1a90f644a8cd26fde785f3980491bab9d",
-  "updated_at": "2026-07-21T21:07:57Z"
+  "source_commit": "1002d077564618623fe00f27ffae23c2b410aca8",
+  "updated_at": "2026-07-21T21:13:03Z"
 }

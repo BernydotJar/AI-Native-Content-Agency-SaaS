@@ -549,7 +549,7 @@
         "scripts/verify-postgresql-runtime.sh",
         "program/requirements-traceability.csv"
       ],
-      "context": "Exact local commit 612e03c1a90f644a8cd26fde785f3980491bab9d passes complete least-privilege, migration, recovery, package, infrastructure, frontend, secret and supply-chain gates. Remote publication, exact-head CI and authorized persistent-environment observation remain pending.",
+      "context": "Exact published head 1002d077564618623fe00f27ffae23c2b410aca8 passed all eight jobs in GitHub Actions run 29868899218. INC-012 code, local verification, push, remote SHA and CI gates are complete. Persistent environment observation is tracked separately.",
       "dependencies": [
         "INC-003"
       ],
@@ -570,7 +570,7 @@
         "production database role creation or credential rotation",
         "persistent schema migration"
       ],
-      "implementation_commit": "612e03c1a90f644a8cd26fde785f3980491bab9d",
+      "implementation_commit": "1002d077564618623fe00f27ffae23c2b410aca8",
       "objective": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation.",
       "prohibited_paths": [
         "external databases",
@@ -578,12 +578,12 @@
         "credential rotation",
         "protected branches"
       ],
-      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
+      "publication_state": "REMOTE_CI_GREEN",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Security Reviewer / Data Engineer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-012",
       "validation_commands": [
         "python3 -m unittest backend.tests.test_postgres_schema_cli -v",
@@ -759,12 +759,12 @@
       "evals": [],
       "id": "WS-07",
       "name": "Identity, Security, Privacy and Tenant Isolation",
-      "next_ready_task": "INC-012",
+      "next_ready_task": "INC-003",
       "objective": "Threat/privacy models, retention and adversarial verification.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "in_progress",
+      "status": "review",
       "validation": [],
       "write_locks": [
         "backend/agency_runtime/api.py",

@@ -109,7 +109,7 @@
         "INC-003"
       ],
       "id": "INC-012",
-      "status": "review"
+      "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",

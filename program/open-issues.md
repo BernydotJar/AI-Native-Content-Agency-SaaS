@@ -39,13 +39,9 @@ Category: human decision
 Producer/critic/fixer/verifier passes can be role-separated in-session, but final PR approval and any cloud apply require a distinct accountable human reviewer.
 
 
-## OI-007 — PostgreSQL runtime role authority
+## OI-007 — PostgreSQL runtime role authority — resolved
 
-Category: delivery / persistent-environment observation
-
-Exact local commit `612e03c1a90f644a8cd26fde785f3980491bab9d` passes the complete non-owner PostgreSQL, migration, recovery, package, infrastructure, secret and supply-chain gates. The code defect is locally remediated. Push and exact-head CI remain executable delivery work; persistent managed-role observation remains a human/infrastructure gate.
-
-Acceptance condition: remote SHA equals the reviewed head and all required CI jobs pass; production additionally requires authorized persistent-environment evidence.
+Exact published head `1002d077564618623fe00f27ffae23c2b410aca8` passed all eight jobs in GitHub Actions run `29868899218` after complete local least-privilege, migration and recovery verification. The code/delivery issue is resolved. Persistent staging observation remains tracked by `F-004`, `BLK-GCP-001` and `SEC-013`.
 
 ## OI-008 — Retention, deletion and legal hold
 
