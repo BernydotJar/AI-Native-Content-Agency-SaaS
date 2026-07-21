@@ -68,6 +68,7 @@ class RuntimeMetrics:
         self._duration_count: Counter[Tuple[str, str]] = Counter()
         self._runs_started = 0
         self._greenlights: Counter[str] = Counter()
+        self._sessions: Counter[str] = Counter()
 
     def record_http(
         self,
@@ -94,6 +95,10 @@ class RuntimeMetrics:
         with self._lock:
             self._greenlights[decision] += 1
 
+    def session_changed(self, action: str) -> None:
+        with self._lock:
+            self._sessions[action] += 1
+
     def render(self) -> str:
         with self._lock:
             requests = dict(self._requests)
@@ -101,11 +106,12 @@ class RuntimeMetrics:
             duration_count = dict(self._duration_count)
             runs_started = self._runs_started
             greenlights = dict(self._greenlights)
+            sessions = dict(self._sessions)
 
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
             "# TYPE agency_runtime_info gauge",
-            'agency_runtime_info{mode="deterministic_sandbox",version="0.4.0"} 1',
+            'agency_runtime_info{mode="deterministic_sandbox",version="0.5.0"} 1',
             "# HELP agency_http_requests_total HTTP requests by method, route template, and status.",
             "# TYPE agency_http_requests_total counter",
         ]
@@ -159,6 +165,18 @@ class RuntimeMetrics:
             lines.append(
                 "agency_greenlight_decisions_total{} {}".format(
                     _labels({"decision": decision}), value
+                )
+            )
+        lines.extend(
+            [
+                "# HELP agency_browser_sessions_total Browser session lifecycle events.",
+                "# TYPE agency_browser_sessions_total counter",
+            ]
+        )
+        for action, value in sorted(sessions.items()):
+            lines.append(
+                "agency_browser_sessions_total{} {}".format(
+                    _labels({"action": action}), value
                 )
             )
         return "\n".join(lines) + "\n"

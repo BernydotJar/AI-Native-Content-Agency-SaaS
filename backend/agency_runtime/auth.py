@@ -23,6 +23,8 @@ class AuthenticationError(PermissionError):
 class TenantPrincipal:
     tenant_id: str
     credential_fingerprint: str
+    auth_method: str = "bearer"
+    session_id: str = ""
 
 
 class TenantAuthenticator:

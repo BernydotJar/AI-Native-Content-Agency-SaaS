@@ -2,7 +2,7 @@
 
 Webapp cinematográfica y sandbox local para representar una agencia de contenido AI-native de ocho agentes. El repositorio ya no es sólo una maqueta de frontend: contiene una experiencia React/TypeScript ejecutable, un runtime Python determinista con memoria SQLite y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: vertical slice backend verificable y empaquetado de producción con autenticación tenant-scoped y persistencia SQLite durable. La UI cinematográfica todavía ejecuta su simulación en el navegador y no consume la API. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
+> Estado actual: vertical slice full-stack verificable y empaquetado de producción. La UI incluye una consola que consume el backend durable mediante cookie HttpOnly + CSRF; el simulador cinematográfico original permanece como sandbox separado. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
 
 ## Qué funciona hoy
 
@@ -12,7 +12,8 @@ Webapp cinematográfica y sandbox local para representar una agencia de contenid
 - Runtime TypeScript puro y determinista para mezclar señales mock de X, Facebook, TikTok e Instagram, aplicar skills y empaquetar artefactos de campaña sandbox.
 - Inspector accesible por agente, outputs, progreso y Greenlight manual.
 - Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
-- FastAPI con bearer auth por tenant, `/readyz`, aislamiento cross-tenant y restauración de ejecuciones después de reiniciar el servicio.
+- FastAPI con bearer auth para máquinas y sesiones HttpOnly + CSRF para navegador, `/readyz`, aislamiento cross-tenant y restauración de ejecuciones después de reiniciar el servicio.
+- Consola React de producción para ejecutar briefs, inspeccionar Scholar/artefactos, decidir Greenlight y consultar auditoría durable.
 - `DynamicSkillCreator` para crear borradores Markdown locales dentro de una raíz explícita, con validación de slug, protección contra traversal/symlinks y overwrite opt-in.
 - Biblioteca local con instrucciones por agente, base de conocimiento y skills editoriales/de plataforma.
 - Pruebas de interacción frontend y pruebas unitarias del runtime, memoria, fachada y creador de skills.
@@ -41,7 +42,7 @@ Contenido operativo local
 └── skills/*.md
 ```
 
-La UI y Python modelan el mismo concepto, pero la UI todavía no consume el estado ni los artefactos de la API en tiempo de ejecución. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
+La nueva consola de producción consume estado y artefactos de FastAPI. La state machine cinematográfica original sigue ejecutándose de forma independiente hasta demostrar paridad completa antes de retirarla. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
 
 Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la matriz requisito → evidencia → estado y las desviaciones deliberadas respecto de la propuesta inicial.
 
@@ -193,11 +194,17 @@ Endpoints iniciales:
 - `POST /api/v1/runs/{run_id}/greenlight/approve`
 - `POST /api/v1/runs/{run_id}/greenlight/reject`
 
-Todos los endpoints `/api/v1/*` requieren `Authorization: Bearer <key>`. El tenant se deriva de la credencial configurada en el servidor; nunca de un header o campo elegido por el cliente.
+Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant se deriva de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente.
 
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
 El servicio persiste runs, trazas, evidencia, artefactos y Greenlights en SQLite por `(tenant_id, run_id)`, y también particiona la memoria por tenant. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, identidad individual y RBAC siguen siendo requisitos para escalamiento horizontal o un piloto público.
+
+## Consola de producción
+
+`ProductionRuntimePanel` usa `src/lib/runtimeApi.ts` contra el mismo origen. La API key no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; se limpia del formulario después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
+
+La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artefactos, aprobar/rechazar y consultar el ledger. Sigue siendo sandbox respecto de research, media, ads y publicación externa. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
 
 ## Observabilidad y auditoría
 

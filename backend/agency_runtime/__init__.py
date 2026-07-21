@@ -2,7 +2,15 @@
 
 from .auth import TenantAuthenticator, TenantPrincipal
 from .memory import SQLiteMemory
-from .persistence import AuditEvent, AuditWrite, SQLiteRunStore
+from .persistence import (
+    AuditEvent,
+    AuditWrite,
+    SessionAuthenticationError,
+    SessionCsrfError,
+    SessionIssue,
+    SessionRecord,
+    SQLiteRunStore,
+)
 from .manifest import load_flow_manifest
 from .models import (
     AGENT_SEQUENCE,
@@ -52,6 +60,10 @@ __all__ = [
     "TenantAuthenticator",
     "TenantPrincipal",
     "SQLiteRunStore",
+    "SessionAuthenticationError",
+    "SessionCsrfError",
+    "SessionIssue",
+    "SessionRecord",
     "AgencyOrchestrator",
     "AgentRole",
     "AgentStatus",

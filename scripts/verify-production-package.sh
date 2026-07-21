@@ -65,6 +65,8 @@ build_with_docker() {
   RUNTIME_ID=$(docker run -d --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
     -e "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
     -e "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" \
+    -e "AGENCY_SESSION_COOKIE_SECURE=false" \
+    -e "AGENCY_SESSION_TTL_SECONDS=600" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
 
@@ -82,7 +84,9 @@ build_with_buildah() {
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs config --env "PORT=$HOST_PORT" \
     --env "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
-    --env "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" "$RUNTIME_ID"
+    --env "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" \
+    --env "AGENCY_SESSION_COOKIE_SECURE=false" \
+    --env "AGENCY_SESSION_TTL_SECONDS=600" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
     > "$TMP_DIR/runtime.log" 2>&1 &
@@ -142,25 +146,46 @@ fi
 
 curl -fsS "http://127.0.0.1:${HOST_PORT}/readyz" > "$TMP_DIR/ready.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/" > "$TMP_DIR/index.html"
-curl -fsS -D "$TMP_DIR/run.headers" -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $AUTH_KEY" \
+curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: package-session-0001' \
+  -d "{\"api_key\":\"$AUTH_KEY\"}" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/sessions" > "$TMP_DIR/session.json"
+INITIAL_CSRF=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["csrf_token"])' "$TMP_DIR/session.json")
+curl -fsS -b "$TMP_DIR/cookies.txt" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/sessions/current" > "$TMP_DIR/resumed-session.json"
+CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["csrf_token"])' "$TMP_DIR/resumed-session.json")
+[ "$INITIAL_CSRF" != "$CSRF_TOKEN" ]
+curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/run.headers" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H 'X-Request-ID: package-create-0001' \
-  -d '{"title":"Packaged runtime verification","objective":"Verify the production package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
+  -d '{"title":"Packaged runtime verification","objective":"Verify the production browser session package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs" > "$TMP_DIR/run.json"
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/run.json")
-curl -fsS -D "$TMP_DIR/approval.headers" -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $AUTH_KEY" \
+curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/approval.headers" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H 'X-Request-ID: package-approve-0001' \
-  -d '{"reviewer":"package-verifier","note":"Verified packaged sandbox release"}' \
+  -d '{"reviewer":"package-verifier","note":"Verified packaged sandbox release through browser session"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/greenlight/approve" \
   > "$TMP_DIR/approved.json"
-curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+curl -fsS -b "$TMP_DIR/cookies.txt" \
   "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events" > "$TMP_DIR/audit.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/metrics" > "$TMP_DIR/metrics.txt"
+curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/revoke.headers" \
+  -X DELETE -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H 'X-Request-ID: package-session-revoke-0001' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/sessions/current" > "$TMP_DIR/revoked.json"
+set +e
+post_revoke_status=$(curl -sS -o "$TMP_DIR/post-revoke.json" -w '%{http_code}' \
+  -b "$TMP_DIR/cookies.txt" "http://127.0.0.1:${HOST_PORT}/api/v1/me")
+set -e
 
-python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/run.json" \
-  "$TMP_DIR/approved.json" "$TMP_DIR/audit.json" "$TMP_DIR/metrics.txt" \
-  "$TMP_DIR/run.headers" "$TMP_DIR/approval.headers" <<'PY'
+python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/session.json" \
+  "$TMP_DIR/resumed-session.json" "$TMP_DIR/run.json" "$TMP_DIR/approved.json" "$TMP_DIR/audit.json" \
+  "$TMP_DIR/metrics.txt" "$TMP_DIR/session.headers" "$TMP_DIR/run.headers" \
+  "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status" <<'PYCHECK'
 import json
 import sys
 
@@ -169,17 +194,26 @@ with open(sys.argv[1], encoding="utf-8") as handle:
 with open(sys.argv[2], encoding="utf-8") as handle:
     ready = json.load(handle)
 with open(sys.argv[3], encoding="utf-8") as handle:
-    run = json.load(handle)
+    session = json.load(handle)
 with open(sys.argv[4], encoding="utf-8") as handle:
-    approved = json.load(handle)
+    resumed_session = json.load(handle)
 with open(sys.argv[5], encoding="utf-8") as handle:
-    audit = json.load(handle)
+    run = json.load(handle)
 with open(sys.argv[6], encoding="utf-8") as handle:
-    metrics = handle.read()
+    approved = json.load(handle)
 with open(sys.argv[7], encoding="utf-8") as handle:
-    run_headers = handle.read().lower()
+    audit = json.load(handle)
 with open(sys.argv[8], encoding="utf-8") as handle:
+    metrics = handle.read()
+with open(sys.argv[9], encoding="utf-8") as handle:
+    session_headers = handle.read().lower()
+with open(sys.argv[10], encoding="utf-8") as handle:
+    run_headers = handle.read().lower()
+with open(sys.argv[11], encoding="utf-8") as handle:
     approval_headers = handle.read().lower()
+with open(sys.argv[12], encoding="utf-8") as handle:
+    revoked = json.load(handle)
+post_revoke_status = sys.argv[13]
 
 assert health == {
     "status": "ok",
@@ -189,6 +223,13 @@ assert health == {
 }
 assert ready["status"] == "ready"
 assert ready["auth_configured"] is True
+assert session["tenant_id"] == "local-verification"
+assert session["csrf_token"]
+assert resumed_session["tenant_id"] == "local-verification"
+assert resumed_session["csrf_token"]
+assert resumed_session["csrf_token"] != session["csrf_token"]
+assert "httponly" in session_headers
+assert "samesite=strict" in session_headers
 assert run["tenant_id"] == "local-verification"
 assert run["status"] == "awaiting_greenlight"
 assert run["agent_states"]["publisher"]["status"] == "waiting_greenlight"
@@ -205,29 +246,38 @@ assert approved["status"] == "completed"
 package = next(item for item in approved["artifacts"] if item["kind"] == "campaign_package")
 assert package["payload"]["publication_performed"] is False
 assert [item["action"] for item in audit["events"]] == [
+    "session.created",
     "run.created",
     "greenlight.approved",
 ]
 assert [item["request_id"] for item in audit["events"]] == [
+    "package-session-0001",
     "package-create-0001",
     "package-approve-0001",
 ]
 assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
+assert 'agency_browser_sessions_total{action="created"} 1' in metrics
+assert "x-request-id: package-session-0001" in session_headers
 assert "x-request-id: package-create-0001" in run_headers
 assert "x-request-id: package-approve-0001" in approval_headers
+assert revoked == {"status": "revoked"}
+assert post_revoke_status == "401"
 print("health=pass")
 print("readiness=pass")
 print("spa=pass")
-print("tenant_auth=pass")
+print("http_only_session=pass")
+print("csrf_rotation=pass")
+print("csrf_protection=pass")
 print("request_correlation=pass")
 print("api_vertical_slice=pass")
 print("publisher_gate=pass")
 print("sandbox_package=pass")
 print("durable_audit=pass")
 print("prometheus_metrics=pass")
+print("session_revocation=pass")
 print("external_side_effects_enabled=false")
-PY
+PYCHECK
 
 if [ -f "$TMP_DIR/runtime.log" ] && grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null; then
   printf 'runtime logs leaked the bearer credential\n' >&2

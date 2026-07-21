@@ -7,7 +7,10 @@
 | `GET /healthz` | none | Process liveness and sandbox-mode declaration. |
 | `GET /readyz` | none | Readiness; returns `503` when tenant authentication is absent. |
 | `GET /metrics` | none | Prometheus text exposition with low-cardinality, non-tenant labels. |
-| `GET /api/v1/audit-events` | bearer tenant credential | Durable, tenant-scoped mutation ledger with cursor pagination. |
+| `POST /api/v1/sessions` | one-time tenant credential | Creates an HttpOnly browser session and returns an in-memory CSRF token. |
+| `GET /api/v1/sessions/current` | HttpOnly cookie | Restores the browser session and rotates CSRF. |
+| `DELETE /api/v1/sessions/current` | cookie + CSRF | Revokes the durable browser session. |
+| `GET /api/v1/audit-events` | bearer or HttpOnly session | Durable, tenant-scoped mutation ledger with cursor pagination. |
 
 `/metrics` intentionally contains no tenant ID, run ID, request ID, objective, reviewer, credential fingerprint, or user content. It is designed for cluster-internal scraping. The Helm chart emits standard Prometheus pod annotations when `observability.metrics.enabled=true`.
 
@@ -43,11 +46,18 @@ Current metrics:
 - `agency_http_request_duration_seconds_sum`;
 - `agency_http_request_duration_seconds_count`;
 - `agency_runs_started_total`;
-- `agency_greenlight_decisions_total`.
+- `agency_greenlight_decisions_total`;
+- `agency_browser_sessions_total`.
 
 HTTP labels are limited to method, FastAPI route template, and status. Greenlight labels contain only `approved` or `rejected`.
 
 These counters are process-local and reset when the pod restarts. Durable business evidence belongs in the audit ledger, not in metrics.
+
+## Browser sessions
+
+Production defaults are `HttpOnly`, `SameSite=Strict`, `Secure=true`, and an eight-hour TTL. Configure them with `AGENCY_SESSION_COOKIE_NAME`, `AGENCY_SESSION_COOKIE_SECURE`, and `AGENCY_SESSION_TTL_SECONDS`. Disable `Secure` only for isolated local HTTP smoke tests.
+
+Session and CSRF values are stored as SHA-256 hashes. Mutations authenticated by cookie require `X-CSRF-Token`; bearer clients do not. Session recovery rotates the CSRF token. Login rate limiting, MFA and user-level identity are not yet implemented.
 
 ## Durable audit ledger
 

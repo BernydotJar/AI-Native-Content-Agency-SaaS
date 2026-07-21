@@ -12,6 +12,10 @@ runtime:
   auth:
     existingSecret: "ai-native-content-agency-runtime"
     tenantApiKeysKey: "tenant-api-keys.json"
+  session:
+    cookieName: "agency_session"
+    cookieSecure: true
+    ttlSeconds: 28800
 
 persistence:
   enabled: true

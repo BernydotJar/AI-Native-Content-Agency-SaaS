@@ -16,37 +16,41 @@ from pydantic import BaseModel, ConfigDict, Field
 from .auth import AuthenticationError, TenantAuthenticator, TenantPrincipal
 from .memory import SQLiteMemory
 from .models import ExecutionRun, MissionBrief, Platform
-from .observability import (
-    RequestTimer,
-    RuntimeMetrics,
-    request_id_from_header,
-    structured_http_log,
-)
+from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
 from .orchestrator import AgencyOrchestrator, GreenlightError
-from .persistence import AuditEvent, AuditWrite, SQLiteRunStore
+from .persistence import (
+    AuditEvent,
+    AuditWrite,
+    SQLiteRunStore,
+    SessionAuthenticationError,
+    SessionCsrfError,
+    SessionIssue,
+    SessionRecord,
+)
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
 
 
 class BriefRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     title: str = Field(min_length=1, max_length=200)
     objective: str = Field(min_length=1, max_length=4000)
     audience: str = Field(min_length=1, max_length=1000)
     platforms: List[Platform] = Field(min_length=1)
     budget_cents: int = Field(default=0, ge=0)
-    source_asset: str = Field(
-        default="sandbox://brief/no-external-asset", max_length=2000
-    )
+    source_asset: str = Field(default="sandbox://brief/no-external-asset", max_length=2000)
     campaign_goal: str = Field(default="awareness", min_length=1, max_length=200)
 
 
 class GreenlightRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
     reviewer: str = Field(min_length=1, max_length=200)
     note: str = Field(default="", max_length=2000)
+
+
+class BrowserSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    api_key: str = Field(min_length=24, max_length=512)
 
 
 @dataclass
@@ -86,6 +90,39 @@ class RuntimeService:
             source_asset=request.source_asset,
             campaign_goal=request.campaign_goal,
         )
+
+    def create_browser_session(
+        self, principal: TenantPrincipal, ttl_seconds: int, request_id: str
+    ) -> SessionIssue:
+        with self._lock:
+            return self.run_store.create_session(
+                tenant_id=principal.tenant_id,
+                credential_fingerprint=principal.credential_fingerprint,
+                ttl_seconds=ttl_seconds,
+                request_id=request_id,
+                actor=_actor(principal),
+            )
+
+    def authenticate_browser_session(self, session_token: str) -> SessionRecord:
+        with self._lock:
+            return self.run_store.authenticate_session(session_token)
+
+    def verify_browser_csrf(self, session_id: str, csrf_token: str) -> None:
+        with self._lock:
+            self.run_store.verify_session_csrf(session_id, csrf_token)
+
+    def resume_browser_session(self, session_id: str) -> SessionIssue:
+        with self._lock:
+            return self.run_store.rotate_session_csrf(session_id)
+
+    def revoke_browser_session(self, principal: TenantPrincipal, request_id: str) -> None:
+        with self._lock:
+            self.run_store.revoke_session(
+                tenant_id=principal.tenant_id,
+                session_id=principal.session_id,
+                request_id=request_id,
+                actor=_actor(principal),
+            )
 
     def start(
         self,
@@ -130,14 +167,7 @@ class RuntimeService:
         request_id: str,
         actor: str,
     ) -> ExecutionRun:
-        return self._decide(
-            tenant_id=tenant_id,
-            run_id=run_id,
-            request=request,
-            request_id=request_id,
-            actor=actor,
-            decision="approved",
-        )
+        return self._decide(tenant_id, run_id, request, request_id, actor, "approved")
 
     def reject(
         self,
@@ -147,14 +177,7 @@ class RuntimeService:
         request_id: str,
         actor: str,
     ) -> ExecutionRun:
-        return self._decide(
-            tenant_id=tenant_id,
-            run_id=run_id,
-            request=request,
-            request_id=request_id,
-            actor=actor,
-            decision="rejected",
-        )
+        return self._decide(tenant_id, run_id, request, request_id, actor, "rejected")
 
     def _decide(
         self,
@@ -169,13 +192,9 @@ class RuntimeService:
             runtime = self._runtime_for(tenant_id)
             runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
             if decision == "approved":
-                run = runtime.orchestrator.approve(
-                    run_id, request.reviewer, request.note
-                )
+                run = runtime.orchestrator.approve(run_id, request.reviewer, request.note)
             else:
-                run = runtime.orchestrator.reject(
-                    run_id, request.reviewer, request.note
-                )
+                run = runtime.orchestrator.reject(run_id, request.reviewer, request.note)
             greenlight = run.greenlight
             if greenlight is None:
                 raise GreenlightError("Greenlight decision was not recorded")
@@ -193,33 +212,20 @@ class RuntimeService:
                         "decision": greenlight.decision.value,
                         "reviewer": greenlight.reviewer,
                         "note": greenlight.note,
-                        "approved_artifact_ids": list(
-                            greenlight.approved_artifact_ids
-                        ),
-                        "approved_artifact_hashes": list(
-                            greenlight.approved_artifact_hashes
-                        ),
-                        "authorized_channels": [
-                            item.value for item in greenlight.authorized_channels
-                        ],
-                        "authorized_budget_cents": (
-                            greenlight.authorized_budget_cents
-                        ),
+                        "approved_artifact_ids": list(greenlight.approved_artifact_ids),
+                        "approved_artifact_hashes": list(greenlight.approved_artifact_hashes),
+                        "authorized_channels": [item.value for item in greenlight.authorized_channels],
+                        "authorized_budget_cents": greenlight.authorized_budget_cents,
                     },
                 ),
             )
 
     def audit_events(
-        self,
-        tenant_id: str,
-        after_sequence: int,
-        limit: int,
+        self, tenant_id: str, after_sequence: int, limit: int
     ) -> Tuple[AuditEvent, ...]:
         with self._lock:
             return self.run_store.audit_events(
-                tenant_id=tenant_id,
-                after_sequence=after_sequence,
-                limit=limit,
+                tenant_id=tenant_id, after_sequence=after_sequence, limit=limit
             )
 
     def close(self) -> None:
@@ -239,23 +245,50 @@ def _run_document(run: ExecutionRun, tenant_id: str) -> Dict[str, object]:
 
 
 def _actor(principal: TenantPrincipal) -> str:
-    return "tenant-key:{}".format(principal.credential_fingerprint)
+    prefix = "browser-session" if principal.auth_method == "session" else "tenant-key"
+    return "{}:{}".format(prefix, principal.credential_fingerprint)
+
+
+def _environment_bool(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError("{} must be a boolean value".format(name))
 
 
 def create_app(
     database_path: Optional[str] = None,
     static_dir: Optional[Path] = None,
     tenant_api_keys: Optional[Mapping[str, str]] = None,
+    session_cookie_secure: Optional[bool] = None,
+    session_ttl_seconds: Optional[int] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
+    cookie_name = os.environ.get("AGENCY_SESSION_COOKIE_NAME", "agency_session")
+    cookie_secure = (
+        _environment_bool("AGENCY_SESSION_COOKIE_SECURE", True)
+        if session_cookie_secure is None
+        else session_cookie_secure
+    )
+    ttl_seconds = (
+        int(os.environ.get("AGENCY_SESSION_TTL_SECONDS", "28800"))
+        if session_ttl_seconds is None
+        else session_ttl_seconds
+    )
+    if ttl_seconds < 300 or ttl_seconds > 86400:
+        raise ValueError("session ttl must be between 300 and 86400 seconds")
+
     service = RuntimeService(db_path)
     metrics = RuntimeMetrics()
     authenticator = (
         TenantAuthenticator(tenant_api_keys)
         if tenant_api_keys is not None
-        else TenantAuthenticator.from_json(
-            os.environ.get("AGENCY_TENANT_API_KEYS_JSON")
-        )
+        else TenantAuthenticator.from_json(os.environ.get("AGENCY_TENANT_API_KEYS_JSON"))
     )
 
     @asynccontextmanager
@@ -267,17 +300,19 @@ def create_app(
 
     app = FastAPI(
         title="AI Native Content Agency API",
-        version="0.4.0",
+        version="0.5.0",
         description=(
-            "Tenant-scoped deterministic sandbox with durable audit evidence. "
-            "No endpoint publishes content, spends budget, renders media, or "
-            "contacts external services."
+            "Tenant-scoped deterministic sandbox with HttpOnly browser sessions "
+            "and durable audit evidence. No endpoint publishes content, spends "
+            "budget, renders media, or contacts external services."
         ),
         lifespan=lifespan,
     )
     app.state.runtime_service = service
     app.state.authenticator = authenticator
     app.state.metrics = metrics
+    app.state.session_cookie_name = cookie_name
+    app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
 
     @app.middleware("http")
@@ -316,21 +351,55 @@ def create_app(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="tenant authentication is not configured",
             )
-        if credentials is None or credentials.scheme.lower() != "bearer":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="bearer credential required",
-                headers={"WWW-Authenticate": "Bearer"},
+        if credentials is not None:
+            if credentials.scheme.lower() != "bearer":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="bearer credential required",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            try:
+                principal = authenticator.authenticate(credentials.credentials)
+            except AuthenticationError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=str(error),
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from error
+        else:
+            session_token = request.cookies.get(cookie_name, "")
+            try:
+                session = service.authenticate_browser_session(session_token)
+            except SessionAuthenticationError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=str(error),
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from error
+            principal = TenantPrincipal(
+                tenant_id=session.tenant_id,
+                credential_fingerprint=session.credential_fingerprint,
+                auth_method="session",
+                session_id=session.session_id,
             )
-        try:
-            principal = authenticator.authenticate(credentials.credentials)
-        except AuthenticationError as error:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=str(error),
-                headers={"WWW-Authenticate": "Bearer"},
-            ) from error
         request.state.tenant_id = principal.tenant_id
+        request.state.auth_method = principal.auth_method
+        request.state.session_id = principal.session_id
+        return principal
+
+    def require_mutation_principal(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> TenantPrincipal:
+        if principal.auth_method == "session":
+            try:
+                service.verify_browser_csrf(
+                    principal.session_id, request.headers.get("X-CSRF-Token", "")
+                )
+            except SessionCsrfError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail=str(error)
+                ) from error
         return principal
 
     @app.get("/healthz", tags=["operations"])
@@ -362,11 +431,104 @@ def create_app(
             media_type="text/plain; version=0.0.4; charset=utf-8",
         )
 
+    @app.post(
+        "/api/v1/sessions",
+        status_code=status.HTTP_201_CREATED,
+        tags=["authentication"],
+    )
+    def create_browser_session(
+        request: Request,
+        response: Response,
+        session_request: BrowserSessionRequest,
+    ) -> Dict[str, object]:
+        if not authenticator.configured:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="tenant authentication is not configured",
+            )
+        try:
+            principal = authenticator.authenticate(session_request.api_key)
+        except AuthenticationError as error:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid session credential",
+            ) from error
+        request.state.tenant_id = principal.tenant_id
+        issue = service.create_browser_session(
+            principal=principal,
+            ttl_seconds=ttl_seconds,
+            request_id=request.state.request_id,
+        )
+        response.set_cookie(
+            key=cookie_name,
+            value=issue.session_token,
+            max_age=ttl_seconds,
+            path="/",
+            secure=cookie_secure,
+            httponly=True,
+            samesite="strict",
+        )
+        metrics.session_changed("created")
+        return {
+            "tenant_id": issue.tenant_id,
+            "csrf_token": issue.csrf_token,
+            "expires_at": issue.expires_at,
+        }
+
+    @app.get("/api/v1/sessions/current", tags=["authentication"])
+    def resume_browser_session(
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> Dict[str, object]:
+        if principal.auth_method != "session" or not principal.session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="current browser session required",
+            )
+        try:
+            issue = service.resume_browser_session(principal.session_id)
+        except SessionAuthenticationError as error:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
+            ) from error
+        return {
+            "tenant_id": issue.tenant_id,
+            "csrf_token": issue.csrf_token,
+            "expires_at": issue.expires_at,
+        }
+
+    @app.delete("/api/v1/sessions/current", tags=["authentication"])
+    def revoke_browser_session(
+        request: Request,
+        response: Response,
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> Dict[str, object]:
+        if principal.auth_method != "session" or not principal.session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="current browser session required",
+            )
+        try:
+            service.revoke_browser_session(principal, request.state.request_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+        response.delete_cookie(
+            key=cookie_name,
+            path="/",
+            secure=cookie_secure,
+            httponly=True,
+            samesite="strict",
+        )
+        metrics.session_changed("revoked")
+        return {"status": "revoked"}
+
     @app.get("/api/v1/me", tags=["authentication"])
     def current_tenant(
         principal: TenantPrincipal = Depends(require_principal),
     ) -> Dict[str, object]:
-        return {"tenant_id": principal.tenant_id}
+        return {
+            "tenant_id": principal.tenant_id,
+            "auth_method": principal.auth_method,
+        }
 
     @app.get("/api/v1/audit-events", tags=["audit"])
     def list_audit_events(
@@ -374,15 +536,11 @@ def create_app(
         after_sequence: int = Query(default=0, ge=0),
         limit: int = Query(default=100, ge=1, le=200),
     ) -> Dict[str, object]:
-        events = service.audit_events(
-            principal.tenant_id, after_sequence, limit + 1
-        )
+        events = service.audit_events(principal.tenant_id, after_sequence, limit + 1)
         page = events[:limit]
         return {
             "events": [to_primitive(item) for item in page],
-            "next_after_sequence": (
-                page[-1].sequence if page else after_sequence
-            ),
+            "next_after_sequence": page[-1].sequence if page else after_sequence,
             "has_more": len(events) > limit,
         }
 
@@ -392,7 +550,7 @@ def create_app(
     def create_run(
         request: Request,
         brief_request: BriefRequest,
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_mutation_principal),
     ) -> Dict[str, object]:
         try:
             run = service.start(
@@ -425,7 +583,7 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_mutation_principal),
     ) -> Dict[str, object]:
         try:
             run = service.approve(
@@ -449,7 +607,7 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
-        principal: TenantPrincipal = Depends(require_principal),
+        principal: TenantPrincipal = Depends(require_mutation_principal),
     ) -> Dict[str, object]:
         try:
             run = service.reject(

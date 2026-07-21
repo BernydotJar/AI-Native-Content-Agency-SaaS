@@ -40,7 +40,7 @@ Este documento compara el producto actual con `proposal_and_prompt.md` y con el 
 | Generación/optimización real de media | Adaptadores `VideoOptimizerTool` e `ImageToVideoTool` | **No implementado.** Se crean planes y storyboards; ningún archivo se lee o renderiza. |
 | Context7, browser y GitHub en runtime | Catálogos TS/Python con estados mock | **No implementado como integración.** Los nombres representan contratos de adapter; el producto no hace llamadas, navegación ni cambios remotos. |
 | API Meta Ads y métricas live | Catálogo, dashboard y forecast fixture | **No implementado.** No hay OAuth, cuenta publicitaria, mutación, polling ni spend. |
-| Transporte frontend↔backend | FastAPI existe y sirve la SPA, pero `src/App.tsx` no realiza `fetch` ni consume contratos backend | **Parcial.** Backend network-addressable real; frontend aún usa su state machine local. |
+| Transporte frontend↔backend | `ProductionRuntimePanel.tsx` + `runtimeApi.ts` consumen FastAPI same-origin con cookie HttpOnly y CSRF | **Real para el vertical slice de producción.** El simulador cinematográfico original sigue como runtime paralelo. |
 | Streaming de eventos | FastAPI sólo expone request/response REST; no hay SSE/WebSocket | **No implementado.** La animación web usa timers locales. |
 | Persistencia de producto multiusuario | `auth.py`, `persistence.py`, memoria namespaced y pruebas de reinicio/cross-tenant | **Real local, single-node.** Runs y approvals sobreviven reinicios y se particionan por tenant; falta PostgreSQL, identidad individual y object storage. |
 | Accesibilidad y reduced motion | Skip link y semántica en `src/App.tsx`; controles/tab/progressbar en componentes; media queries en `src/index.css` | **Real local, con cobertura automatizada parcial.** Falta auditoría manual completa con browser/lector de pantalla. |
@@ -56,9 +56,9 @@ La implementación conserva React y TypeScript, pero usa Vite 8. No hay routing 
 
 La topología usa botones HTML posicionados y un SVG normalizado para edges. Esto evita otra dependencia y permite una secuencia móvil específica, pero no ofrece edición de grafos, zoom/pan, minimap, handles o el ecosistema de React Flow.
 
-### Dos runtimes en lugar de una arquitectura cliente/servidor
+### Consola cliente/servidor junto al simulador legado
 
-`src/App.tsx` y `src/lib/simulationRuntime.ts` ejecutan la demo en el navegador. `backend/agency_runtime` ejecuta otra representación determinista desde Python. Esta separación permite probar seguridad y contratos sin levantar servicios, pero puede producir divergencia de estado, artefactos y reglas. La convergencia requiere un contrato versionado y transporte real.
+`ProductionRuntimePanel.tsx` ya ejecuta el backend durable mediante contratos HTTP tipados. `src/lib/simulationRuntime.ts` permanece para la experiencia cinematográfica preexistente. La duplicación es deliberada durante la transición y deberá retirarse sólo después de demostrar paridad de misiones, estados, memoria y Greenlight.
 
 ### Fixtures deterministas en lugar de MCP/APIs live
 
@@ -107,5 +107,6 @@ La verificación automatizada no sustituye QA visual/manual. El browser integrad
 | Horizontal high availability | SQLite remains a single-writer store. | **Missing; requires shared database adapter.** |
 | Structured observability | `observability.py`, `/metrics`, request middleware, Helm scrape annotations, and sanitization tests. | **Real local.** Metrics are process-local; no external exporter or distributed tracing. |
 | Durable audit export | Transactional `audit_events` plus tenant-scoped cursor endpoint and restart tests. | **Real local.** Application append-only; no hash chain, retention engine, immutable archive, or SIEM export. |
+| Browser-safe frontend session | `runtime_sessions`, `/api/v1/sessions*`, `runtimeApi.ts`, `ProductionRuntimePanel.tsx`, and session/storage tests. | **Real local and packaged.** HttpOnly/SameSite/CSRF/rotation/revocation; no managed user identity, MFA or rate limiting. |
 
-Verification on 21 July 2026: Oxlint passed, 28 Vitest tests passed, Vite production build passed, 25 Python tests passed, Helm lint/template passed, both Helm safety guards passed, and the packaged image passed health/readiness/auth/SPA/API/audit/metrics smoke. Docker's nested `vfs` daemon failed to register a base-image layer; the documented Buildah `vfs` + `chroot` alternative completed the identical Dockerfile and runtime smoke.
+Verification on 21 July 2026: Oxlint passed, 28 Vitest tests passed, Vite production build passed, 28 Python tests and 33 frontend tests passed; Helm lint/template and both safety guards passed; the packaged image passed HttpOnly session/CSRF/run/Greenlight/package/audit/metrics/revocation smoke. Docker's nested `vfs` daemon failed to register a base-image layer; the documented Buildah `vfs` + `chroot` alternative completed the identical Dockerfile and runtime smoke.

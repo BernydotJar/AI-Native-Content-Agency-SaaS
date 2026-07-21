@@ -5,7 +5,11 @@ from pathlib import Path
 from agency_runtime.memory import SQLiteMemory
 from agency_runtime.models import MissionBrief, Platform, Provenance
 from agency_runtime.orchestrator import AgencyOrchestrator
-from agency_runtime.persistence import SQLiteRunStore
+from agency_runtime.persistence import (
+    SessionAuthenticationError,
+    SessionCsrfError,
+    SQLiteRunStore,
+)
 from agency_runtime.tools import build_sandbox_toolset
 
 
@@ -50,6 +54,39 @@ class TenantPersistenceTests(unittest.TestCase):
                 self.assertNotEqual(alpha_record.memory_id, beta_record.memory_id)
                 with self.assertRaises(KeyError):
                     beta.recall(alpha_record.memory_id)
+
+    def test_session_tokens_are_hashed_and_expire(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "runtime.sqlite3"
+            current = ["2026-07-21T12:00:00+00:00"]
+
+            def clock():
+                return current[0]
+
+            store = SQLiteRunStore(database, clock=clock)
+            try:
+                issued = store.create_session(
+                    tenant_id="tenant-alpha",
+                    credential_fingerprint="fingerprint-1234",
+                    ttl_seconds=300,
+                    request_id="session-store-0001",
+                    actor="tenant-key:fingerprint-1234",
+                )
+                self.assertEqual(
+                    store.authenticate_session(issued.session_token).tenant_id,
+                    "tenant-alpha",
+                )
+                store.verify_session_csrf(issued.session_id, issued.csrf_token)
+                with self.assertRaises(SessionCsrfError):
+                    store.verify_session_csrf(issued.session_id, "incorrect-token")
+                raw = database.read_bytes()
+                self.assertNotIn(issued.session_token.encode("utf-8"), raw)
+                self.assertNotIn(issued.csrf_token.encode("utf-8"), raw)
+                current[0] = "2026-07-21T12:05:01+00:00"
+                with self.assertRaises(SessionAuthenticationError):
+                    store.authenticate_session(issued.session_token)
+            finally:
+                store.close()
 
     def test_run_store_round_trip_preserves_greenlight_contract(self):
         with tempfile.TemporaryDirectory() as directory:

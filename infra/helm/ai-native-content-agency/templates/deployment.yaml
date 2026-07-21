@@ -47,6 +47,12 @@ spec:
                 secretKeyRef:
                   name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
                   key: {{ required "runtime.auth.tenantApiKeysKey is required" .Values.runtime.auth.tenantApiKeysKey | quote }}
+            - name: AGENCY_SESSION_COOKIE_NAME
+              value: {{ .Values.runtime.session.cookieName | quote }}
+            - name: AGENCY_SESSION_COOKIE_SECURE
+              value: {{ .Values.runtime.session.cookieSecure | quote }}
+            - name: AGENCY_SESSION_TTL_SECONDS
+              value: {{ .Values.runtime.session.ttlSeconds | quote }}
           startupProbe:
             httpGet:
               path: /healthz

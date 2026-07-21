@@ -21,6 +21,7 @@ import type {
 import { MetaAdsDashboard } from "./components/MetaAdsDashboard";
 import type { MetaAdsCampaign } from "./components/MetaAdsDashboard";
 import { ToolFabricPanel } from "./components/ToolFabricPanel";
+import { ProductionRuntimePanel } from "./components/ProductionRuntimePanel";
 import { packageCampaign } from "./lib/simulationRuntime";
 import { 
   Terminal, 
@@ -1470,6 +1471,10 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        <div className="mt-10 lg:mt-14">
+          <ProductionRuntimePanel />
+        </div>
 
         <div className="mt-10 lg:mt-14">
           <MemorySkillsPanel
