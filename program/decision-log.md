@@ -79,3 +79,21 @@ Decision: `PostgresRuntimeDatabase` defaults to `validate`. Only the explicit `a
 Rationale: application startup is horizontally concurrent and continuously exposed. Giving every replica schema ownership or implicit migration authority expands compromise impact and makes rollout/rollback nondeterministic.
 
 Consequence: a new or upgraded database must be initialized and granted before application rollout. Missing, incomplete or incompatible schema fails startup/readiness instead of being repaired implicitly. The code/delivery HIGH is closed; persistent environment observation remains a separate production gate.
+
+## D-010 — Versioned SLO and alert contracts
+
+Date: 2026-07-21
+Status: accepted locally at `6a885827b7e89d06111c87c34293250eab196d47`; remote CI pending
+
+Decision: SLOs, exact error budgets, alert metadata, Prometheus rules and deterministic exercises are versioned and validated together. `PrometheusRule` is opt-in and assumes an existing operator; the repository never equates rule rendering with telemetry or paging.
+
+Consequence: rule/catalog/runbook drift fails CI. Persistent loading, alert delivery and human response remain staging/production evidence.
+
+## D-011 — Backup freshness is emitted only after integrity validation
+
+Date: 2026-07-21
+Status: accepted locally at `6a885827b7e89d06111c87c34293250eab196d47`; external production controls pending
+
+Decision: successful SQLite/PostgreSQL backup commands may atomically write a private Prometheus textfile only after manifest/artifact integrity validation. The signal contains backend, bytes and timestamp only.
+
+Consequence: stale/missing signals are locally testable without leaking paths or credentials. Scheduler, KMS, encryption, immutable off-host retention and real alert delivery remain explicit external gates.

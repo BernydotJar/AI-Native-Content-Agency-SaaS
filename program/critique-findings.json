@@ -57,8 +57,8 @@
       "status": "OPEN"
     },
     {
-      "description": "Backups are not scheduled, encrypted, immutable/off-host or exercised in an authorized environment.",
-      "evidence": "Repository tooling and ephemeral restore drills pass; production backup storage, KMS, scheduling, retention and alerting do not exist.",
+      "description": "Production backups require scheduling, encrypted immutable off-host retention, KMS/key lifecycle and exercised alert delivery.",
+      "evidence": "Exact local commit 6a885827b7e89d06111c87c34293250eab196d47 adds private atomic SQLite/PostgreSQL backup freshness metrics, 24-hour RPO/25-hour freshness SLO, stale/missing-signal alerts, deterministic rule exercises and restore-preserving regression. Production scheduler, KMS/encryption, immutable off-host storage, retention and real alert delivery remain external/human-gated.",
       "id": "F-008",
       "owner": "INC-005",
       "severity": "HIGH",

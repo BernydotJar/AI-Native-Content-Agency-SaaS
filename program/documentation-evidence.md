@@ -31,3 +31,8 @@ Known documentation repairs in `INC-001`:
 | `docs/adr/0008-durable-command-idempotency-and-greenlight-fencing.md` | inbound command replay and effect fencing decision | exact local and remote evidence at `bc01fa7`; future external providers still require outbound receipts |
 | `specs/004-durable-idempotency/` | INC-004 operational specification | implementation and eight-job exact-head CI pass; external effects remain out of scope |
 | `program/reports/inc-004-progress.md` | INC-004 bounded review | completion evidence at `bc01fa7` with exact-head run `29871278876` |
+
+| `ops/slo-catalog.json`, `ops/alert-catalog.json`, `ops/alert-exercises.json` | INC-005 operability contracts | exact local validation at `6a88582`; persistent monitoring/paging not observed |
+| `scripts/verify-operability.py` | fail-closed SLO/rule/runbook/exercise validator | 4 SLOs, 7 alerts and 8 exercises pass locally; exact CI pending |
+| `docs/runbooks/incident-response.md` and `docs/runbooks/release-rollback.md` | incident and rollback procedures | local rule linkage and control-plane rollback proven; human/staging drills pending |
+| `program/reports/inc-005-progress.md` | INC-005 bounded review | local evidence at `6a88582`; external backup/monitoring gates remain open |

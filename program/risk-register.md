@@ -6,7 +6,7 @@ Updated: 2026-07-21
 |---|---|---|---|---|
 | R-001 | HIGH | Two divergent production backends become concurrent authorities. | PR #3 runtime selected; PR #2 treated as donor; no wholesale merge. | Open, controlled |
 | R-002 | HIGH | Documentation/CI imply a GCP deployment that does not exist. | Cloud state recorded as `DENY_APPLY`; runtime observation required. | Open external |
-| R-003 | MEDIUM | Local recovery works but production backups may be stale, unencrypted or unavailable off-host. | Strict tooling plus SQLite/PostgreSQL application-readable drills pass; runbook requires external encryption/retention/scheduling. | Open deployment control |
+| R-003 | HIGH | Production backup may be stale, unencrypted, mutable or unavailable off-host. | Exact local `6a885827b7e89d06111c87c34293250eab196d47` proves validated private freshness signals, stale/missing alerts and restores; scheduler, KMS/encryption, immutable off-host retention and real delivery remain absent. | External production controls required |
 | R-004 | HIGH | Duplicate or ambiguous mutable requests create conflicting state. | Exact head `bc01fa7b54341865f848c0754884cc83f660a0c7` passed local race/replay gates and eight-job CI run `29871278876` using digest-only transactional receipts and advisory command locks. | Controlled in code and delivery |
 | R-005 | HIGH | Static identity configuration is treated as enterprise production IAM. | RBAC/session/key rotation documented; SSO/MFA/lifecycle remain explicit gaps. | Open |
 | R-006 | HIGH | Tenant or identity metadata leaks through errors, logs, metrics, or audit visibility. | Route-template logs, low-cardinality metrics, uniform cross-tenant 404, tenant-scoped audit. Privacy review still missing. | Open review |

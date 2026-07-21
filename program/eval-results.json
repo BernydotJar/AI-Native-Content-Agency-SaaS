@@ -153,9 +153,37 @@
       "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
       "result": "PASS",
       "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "python3 scripts/verify-operability.py",
+      "id": "INC005-OPERABILITY-CONTRACT",
+      "observed": "4 SLOs, exact error budgets, 7 alerts, 8 deterministic exercises, metric/rule/runbook parity and negative drift tests PASS",
+      "result": "PASS",
+      "scope": "SLO, alert and runbook contracts"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC005-BACKUP-FRESHNESS",
+      "observed": "PostgreSQL 15.18; 101/101; private atomic SQLite/PostgreSQL freshness textfiles, migration/replay and both restores PASS",
+      "result": "PASS",
+      "scope": "backup freshness and recovery"
+    },
+    {
+      "command": "./scripts/verify-local-infrastructure.sh",
+      "id": "INC005-ROLLBACK",
+      "observed": "bounded Helm upgrade, new revision, rollback to captured revision, original configuration restored, deployed status verified; Terraform SQLite/PostgreSQL lifecycle cleanup PASS",
+      "result": "PASS",
+      "scope": "agentless Kubernetes control-plane rollback"
+    },
+    {
+      "command": "verify-python-locks, frontend, package, workflow, secret and supply-chain gates",
+      "id": "INC005-CROSS-WORKSTREAM",
+      "observed": "100 locked-wheel tests with 11 PostgreSQL-only skips; frontend lint/35 tests/build; non-root package and opt-in PrometheusRule render; actionlint/Gitleaks; clean-source SBOM/policy/provenance/Cosign PASS",
+      "result": "PASS",
+      "scope": "reproducibility, UI, package and supply chain"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "bc01fa7b54341865f848c0754884cc83f660a0c7",
-  "updated_at": "2026-07-21T21:51:30Z"
+  "source_commit": "6a885827b7e89d06111c87c34293250eab196d47",
+  "updated_at": "2026-07-21T22:15:56Z"
 }

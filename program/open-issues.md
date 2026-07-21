@@ -48,3 +48,11 @@ Category: human decision / legal review / data
 No jurisdiction, effective policy or accountable reviewer is selected. No destructive automation is authorized.
 
 Exact resume condition for policy implementation: identified operating entity/customer/jurisdiction, approved source/version/effective date, retention/legal-hold/backup propagation decisions, privacy/legal reviewer, security reviewer and business data owner.
+
+## OI-009 — Production backup and alert delivery
+
+Category: infrastructure / credential / human decision / data
+
+Exact local commit `6a885827b7e89d06111c87c34293250eab196d47` implements and exercises backup freshness signals, stale/missing rules, restore regression and alert-contract validation. No authorized scheduler, KMS/key lifecycle, encrypted immutable off-host destination, approved retention or persistent alert delivery exists.
+
+Acceptance condition: authorized target and credentials; reviewed scheduler; encryption/KMS; immutable off-host retention; approved policy; rules loaded; paging delivered; and a staging restore/incident exercise with retained evidence.

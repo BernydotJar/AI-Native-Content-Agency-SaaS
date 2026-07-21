@@ -235,31 +235,49 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Global production-readiness requirement.",
+      "context": "Executable local operability is complete: SLO/error budgets, cumulative latency histogram, alert rules/exercises, private backup freshness signals, incident/rollback/capacity runbooks and an agentless Helm rollback drill. Persistent monitoring/paging, production scheduler/KMS/off-host retention and staging workload observation remain external gates.",
       "dependencies": [
         "INC-002",
         "INC-003"
       ],
       "expected_outputs": [
-        "bounded spec",
-        "implementation/evidence",
-        "independent review"
+        "versioned SLO and error-budget catalog",
+        "cumulative request latency histogram",
+        "validated Prometheus alert rules and deterministic exercises",
+        "private atomic backup freshness textfiles for SQLite/PostgreSQL",
+        "opt-in Helm/Terraform PrometheusRule contract",
+        "incident, rollback, capacity and tracing-decision runbooks",
+        "disposable Helm upgrade/rollback evidence",
+        "exact local and CI evidence before publication claim"
       ],
       "human_gates": [
         "merge",
         "production or external effect when applicable"
       ],
+      "implementation_commit": "6a885827b7e89d06111c87c34293250eab196d47",
       "objective": "Define SLOs, alert rules, alert exercises, incident response and rollback drills.",
       "prohibited_paths": [
         "protected branches",
         "production",
         "external side effects without human gate"
       ],
+      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
       "read_only_paths": [],
       "role": "Production Reviewer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-005",
-      "validation_commands": [],
+      "validation_commands": [
+        "python3 scripts/verify-operability.py",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir .",
+        "git diff --check"
+      ],
       "workstream_id": "WS-09",
       "write_lock": "unclaimed"
     },
@@ -833,7 +851,7 @@
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "pending",
+      "status": "review",
       "validation": [],
       "write_locks": []
     },

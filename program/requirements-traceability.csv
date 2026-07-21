@@ -45,16 +45,16 @@ UX-008,ux,Reduced motion,weak_evidence,CSS media queries and motion controls,Man
 UX-009,ux,No keyboard traps,weak_evidence,Automated interaction tests only,Manual verify,WS-06
 OPS-001,operations,Environment strategy development test staging production,incomplete,Helm/Terraform local path and no authorized cloud target,Define target strategy,WS-09
 OPS-002,operations,Structured logs metrics health readiness,proven,observability.py endpoints tests,Observe in staging,WS-09
-OPS-003,operations,Distributed tracing or explicit decision,incomplete,No tracing and no formal decision,Record ADR or implement,WS-09
-OPS-004,operations,Alert definitions,missing,Only recommendations in docs/OPERATIONS.md,Add rules and validation,WS-09
-OPS-005,operations,Alert exercised,missing,No alert runtime exercise,Implement exercise harness,WS-09
-OPS-006,operations,SLOs and error budgets,missing,No SLO contract,Specify measurable SLOs,WS-09
-OPS-007,operations,Backup implementation,incomplete,checksummed SQLite/PostgreSQL tooling and local drills pass; no scheduled encrypted off-host service,Implement in authorized environment,WS-03
+OPS-003,operations,Distributed tracing or explicit decision,proven,6a885827b7e89d06111c87c34293250eab196d47; docs/adr/0009-distributed-tracing-decision.md,Revisit before any multi-service/effectful architecture and prove traces in staging,WS-09
+OPS-004,operations,Alert definitions,proven,6a885827b7e89d06111c87c34293250eab196d47; ops/alert-catalog.json; infra/monitoring/prometheus-rules.yaml; scripts/verify-operability.py,Load the validated rules into an authorized persistent monitoring system,WS-09
+OPS-005,operations,Alert exercised,weak_evidence,6a885827b7e89d06111c87c34293250eab196d47; ops/alert-exercises.json; backend/tests/test_operability.py,Exercise alert delivery and human response in authorized staging,WS-09
+OPS-006,operations,SLOs and error budgets,proven,6a885827b7e89d06111c87c34293250eab196d47; ops/slo-catalog.json; scripts/verify-operability.py,Observe SLI/error-budget consumption in staging before release,WS-09
+OPS-007,operations,Backup implementation,incomplete,6a885827b7e89d06111c87c34293250eab196d47; private atomic freshness textfiles and local restore drills,"Provide authorized scheduler, KMS/encryption, immutable off-host storage, retention and alert delivery",WS-03
 OPS-008,operations,Restore drill,proven,representative SQLite/PostgreSQL restores preserve counts/schema and application readability,Repeat in authorized staging,WS-03
-OPS-009,operations,Deployment runbook,incomplete,Local infrastructure docs only,Add authorized environment runbook,WS-09
-OPS-010,operations,Rollback runbook and drill,missing,Narrative fragments only,Implement and exercise,WS-09
-OPS-011,operations,Incident response,incomplete,No active-branch incident runbook,Port and adapt donor document,WS-09
-OPS-012,operations,Capacity assumptions,weak_evidence,PostgreSQL pool ceiling documented,Add workload model and load test,WS-09
+OPS-009,operations,Deployment runbook,weak_evidence,6a885827b7e89d06111c87c34293250eab196d47; docs/OPERATIONS.md and existing deployment procedures,Complete authorized environment-specific deployment procedure and staging execution,WS-09
+OPS-010,operations,Rollback runbook and drill,weak_evidence,6a885827b7e89d06111c87c34293250eab196d47; docs/runbooks/release-rollback.md; local agentless Helm rollback drill,Exercise workload/traffic rollback and RTO in authorized staging,WS-09
+OPS-011,operations,Incident response,weak_evidence,6a885827b7e89d06111c87c34293250eab196d47; docs/runbooks/incident-response.md,Execute a human incident drill with real alert delivery in authorized staging,WS-09
+OPS-012,operations,Capacity assumptions,weak_evidence,6a885827b7e89d06111c87c34293250eab196d47; docs/CAPACITY_ASSUMPTIONS.md,"Run load, soak, pool saturation and failover tests in staging",WS-09
 OPS-013,operations,Staging workload verification,missing,No authorized staging or pod execution,External blocker plus independent local work,WS-09
 DLV-001,delivery,Frontend deterministic gates,proven,lint 33 tests build in session,Preserve,WS-10
 DLV-002,delivery,Backend locked wheel gates,proven,baseline CI eight jobs success,Re-run after changes,WS-10
