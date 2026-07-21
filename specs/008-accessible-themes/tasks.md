@@ -9,4 +9,4 @@
 - [x] Package and clean-source supply-chain verification.
 - [x] Critic and automated independent review; human accessibility review blocked.
 - [x] Program state, commit, push, draft PR and exact-head CI.
-- [ ] Re-run exact-head CI after deterministic Chromium harness repair.
+- [x] Re-run exact-head CI after deterministic Chromium harness repair.

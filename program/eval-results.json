@@ -286,9 +286,16 @@
       "observed": "Three consecutive positive runs PASS; occupied-port case fails in 2 seconds with Vite process diagnostic; no residual listeners; stale output removed before each run",
       "result": "PASS",
       "scope": "deterministic accessibility browser gate"
+    },
+    {
+      "command": "gh run view 29876865289",
+      "id": "INC008-REPAIRED-HEAD-CI",
+      "observed": "All eight jobs SUCCESS after deterministic browser-harness repair; Chromium accessibility and artifact upload steps PASS.",
+      "result": "PASS",
+      "scope": "remote repaired-head automated delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "a3fa52f6c3e0e5e503527f5ba446badf4ee52070",
-  "updated_at": "2026-07-21T23:21:31Z"
+  "source_commit": "e83c9533fd277bbba82b2dea956c80b01e037b50",
+  "updated_at": "2026-07-21T23:24:15Z"
 }

@@ -415,7 +415,7 @@
       ],
       "read_only_paths": [],
       "role": "Accessibility Reviewer",
-      "status": "review",
+      "status": "blocked",
       "task_id": "INC-008",
       "validation_commands": [
         "npm test -- --reporter=dot",
@@ -430,7 +430,7 @@
         "gitleaks dir . --redact"
       ],
       "workstream_id": "WS-06",
-      "write_lock": "agent/inc-008-accessible-themes \u2014 deterministic browser gate repair"
+      "write_lock": "released; blocked on accountable human accessibility review"
     },
     {
       "acceptance_criteria": [
@@ -654,7 +654,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T23:21:31Z",
+  "updated_at": "2026-07-21T23:24:15Z",
   "workstreams": [
     {
       "acceptance_criteria": [

@@ -5,7 +5,7 @@ Branch: `agent/inc-008-accessible-themes`
 Stacked base: `agent/inc-007-operator-journey@dad71025bf14281930b8fafa2edae81e2a7c6c84`
 Identity/entitlement commit: `f63a58648eec0579d53a007c8ed83ff376b95727`
 Theme/browser commit: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
-Status: `REVIEW — REMOTE_BROWSER_GATE_REPAIR_PENDING`
+Status: `CHECKPOINT_COMPLETED_AUTOMATED — MANUAL_REVIEW_BLOCKED`
 External effects: none
 
 ## Review contract
@@ -123,7 +123,7 @@ Repair `a3fa52f6c3e0e5e503527f5ba446badf4ee52070`:
 - passes three consecutive positive runs;
 - rejects an occupied preview port in two seconds with the expected process diagnostic.
 
-Remote CI for the repaired head remains pending.
+Repaired head `e83c9533fd277bbba82b2dea956c80b01e037b50` passed all eight GitHub Actions jobs in run `29876865289`; the Chromium accessibility step and 143474-byte evidence artifact both succeeded. Human accessibility evidence remains blocked.
 
 ## Evidence boundary
 

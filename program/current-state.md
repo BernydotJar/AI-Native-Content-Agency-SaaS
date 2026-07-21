@@ -14,12 +14,13 @@ Cloud recommendation: `DENY_APPLY`
 - Identity/entitlement implementation: `f63a58648eec0579d53a007c8ed83ff376b95727`
 - Theme/browser implementation: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
 - Local program checkpoint: the commit containing this document, directly above `8ecf77e`
-- Active branch remote before repair: `6eb2b6b3ee7a253ef67dae64a888198de6594330`
-- Local Chromium harness repair: `a3fa52f6c3e0e5e503527f5ba446badf4ee52070`
-- Draft PR for INC-008: `#7`, base `agent/inc-007-operator-journey`
+- Active branch remote: `e83c9533fd277bbba82b2dea956c80b01e037b50`
+- Chromium harness repair: `a3fa52f6c3e0e5e503527f5ba446badf4ee52070`
+- Draft PR for INC-008: `#7`, base `agent/inc-007-operator-journey`, clean and mergeable
 - Implementation CI: run `29876402303`, eight of eight jobs successful with accessibility artifact
-- Closure CI: run `29876550199`, seven of eight jobs successful; verify failed on nondeterministic PID-derived CDP port
-- Repaired-head CI: pending
+- Closure CI regression: run `29876550199`, seven of eight jobs; verify failed on nondeterministic PID-derived CDP port
+- Repaired-head CI: run `29876865289`, eight of eight jobs successful
+- Repaired accessibility artifact: 143474 bytes, retained through 2026-08-20
 - Exact verified stacked-base CI: run `29874693956`, eight of eight jobs successful at `dad7102`
 - PR `#6`: draft and green on `agent/inc-007-operator-journey`
 - PR `#5`: draft and green on `agent/inc-005-operability`
@@ -60,7 +61,7 @@ Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29
 
 ### INC-008 — Accessible themes and accessibility evidence
 
-Status: `review`
+Status: `blocked`
 Owner: Accessibility Reviewer / Frontend Engineer / Identity Engineer
 External effects: none
 
@@ -116,7 +117,7 @@ Human 400% zoom and viewport review         NOT_RUN
 Physical-device behavior                    NOT_RUN
 ```
 
-`INC-008` implementation passed exact CI, but the later closure checkpoint exposed a nondeterministic browser-harness defect. The repair passes repeated positive and negative local evidence; remote repaired-head CI is pending. After that CI, the increment returns to the human-only accessibility blocker.
+`INC-008` completed every safe automated repository and delivery gate after repairing the nondeterministic Chromium harness. It is `blocked`, not `done`, exclusively because `F-007` requires accountable human accessibility evidence.
 
 ## Open global HIGH release findings
 
@@ -169,11 +170,11 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Publish the deterministic Chromium harness repair and this program checkpoint.
-2. Require all eight exact-head jobs and inspect the accessibility artifact.
-3. After repaired-head CI, return INC-008 to the human-only blocker.
-4. Continue an independent ready workstream; keep integrations, billing, publication and spend disabled.
+1. Publish this repaired-head closure checkpoint.
+2. Continue an independent ready workstream according to the task DAG.
+3. Keep F-007 and INC-008 blocked until accountable human review.
+4. Keep integrations, billing, publication and spend disabled.
 
 ## Exact continuation condition
 
-Push repair `a3fa52f6c3e0e5e503527f5ba446badf4ee52070` plus the program checkpoint, verify remote equality and require eight-job exact-head CI. Repair any remaining failure before returning INC-008 to BLK-A11Y-MANUAL-001. Preserve DENY_RELEASE and DENY_APPLY. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Publish this closure checkpoint above exact green repaired head `e83c9533fd277bbba82b2dea956c80b01e037b50`. Then select the next independent DAG node. Preserve DENY_RELEASE, DENY_APPLY, F-007 and BLK-A11Y-MANUAL-001 until human evidence exists. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
