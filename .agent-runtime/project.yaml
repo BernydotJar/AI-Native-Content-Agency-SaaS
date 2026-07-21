@@ -1,0 +1,12 @@
+apiVersion: runtime.cloud-sandbox.dev/v1alpha1
+kind: Project
+metadata:
+  id: ai-native-content-agency
+  name: AI Native Content Agency
+spec:
+  repository: https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS.git
+  defaultBranch: main
+  workstationMode: persistent
+  stateDirectories:
+    - artifacts
+    - checkpoints

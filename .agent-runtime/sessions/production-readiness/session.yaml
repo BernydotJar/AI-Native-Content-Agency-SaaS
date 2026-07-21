@@ -1,0 +1,12 @@
+apiVersion: runtime.cloud-sandbox.dev/v1alpha1
+kind: Session
+metadata:
+  id: production-readiness
+  name: Production Readiness
+spec:
+  branch: agent/production-readiness
+  executionPolicyRef: execution-policy.yaml
+  objective: Terraform and Kubernetes production-readiness program
+status:
+  phase: active
+  lastVerifiedCommit: dcb1d1c567ad688b7fd78a219411b42d5806034c

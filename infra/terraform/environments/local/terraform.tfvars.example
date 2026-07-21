@@ -1,0 +1,4 @@
+kubeconfig_path = "~/.kube/config"
+namespace       = "ai-native-content-agency"
+image_repository = "ai-native-content-agency"
+image_tag        = "local"
