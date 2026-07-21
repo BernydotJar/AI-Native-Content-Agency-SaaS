@@ -7,10 +7,11 @@ import secrets
 import sqlite3
 import threading
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Optional, Tuple, Union
+from typing import Callable, Iterator, Mapping, Optional, Tuple, Union
 
 from .memory import utc_now
 from .models import ExecutionRun
@@ -29,6 +30,7 @@ class AuditWrite:
     resource_id: str
     actor: str
     payload: Mapping[str, object]
+    event_id: str = ""
 
     def __post_init__(self) -> None:
         require_non_empty(self.request_id, "request_id")
@@ -36,6 +38,8 @@ class AuditWrite:
         require_non_empty(self.resource_type, "resource_type")
         require_non_empty(self.resource_id, "resource_id")
         require_non_empty(self.actor, "actor")
+        if self.event_id:
+            require_non_empty(self.event_id, "event_id")
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,12 @@ class AuthenticationRateLimitError(PermissionError):
 
 
 class RunStateConflictError(RuntimeError):
+    pass
+
+
+class AuditEventConflictError(RuntimeError):
+    """A deterministic audit receipt already exists for this command."""
+
     pass
 
 
@@ -229,7 +239,7 @@ class SQLiteRunStore:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                "audit-{}".format(uuid.uuid4().hex),
+                audit.event_id or "audit-{}".format(uuid.uuid4().hex),
                 tenant_id,
                 audit.request_id,
                 self._clock(),
@@ -245,6 +255,12 @@ class SQLiteRunStore:
         require_non_empty(tenant_id, "tenant_id")
         with self._lock, self._connection:
             self._append_audit_locked(tenant_id, audit)
+
+    @contextmanager
+    def command_lock(self, lock_id: str) -> Iterator[None]:
+        require_non_empty(lock_id, "lock_id")
+        with self._lock:
+            yield
 
     def create(
         self,
@@ -274,6 +290,12 @@ class SQLiteRunStore:
                 if audit is not None:
                     self._append_audit_locked(tenant_id, audit)
         except sqlite3.IntegrityError as error:
+            if audit is not None and audit.event_id and self.audit_event(
+                tenant_id, audit.event_id
+            ) is not None:
+                raise AuditEventConflictError(
+                    "command receipt already exists"
+                ) from error
             raise ValueError(
                 "run already exists for tenant: {}".format(run.run_id)
             ) from error
@@ -287,50 +309,59 @@ class SQLiteRunStore:
         expected_status: Optional[str] = None,
     ) -> ExecutionRun:
         document = canonical_json(execution_run_to_document(run))
-        with self._lock, self._connection:
-            if expected_status is None:
-                cursor = self._connection.execute(
-                    """
-                    UPDATE runtime_runs
-                    SET status = ?, document_json = ?, updated_at = ?
-                    WHERE tenant_id = ? AND run_id = ?
-                    """,
-                    (
-                        run.status.value,
-                        document,
-                        self._clock(),
-                        tenant_id,
-                        run.run_id,
-                    ),
-                )
-            else:
-                cursor = self._connection.execute(
-                    """
-                    UPDATE runtime_runs
-                    SET status = ?, document_json = ?, updated_at = ?
-                    WHERE tenant_id = ? AND run_id = ? AND status = ?
-                    """,
-                    (
-                        run.status.value,
-                        document,
-                        self._clock(),
-                        tenant_id,
-                        run.run_id,
-                        expected_status,
-                    ),
-                )
-            if cursor.rowcount != 1:
-                row = self._connection.execute(
-                    "SELECT status FROM runtime_runs WHERE tenant_id = ? AND run_id = ?",
-                    (tenant_id, run.run_id),
-                ).fetchone()
-                if row is None:
-                    raise KeyError("run not found: {}".format(run.run_id))
-                raise RunStateConflictError(
-                    "run state changed before persistence: {}".format(run.run_id)
-                )
-            if audit is not None:
-                self._append_audit_locked(tenant_id, audit)
+        try:
+            with self._lock, self._connection:
+                if expected_status is None:
+                    cursor = self._connection.execute(
+                        """
+                        UPDATE runtime_runs
+                        SET status = ?, document_json = ?, updated_at = ?
+                        WHERE tenant_id = ? AND run_id = ?
+                        """,
+                        (
+                            run.status.value,
+                            document,
+                            self._clock(),
+                            tenant_id,
+                            run.run_id,
+                        ),
+                    )
+                else:
+                    cursor = self._connection.execute(
+                        """
+                        UPDATE runtime_runs
+                        SET status = ?, document_json = ?, updated_at = ?
+                        WHERE tenant_id = ? AND run_id = ? AND status = ?
+                        """,
+                        (
+                            run.status.value,
+                            document,
+                            self._clock(),
+                            tenant_id,
+                            run.run_id,
+                            expected_status,
+                        ),
+                    )
+                if cursor.rowcount != 1:
+                    row = self._connection.execute(
+                        "SELECT status FROM runtime_runs WHERE tenant_id = ? AND run_id = ?",
+                        (tenant_id, run.run_id),
+                    ).fetchone()
+                    if row is None:
+                        raise KeyError("run not found: {}".format(run.run_id))
+                    raise RunStateConflictError(
+                        "run state changed before persistence: {}".format(run.run_id)
+                    )
+                if audit is not None:
+                    self._append_audit_locked(tenant_id, audit)
+        except sqlite3.IntegrityError as error:
+            if audit is not None and audit.event_id and self.audit_event(
+                tenant_id, audit.event_id
+            ) is not None:
+                raise AuditEventConflictError(
+                    "command receipt already exists"
+                ) from error
+            raise
         return run
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
@@ -387,6 +418,19 @@ class SQLiteRunStore:
                 (tenant_id, after_sequence, limit),
             ).fetchall()
         return tuple(self._row_to_audit_event(row) for row in rows)
+
+    def audit_event(self, tenant_id: str, event_id: str) -> Optional[AuditEvent]:
+        require_non_empty(tenant_id, "tenant_id")
+        require_non_empty(event_id, "event_id")
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT * FROM audit_events
+                WHERE tenant_id = ? AND event_id = ?
+                """,
+                (tenant_id, event_id),
+            ).fetchone()
+        return None if row is None else self._row_to_audit_event(row)
 
     def audit_count(self, tenant_id: str) -> int:
         with self._lock:

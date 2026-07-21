@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   CheckCircle2,
@@ -43,6 +43,13 @@ const DEFAULT_BRIEF: RuntimeBrief = {
   campaign_goal: "qualified_demand",
 };
 
+function newCommandKey(scope: string): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return `${scope}:${suffix}`;
+}
+
 function messageFromError(error: unknown): string {
   if (error instanceof RuntimeApiError) {
     return error.requestId
@@ -74,6 +81,24 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
   const [auditEvents, setAuditEvents] = useState<RuntimeAuditEvent[]>([]);
   const [busyAction, setBusyAction] = useState<string>("");
   const [error, setError] = useState("");
+  const commandKeys = useRef(new Map<string, string>());
+
+  const commandKey = (scope: string) => {
+    const existing = commandKeys.current.get(scope);
+    if (existing) return existing;
+    const created = newCommandKey(scope);
+    commandKeys.current.set(scope, created);
+    return created;
+  };
+
+  const clearCommandKey = (scope: string) => {
+    commandKeys.current.delete(scope);
+  };
+
+  const updateBrief = (patch: Partial<RuntimeBrief>) => {
+    clearCommandKey("run:create");
+    setBrief((current) => ({ ...current, ...patch }));
+  };
 
   const scholar = useMemo(() => scholarFromRun(run), [run]);
   const packageArtifact = run?.artifacts.find((artifact) => artifact.kind === "campaign_package");
@@ -106,6 +131,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
       const opened = await api.createSession(apiKey.trim());
       setSession(opened);
       setRun(null);
+      commandKeys.current.clear();
       await refreshAudit();
     } catch (caught) {
       setSession(null);
@@ -121,9 +147,15 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
     if (!session || brief.platforms.length === 0) return;
     setBusyAction("run");
     setError("");
+    const scope = "run:create";
     try {
-      const created = await api.createRun(brief, session.csrf_token);
+      const created = await api.createRun(
+        brief,
+        session.csrf_token,
+        commandKey(scope),
+      );
       setRun(created);
+      clearCommandKey(scope);
       await refreshAudit();
     } catch (caught) {
       setError(messageFromError(caught));
@@ -136,11 +168,35 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
     if (!session || !run) return;
     setBusyAction(decision);
     setError("");
+    const scope = `greenlight:${decision}:${run.run_id}`;
     try {
+      const key = commandKey(scope);
       const decided = decision === "approve"
-        ? await api.approveRun(run.run_id, session.csrf_token)
-        : await api.rejectRun(run.run_id, session.csrf_token);
+        ? await api.approveRun(run.run_id, session.csrf_token, key)
+        : await api.rejectRun(run.run_id, session.csrf_token, key);
       setRun(decided);
+      clearCommandKey(scope);
+      await refreshAudit();
+    } catch (caught) {
+      setError(messageFromError(caught));
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const revokeGreenlight = async () => {
+    if (!session || !run || run.status !== "completed") return;
+    const scope = `greenlight:revoke:${run.run_id}`;
+    setBusyAction("revoke");
+    setError("");
+    try {
+      const revoked = await api.revokeRun(
+        run.run_id,
+        session.csrf_token,
+        commandKey(scope),
+      );
+      setRun(revoked);
+      clearCommandKey(scope);
       await refreshAudit();
     } catch (caught) {
       setError(messageFromError(caught));
@@ -158,6 +214,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
       setSession(null);
       setRun(null);
       setAuditEvents([]);
+      commandKeys.current.clear();
     } catch (caught) {
       setError(messageFromError(caught));
     } finally {
@@ -166,6 +223,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
   };
 
   const togglePlatform = (platform: RuntimePlatform) => {
+    clearCommandKey("run:create");
     setBrief((current) => ({
       ...current,
       platforms: current.platforms.includes(platform)
@@ -292,7 +350,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
               Campaign title
               <input
                 value={brief.title}
-                onChange={(event) => setBrief((current) => ({ ...current, title: event.target.value }))}
+                onChange={(event) => updateBrief({ title: event.target.value })}
                 className="mt-2 w-full rounded-xl border border-white/[0.09] bg-black/30 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-[var(--primary-color)]"
                 disabled={!session}
                 required
@@ -302,7 +360,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
               Target segment
               <input
                 value={brief.audience}
-                onChange={(event) => setBrief((current) => ({ ...current, audience: event.target.value }))}
+                onChange={(event) => updateBrief({ audience: event.target.value })}
                 className="mt-2 w-full rounded-xl border border-white/[0.09] bg-black/30 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-[var(--primary-color)]"
                 disabled={!session}
                 required
@@ -312,7 +370,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
               Objective
               <textarea
                 value={brief.objective}
-                onChange={(event) => setBrief((current) => ({ ...current, objective: event.target.value }))}
+                onChange={(event) => updateBrief({ objective: event.target.value })}
                 className="mt-2 min-h-24 w-full resize-y rounded-xl border border-white/[0.09] bg-black/30 px-3 py-2.5 text-sm leading-6 text-zinc-100 outline-none focus:border-[var(--primary-color)]"
                 disabled={!session}
                 required
@@ -412,6 +470,32 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
                     >
                       <XCircle size={15} aria-hidden="true" /> Reject package
                     </button>
+                  </div>
+                )}
+
+                {run.status === "completed" && run.greenlight?.revoked_at === null && (
+                  <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.05] p-4">
+                    <p className="text-xs font-semibold text-amber-100">
+                      Greenlight active · fence {run.greenlight.fencing_token}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-amber-100/70">
+                      Revocation preserves the decision history and invalidates every prior effect token.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void revokeGreenlight()}
+                      disabled={Boolean(busyAction)}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300/30 px-4 py-3 text-xs font-bold text-amber-100 transition hover:bg-amber-300/[0.08] disabled:opacity-40"
+                    >
+                      <XCircle size={15} aria-hidden="true" />
+                      {busyAction === "revoke" ? "Revoking Greenlight…" : "Revoke Greenlight"}
+                    </button>
+                  </div>
+                )}
+
+                {run.status === "revoked" && run.greenlight && (
+                  <div className="rounded-xl border border-red-300/20 bg-red-300/[0.06] p-4 text-xs text-red-100">
+                    Greenlight revoked. Fence {run.greenlight.fencing_token}; publication remains disabled.
                   </div>
                 )}
 

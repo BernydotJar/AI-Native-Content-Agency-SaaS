@@ -45,8 +45,11 @@ BRIEF = {
 }
 
 
-def auth(api_key):
-    return {"Authorization": "Bearer {}".format(api_key)}
+def auth(api_key, idempotency_key=None):
+    result = {"Authorization": "Bearer {}".format(api_key)}
+    if idempotency_key is not None:
+        result["Idempotency-Key"] = idempotency_key
+    return result
 
 
 def identity(tenant_id, subject_id, role, key_id, api_key, active=True):
@@ -180,7 +183,9 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             self.assertTrue(ready.json()["durable_run_store"])
 
             created = first.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(self.operator_key)
+                "/api/v1/runs",
+                json=BRIEF,
+                headers=auth(self.operator_key, "postgres-create-shared-0001"),
             )
             self.assertEqual(created.status_code, 201)
             run_id = created.json()["run_id"]
@@ -194,7 +199,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             approved = second.post(
                 "/api/v1/runs/{}/greenlight/approve".format(run_id),
                 json={"reviewer": "approver", "note": "shared state verified"},
-                headers=auth(self.approver_key),
+                headers=auth(self.approver_key, "postgres-approve-shared-0001"),
             )
             self.assertEqual(approved.status_code, 200)
             self.assertEqual(approved.json()["status"], "completed")
@@ -212,6 +217,127 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 [event["action"] for event in events],
                 ["run.created", "greenlight.approved"],
             )
+
+    def test_compatible_create_replay_is_serialized_across_replicas(self):
+        first = TestClient(self.app())
+        second = TestClient(self.app())
+        key = "postgres-compatible-create-{}".format(self.tenant)
+        with first, second:
+            def create(client):
+                return client.post(
+                    "/api/v1/runs",
+                    json=dict(BRIEF, title="Compatible {}".format(self.tenant)),
+                    headers=auth(self.operator_key, key),
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                responses = [
+                    future.result()
+                    for future in (
+                        executor.submit(create, first),
+                        executor.submit(create, second),
+                    )
+                ]
+            self.assertEqual([response.status_code for response in responses], [201, 201])
+            self.assertEqual(responses[0].json(), responses[1].json())
+            run_id = responses[0].json()["run_id"]
+            events = first.get(
+                "/api/v1/audit-events", headers=auth(self.viewer_key)
+            ).json()["events"]
+            created = [
+                event
+                for event in events
+                if event["action"] == "run.created" and event["resource_id"] == run_id
+            ]
+            self.assertEqual(len(created), 1)
+            self.assertNotIn(key, repr(created))
+
+        with raw_connection(MIGRATION_DATABASE_URL) as connection:
+            rows = connection.cursor()
+            rows.execute(
+                "SELECT event_id, payload_json::text FROM audit_events WHERE tenant_id = %s",
+                (self.tenant,),
+            )
+            serialized = repr(rows.fetchall())
+        self.assertNotIn(key, serialized)
+
+    def test_incompatible_create_reuse_yields_one_uniform_conflict(self):
+        first = TestClient(self.app())
+        second = TestClient(self.app())
+        key = "postgres-incompatible-create-{}".format(self.tenant)
+        with first, second:
+            briefs = [
+                dict(BRIEF, title="Incompatible A {}".format(self.tenant)),
+                dict(BRIEF, title="Incompatible B {}".format(self.tenant)),
+            ]
+
+            def create(client, brief):
+                return client.post(
+                    "/api/v1/runs",
+                    json=brief,
+                    headers=auth(self.operator_key, key),
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                responses = [
+                    future.result()
+                    for future in (
+                        executor.submit(create, first, briefs[0]),
+                        executor.submit(create, second, briefs[1]),
+                    )
+                ]
+            self.assertEqual(sorted(response.status_code for response in responses), [201, 409])
+            conflict = next(response for response in responses if response.status_code == 409)
+            self.assertEqual(conflict.json()["code"], "idempotency_conflict")
+            self.assertNotIn(key, conflict.text)
+
+    def test_compatible_greenlight_replay_packages_once_across_replicas(self):
+        first = TestClient(self.app())
+        second = TestClient(self.app())
+        with first, second:
+            created = first.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Compatible decision {}".format(self.tenant)),
+                headers=auth(self.operator_key, "postgres-compatible-run-{}".format(self.tenant)),
+            )
+            self.assertEqual(created.status_code, 201)
+            run_id = created.json()["run_id"]
+            decision = {"reviewer": "approver", "note": "same decision"}
+            key = "postgres-compatible-approve-{}".format(self.tenant)
+
+            def approve(client):
+                return client.post(
+                    "/api/v1/runs/{}/greenlight/approve".format(run_id),
+                    json=decision,
+                    headers=auth(self.approver_key, key),
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                responses = [
+                    future.result()
+                    for future in (
+                        executor.submit(approve, first),
+                        executor.submit(approve, second),
+                    )
+                ]
+            self.assertEqual([response.status_code for response in responses], [200, 200])
+            self.assertEqual(responses[0].json(), responses[1].json())
+            packages = [
+                artifact
+                for artifact in responses[0].json()["artifacts"]
+                if artifact["kind"] == "campaign_package"
+            ]
+            self.assertEqual(len(packages), 1)
+            events = first.get(
+                "/api/v1/audit-events", headers=auth(self.viewer_key)
+            ).json()["events"]
+            decisions = [
+                event
+                for event in events
+                if event["action"] == "greenlight.approved"
+                and event["resource_id"] == run_id
+            ]
+            self.assertEqual(len(decisions), 1)
 
     def test_authorization_denial_is_shared_and_public_error_is_uniform(self):
         with TestClient(self.app()) as first, TestClient(self.app()) as second:
@@ -263,7 +389,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             created = first.post(
                 "/api/v1/runs",
                 json=dict(BRIEF, title="Concurrent Greenlight {}".format(self.tenant)),
-                headers=auth(self.operator_key),
+                headers=auth(self.operator_key, "postgres-create-concurrent-0001"),
             )
             self.assertEqual(created.status_code, 201)
             run_id = created.json()["run_id"]
@@ -272,7 +398,10 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 return client.post(
                     "/api/v1/runs/{}/greenlight/{}".format(run_id, action),
                     json={"reviewer": action, "note": "concurrent decision"},
-                    headers=auth(self.approver_key),
+                    headers=auth(
+                        self.approver_key,
+                        "postgres-greenlight-{}-0001".format(action),
+                    ),
                 )
 
             with ThreadPoolExecutor(max_workers=2) as executor:

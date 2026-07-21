@@ -47,7 +47,7 @@ Any future effectful adapter creates a new trust boundary and requires its own v
 | API keys, session and CSRF tokens | confidentiality, integrity, revocability | account/tenant impersonation |
 | Tenant and subject binding | integrity | cross-tenant access or privilege escalation |
 | Campaign briefs, artifacts and memories | confidentiality, integrity, provenance | political/client disclosure, manipulated strategy or unsupported claims |
-| Greenlight decision and exact artifact hashes | integrity, freshness, non-replay | unreviewed package treated as approved |
+| Greenlight decision, fencing token and exact artifact hashes | integrity, freshness, non-replay | unreviewed or revoked package treated as approved |
 | Audit ledger and request correlation | integrity, availability, tenant isolation | repudiation, false evidence or incident blindness |
 | Rate-limit state | integrity, availability | brute-force bypass or credential denial of service |
 | SQLite/PostgreSQL data and backups | confidentiality, integrity, recoverability | broad tenant disclosure or unrecoverable loss |
@@ -101,7 +101,7 @@ No trust is assigned merely because traffic originates from the browser, a priva
 1. Client-supplied tenant, subject, role or key ID is never authoritative.
 2. Forwarded source addresses are trusted only from configured proxy networks.
 3. PostgreSQL/SQLite records are addressed with tenant-leading predicates or composite keys.
-4. Greenlight applies only to the stored exact artifact IDs and hashes; it is not publication authority.
+4. Greenlight applies only to the stored exact artifact IDs/hashes, current fencing token, channels and budget; it is not publication authority.
 5. Sandbox adapters cannot create an external effect.
 6. Backup manifests establish byte integrity relative to a trusted manifest, not authenticity or encryption.
 7. CI/manifests prove only their tested scope; they do not prove a running workload or production control.
@@ -126,17 +126,19 @@ No trust is assigned merely because traffic originates from the browser, a priva
 ### F3 — Run creation and agent orchestration
 
 1. Request body is bounded globally and by field/list validators.
-2. `runs:create` is authorized server-side.
-3. The deterministic orchestrator produces local evidence and artifact hashes.
-4. Run and `run.created` audit event commit transactionally in one tenant scope.
+2. `runs:create` is authorized server-side and requires a bounded idempotency key.
+3. The key is digested; operation/resource/payload/authenticated subject form the request fingerprint.
+4. The deterministic orchestrator produces local evidence and artifact hashes once per concurrent command.
+5. Run, replay snapshot and `run.created` receipt commit transactionally in one tenant scope.
 
 ### F4 — Greenlight
 
-1. Approver/admin obtains a tenant-scoped run.
-2. Server compares expected artifact IDs/hashes and current state.
-3. One approve/reject decision and audit event commit transactionally.
-4. Concurrent/stale/duplicate state returns a uniform 409 without internal state disclosure.
-5. Durable client idempotency replay and post-approval revocation remain missing; no effectful adapter may be enabled.
+1. Approver/admin obtains a tenant-scoped run and submits a bounded idempotency key.
+2. The authenticated subject, not client reviewer text, is persisted as decision authority.
+3. One approve/reject/revoke mutation, replay snapshot and audit receipt commit transactionally.
+4. Compatible replay returns the original document; incompatible key reuse returns uniform 409.
+5. Approval starts fencing token `1`; revocation increments it and preserves evidence.
+6. A future adapter must verify active status, Greenlight ID, current token, artifact IDs/hashes, channel and budget. No effectful adapter is enabled.
 
 ### F5 — Denial and incident evidence
 
@@ -158,7 +160,7 @@ No trust is assigned merely because traffic originates from the browser, a priva
 | T-002 | Spoofing | Steal/replay a browser session or CSRF token. | HttpOnly/SameSite cookie, Secure default, hashed tokens, expiry, credential fingerprint, constant-time CSRF, revocation and cross-instance tests. | No device binding/MFA; XSS defense also depends on reviewed CSP and frontend hygiene. | MEDIUM open |
 | T-003 | Spoofing | Forge client IP via forwarding headers to evade limits. | Forwarded headers accepted only from configured trusted proxy networks; direct source otherwise. | Deployment must keep trusted CIDRs exact and prevent direct backend bypass. | Controlled / deployment gate |
 | T-004 | Tampering | Supply client tenant/role/key ID or access guessed foreign run. | Principal derives only from server configuration/session; composite tenant keys and tenant-leading SQL; foreign/missing response is uniform; negative tests. | PostgreSQL Row Level Security is not implemented; application predicates remain the primary tenant boundary. | HIGH open |
-| T-005 | Tampering | Alter reviewed artifacts after Greenlight. | Exact artifact IDs/hashes stored and checked; one transactional decision; stale/concurrent tests. | No durable command idempotency ledger and no post-approval revocation/fencing before a future effect. | HIGH open (INC-004) |
+| T-005 | Tampering | Alter reviewed artifacts, replay a command or use stale approval after Greenlight. | Durable tenant/operation-scoped receipts, exact compatible replay, uniform conflicts, authenticated decision identity, artifact hashes, revocation and fencing-token guard; SQLite/PostgreSQL concurrency tests. | External providers still require their own outbox, provider idempotency token and receipt before activation. | Controlled for current sandbox |
 | T-006 | Tampering | Modify audit evidence. | Append-only application interface and transactional writes; tenant-scoped pagination; backup checksums. | Database owner/operator can alter rows; no hash chain, signature or immutable export. | HIGH open for production |
 | T-007 | Tampering | Alter backup or restore into active/non-empty target. | Strict manifest, size/SHA-256, integrity/archive validation, atomic SQLite replacement, sidecar guard, empty PostgreSQL target and transactional restore; drills. | Manifest is not signed; external encryption/immutability/scheduling absent. | MEDIUM open |
 | T-008 | Repudiation | Deny a mutation, approval or security denial. | Request IDs, actor/action/resource/payload audit; mutations and authenticated RBAC/CSRF denials durable across restart/replica. | Anonymous failures cannot be tenant-attributed; audit is not independently immutable or time-attested. | MEDIUM open |
@@ -169,7 +171,7 @@ No trust is assigned merely because traffic originates from the browser, a priva
 | T-013 | Denial of service | Brute-force credentials or spray many keys. | Atomic durable per-source/per-credential buckets in SQLite/PostgreSQL, retry header and bounded metrics; concurrency tests. | Valid principals can flood reads/denials/audit because no general authenticated request quota exists. | MEDIUM open (operations/rate policy) |
 | T-014 | Denial of service | Exhaust PostgreSQL pool or hold transactions across external calls. | Bounded pool, deterministic local tools, no external calls inside transactions, readiness checks. | Capacity/soak/failover not measured; current deployment evidence has no running scheduler workload. | HIGH open for staging |
 | T-015 | Elevation of privilege | Viewer/operator performs approval/admin action. | Explicit permission matrix enforced in dependencies; denials audited; role/session change tests. | Static configuration changes are operator-controlled and not independently approved. | Controlled / config governance |
-| T-016 | Elevation of privilege | Compromise overprivileged PostgreSQL runtime account. | Implementation separates explicit `initialize` from read-only `validate`; Helm/Terraform force application pods to validate; the disposable verifier defines a non-superuser/non-owner runtime role, exact DML grants and DDL/TRUNCATE/schema-metadata denial. | The revised exact-commit gates have not been rerun in this iteration and no persistent staging/production role has been observed. | HIGH remediation in progress (INC-012) |
+| T-016 | Elevation of privilege | Compromise overprivileged PostgreSQL runtime account. | Exact-head CI and local verifier prove explicit initialize/validate separation, non-superuser/non-owner runtime, exact DML grants and DDL/TEMP/TRUNCATE/schema-metadata/role-escalation denial. | No persistent staging/production role has been observed; tracked by the environment gate. | Controlled in code/delivery; staging gate |
 | T-017 | Elevation / supply chain | Malicious package/action/base image executes in build/runtime. | Hash locks, SHA/digest pins, SBOM, vulnerability/license policy, provenance, offline Cosign verification, non-root image. | Five expiring HIGH exceptions require remediation by 2026-08-21; external registry/publisher controls untested. | MEDIUM open |
 | T-018 | Prompt/content injection | Campaign content instructs agents/tools to bypass policy or publish. | Deterministic local adapters, no provider/browser/publisher effect, explicit Greenlight boundary. | Semantic prompt-injection and groundedness eval harness is incomplete; any future browser/video adapter is HIGH risk until isolated. | HIGH open before integrations |
 | T-019 | Human authority | Technical success is mistaken for merge/deploy/publication authorization. | Program state explicitly separates committed/pushed/CI/deployed/observed; `DENY_RELEASE`/`DENY_APPLY`; no automatic merge/deploy. | Human process can still override; accountable release reviewer required. | Human gate |

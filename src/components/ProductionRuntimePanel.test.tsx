@@ -79,6 +79,10 @@ const completedRun: RuntimeRun = {
     approved_artifact_hashes: ["hash-1", "hash-2"],
     authorized_channels: ["x", "instagram"],
     authorized_budget_cents: 0,
+    fencing_token: 1,
+    revoked_at: null,
+    revoked_by: "",
+    revocation_reason: "",
   },
   artifacts: [
     ...awaitingRun.artifacts,
@@ -92,6 +96,18 @@ const completedRun: RuntimeRun = {
   ],
 };
 
+const revokedRun: RuntimeRun = {
+  ...completedRun,
+  status: "revoked",
+  greenlight: completedRun.greenlight && {
+    ...completedRun.greenlight,
+    fencing_token: 2,
+    revoked_at: "2026-07-21T20:30:00+00:00",
+    revoked_by: "operator@example.com",
+    revocation_reason: "Campaign paused",
+  },
+};
+
 function buildApi(): RuntimeApi {
   return {
     createSession: vi.fn().mockResolvedValue(session),
@@ -99,6 +115,7 @@ function buildApi(): RuntimeApi {
     createRun: vi.fn().mockResolvedValue(awaitingRun),
     approveRun: vi.fn().mockResolvedValue(completedRun),
     rejectRun: vi.fn().mockResolvedValue({ ...awaitingRun, status: "rejected" }),
+    revokeRun: vi.fn().mockResolvedValue(revokedRun),
     auditEvents: vi.fn().mockResolvedValue(auditEvents),
     revokeSession: vi.fn().mockResolvedValue(undefined),
   };
@@ -129,6 +146,7 @@ describe("ProductionRuntimePanel", () => {
     expect(api.createRun).toHaveBeenCalledWith(
       expect.objectContaining({ platforms: ["x", "instagram"] }),
       "csrf-session-value",
+      expect.stringMatching(/^run:create:/),
     );
     expect(await screen.findByText("awaiting greenlight")).toBeInTheDocument();
     expect(screen.getByText("Reencuadre Cognitivo")).toBeInTheDocument();
@@ -136,14 +154,47 @@ describe("ProductionRuntimePanel", () => {
     expect(screen.getByText("Resolución Operativa")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Approve exact artifacts/i }));
-    expect(api.approveRun).toHaveBeenCalledWith("run-123", "csrf-session-value");
+    expect(api.approveRun).toHaveBeenCalledWith(
+      "run-123",
+      "csrf-session-value",
+      expect.stringMatching(/^greenlight:approve:run-123:/),
+    );
     expect(await screen.findByText(/Sandbox campaign package created/i)).toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Revoke Greenlight/i }));
+    expect(api.revokeRun).toHaveBeenCalledWith(
+      "run-123",
+      "csrf-session-value",
+      expect.stringMatching(/^greenlight:revoke:run-123:/),
+    );
+    expect(await screen.findByText(/Greenlight revoked/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Revoke browser session/i }));
     expect(api.revokeSession).toHaveBeenCalledWith("csrf-session-value");
     expect(await screen.findByLabelText(/Tenant API key/i)).toHaveValue("");
     expect(storageSpy).not.toHaveBeenCalled();
+  });
+
+  it("reuses one command key for an ambiguous run retry", async () => {
+    const user = userEvent.setup();
+    const api = buildApi();
+    vi.mocked(api.createRun)
+      .mockRejectedValueOnce(new RuntimeApiError(503, "temporary failure", "request-run-0001"))
+      .mockResolvedValueOnce(awaitingRun);
+    render(<ProductionRuntimePanel api={api} />);
+
+    await user.type(screen.getByLabelText(/Tenant API key/i), "one-time-browser-api-key-value");
+    await user.click(screen.getByRole("button", { name: /Open secure session/i }));
+    const runButton = screen.getByRole("button", { name: /Run governed campaign/i });
+    await user.click(runButton);
+    expect(await screen.findByRole("alert")).toHaveTextContent("temporary failure");
+    await user.click(runButton);
+
+    const firstKey = vi.mocked(api.createRun).mock.calls[0][2];
+    const secondKey = vi.mocked(api.createRun).mock.calls[1][2];
+    expect(firstKey).toMatch(/^run:create:/);
+    expect(secondKey).toBe(firstKey);
   });
 
   it("clears the API key and surfaces the correlated request on failure", async () => {

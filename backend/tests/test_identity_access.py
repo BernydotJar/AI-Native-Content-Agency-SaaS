@@ -48,8 +48,11 @@ def identity(
     }
 
 
-def auth(api_key):
-    return {"Authorization": "Bearer {}".format(api_key)}
+def auth(api_key, idempotency_key=None):
+    result = {"Authorization": "Bearer {}".format(api_key)}
+    if idempotency_key is not None:
+        result["Idempotency-Key"] = idempotency_key
+    return result
 
 
 IDENTITIES = [
@@ -111,7 +114,7 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
             )
 
             created = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(OPERATOR_OLD_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(OPERATOR_OLD_KEY, "identity-create-0001")
             )
             self.assertEqual(created.status_code, 201)
             run_id = created.json()["run_id"]
@@ -119,7 +122,7 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                 client.post(
                     "/api/v1/runs/{}/greenlight/approve".format(run_id),
                     json={"reviewer": "operator", "note": "must not approve"},
-                    headers=auth(OPERATOR_OLD_KEY),
+                    headers=auth(OPERATOR_OLD_KEY, "identity-operator-approve-denied-0001"),
                 ).status_code,
                 403,
             )
@@ -130,11 +133,36 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
             )
             approved = client.post(
                 "/api/v1/runs/{}/greenlight/approve".format(run_id),
-                json={"reviewer": "approver@example.com", "note": "least privilege"},
-                headers=auth(APPROVER_KEY),
+                json={"reviewer": "claimed-other@example.com", "note": "least privilege"},
+                headers=auth(APPROVER_KEY, "identity-approve-0001"),
             )
             self.assertEqual(approved.status_code, 200)
             self.assertEqual(approved.json()["status"], "completed")
+            self.assertEqual(
+                approved.json()["greenlight"]["reviewer"], "approver@example.com"
+            )
+            self.assertNotEqual(
+                approved.json()["greenlight"]["reviewer"], "claimed-other@example.com"
+            )
+
+            operator_revoke = client.post(
+                "/api/v1/runs/{}/greenlight/revoke".format(run_id),
+                json={"reviewer": "operator", "reason": "must not revoke"},
+                headers=auth(OPERATOR_OLD_KEY, "identity-operator-revoke-denied-0001"),
+            )
+            self.assertEqual(operator_revoke.status_code, 403)
+            self.assertEqual(operator_revoke.json()["code"], "authorization_denied")
+
+            revoked = client.post(
+                "/api/v1/runs/{}/greenlight/revoke".format(run_id),
+                json={"reviewer": "claimed-other@example.com", "reason": "campaign paused"},
+                headers=auth(APPROVER_KEY, "identity-approver-revoke-0001"),
+            )
+            self.assertEqual(revoked.status_code, 200)
+            self.assertEqual(revoked.json()["status"], "revoked")
+            self.assertEqual(
+                revoked.json()["greenlight"]["revoked_by"], "approver@example.com"
+            )
 
             audit = client.get("/api/v1/audit-events", headers=auth(VIEWER_KEY))
             self.assertEqual(audit.status_code, 200)
@@ -147,6 +175,8 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                     "authorization.denied",
                     "authorization.denied",
                     "greenlight.approved",
+                    "authorization.denied",
+                    "greenlight.revoked",
                 ],
             )
             self.assertEqual(
@@ -157,6 +187,8 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                     "api-key:operator@example.com",
                     "api-key:approver@example.com",
                     "api-key:approver@example.com",
+                    "api-key:operator@example.com",
+                    "api-key:approver@example.com",
                 ],
             )
             denial_payloads = [
@@ -166,7 +198,7 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
             ]
             self.assertEqual(
                 [payload["role"] for payload in denial_payloads],
-                ["viewer", "operator", "approver"],
+                ["viewer", "operator", "approver", "operator"],
             )
             self.assertNotIn(OPERATOR_OLD_KEY, audit.text)
             self.assertNotIn(APPROVER_KEY, audit.text)

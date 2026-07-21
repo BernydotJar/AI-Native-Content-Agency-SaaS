@@ -10,7 +10,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -36,6 +36,7 @@ from .postgres import (
 )
 from .persistence import (
     AuditEvent,
+    AuditEventConflictError,
     AuditWrite,
     AuthenticationRateLimitError,
     RunStateConflictError,
@@ -45,6 +46,7 @@ from .persistence import (
     SessionIssue,
     SessionRecord,
 )
+from .serialization import execution_run_from_document, execution_run_to_document
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
 from .version import VERSION
@@ -55,6 +57,7 @@ _PUBLIC_ERROR_CODE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 _MAX_PUBLIC_ERROR_DETAIL = 200
 _DEFAULT_MAX_REQUEST_BODY_BYTES = 1024 * 1024
 _MAX_CONFIGURED_REQUEST_BODY_BYTES = 10 * 1024 * 1024
+_IDEMPOTENCY_KEY_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$"
 _SAFE_HTTP_ERRORS = {
     status.HTTP_400_BAD_REQUEST: ("invalid_request", "invalid request"),
     status.HTTP_401_UNAUTHORIZED: ("authentication_failed", "authentication failed"),
@@ -102,6 +105,10 @@ class PublicApiError(HTTPException):
 
 def _error_body(code: str, detail: str, request_id: str) -> Dict[str, object]:
     return {"code": code, "detail": detail, "request_id": request_id}
+
+
+class IdempotencyConflictError(RuntimeError):
+    pass
 
 
 class RequestBodyLimitMiddleware:
@@ -248,6 +255,12 @@ class GreenlightRequest(BaseModel):
     note: str = Field(default="", max_length=2000)
 
 
+class GreenlightRevocationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reviewer: str = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=1, max_length=2000)
+
+
 class BrowserSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     api_key: str = Field(min_length=24, max_length=512)
@@ -257,6 +270,12 @@ class BrowserSessionRequest(BaseModel):
 class TenantRuntime:
     memory: MemoryStore
     orchestrator: AgencyOrchestrator
+
+
+@dataclass(frozen=True)
+class CommandResult:
+    run: ExecutionRun
+    replayed: bool
 
 
 class RuntimeService:
@@ -421,36 +440,106 @@ class RuntimeService:
                 actor=_actor(principal),
             )
 
+    @staticmethod
+    def _command_event_id(tenant_id: str, operation: str, idempotency_key: str) -> str:
+        key_digest = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
+        return stable_id("command", tenant_id, operation, key_digest, length=48)
+
+    @staticmethod
+    def _command_fingerprint(
+        operation: str, subject_id: str, resource_id: str, payload: object
+    ) -> str:
+        return stable_id(
+            "request", operation, subject_id, resource_id, payload, length=64
+        )
+
+    def _command_replay(
+        self,
+        tenant_id: str,
+        event_id: str,
+        operation: str,
+        request_fingerprint: str,
+    ) -> Optional[ExecutionRun]:
+        event = self.run_store.audit_event(tenant_id, event_id)
+        if event is None:
+            return None
+        raw_idempotency = event.payload.get("idempotency")
+        if not isinstance(raw_idempotency, Mapping):
+            raise RuntimeError("command receipt is missing idempotency metadata")
+        if (
+            raw_idempotency.get("operation") != operation
+            or raw_idempotency.get("request_fingerprint") != request_fingerprint
+        ):
+            raise IdempotencyConflictError(
+                "idempotency key conflicts with a prior request"
+            )
+        response_document = raw_idempotency.get("response_document")
+        if not isinstance(response_document, Mapping):
+            raise RuntimeError("command receipt is missing its response document")
+        return execution_run_from_document(response_document)
+
+    @staticmethod
+    def _command_payload(
+        operation: str, request_fingerprint: str, run: ExecutionRun
+    ) -> Mapping[str, object]:
+        return {
+            "operation": operation,
+            "request_fingerprint": request_fingerprint,
+            "response_document": execution_run_to_document(run),
+        }
+
     def start(
         self,
         tenant_id: str,
         request: BriefRequest,
         request_id: str,
         actor: str,
-    ) -> ExecutionRun:
+        subject_id: str,
+        idempotency_key: str,
+    ) -> CommandResult:
         brief = self._brief(request)
         run_id = stable_id("run", brief)
-        with self._lock:
+        operation = "run.create"
+        event_id = self._command_event_id(tenant_id, operation, idempotency_key)
+        fingerprint = self._command_fingerprint(
+            operation, subject_id, run_id, request.model_dump(mode="json")
+        )
+        with self._lock, self.run_store.command_lock(event_id):
+            replay = self._command_replay(tenant_id, event_id, operation, fingerprint)
+            if replay is not None:
+                return CommandResult(replay, True)
             if self.run_store.exists(tenant_id, run_id):
                 raise ValueError("run already exists for tenant: {}".format(run_id))
             run = self._runtime_for(tenant_id).orchestrator.start(brief)
-            return self.run_store.create(
-                tenant_id,
-                run,
-                audit=AuditWrite(
-                    request_id=request_id,
-                    action="run.created",
-                    resource_type="execution_run",
-                    resource_id=run.run_id,
-                    actor=actor,
-                    payload={
-                        "status": run.status.value,
-                        "artifact_ids": [item.artifact_id for item in run.artifacts],
-                        "platforms": [item.value for item in run.brief.platforms],
-                        "budget_cents": run.brief.budget_cents,
-                    },
-                ),
-            )
+            audit_payload = {
+                "status": run.status.value,
+                "artifact_ids": [item.artifact_id for item in run.artifacts],
+                "platforms": [item.value for item in run.brief.platforms],
+                "budget_cents": run.brief.budget_cents,
+                "idempotency": self._command_payload(operation, fingerprint, run),
+            }
+            try:
+                stored = self.run_store.create(
+                    tenant_id,
+                    run,
+                    audit=AuditWrite(
+                        request_id=request_id,
+                        action="run.created",
+                        resource_type="execution_run",
+                        resource_id=run.run_id,
+                        actor=actor,
+                        payload=audit_payload,
+                        event_id=event_id,
+                    ),
+                )
+            except AuditEventConflictError:
+                replay = self._command_replay(
+                    tenant_id, event_id, operation, fingerprint
+                )
+                if replay is None:
+                    raise
+                return CommandResult(replay, True)
+            return CommandResult(stored, False)
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
         with self._lock:
@@ -463,8 +552,19 @@ class RuntimeService:
         request: GreenlightRequest,
         request_id: str,
         actor: str,
-    ) -> ExecutionRun:
-        return self._decide(tenant_id, run_id, request, request_id, actor, "approved")
+        subject_id: str,
+        idempotency_key: str,
+    ) -> CommandResult:
+        return self._decide(
+            tenant_id,
+            run_id,
+            request,
+            request_id,
+            actor,
+            subject_id,
+            idempotency_key,
+            "approved",
+        )
 
     def reject(
         self,
@@ -473,8 +573,19 @@ class RuntimeService:
         request: GreenlightRequest,
         request_id: str,
         actor: str,
-    ) -> ExecutionRun:
-        return self._decide(tenant_id, run_id, request, request_id, actor, "rejected")
+        subject_id: str,
+        idempotency_key: str,
+    ) -> CommandResult:
+        return self._decide(
+            tenant_id,
+            run_id,
+            request,
+            request_id,
+            actor,
+            subject_id,
+            idempotency_key,
+            "rejected",
+        )
 
     def _decide(
         self,
@@ -483,53 +594,164 @@ class RuntimeService:
         request: GreenlightRequest,
         request_id: str,
         actor: str,
+        subject_id: str,
+        idempotency_key: str,
         decision: str,
-    ) -> ExecutionRun:
-        with self._lock:
+    ) -> CommandResult:
+        operation = "greenlight.{}".format(decision)
+        event_id = self._command_event_id(tenant_id, operation, idempotency_key)
+        fingerprint = self._command_fingerprint(
+            operation, subject_id, run_id, request.model_dump(mode="json")
+        )
+        with self._lock, self.run_store.command_lock(event_id):
+            replay = self._command_replay(tenant_id, event_id, operation, fingerprint)
+            if replay is not None:
+                return CommandResult(replay, True)
             runtime = self._runtime_for(tenant_id)
             runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
             if decision == "approved":
-                run = runtime.orchestrator.approve(run_id, request.reviewer, request.note)
+                run = runtime.orchestrator.approve(run_id, subject_id, request.note)
             else:
-                run = runtime.orchestrator.reject(run_id, request.reviewer, request.note)
+                run = runtime.orchestrator.reject(run_id, subject_id, request.note)
             greenlight = run.greenlight
             if greenlight is None:
                 raise GreenlightError("Greenlight decision was not recorded")
+            payload = {
+                "greenlight_id": greenlight.greenlight_id,
+                "decision": greenlight.decision.value,
+                "reviewer": greenlight.reviewer,
+                "note": greenlight.note,
+                "approved_artifact_ids": list(greenlight.approved_artifact_ids),
+                "approved_artifact_hashes": list(greenlight.approved_artifact_hashes),
+                "authorized_channels": [
+                    item.value for item in greenlight.authorized_channels
+                ],
+                "authorized_budget_cents": greenlight.authorized_budget_cents,
+                "fencing_token": greenlight.fencing_token,
+                "idempotency": self._command_payload(operation, fingerprint, run),
+            }
             try:
-                return self.run_store.save(
+                stored = self.run_store.save(
                     tenant_id,
                     run,
                     expected_status=RunStatus.AWAITING_GREENLIGHT.value,
                     audit=AuditWrite(
                         request_id=request_id,
-                        action="greenlight.{}".format(decision),
+                        action=operation,
+                        resource_type="execution_run",
+                        resource_id=run.run_id,
+                        actor=actor,
+                        payload=payload,
+                        event_id=event_id,
+                    ),
+                )
+            except AuditEventConflictError:
+                replay = self._command_replay(
+                    tenant_id, event_id, operation, fingerprint
+                )
+                if replay is None:
+                    raise
+                return CommandResult(replay, True)
+            except RunStateConflictError as error:
+                raise GreenlightError(
+                    "Greenlight was already decided by another request"
+                ) from error
+            return CommandResult(stored, False)
+
+    def revoke_greenlight(
+        self,
+        tenant_id: str,
+        run_id: str,
+        request: GreenlightRevocationRequest,
+        request_id: str,
+        actor: str,
+        subject_id: str,
+        idempotency_key: str,
+    ) -> CommandResult:
+        operation = "greenlight.revoked"
+        event_id = self._command_event_id(tenant_id, operation, idempotency_key)
+        fingerprint = self._command_fingerprint(
+            operation, subject_id, run_id, request.model_dump(mode="json")
+        )
+        with self._lock, self.run_store.command_lock(event_id):
+            replay = self._command_replay(tenant_id, event_id, operation, fingerprint)
+            if replay is not None:
+                return CommandResult(replay, True)
+            runtime = self._runtime_for(tenant_id)
+            runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
+            run = runtime.orchestrator.revoke(
+                run_id, subject_id, request.reason
+            )
+            greenlight = run.greenlight
+            if greenlight is None:
+                raise GreenlightError("Greenlight revocation was not recorded")
+            try:
+                stored = self.run_store.save(
+                    tenant_id,
+                    run,
+                    expected_status=RunStatus.COMPLETED.value,
+                    audit=AuditWrite(
+                        request_id=request_id,
+                        action=operation,
                         resource_type="execution_run",
                         resource_id=run.run_id,
                         actor=actor,
                         payload={
                             "greenlight_id": greenlight.greenlight_id,
-                            "decision": greenlight.decision.value,
-                            "reviewer": greenlight.reviewer,
-                            "note": greenlight.note,
-                            "approved_artifact_ids": list(
-                                greenlight.approved_artifact_ids
-                            ),
-                            "approved_artifact_hashes": list(
-                                greenlight.approved_artifact_hashes
-                            ),
-                            "authorized_channels": [
-                                item.value for item in greenlight.authorized_channels
-                            ],
-                            "authorized_budget_cents": (
-                                greenlight.authorized_budget_cents
+                            "fencing_token": greenlight.fencing_token,
+                            "reviewer": greenlight.revoked_by,
+                            "reason": greenlight.revocation_reason,
+                            "idempotency": self._command_payload(
+                                operation, fingerprint, run
                             ),
                         },
+                        event_id=event_id,
                     ),
                 )
+            except AuditEventConflictError:
+                replay = self._command_replay(
+                    tenant_id, event_id, operation, fingerprint
+                )
+                if replay is None:
+                    raise
+                return CommandResult(replay, True)
             except RunStateConflictError as error:
-                raise GreenlightError(
-                    "Greenlight was already decided by another request"
-                ) from error
+                raise GreenlightError("Greenlight is not active") from error
+            return CommandResult(stored, False)
+
+    def assert_greenlight_effect_authorized(
+        self,
+        tenant_id: str,
+        run_id: str,
+        greenlight_id: str,
+        fencing_token: int,
+        artifact_ids: Tuple[str, ...],
+        artifact_hashes: Tuple[str, ...],
+        channel: str,
+        budget_cents: int,
+    ) -> None:
+        with self._lock:
+            run = self.run_store.get(tenant_id, run_id)
+        greenlight = run.greenlight
+        if (
+            run.status is not RunStatus.COMPLETED
+            or greenlight is None
+            or not greenlight.active
+        ):
+            raise GreenlightError("Greenlight is not active")
+        if greenlight.greenlight_id != greenlight_id:
+            raise GreenlightError("Greenlight identity does not match")
+        if greenlight.fencing_token != fencing_token:
+            raise GreenlightError("Greenlight fencing token is stale")
+        if (
+            greenlight.approved_artifact_ids != artifact_ids
+            or greenlight.approved_artifact_hashes != artifact_hashes
+        ):
+            raise GreenlightError("Greenlight artifact envelope does not match")
+        if channel not in {item.value for item in greenlight.authorized_channels}:
+            raise GreenlightError("Greenlight channel is not authorized")
+        if budget_cents < 0 or budget_cents > greenlight.authorized_budget_cents:
+            raise GreenlightError("Greenlight budget is not authorized")
 
     def audit_events(
         self, tenant_id: str, after_sequence: int, limit: int
@@ -701,7 +923,8 @@ def create_app(
         version=VERSION,
         description=(
             "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
-            "state, durable rate limiting, HttpOnly browser sessions and audit evidence. No endpoint "
+            "state, durable rate limiting, HttpOnly browser sessions and audit "
+            "evidence. No endpoint "
             "publishes content, spends "
             "budget, renders media, or contacts external services."
         ),
@@ -1015,6 +1238,12 @@ def create_app(
     ) -> TenantPrincipal:
         return _authorize(request, principal, "greenlight:decide")
 
+    def require_greenlight_revoker(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        return _authorize(request, principal, "greenlight:revoke")
+
     @app.get("/healthz", tags=["operations"])
     def healthz() -> Dict[str, object]:
         return {
@@ -1193,17 +1422,32 @@ def create_app(
     def create_run(
         request: Request,
         brief_request: BriefRequest,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
         principal: TenantPrincipal = Depends(require_run_creator),
     ) -> Dict[str, object]:
         try:
-            run = service.start(
+            result = service.start(
                 principal.tenant_id,
                 brief_request,
                 request.state.request_id,
                 _actor(principal),
+                principal.subject_id,
+                idempotency_key,
             )
-            metrics.run_started()
-            return _run_document(run, principal.tenant_id)
+            if not result.replayed:
+                metrics.run_started()
+            return _run_document(result.run, principal.tenant_id)
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
         except ValueError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 
@@ -1214,10 +1458,18 @@ def create_app(
     ) -> Dict[str, object]:
         try:
             return _run_document(
-                service.get(principal.tenant_id, run_id), principal.tenant_id
+                service.get(principal.tenant_id, run_id),
+                principal.tenant_id,
             )
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+
+    def _greenlight_result(
+        result: CommandResult, tenant_id: str, decision: str
+    ) -> Dict[str, object]:
+        if not result.replayed:
+            metrics.greenlight_decided(decision)
+        return _run_document(result.run, tenant_id)
 
     @app.post(
         "/api/v1/runs/{run_id}/greenlight/approve", tags=["greenlight"]
@@ -1226,18 +1478,34 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
         principal: TenantPrincipal = Depends(require_greenlight_approver),
     ) -> Dict[str, object]:
         try:
-            run = service.approve(
+            return _greenlight_result(
+                service.approve(
+                    principal.tenant_id,
+                    run_id,
+                    decision_request,
+                    request.state.request_id,
+                    _actor(principal),
+                    principal.subject_id,
+                    idempotency_key,
+                ),
                 principal.tenant_id,
-                run_id,
-                decision_request,
-                request.state.request_id,
-                _actor(principal),
+                "approved",
             )
-            metrics.greenlight_decided("approved")
-            return _run_document(run, principal.tenant_id)
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
         except GreenlightError as error:
@@ -1250,18 +1518,74 @@ def create_app(
         run_id: str,
         request: Request,
         decision_request: GreenlightRequest,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
         principal: TenantPrincipal = Depends(require_greenlight_approver),
     ) -> Dict[str, object]:
         try:
-            run = service.reject(
+            return _greenlight_result(
+                service.reject(
+                    principal.tenant_id,
+                    run_id,
+                    decision_request,
+                    request.state.request_id,
+                    _actor(principal),
+                    principal.subject_id,
+                    idempotency_key,
+                ),
                 principal.tenant_id,
-                run_id,
-                decision_request,
-                request.state.request_id,
-                _actor(principal),
+                "rejected",
             )
-            metrics.greenlight_decided("rejected")
-            return _run_document(run, principal.tenant_id)
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+        except GreenlightError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @app.post(
+        "/api/v1/runs/{run_id}/greenlight/revoke", tags=["greenlight"]
+    )
+    def revoke_run_greenlight(
+        run_id: str,
+        request: Request,
+        revocation_request: GreenlightRevocationRequest,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_greenlight_revoker),
+    ) -> Dict[str, object]:
+        try:
+            return _greenlight_result(
+                service.revoke_greenlight(
+                    principal.tenant_id,
+                    run_id,
+                    revocation_request,
+                    request.state.request_id,
+                    _actor(principal),
+                    principal.subject_id,
+                    idempotency_key,
+                ),
+                principal.tenant_id,
+                "revoked",
+            )
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
         except GreenlightError as error:

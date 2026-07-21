@@ -19,8 +19,11 @@ BRIEF = {
 }
 
 
-def auth(api_key):
-    return {"Authorization": "Bearer {}".format(api_key)}
+def auth(api_key, idempotency_key=None):
+    result = {"Authorization": "Bearer {}".format(api_key)}
+    if idempotency_key is not None:
+        result["Idempotency-Key"] = idempotency_key
+    return result
 
 
 class ApiVerticalSliceTests(unittest.TestCase):
@@ -77,7 +80,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
     def test_brief_to_scholar_to_greenlight_to_campaign_package(self):
         with self.client() as client:
             created = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-vertical-0001")
             )
             self.assertEqual(created.status_code, 201)
             run = created.json()
@@ -108,7 +111,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
                     "reviewer": "commercial-owner",
                     "note": "Approved sandbox package",
                 },
-                headers=auth(ALPHA_KEY),
+                headers=auth(ALPHA_KEY, "api-" + "approve-vertical-0001"),
             )
             self.assertEqual(approved.status_code, 200)
             completed = approved.json()
@@ -134,10 +137,10 @@ class ApiVerticalSliceTests(unittest.TestCase):
         beta_brief = dict(BRIEF, title="Beta-only launch")
         with self.client() as client:
             alpha = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-alpha-0001")
             )
             beta = client.post(
-                "/api/v1/runs", json=beta_brief, headers=auth(BETA_KEY)
+                "/api/v1/runs", json=beta_brief, headers=auth(BETA_KEY, "api-create-beta-0001")
             )
             self.assertEqual(alpha.status_code, 201)
             self.assertEqual(beta.status_code, 201)
@@ -158,7 +161,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
             )
 
             same_brief_beta = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(BETA_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(BETA_KEY, "api-create-beta-shared-0001")
             )
             self.assertEqual(same_brief_beta.status_code, 201)
             self.assertEqual(
@@ -166,7 +169,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
             )
             self.assertEqual(
                 client.post(
-                    "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                    "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-alpha-duplicate-0001")
                 ).status_code,
                 409,
             )
@@ -174,7 +177,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
     def test_run_and_greenlight_survive_service_restart(self):
         with self.client() as first_client:
             created = first_client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-restart-0001")
             )
             self.assertEqual(created.status_code, 201)
             run_id = created.json()["run_id"]
@@ -188,7 +191,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
             approved = second_client.post(
                 "/api/v1/runs/{}/greenlight/approve".format(run_id),
                 json={"reviewer": "owner", "note": "durable approval"},
-                headers=auth(ALPHA_KEY),
+                headers=auth(ALPHA_KEY, "api-approve-restart-0001"),
             )
             self.assertEqual(approved.status_code, 200)
 
@@ -205,7 +208,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
     def test_second_decision_is_a_conflict_after_restore(self):
         with self.client() as client:
             first = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-second-decision-0001")
             )
             run_id = first.json()["run_id"]
             decision = {"reviewer": "owner", "note": "reject"}
@@ -213,7 +216,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
                 client.post(
                     "/api/v1/runs/{}/greenlight/reject".format(run_id),
                     json=decision,
-                    headers=auth(ALPHA_KEY),
+                    headers=auth(ALPHA_KEY, "api-reject-first-decision-0001"),
                 ).status_code,
                 200,
             )
@@ -223,7 +226,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
                 restarted.post(
                     "/api/v1/runs/{}/greenlight/approve".format(run_id),
                     json=decision,
-                    headers=auth(ALPHA_KEY),
+                    headers=auth(ALPHA_KEY, "api-" + "approve-second-decision-0001"),
                 ).status_code,
                 409,
             )

@@ -12,9 +12,10 @@
 | `DELETE /api/v1/sessions/current` | cookie + CSRF | active identity | Revokes the durable browser session. |
 | `GET /api/v1/me` | bearer or cookie | `identity:read` | Returns tenant, subject, role, key ID, permissions, and authentication method. |
 | `GET /api/v1/audit-events` | bearer or cookie | `audit:read` | Durable, tenant-scoped mutation ledger with cursor pagination. |
-| `POST /api/v1/runs` | bearer or cookie + CSRF | `runs:create` | Starts a governed sandbox run. |
+| `POST /api/v1/runs` | bearer or cookie + CSRF + `Idempotency-Key` | `runs:create` | Starts or compatibly replays one governed sandbox run. |
 | `GET /api/v1/runs/{run_id}` | bearer or cookie | `runs:read` | Reads a tenant-scoped run. |
-| `POST /api/v1/runs/{run_id}/greenlight/*` | bearer or cookie + CSRF | `greenlight:decide` | Approves or rejects exact reviewed artifacts. |
+| `POST /api/v1/runs/{run_id}/greenlight/approve|reject` | bearer or cookie + CSRF + `Idempotency-Key` | `greenlight:decide` | Decides or compatibly replays exact reviewed artifacts. |
+| `POST /api/v1/runs/{run_id}/greenlight/revoke` | bearer or cookie + CSRF + `Idempotency-Key` | `greenlight:revoke` | Revokes active approval and increments its fencing token. |
 
 `/metrics` intentionally contains no tenant ID, subject ID, key ID, run ID, request ID, objective, reviewer, credential fingerprint, or user content. It is designed for cluster-internal scraping. The Helm chart emits standard Prometheus pod annotations when `observability.metrics.enabled=true`.
 
@@ -41,7 +42,7 @@ Roles are intentionally fixed and fail closed:
 |---|---|
 | `viewer` | `identity:read`, `runs:read`, `audit:read` |
 | `operator` | viewer permissions plus `runs:create` |
-| `approver` | viewer permissions plus `greenlight:decide` |
+| `approver` | viewer permissions plus `greenlight:decide`, `greenlight:revoke` |
 | `admin` | all current permissions |
 
 A `key_id` is unique within a tenant. Multiple active key IDs may identify the same subject during a controlled rotation window. To rotate a key:
@@ -74,6 +75,18 @@ Source attribution depends on Uvicorn proxy handling. Set `FORWARDED_ALLOW_IPS` 
 Production defaults are `HttpOnly`, `SameSite=Strict`, `Secure=true`, and an eight-hour TTL. Configure them with `AGENCY_SESSION_COOKIE_NAME`, `AGENCY_SESSION_COOKIE_SECURE`, and `AGENCY_SESSION_TTL_SECONDS`. Disable `Secure` only for isolated local HTTP smoke tests.
 
 Mutations authenticated by cookie require `X-CSRF-Token`; bearer clients do not. Session recovery rotates the CSRF token. Sessions retain tenant, subject, role, key ID, and credential fingerprint so deactivating a key invalidates its existing sessions.
+
+## Durable command idempotency and Greenlight fencing
+
+Governed business mutations require `Idempotency-Key` with 8–200 safe characters. A client must reuse the same key only for the exact same logical command and retain it after an ambiguous network failure. Editing the brief, reviewer note, revocation reason or target requires a new key.
+
+The server stores only a digest-derived receipt ID and a canonical request fingerprint. Compatible replay returns the original committed response. Reusing a key with different content returns the uniform `409 idempotency_conflict`; it does not reveal the prior payload, actor, key digest or internal state. Receipts are tenant- and operation-scoped.
+
+Greenlight approval persists fencing token `1`. Revocation increments the token, preserves prior evidence and changes the run to `revoked`. Any future effect adapter must prove the current Greenlight ID/token, exact artifact IDs/hashes, authorized channel and budget before acting. External effects remain disabled in this runtime.
+
+Session creation is deliberately excluded because replaying its original result would require retaining raw session and CSRF secrets. Machine/browser clients must not silently retry session issuance.
+
+The receipt snapshot duplicates the committed run document in the audit ledger. Include this growth in database capacity, backup and retention planning. A future external provider requires a durable outbox and provider receipt in addition to this inbound command contract. See [ADR 0008](adr/0008-durable-command-idempotency-and-greenlight-fencing.md).
 
 ## Request correlation
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple
 
 from .memory import MemoryStore, utc_now
@@ -105,6 +106,44 @@ class AgencyOrchestrator:
             decision=GreenlightDecision.REJECTED,
             note=note,
         )
+
+    def revoke(self, run_id: str, reviewer: str, reason: str) -> ExecutionRun:
+        run = self.get_run(run_id)
+        greenlight = run.greenlight
+        if (
+            run.status is not RunStatus.COMPLETED
+            or greenlight is None
+            or not greenlight.active
+        ):
+            raise GreenlightError("Greenlight is not active")
+        normalized_reviewer = reviewer.strip()
+        normalized_reason = reason.strip()
+        if not normalized_reviewer:
+            raise GreenlightError("reviewer must not be empty")
+        if not normalized_reason:
+            raise GreenlightError("revocation reason must not be empty")
+        revoked_at = self._clock()
+        run.greenlight = replace(
+            greenlight,
+            fencing_token=greenlight.fencing_token + 1,
+            revoked_at=revoked_at,
+            revoked_by=normalized_reviewer,
+            revocation_reason=normalized_reason,
+        )
+        run.status = RunStatus.REVOKED
+        run.state_for(AgentRole.PUBLISHER).update(
+            AgentStatus.BLOCKED,
+            100,
+            "Greenlight revoked; all prior effect tokens are fenced.",
+        )
+        self._event(
+            run,
+            AgentRole.PUBLISHER,
+            "greenlight_revoked",
+            AgentStatus.BLOCKED.value,
+            "Approval revoked locally; publication remains disabled.",
+        )
+        return run
 
     def get_run(self, run_id: str) -> ExecutionRun:
         try:

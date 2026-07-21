@@ -42,7 +42,7 @@ describe("runtime API client", () => {
       platforms: ["x"],
       budget_cents: 0,
       campaign_goal: "verification",
-    }, "csrf-token-123");
+    }, "csrf-token-123", "run-create-client-0001");
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/v1/sessions", expect.objectContaining({
       method: "POST",
@@ -52,9 +52,53 @@ describe("runtime API client", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/runs", expect.objectContaining({
       method: "POST",
       credentials: "include",
-      headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token-123" }),
+      headers: expect.objectContaining({
+        "X-CSRF-Token": "csrf-token-123",
+        "Idempotency-Key": "run-create-client-0001",
+      }),
     }));
     expect(JSON.stringify(fetchMock.mock.calls[1])).not.toContain("one-time-browser-api-key-value");
+  });
+
+  it("sends explicit idempotency keys for Greenlight decisions and revocation", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValue(jsonResponse({
+        run_id: "run-1",
+        tenant_id: "tenant-alpha",
+        status: "revoked",
+        agent_states: {},
+        artifacts: [],
+        greenlight: null,
+        sandbox: true,
+        external_side_effects_enabled: false,
+      }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await api.approveRun("run-1", "csrf", "approve-key-0001");
+    await api.rejectRun("run-1", "csrf", "reject-key-0001");
+    await api.revokeRun("run-1", "csrf", "revoke-key-0001");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/runs/run-1/greenlight/approve",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Idempotency-Key": "approve-key-0001" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/runs/run-1/greenlight/reject",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Idempotency-Key": "reject-key-0001" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/runs/run-1/greenlight/revoke",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Idempotency-Key": "revoke-key-0001" }),
+      }),
+    );
   });
 
   it("resumes an HttpOnly session without a browser-stored API key", async () => {
@@ -90,7 +134,9 @@ describe("runtime API client", () => {
       }, 403, "request-error-0001"),
     ) as typeof fetch);
 
-    await expect(api.rejectRun("run-1", "bad-csrf")).rejects.toEqual(
+    await expect(
+      api.rejectRun("run-1", "bad-csrf", "greenlight-reject-client-0001"),
+    ).rejects.toEqual(
       expect.objectContaining<Partial<RuntimeApiError>>({
         status: 403,
         code: "request_verification_failed",

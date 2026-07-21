@@ -231,7 +231,7 @@ fi
 curl -fsS "http://127.0.0.1:${HOST_PORT}/readyz" > "$TMP_DIR/ready.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/" > "$TMP_DIR/index.html"
 set +e
-viewer_create_status=$(curl -sS -o "$TMP_DIR/viewer-denied.json" -w '%{http_code}'   -H 'Content-Type: application/json'   -H "Authorization: Bearer $VIEWER_KEY"   -H 'X-Request-ID: package-viewer-denied-0001'   -d '{"title":"Viewer must not create","objective":"Verify least privilege","audience":"reviewers","platforms":["x"],"budget_cents":0,"campaign_goal":"verification"}'   "http://127.0.0.1:${HOST_PORT}/api/v1/runs")
+viewer_create_status=$(curl -sS -o "$TMP_DIR/viewer-denied.json" -w '%{http_code}'   -H 'Content-Type: application/json'   -H "Authorization: Bearer $VIEWER_KEY"   -H 'X-Request-ID: package-viewer-denied-0001'   -H 'Idempotency-Key: package-viewer-create-0001'   -d '{"title":"Viewer must not create","objective":"Verify least privilege","audience":"reviewers","platforms":["x"],"budget_cents":0,"campaign_goal":"verification"}'   "http://127.0.0.1:${HOST_PORT}/api/v1/runs")
 set -e
 [ "$viewer_create_status" = "403" ]
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
@@ -247,6 +247,7 @@ CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["cs
 curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/run.headers" \
   -H 'Content-Type: application/json' \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H 'Idempotency-Key: package-create-command-0001' \
   -H 'X-Request-ID: package-create-0001' \
   -d '{"title":"Packaged runtime verification","objective":"Verify the production browser session package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs" > "$TMP_DIR/run.json"
@@ -254,6 +255,7 @@ RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id
 curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/approval.headers" \
   -H 'Content-Type: application/json' \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H 'Idempotency-Key: package-approve-command-0001' \
   -H 'X-Request-ID: package-approve-0001' \
   -d '{"reviewer":"package-verifier","note":"Verified packaged sandbox release through browser session"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/greenlight/approve" \

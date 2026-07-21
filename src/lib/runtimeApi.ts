@@ -42,12 +42,16 @@ export interface RuntimeGreenlight {
   approved_artifact_hashes: string[];
   authorized_channels: RuntimePlatform[];
   authorized_budget_cents: number;
+  fencing_token: number;
+  revoked_at: string | null;
+  revoked_by: string;
+  revocation_reason: string;
 }
 
 export interface RuntimeRun {
   run_id: string;
   tenant_id: string;
-  status: "running" | "awaiting_greenlight" | "completed" | "rejected" | "failed";
+  status: "running" | "awaiting_greenlight" | "completed" | "rejected" | "revoked" | "failed";
   agent_states: Record<string, RuntimeAgentState>;
   artifacts: RuntimeArtifact[];
   greenlight: RuntimeGreenlight | null;
@@ -90,9 +94,10 @@ export class RuntimeApiError extends Error {
 export interface RuntimeApi {
   createSession(apiKey: string): Promise<BrowserRuntimeSession>;
   resumeSession(): Promise<BrowserRuntimeSession | null>;
-  createRun(brief: RuntimeBrief, csrfToken: string): Promise<RuntimeRun>;
-  approveRun(runId: string, csrfToken: string): Promise<RuntimeRun>;
-  rejectRun(runId: string, csrfToken: string): Promise<RuntimeRun>;
+  createRun(brief: RuntimeBrief, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
+  approveRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
+  rejectRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
+  revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   auditEvents(): Promise<RuntimeAuditEvent[]>;
   revokeSession(csrfToken: string): Promise<void>;
 }
@@ -142,20 +147,26 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         throw error;
       }
     },
-    createRun(brief, csrfToken) {
+    createRun(brief, csrfToken, idempotencyKey) {
       return requestJson<RuntimeRun>(fetchImpl, "/api/v1/runs", {
         method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
+        headers: {
+          "X-CSRF-Token": csrfToken,
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify(brief),
       });
     },
-    approveRun(runId, csrfToken) {
+    approveRun(runId, csrfToken, idempotencyKey) {
       return requestJson<RuntimeRun>(
         fetchImpl,
         `/api/v1/runs/${encodeURIComponent(runId)}/greenlight/approve`,
         {
           method: "POST",
-          headers: { "X-CSRF-Token": csrfToken },
+          headers: {
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": idempotencyKey,
+          },
           body: JSON.stringify({
             reviewer: "war-room-operator",
             note: "Approved from the production runtime console.",
@@ -163,16 +174,36 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         },
       );
     },
-    rejectRun(runId, csrfToken) {
+    rejectRun(runId, csrfToken, idempotencyKey) {
       return requestJson<RuntimeRun>(
         fetchImpl,
         `/api/v1/runs/${encodeURIComponent(runId)}/greenlight/reject`,
         {
           method: "POST",
-          headers: { "X-CSRF-Token": csrfToken },
+          headers: {
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": idempotencyKey,
+          },
           body: JSON.stringify({
             reviewer: "war-room-operator",
             note: "Rejected from the production runtime console.",
+          }),
+        },
+      );
+    },
+    revokeRun(runId, csrfToken, idempotencyKey) {
+      return requestJson<RuntimeRun>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}/greenlight/revoke`,
+        {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            reviewer: "authenticated-subject",
+            reason: "Revoked from the production runtime console.",
           }),
         },
       );

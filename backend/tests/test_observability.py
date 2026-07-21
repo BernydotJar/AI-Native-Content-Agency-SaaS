@@ -21,8 +21,11 @@ BRIEF = {
 }
 
 
-def auth(api_key):
-    return {"Authorization": "Bearer {}".format(api_key)}
+def auth(api_key, idempotency_key=None):
+    result = {"Authorization": "Bearer {}".format(api_key)}
+    if idempotency_key is not None:
+        result["Idempotency-Key"] = idempotency_key
+    return result
 
 
 class ObservabilityTests(unittest.TestCase):
@@ -103,7 +106,7 @@ class ObservabilityTests(unittest.TestCase):
                 "/api/v1/runs",
                 json=BRIEF,
                 headers={
-                    **auth(ALPHA_KEY),
+                    **auth(ALPHA_KEY, "audit-create-command-0001"),
                     "X-Request-ID": "audit-create-0001",
                 },
             )
@@ -114,7 +117,7 @@ class ObservabilityTests(unittest.TestCase):
                 "/api/v1/runs",
                 json=BRIEF,
                 headers={
-                    **auth(ALPHA_KEY),
+                    **auth(ALPHA_KEY, "audit-duplicate-command-0001"),
                     "X-Request-ID": "audit-duplicate-0001",
                 },
             )
@@ -127,7 +130,7 @@ class ObservabilityTests(unittest.TestCase):
                     "note": "Approved with durable audit evidence",
                 },
                 headers={
-                    **auth(ALPHA_KEY),
+                    **auth(ALPHA_KEY, "audit-approve-command-0001"),
                     "X-Request-ID": "audit-approve-0001",
                 },
             )

@@ -18,7 +18,13 @@ _ROLE_PERMISSIONS = {
         {"identity:read", "runs:read", "runs:create", "audit:read"}
     ),
     "approver": frozenset(
-        {"identity:read", "runs:read", "greenlight:decide", "audit:read"}
+        {
+            "identity:read",
+            "runs:read",
+            "greenlight:decide",
+            "greenlight:revoke",
+            "audit:read",
+        }
     ),
     "admin": frozenset(
         {
@@ -26,6 +32,7 @@ _ROLE_PERMISSIONS = {
             "runs:read",
             "runs:create",
             "greenlight:decide",
+            "greenlight:revoke",
             "audit:read",
         }
     ),

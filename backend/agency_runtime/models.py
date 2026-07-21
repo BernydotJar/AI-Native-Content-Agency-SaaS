@@ -51,6 +51,7 @@ class RunStatus(str, Enum):
     AWAITING_GREENLIGHT = "awaiting_greenlight"
     COMPLETED = "completed"
     REJECTED = "rejected"
+    REVOKED = "revoked"
     FAILED = "failed"
 
 
@@ -155,6 +156,10 @@ class Greenlight:
     approved_artifact_hashes: Tuple[str, ...] = ()
     authorized_channels: Tuple[Platform, ...] = ()
     authorized_budget_cents: int = 0
+    fencing_token: int = 1
+    revoked_at: Optional[str] = None
+    revoked_by: str = ""
+    revocation_reason: str = ""
 
     def __post_init__(self) -> None:
         require_non_empty(self.reviewer, "reviewer")
@@ -163,6 +168,21 @@ class Greenlight:
             raise ValueError("approved artifact ids and hashes must have equal length")
         if self.authorized_budget_cents < 0:
             raise ValueError("authorized_budget_cents must not be negative")
+        if self.fencing_token < 1:
+            raise ValueError("fencing_token must be positive")
+        if self.revoked_at is None:
+            if self.revoked_by or self.revocation_reason:
+                raise ValueError("active Greenlight cannot contain revocation metadata")
+        else:
+            require_non_empty(self.revoked_by, "revoked_by")
+            require_non_empty(self.revocation_reason, "revocation_reason")
+
+    @property
+    def active(self) -> bool:
+        return (
+            self.decision is GreenlightDecision.APPROVED
+            and self.revoked_at is None
+        )
 
 
 @dataclass

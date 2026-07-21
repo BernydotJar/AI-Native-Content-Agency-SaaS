@@ -104,6 +104,14 @@ def execution_run_from_document(document: Mapping[str, object]) -> ExecutionRun:
                 Platform(value) for value in item.get("authorized_channels", [])
             ),
             authorized_budget_cents=int(item.get("authorized_budget_cents", 0)),
+            fencing_token=int(item.get("fencing_token", 1)),
+            revoked_at=(
+                str(item["revoked_at"])
+                if item.get("revoked_at") is not None
+                else None
+            ),
+            revoked_by=str(item.get("revoked_by", "")),
+            revocation_reason=str(item.get("revocation_reason", "")),
         )
 
     return ExecutionRun(

@@ -25,6 +25,7 @@ from .models import (
 )
 from .persistence import (
     AuditEvent,
+    AuditEventConflictError,
     AuditWrite,
     AuthenticationRateLimitError,
     RunStateConflictError,
@@ -475,6 +476,8 @@ class PostgresRuntimeDatabase:
             )
         normalized_schema_mode = normalize_postgres_schema_mode(schema_mode)
         self._clock = clock
+        self._conninfo = normalized
+        self._connect_timeout_seconds = connect_timeout_seconds
         self.schema_mode = normalized_schema_mode
         self._closed = False
         pool = ConnectionPool(
@@ -707,7 +710,7 @@ class PostgresRunStore:
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))
             """,
             (
-                "audit-{}".format(uuid.uuid4().hex),
+                audit.event_id or "audit-{}".format(uuid.uuid4().hex),
                 tenant_id,
                 audit.request_id,
                 _datetime(self._clock()),
@@ -724,6 +727,34 @@ class PostgresRunStore:
         with self.database.pool.connection() as connection:
             self._append_audit(connection, tenant_id, audit)
 
+    @contextmanager
+    def command_lock(self, lock_id: str) -> Iterator[None]:
+        require_non_empty(lock_id, "lock_id")
+        raw = _connect_database_url(
+            self.database._conninfo, self.database._connect_timeout_seconds
+        )
+        connection = _MappingConnection(raw)
+        try:
+            connection.execute(
+                "SELECT pg_catalog.pg_advisory_lock("
+                "pg_catalog.hashtextextended(%s, 0)) AS locked",
+                (lock_id,),
+            )
+            raw.commit()
+            try:
+                yield
+            finally:
+                row = connection.execute(
+                    "SELECT pg_catalog.pg_advisory_unlock("
+                    "pg_catalog.hashtextextended(%s, 0)) AS unlocked",
+                    (lock_id,),
+                ).fetchone()
+                raw.commit()
+                if row is None or bool(row["unlocked"]) is not True:
+                    raise RuntimeError("PostgreSQL command lock was not held")
+        finally:
+            raw.close()
+
     def create(
         self,
         tenant_id: str,
@@ -731,30 +762,39 @@ class PostgresRunStore:
         audit: Optional[AuditWrite] = None,
     ) -> ExecutionRun:
         timestamp = _datetime(self._clock())
-        with self.database.pool.connection() as connection:
-            cursor = connection.execute(
-                """
-                INSERT INTO runtime_runs(
-                    tenant_id, run_id, status, document_json, version,
-                    created_at, updated_at
-                ) VALUES (%s, %s, %s, CAST(%s AS jsonb), 1, %s, %s)
-                ON CONFLICT (tenant_id, run_id) DO NOTHING
-                """,
-                (
-                    tenant_id,
-                    run.run_id,
-                    run.status.value,
-                    canonical_json(execution_run_to_document(run)),
-                    timestamp,
-                    timestamp,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise ValueError(
-                    "run already exists for tenant: {}".format(run.run_id)
+        try:
+            with self.database.pool.connection() as connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO runtime_runs(
+                        tenant_id, run_id, status, document_json, version,
+                        created_at, updated_at
+                    ) VALUES (%s, %s, %s, CAST(%s AS jsonb), 1, %s, %s)
+                    ON CONFLICT (tenant_id, run_id) DO NOTHING
+                    """,
+                    (
+                        tenant_id,
+                        run.run_id,
+                        run.status.value,
+                        canonical_json(execution_run_to_document(run)),
+                        timestamp,
+                        timestamp,
+                    ),
                 )
-            if audit is not None:
-                self._append_audit(connection, tenant_id, audit)
+                if cursor.rowcount != 1:
+                    raise ValueError(
+                        "run already exists for tenant: {}".format(run.run_id)
+                    )
+                if audit is not None:
+                    self._append_audit(connection, tenant_id, audit)
+        except dbapi.IntegrityError as error:
+            if audit is not None and audit.event_id and self.audit_event(
+                tenant_id, audit.event_id
+            ) is not None:
+                raise AuditEventConflictError(
+                    "command receipt already exists"
+                ) from error
+            raise
         return run
 
     def save(
@@ -764,52 +804,61 @@ class PostgresRunStore:
         audit: Optional[AuditWrite] = None,
         expected_status: Optional[str] = None,
     ) -> ExecutionRun:
-        with self.database.pool.connection() as connection:
-            if expected_status is None:
-                cursor = connection.execute(
-                    """
-                    UPDATE runtime_runs
-                    SET status = %s, document_json = CAST(%s AS jsonb), version = version + 1,
-                        updated_at = %s
-                    WHERE tenant_id = %s AND run_id = %s
-                    """,
-                    (
-                        run.status.value,
-                        canonical_json(execution_run_to_document(run)),
-                        _datetime(self._clock()),
-                        tenant_id,
-                        run.run_id,
-                    ),
-                )
-            else:
-                cursor = connection.execute(
-                    """
-                    UPDATE runtime_runs
-                    SET status = %s, document_json = CAST(%s AS jsonb), version = version + 1,
-                        updated_at = %s
-                    WHERE tenant_id = %s AND run_id = %s AND status = %s
-                    """,
-                    (
-                        run.status.value,
-                        canonical_json(execution_run_to_document(run)),
-                        _datetime(self._clock()),
-                        tenant_id,
-                        run.run_id,
-                        expected_status,
-                    ),
-                )
-            if cursor.rowcount != 1:
-                exists = connection.execute(
-                    "SELECT status FROM runtime_runs WHERE tenant_id = %s AND run_id = %s",
-                    (tenant_id, run.run_id),
-                ).fetchone()
-                if exists is None:
-                    raise KeyError("run not found: {}".format(run.run_id))
-                raise RunStateConflictError(
-                    "run state changed before persistence: {}".format(run.run_id)
-                )
-            if audit is not None:
-                self._append_audit(connection, tenant_id, audit)
+        try:
+            with self.database.pool.connection() as connection:
+                if expected_status is None:
+                    cursor = connection.execute(
+                        """
+                        UPDATE runtime_runs
+                        SET status = %s, document_json = CAST(%s AS jsonb),
+                            version = version + 1, updated_at = %s
+                        WHERE tenant_id = %s AND run_id = %s
+                        """,
+                        (
+                            run.status.value,
+                            canonical_json(execution_run_to_document(run)),
+                            _datetime(self._clock()),
+                            tenant_id,
+                            run.run_id,
+                        ),
+                    )
+                else:
+                    cursor = connection.execute(
+                        """
+                        UPDATE runtime_runs
+                        SET status = %s, document_json = CAST(%s AS jsonb),
+                            version = version + 1, updated_at = %s
+                        WHERE tenant_id = %s AND run_id = %s AND status = %s
+                        """,
+                        (
+                            run.status.value,
+                            canonical_json(execution_run_to_document(run)),
+                            _datetime(self._clock()),
+                            tenant_id,
+                            run.run_id,
+                            expected_status,
+                        ),
+                    )
+                if cursor.rowcount != 1:
+                    exists = connection.execute(
+                        "SELECT status FROM runtime_runs WHERE tenant_id = %s AND run_id = %s",
+                        (tenant_id, run.run_id),
+                    ).fetchone()
+                    if exists is None:
+                        raise KeyError("run not found: {}".format(run.run_id))
+                    raise RunStateConflictError(
+                        "run state changed before persistence: {}".format(run.run_id)
+                    )
+                if audit is not None:
+                    self._append_audit(connection, tenant_id, audit)
+        except dbapi.IntegrityError as error:
+            if audit is not None and audit.event_id and self.audit_event(
+                tenant_id, audit.event_id
+            ) is not None:
+                raise AuditEventConflictError(
+                    "command receipt already exists"
+                ) from error
+            raise
         return run
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
@@ -862,6 +911,19 @@ class PostgresRunStore:
                 (tenant_id, after_sequence, limit),
             ).fetchall()
         return tuple(self._row_to_audit_event(row) for row in rows)
+
+    def audit_event(self, tenant_id: str, event_id: str) -> Optional[AuditEvent]:
+        require_non_empty(tenant_id, "tenant_id")
+        require_non_empty(event_id, "event_id")
+        with self.database.pool.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM audit_events
+                WHERE tenant_id = %s AND event_id = %s
+                """,
+                (tenant_id, event_id),
+            ).fetchone()
+        return None if row is None else self._row_to_audit_event(row)
 
     def audit_count(self, tenant_id: str) -> int:
         with self.database.pool.connection() as connection:

@@ -85,6 +85,7 @@ class BrowserSessionTests(unittest.TestCase):
                 headers={
                     "X-CSRF-Token": rotated_csrf,
                     "X-Request-ID": "session-run-0001",
+                    "Idempotency-Key": "session-run-command-0001",
                 },
             )
             self.assertEqual(accepted.status_code, 201)

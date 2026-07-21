@@ -211,10 +211,11 @@ Endpoints iniciales:
 - `GET /api/v1/runs/{run_id}`
 - `POST /api/v1/runs/{run_id}/greenlight/approve`
 - `POST /api/v1/runs/{run_id}/greenlight/reject`
+- `POST /api/v1/runs/{run_id}/greenlight/revoke`
 
-Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant, sujeto, rol y `key_id` se derivan de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente. `viewer` puede leer runs/auditoría, `operator` también crea runs, `approver` decide Greenlight y `admin` reúne ambos permisos. La configuración legacy `AGENCY_TENANT_API_KEYS_JSON` sigue disponible sólo para migración y puede desactivarse en Helm.
+Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador intercambia la key una sola vez en `/api/v1/sessions`, recibe una cookie HttpOnly/SameSite=Strict y usa un CSRF rotatorio mantenido sólo en memoria. El tenant, sujeto, rol y `key_id` se derivan de la credencial o sesión configurada por el servidor; nunca de un header o campo elegido por el cliente. `viewer` puede leer runs/auditoría, `operator` también crea runs, `approver` decide o revoca Greenlight y `admin` reúne ambos permisos. La configuración legacy `AGENCY_TENANT_API_KEYS_JSON` sigue disponible sólo para migración y puede desactivarse en Helm.
 
-El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
+El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. Las mutaciones de runs y Greenlight requieren `Idempotency-Key`: un retry compatible devuelve el documento original, mientras que una reutilización incompatible falla con un 409 uniforme sin guardar la key cruda. El Greenlight conserva IDs/hashes exactos, canales, presupuesto y un fencing token; puede revocarse sin borrar evidencia, invalidando tokens anteriores. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
 El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones y contadores de abuso en SQLite o PostgreSQL, siempre bajo claves tenant-scoped. Las credenciales, cookies y CSRF nunca se persisten en claro. La rotación admite claves superpuestas por sujeto y revoca bearer/sesiones derivados cuando una clave deja de estar activa. SQLite queda limitado a local/single-replica. PostgreSQL soporta estado compartido; el schema se inicializa con un comando operador separado y los pods sólo validan con un rol runtime no propietario. El repositorio ya incluye drills efímeros de backup/restore, pero todavía faltan backup productivo programado/cifrado/inmutable, failover, capacidad medida, un IdP administrado, SSO/MFA y almacenamiento de objetos antes de un piloto público.
 
@@ -222,7 +223,7 @@ El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones 
 
 `ProductionRuntimePanel` usa `src/lib/runtimeApi.ts` contra el mismo origen. La API key no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; se limpia del formulario después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
 
-La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artefactos, aprobar/rechazar y consultar el ledger. Sigue siendo sandbox respecto de research, media, ads y publicación externa. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
+La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artefactos, aprobar/rechazar/revocar y consultar el ledger. Conserva una clave idempotente en memoria durante retries ambiguos y la invalida cuando cambia el comando. Sigue siendo sandbox respecto de research, media, ads y publicación externa. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
 
 ## Observabilidad y auditoría
 

@@ -35,10 +35,12 @@ def identity(tenant_id, subject_id, role, key_id, api_key):
     }
 
 
-def auth(api_key, request_id=None):
+def auth(api_key, request_id=None, idempotency_key=None):
     headers = {"Authorization": "Bearer {}".format(api_key)}
     if request_id:
         headers["X-Request-ID"] = request_id
+    if idempotency_key:
+        headers["Idempotency-Key"] = idempotency_key
     return headers
 
 
@@ -169,10 +171,11 @@ class SecurityPrivacyApiTests(unittest.TestCase):
             for forbidden in ("viewer", "runs:create", "permission", "role"):
                 self.assertNotIn(forbidden, denied.text)
 
+            beta_command = "security-beta-create-0001"
             beta = client.post(
                 "/api/v1/runs",
                 json=dict(BRIEF, title="Beta private campaign"),
-                headers=auth(BETA_KEY),
+                headers=auth(BETA_KEY, idempotency_key=beta_command),
             )
             self.assertEqual(beta.status_code, 201)
             foreign_id = beta.json()["run_id"]
@@ -197,14 +200,17 @@ class SecurityPrivacyApiTests(unittest.TestCase):
             self.assertNotIn(foreign_id, foreign.text)
             self.assertNotIn("run-does-not-exist", missing.text)
 
+            alpha_command = "security-alpha-create-0001"
             created = client.post(
-                "/api/v1/runs", json=BRIEF, headers=auth(ADMIN_KEY)
+                "/api/v1/runs",
+                json=BRIEF,
+                headers=auth(ADMIN_KEY, idempotency_key=alpha_command),
             )
             self.assertEqual(created.status_code, 201)
             duplicate = client.post(
                 "/api/v1/runs",
                 json=BRIEF,
-                headers=auth(ADMIN_KEY, "security-conflict-hidden-0001"),
+                headers=auth(ADMIN_KEY, "security-conflict-hidden-0001", "security-alpha-duplicate-0001"),
             )
             self.assertEqual(duplicate.status_code, 409)
             self.assertEqual(
@@ -246,7 +252,7 @@ class SecurityPrivacyApiTests(unittest.TestCase):
             invalid_brief = client.post(
                 "/api/v1/runs",
                 json=dict(BRIEF, objective=campaign_secret),
-                headers=auth(ADMIN_KEY, "security-validation-brief-0001"),
+                headers=auth(ADMIN_KEY, "security-validation-brief-0001", "security-invalid-brief-0001"),
             )
             self.assertEqual(invalid_brief.status_code, 422)
             serialized = json.dumps(invalid_brief.json(), sort_keys=True)
@@ -556,7 +562,7 @@ class SecurityPrivacyApiTests(unittest.TestCase):
                     response = client.post(
                         "/api/v1/runs",
                         json=BRIEF,
-                        headers=auth(ADMIN_KEY, "security-internal-error-0001"),
+                        headers=auth(ADMIN_KEY, "security-internal-error-0001", "security-internal-command-0001"),
                     )
             self.assertEqual(response.status_code, 500)
             self.assertEqual(

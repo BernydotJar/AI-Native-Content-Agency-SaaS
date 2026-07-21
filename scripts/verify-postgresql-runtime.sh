@@ -601,6 +601,8 @@ service.start(
     ),
     request_id="req-migration-run",
     actor="api-key:operator-migration",
+    subject_id="operator-migration",
+    idempotency_key="migration-fixture-run-0001",
 )
 service.create_browser_session(
     principal=TenantPrincipal(
