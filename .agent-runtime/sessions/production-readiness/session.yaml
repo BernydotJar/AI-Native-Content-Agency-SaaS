@@ -9,4 +9,4 @@ spec:
   objective: Terraform and Kubernetes production-readiness program
 status:
   phase: active
-  lastVerifiedCommit: dcb1d1c567ad688b7fd78a219411b42d5806034c
+  lastVerifiedCommit: 2c38bba
