@@ -13,7 +13,7 @@ ENG-001,engineering,Architecture reviewed and current,weak_evidence,program/arch
 ENG-002,engineering,Schemas and migrations reviewed,weak_evidence,SQLite schema PostgreSQL schema migration gate,Add formal schema compatibility audit,WS-03
 ENG-003,engineering,Versioned API contracts,incomplete,/api/v1 and FastAPI metadata,Add checked OpenAPI and structured error contract,WS-04
 ENG-004,engineering,Data correctness and transactions,weak_evidence,SQLite/PostgreSQL tests and transactional audit,Expand invariants and restore verification,WS-03
-ENG-005,engineering,Durable command idempotency,weak_evidence,f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546; backend/tests/test_idempotency.py; backend/tests/test_postgres_runtime.py; docs/adr/0008-durable-command-idempotency-and-greenlight-fencing.md,Push exact head and require exact-head CI before closing INC-004,WS-04
+ENG-005,engineering,Durable command idempotency,proven,bc01fa7b54341865f848c0754884cc83f660a0c7; GitHub Actions 29871278876; backend/tests/test_idempotency.py; backend/tests/test_postgres_runtime.py,Preserve regression and require separate outbound provider receipts before external effects,WS-04
 ENG-006,engineering,Concurrency correctness,weak_evidence,PostgreSQL Greenlight/rate-limit concurrency tests,Add duplicate run/idempotency races and load evidence,WS-04
 ENG-007,engineering,Application and data rollback,missing,Only narrative migration rollback exists,Implement rollback drill and runbook,WS-09
 ENG-008,engineering,Reproducible builds and tests,proven,hash locks wheel gates npm lock CI,Preserve,WS-12
@@ -33,7 +33,7 @@ SEC-008,security,Dependency vulnerability and license review,proven,SBOM Grype l
 SEC-009,security,Zero open CRITICAL/HIGH findings,contradicted,Seven HIGH global release findings remain open or externally blocked,Close executable findings and preserve exact external blockers,WS-10
 SEC-010,security,Uniform errors and metadata leakage prevention,proven,public-error.v1 hides auth state role permission foreign IDs conflicts input and internal exception messages,Preserve regression and verify proxy/platform telemetry,WS-07
 SEC-011,security,Rate limiting and abuse controls,proven,Durable credential/source buckets and tests,Add distributed edge strategy,WS-07
-SEC-012,security,Revocation behavior,weak_evidence,f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546; Greenlight revocation/fencing tests; authenticated-subject authorization negative tests,Push exact head and require exact-head CI; keep external effects disabled until provider receipts exist,WS-04
+SEC-012,security,Revocation behavior,proven,bc01fa7b54341865f848c0754884cc83f660a0c7; GitHub Actions 29871278876; authenticated Greenlight revocation/fencing tests,Preserve regression; external credential/provider revocation remains integration-specific and disabled,WS-04
 UX-001,ux,Documented design system,incomplete,Existing CSS/component language without complete token document,Create design-system record,WS-06
 UX-002,ux,Four political themes plus paid premium theme,missing,No theme implementation,Implement accessible gated theme slice,WS-06
 UX-003,ux,Responsive behavior,weak_evidence,CSS and component tests only,Manual responsive review,WS-06

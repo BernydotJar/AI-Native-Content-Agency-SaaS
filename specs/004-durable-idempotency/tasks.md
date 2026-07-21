@@ -10,4 +10,4 @@
 - [x] Update frontend API/types/control and documentation.
 - [x] Run all required gates and independent review.
 
-- [ ] Push exact head and obtain eight-job CI.
+- [x] Push exact head and obtain eight-job CI.

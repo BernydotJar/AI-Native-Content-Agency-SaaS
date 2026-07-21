@@ -146,9 +146,16 @@
       "observed": "Buildah runtime smoke PASS; Terraform/Helm/K3s both storage modes PASS; no secrets; clean-source SBOM, Grype/license, provenance and offline Cosign PASS",
       "result": "PASS",
       "scope": "package, infrastructure and supply-chain regression"
+    },
+    {
+      "command": "gh run view 29871278876",
+      "id": "INC004-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546",
-  "updated_at": "2026-07-21T21:43:50Z"
+  "source_commit": "bc01fa7b54341865f848c0754884cc83f660a0c7",
+  "updated_at": "2026-07-21T21:51:30Z"
 }

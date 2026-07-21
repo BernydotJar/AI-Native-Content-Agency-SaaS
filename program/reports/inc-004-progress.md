@@ -1,92 +1,84 @@
-# INC-004 Verification Review
+# INC-004 Completion Review
 
 Date: 2026-07-21
 Branch: `agent/inc-004-idempotency`
 Base: `agent/production-readiness@c52684b66da42e11af11ecdf3a48ea1d9ae7b818`
-Exact verified implementation commit: `f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546`
-Status: `LOCAL_VERIFIED_PENDING_PUSH_CI`
+Exact remotely verified head: `bc01fa7b54341865f848c0754884cc83f660a0c7`
+GitHub Actions run: `29871278876`
+Draft PR: `#4`
+Status: `CHECKPOINT_COMPLETED`
 
-## Review contract
+## Outcome
+
+Durable inbound command replay and Greenlight revocation/fencing are implemented, locally verified, committed, pushed and verified by exact-head CI.
 
 ```yaml
-task_id: INC-004
-workstream_id: WS-04
-producer: Backend Engineer
-critic: Security and Data Correctness Reviewer
-fixer: Backend/Frontend Engineer
-independent_verifier: SQLite/PostgreSQL/frontend/package/infrastructure/supply-chain gates
-objective: >
-  Add durable compatible replay, uniform incompatible conflicts and Greenlight
-  revocation/fencing without enabling an external side effect.
+increment: INC-004
+workstream: WS-04
+status: CHECKPOINT_COMPLETED
+implementation_head: bc01fa7b54341865f848c0754884cc83f660a0c7
+remote_sha: bc01fa7b54341865f848c0754884cc83f660a0c7
+pull_request: 4
+ci_run: 29871278876
+ci_jobs_passed: 8
+ci_jobs_failed: 0
+F_002: CLOSED
+ENG_005: proven
+SEC_012: proven
+production_status: DENY_RELEASE
+cloud_status: DENY_APPLY
 external_effects: NONE
 ```
 
-## Implemented boundary
+## Proven boundary
 
-- Business mutations require a bounded `Idempotency-Key`.
-- Raw keys are SHA-256 digested and never persisted, logged or returned.
-- Tenant plus operation plus key digest produces the deterministic audit receipt ID.
-- Operation, resource, authenticated subject and canonical payload produce the request fingerprint.
-- Mutation, exact response snapshot and receipt commit in one database transaction.
-- Compatible replay returns the original document; incompatible reuse returns a sanitized 409.
-- PostgreSQL uses a dedicated session advisory lock so concurrent replicas execute local provider work once without holding an application-pool transaction.
-- Client reviewer text is non-authoritative; the authenticated subject is stored and audited.
-- Approved Greenlight starts at fence `1`; revocation increments the fence, preserves evidence and blocks Publisher.
-- Future effect authorization requires active status, exact Greenlight ID/token, artifacts, channel and budget.
-- The browser retains one key through ambiguous retry and discards it when the command changes or succeeds.
-- Session creation remains non-retryable because exact replay would require retaining credential material.
+- Governed business mutations require a bounded idempotency key.
+- The raw key is never persisted, logged or returned.
+- Tenant, operation and key digest identify one transactional receipt.
+- Operation, resource, authenticated subject and canonical payload identify compatibility.
+- Compatible replay returns the original response; incompatible reuse returns uniform 409.
+- SQLite replay survives restart.
+- PostgreSQL compatible/incompatible races serialize without holding a pool transaction and execute package/provider work once.
+- Client reviewer text is not authority; the authenticated subject is persisted and audited.
+- Greenlight revocation increments its fencing token, preserves evidence and blocks Publisher.
+- A future effect guard checks active state, Greenlight identity, token, artifacts, channel and budget.
+- The browser reuses one key after ambiguous failure and invalidates it after command changes or success.
 
-## Critic findings resolved
-
-| Finding | Severity | Resolution | Evidence |
-|---|---|---|---|
-| Deterministic run ID returned duplicate conflict instead of replay | HIGH | durable receipt and exact response snapshot | restart/replay tests |
-| Concurrent replicas could repeat package/provider work | HIGH | dedicated PostgreSQL advisory command lock | compatible race tests |
-| Same key with changed content lacked stable conflict | HIGH | subject/resource/payload fingerprint and public `idempotency_conflict` | SQLite/PostgreSQL negatives |
-| Raw key could become receipt material | HIGH | only digest-derived ID and fingerprint persist | SQL/audit absence tests and Gitleaks |
-| Client reviewer text could impersonate another principal | HIGH | persisted reviewer/revoker is authenticated subject | RBAC identity test |
-| Approved Greenlight lacked revocation/fencing | HIGH | revoke endpoint, fence increment and exact effect guard | revocation and stale-envelope tests |
-| Browser retries generated new commands | MEDIUM | in-memory command-key lifecycle with payload invalidation | component retry test |
-| Receipt snapshot increases audit growth | MEDIUM residual | documented capacity/retention impact | ADR 0008 and operations docs |
-| Crash before receipt may repeat local deterministic work | MEDIUM residual | external effects remain disabled; future provider requires outbox/receipt | ADR 0008 and threat model |
-
-## Executed evidence
+## Local evidence
 
 | Gate | Result | Observed |
 |---|---|---|
-| focused idempotency tests | PASS | 9/9, including OpenAPI, replay, conflict, raw-key absence, revocation and effect guard |
-| `./scripts/verify-python-locks.sh` | PASS | agency-runtime 0.7.0, pip check, 97 tests with 11 PostgreSQL-only skips |
-| `./scripts/verify-postgresql-runtime.sh` | PASS | PostgreSQL 15.18, 97/97, cross-replica compatible/incompatible races, package-once, migration and restores |
-| frontend lint/tests/build | PASS | zero lint findings, 35/35 tests, production build |
-| production package | PASS | Helm guards and Buildah non-root live runtime smoke |
-| local infrastructure | PASS | Terraform/Helm/K3s plan-apply-destroy for both storage modes |
-| workflow and secret checks | PASS | actionlint and Gitleaks worktree with no findings |
+| focused idempotency/fencing | PASS | 9/9 including OpenAPI, replay, conflict, key absence, revocation and effect guard |
+| locked wheel | PASS | agency-runtime 0.7.0; 97 tests, 11 PostgreSQL-only skips |
+| PostgreSQL | PASS | PostgreSQL 15.18; 97/97; cross-replica races, package-once, migration and restores |
+| frontend | PASS | lint zero, 35/35 tests and production build |
+| package | PASS | Helm guards and Buildah non-root live runtime smoke |
+| local infrastructure | PASS | Terraform/Helm/K3s both storage modes |
+| workflow and secrets | PASS | actionlint and zero effective Gitleaks findings |
 | supply chain | PASS | clean source, pinned bases, SBOM, Grype/license policy, provenance and offline Cosign |
-| static/whitespace | PASS | Python compile, TypeScript, Bash syntax and `git diff --check` |
 
-## Evidence limitations
+## Remote evidence
 
-- The branch is local and has no remote CI yet.
-- PostgreSQL/K3s resources were disposable; no persistent environment changed.
-- Agentless K3s does not prove pod scheduling.
-- Session issuance is deliberately excluded from replay.
-- No real provider, publishing, media generation, browser automation or spend was activated.
-- A future effectful provider needs durable outbound idempotency and receipts in addition to inbound command replay.
-- Receipt snapshots increase database, backup and retention volume.
+GitHub Actions run `29871278876` completed successfully at exact head `bc01fa7`:
 
-## Release decision
+- `workflow-lint`;
+- `verify`;
+- `python-locks`;
+- `postgresql-shared-state`;
+- `container`;
+- `helm`;
+- `terraform`;
+- `supply-chain`.
 
-```yaml
-INC_004: REVIEW
-F_002: IN_PROGRESS
-ENG_005: weak_evidence
-SEC_012: weak_evidence
-push: PENDING
-exact_head_ci: PENDING
-release: DENY_RELEASE
-cloud_apply: DENY_APPLY
-```
+## Residual boundaries
 
-## Exact continuation
+- PR `#4` is intentionally draft and stacked on PR `#3`.
+- Session issuance is excluded because replay would require storing recoverable session/CSRF secrets.
+- Receipt snapshots increase database, audit, backup and retention volume.
+- A future external provider needs outbound outbox/idempotency/receipt/revocation controls.
+- No real provider, persistent environment, deployment, publication or spend occurred.
+- Five unrelated HIGH release findings remain open.
 
-Commit the program checkpoint, push `agent/inc-004-idempotency`, verify the exact remote SHA and create a draft PR based on `agent/production-readiness`. Require all eight jobs. Close the finding and requirement gaps only after exact-head CI succeeds. The stacked PR cannot be merged before PR `#3` and must not bypass its required review.
+## Merge gate
+
+PR `#3` remains `REVIEW_REQUIRED` despite 8/8 checks and a normal authorized merge attempt. PR `#4` must remain draft and stacked until PR `#3` receives an eligible independent approval and merges normally. No admin bypass is authorized or appropriate.

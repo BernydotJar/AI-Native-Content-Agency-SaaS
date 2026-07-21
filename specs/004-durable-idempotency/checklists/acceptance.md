@@ -10,4 +10,4 @@
 - [x] Stale or altered effect envelope is rejected.
 - [x] External effects remain disabled.
 
-- [ ] Exact remote SHA and CI verified.
+- [x] Exact remote SHA and CI verified.

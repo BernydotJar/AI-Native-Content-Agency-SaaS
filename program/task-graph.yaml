@@ -46,7 +46,7 @@
         "INC-003"
       ],
       "id": "INC-004",
-      "status": "review"
+      "status": "done"
     },
     {
       "depends_on": [

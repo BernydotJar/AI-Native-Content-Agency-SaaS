@@ -181,7 +181,7 @@
         "SQLite/PostgreSQL stores",
         "Greenlight invariants"
       ],
-      "context": "Deterministic IDs previously rejected duplicate delivery. Exact local implementation now provides durable audit-ledger receipts, compatible replay, concurrent provider-once behavior and Greenlight revocation/fencing; push and exact-head CI remain pending.",
+      "context": "Exact published head bc01fa7b54341865f848c0754884cc83f660a0c7 passed all eight jobs in GitHub Actions run 29871278876. Durable inbound command idempotency and Greenlight revocation/fencing are complete for the selected sandbox runtime. External effect adapters remain disabled and require separate outbound receipts.",
       "dependencies": [
         "INC-001",
         "INC-003"
@@ -195,15 +195,15 @@
         "API/operations/security documentation"
       ],
       "human_gates": [],
-      "implementation_commit": "f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546",
+      "implementation_commit": "bc01fa7b54341865f848c0754884cc83f660a0c7",
       "objective": "Add durable idempotency keys, compatible replay, conflict behavior, and structured errors for mutable APIs.",
       "prohibited_paths": [
         "external side effects"
       ],
-      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
+      "publication_state": "REMOTE_CI_GREEN",
       "read_only_paths": [],
       "role": "Backend Engineer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-004",
       "validation_commands": [
         "python -m unittest backend.tests.test_idempotency -v",
@@ -701,12 +701,12 @@
       "evals": [],
       "id": "WS-04",
       "name": "Backend, APIs and Agent Runtime",
-      "next_ready_task": "INC-004",
+      "next_ready_task": "INC-005",
       "objective": "Close idempotency, structured errors, revocation and runtime gaps.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "review",
+      "status": "done",
       "validation": [],
       "write_locks": []
     },

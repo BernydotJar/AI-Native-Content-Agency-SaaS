@@ -20,11 +20,9 @@ Category: code / operations
 
 Executable work remains and is assigned to `INC-002`. Persistent production restore remains human-gated after tooling and ephemeral drills pass.
 
-## OI-004 — Idempotency and Greenlight revocation
+## OI-004 — Idempotency and Greenlight revocation — resolved
 
-Category: delivery / data correctness
-
-Exact local commit `f3fb67d382f34ec40ed9f2bb18b02a3dc65c1546` passes durable replay, incompatible-conflict, cross-replica provider-once, authenticated-subject and Greenlight revocation/fencing gates. Push and exact-head CI remain executable work. External provider activation still requires a separate outbound outbox/idempotency/receipt contract.
+Exact published head `bc01fa7b54341865f848c0754884cc83f660a0c7` passed all eight jobs in GitHub Actions run `29871278876` after complete SQLite/PostgreSQL concurrency, replay, authorization, revocation and fencing verification. Future external providers remain disabled and require separate outbound outbox/idempotency/receipt controls.
 
 ## OI-005 — Accessibility manual gate
 
