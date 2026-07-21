@@ -39,7 +39,7 @@ class SQLiteMemory:
         self.path = str(path)
         self._clock = clock
         self._lock = threading.RLock()
-        self._connection = sqlite3.connect(self.path)
+        self._connection = sqlite3.connect(self.path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         if self.path != ":memory:":

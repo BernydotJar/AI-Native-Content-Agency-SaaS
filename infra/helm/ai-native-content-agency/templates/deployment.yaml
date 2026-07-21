@@ -26,6 +26,9 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          env:
+            - name: AGENCY_MEMORY_DB
+              value: {{ .Values.runtime.memoryDatabase | quote }}
           readinessProbe:
             httpGet:
               path: /healthz

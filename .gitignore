@@ -32,3 +32,6 @@ __pycache__/
 *.tfstate
 *.tfstate.*
 crash.log
+
+# Local Python environments
+.venv/

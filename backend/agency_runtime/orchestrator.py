@@ -29,7 +29,7 @@ from .tools import (
     TrendsRequest,
     VideoOptimizationRequest,
 )
-from .utils import stable_id, to_primitive
+from .utils import canonical_json, stable_id, to_primitive
 
 
 Clock = Callable[[], str]
@@ -133,15 +133,26 @@ class AgencyOrchestrator:
             raise GreenlightError("reviewer must not be empty")
 
         decided_at = self._clock()
+        approved_artifacts = tuple(run.artifacts)
+        approved_ids = tuple(item.artifact_id for item in approved_artifacts)
+        approved_hashes = tuple(
+            stable_id("sha256", canonical_json(item), length=64)
+            for item in approved_artifacts
+        )
         greenlight = Greenlight(
             greenlight_id=stable_id(
-                "greenlight", run_id, decision, reviewer.strip(), note.strip(), decided_at
+                "greenlight", run_id, decision, reviewer.strip(), note.strip(),
+                decided_at, approved_ids, approved_hashes
             ),
             run_id=run_id,
             decision=decision,
             reviewer=reviewer.strip(),
             note=note.strip(),
             decided_at=decided_at,
+            approved_artifact_ids=approved_ids,
+            approved_artifact_hashes=approved_hashes,
+            authorized_channels=run.brief.platforms,
+            authorized_budget_cents=run.brief.budget_cents,
         )
         run.greenlight = greenlight
 
@@ -253,6 +264,20 @@ class AgencyOrchestrator:
             {
                 "trends": to_primitive(trends.result),
                 "browser_observation": to_primitive(browser.result),
+                "scholar": {
+                    "reencuadre_cognitivo": (
+                        "La oportunidad no es producir más contenido, sino convertir "
+                        "evidencia en una decisión editorial verificable."
+                    ),
+                    "tension_del_trade_off": (
+                        "Mayor velocidad amplifica alcance, pero también amplifica "
+                        "afirmaciones débiles si la procedencia no acompaña cada señal."
+                    ),
+                    "resolucion_operativa": (
+                        "Priorizar una tesis sustentada, adaptar su expresión por canal "
+                        "y mantener Risk y Greenlight como límites obligatorios."
+                    ),
+                },
                 "live_sources_contacted": False,
             },
             evidence=(trends.evidence, browser.evidence),

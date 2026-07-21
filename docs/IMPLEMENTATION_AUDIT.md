@@ -90,3 +90,18 @@ La verificación automatizada no sustituye QA visual/manual. El browser integrad
 5. Añadir tenancy, secrets management, retención, borrado y auditoría.
 6. Conectar el frontend a una única fuente de verdad y retirar la state machine duplicada cuando la paridad esté comprobada.
 7. Realizar QA visual, responsive, accesible y de fallo antes de cualquier piloto con efectos externos.
+
+## Production Readiness increment — 21 July 2026
+
+| Capability | Evidence | Status |
+|---|---|---|
+| Network-addressable backend | `backend/agency_runtime/api.py` exposes health, run creation/read, approval, and rejection via FastAPI. | **Real local, process-scoped.** |
+| Brief → governed campaign package vertical slice | `backend/tests/test_api.py` executes brief → seven pre-gate artifacts → Scholar → Risk → Greenlight → sandbox package. | **Real local with mock external evidence.** |
+| Scholar three-part explanation | `research_dossier.payload.scholar` contains cognitive reframing, trade-off tension, and operational resolution. | **Real deterministic transformation.** |
+| Artifact-bound Greenlight | `Greenlight` records exact artifact IDs and SHA-256-derived hashes, authorized channels, and budget. | **Real local.** Mutation after review is not exposed by the current API. |
+| Unified production process | The production Dockerfile builds React and runs FastAPI, which serves both `/api/v1/*` and the SPA. | **Implemented; local Docker execution unavailable in this workstation.** |
+| HTTP concurrency safety | SQLite is opened with cross-thread access and all operations remain protected by an `RLock`. | **Verified by FastAPI TestClient.** |
+| Authentication and tenant isolation | No identity provider, tenant key, authorization policy, or per-tenant data partition exists. | **Missing; blocks multiuser pilot.** |
+| Durable run persistence | Memory observations persist in SQLite, but `ExecutionRun` objects remain process-local. | **Partial; restart loses runs and approvals.** |
+
+Verification on 21 July 2026: Oxlint passed, 28 Vitest tests passed, Vite production build passed, 19 Python tests passed, and live HTTP smoke returned `200` for health/SPA and `201` for run creation. Helm CLI was not installed in the workstation, so Helm validation was not claimed locally; the workflow retains `helm lint` and `helm template` gates.

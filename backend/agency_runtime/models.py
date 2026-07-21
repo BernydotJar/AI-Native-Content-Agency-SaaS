@@ -151,10 +151,18 @@ class Greenlight:
     reviewer: str
     note: str
     decided_at: str
+    approved_artifact_ids: Tuple[str, ...] = ()
+    approved_artifact_hashes: Tuple[str, ...] = ()
+    authorized_channels: Tuple[Platform, ...] = ()
+    authorized_budget_cents: int = 0
 
     def __post_init__(self) -> None:
         require_non_empty(self.reviewer, "reviewer")
         require_non_empty(self.decided_at, "decided_at")
+        if len(self.approved_artifact_ids) != len(self.approved_artifact_hashes):
+            raise ValueError("approved artifact ids and hashes must have equal length")
+        if self.authorized_budget_cents < 0:
+            raise ValueError("authorized_budget_cents must not be negative")
 
 
 @dataclass

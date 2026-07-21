@@ -164,3 +164,26 @@ python3 agency.py demo --approve --json
 ```
 
 La demo JSON reporta de forma explícita cero llamadas de red, navegaciones, cambios en GitHub, renders, publicaciones y gasto publicitario. El browser integrado no expuso una instancia durante este cierre, por lo que la QA visual interactiva quedó pendiente.
+
+## API de ejecución
+
+El mismo runtime Python ya está disponible mediante FastAPI. La imagen de producción sirve la SPA y la API en el puerto `8080`:
+
+```bash
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -e . httpx
+.venv/bin/agency-api
+```
+
+Endpoints iniciales:
+
+- `GET /healthz`
+- `POST /api/v1/runs`
+- `GET /api/v1/runs/{run_id}`
+- `POST /api/v1/runs/{run_id}/greenlight/approve`
+- `POST /api/v1/runs/{run_id}/greenlight/reject`
+
+El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
+
+Este servicio todavía usa estado de ejecuciones en memoria de proceso y SQLite local para memoria semántica básica. Autenticación, tenancy y persistencia durable de runs siguen siendo requisitos bloqueantes para un piloto multiusuario.

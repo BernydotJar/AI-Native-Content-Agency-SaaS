@@ -14,9 +14,12 @@ def to_primitive(value: Any) -> Any:
     if is_dataclass(value):
         return to_primitive(asdict(value))
     if isinstance(value, Mapping):
+        def key_text(key: Any) -> str:
+            return str(key.value) if isinstance(key, Enum) else str(key)
+
         return {
-            str(key): to_primitive(item)
-            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            key_text(key): to_primitive(item)
+            for key, item in sorted(value.items(), key=lambda pair: key_text(pair[0]))
         }
     if isinstance(value, (list, tuple)):
         return [to_primitive(item) for item in value]
