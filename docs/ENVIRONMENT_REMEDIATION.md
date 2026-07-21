@@ -113,7 +113,7 @@ Terraform fmt/init/validate passed locally with locked, signed providers. Full-n
 
 ## GitHub Actions workflow validation
 
-`actionlint 1.7.11` was installed as a checksum-verified local binary from the official release archive.
+`actionlint 1.7.12` is installed as a checksum-verified local binary from the official release archive. The installer maps the host `x86_64` architecture to the upstream `amd64` asset name.
 
 - SHA-256: `2b65d6542df67ed865349f37750738ec83e027f6acc17f6889a46dbd07a14335`
 - Destination: `/home/agent/.local/bin/actionlint`

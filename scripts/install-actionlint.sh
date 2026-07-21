@@ -2,7 +2,7 @@
 set -euo pipefail
 
 INSTALL_DIR=${INSTALL_DIR:-$HOME/.local/bin}
-ACTIONLINT_VERSION=${ACTIONLINT_VERSION:-1.7.11}
+ACTIONLINT_VERSION=${ACTIONLINT_VERSION:-1.7.12}
 TMP_DIR=$(mktemp -d)
 
 cleanup() {
@@ -19,7 +19,7 @@ done
 
 case "$(uname -m)" in
   aarch64|arm64) ACTIONLINT_ARCH=arm64 ;;
-  x86_64|amd64) ACTIONLINT_ARCH=x86_64 ;;
+  x86_64|amd64) ACTIONLINT_ARCH=amd64 ;;
   *)
     printf 'unsupported architecture: %s\n' "$(uname -m)" >&2
     exit 2

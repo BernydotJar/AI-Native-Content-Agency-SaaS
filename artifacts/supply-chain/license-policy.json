@@ -4,9 +4,11 @@
     "python"
   ],
   "allowed_licenses": [
+    "Apache-2.0",
     "BSD-3-Clause",
     "MIT",
     "MIT License",
+    "MIT-0",
     "PSF-2.0"
   ],
   "denied_tokens": [
@@ -21,6 +23,36 @@
       "package": "annotated-types",
       "version": "0.7.0",
       "reason": "The installed package metadata is not surfaced as a license by Syft; this exact transitive version was reviewed separately."
+    }
+  ],
+  "reviewed_license_mappings": [
+    {
+      "package": "pg8000",
+      "version": "1.31.5",
+      "reported_license": "BSD 3-Clause License",
+      "normalized_licenses": [
+        "BSD-3-Clause"
+      ],
+      "reason": "PyPI metadata for this exact release reports BSD 3-Clause License and classifies it as an OSI-approved BSD license."
+    },
+    {
+      "package": "python-dateutil",
+      "version": "2.9.0.post0",
+      "reported_license": "Dual License",
+      "normalized_licenses": [
+        "Apache-2.0",
+        "BSD-3-Clause"
+      ],
+      "reason": "PyPI metadata for this exact release reports Dual License and lists both Apache Software License and BSD License classifiers."
+    },
+    {
+      "package": "scramp",
+      "version": "1.4.12",
+      "reported_license": "MIT No Attribution",
+      "normalized_licenses": [
+        "MIT-0"
+      ],
+      "reason": "PyPI metadata for this exact release classifies MIT No Attribution as the SPDX MIT-0 license."
     }
   ]
 }

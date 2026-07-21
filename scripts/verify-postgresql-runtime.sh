@@ -122,7 +122,8 @@ if [ "$(id -u)" -eq 0 ]; then
   chown -R "$POSTGRES_RUN_USER" "$PG_ROOT"
 fi
 run_as_postgres "$POSTGRES_BIN_DIR/initdb" -D "$PG_DATA" \
-  --auth=trust --no-locale --encoding=UTF8 >"$TMP_DIR/initdb.log"
+  --auth=trust --no-locale --encoding=UTF8 \
+  --username="$POSTGRES_RUN_USER" >"$TMP_DIR/initdb.log"
 PG_PORT=$(
   "$VENV/bin/python" - <<'PY'
 import socket
@@ -343,7 +344,7 @@ if [ "$REPLAY_STATUS" -eq 0 ]; then
   printf 'migration replay unexpectedly succeeded\n' >&2
   exit 1
 fi
-grep -q 'target tables are not empty' "$TMP_DIR/migration-replay.log"
+grep -q 'PostgreSQL target must be empty before migration' "$TMP_DIR/migration-replay.log"
 printf 'migration_replay_guard=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"

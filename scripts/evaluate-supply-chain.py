@@ -168,9 +168,35 @@ def evaluate_licenses(
         (str(item["package"]), str(item["version"]))
         for item in policy.get("missing_license_exceptions", [])
     }
+    reviewed_mappings: dict[tuple[str, str, str], tuple[str, ...]] = {}
+    for item in policy.get("reviewed_license_mappings", []):
+        package = str(item.get("package", "")).strip()
+        version = str(item.get("version", "")).strip()
+        reported = str(item.get("reported_license", "")).strip()
+        normalized = tuple(
+            str(value).strip()
+            for value in item.get("normalized_licenses", [])
+            if str(value).strip()
+        )
+        reason = str(item.get("reason", "")).strip()
+        key = (package, version, reported)
+        if not all(key) or not normalized or not reason:
+            errors.append(
+                "reviewed license mapping requires package, version, "
+                "reported_license, normalized_licenses, and reason"
+            )
+            continue
+        if key in reviewed_mappings:
+            errors.append(
+                "duplicate reviewed license mapping: "
+                f"{reported}: {package}@{version}"
+            )
+            continue
+        reviewed_mappings[key] = normalized
 
     packages: list[tuple[str, str, list[str]]] = []
     exception_hits: list[str] = []
+    mapping_hits: list[str] = []
     license_counts: Counter[str] = Counter()
     for component in sbom.get("components", []):
         component_type = package_type(component)
@@ -191,19 +217,51 @@ def evaluate_licenses(
             upper = license_name.upper()
             if any(token in upper for token in denied_tokens):
                 errors.append(f"denied license {license_name}: {name}@{version}")
-            elif license_name not in allowed:
+                continue
+            if license_name in allowed:
+                continue
+            mapping_key = (name, version, license_name)
+            normalized_licenses = reviewed_mappings.get(mapping_key)
+            if normalized_licenses is None:
                 errors.append(f"unapproved license {license_name}: {name}@{version}")
+                continue
+            mapping_valid = True
+            for normalized_license in normalized_licenses:
+                normalized_upper = normalized_license.upper()
+                if any(token in normalized_upper for token in denied_tokens):
+                    errors.append(
+                        "reviewed license mapping resolves to denied license "
+                        f"{normalized_license}: {name}@{version}"
+                    )
+                    mapping_valid = False
+                elif normalized_license not in allowed:
+                    errors.append(
+                        "reviewed license mapping resolves to unapproved license "
+                        f"{normalized_license}: {name}@{version}"
+                    )
+                    mapping_valid = False
+            if mapping_valid:
+                mapping_hits.append(f"{name}@{version}: {license_name}")
 
     expected_exceptions = {f"{name}@{version}" for name, version in exceptions}
     errors.extend(
         f"stale missing-license exception: {item}"
         for item in sorted(expected_exceptions - set(exception_hits))
     )
+    expected_mappings = {
+        f"{name}@{version}: {reported}"
+        for name, version, reported in reviewed_mappings
+    }
+    errors.extend(
+        f"stale reviewed license mapping: {item}"
+        for item in sorted(expected_mappings - set(mapping_hits))
+    )
 
     return {
         "packages_evaluated": len(packages),
         "licenses": dict(sorted(license_counts.items())),
         "missing_license_exceptions_used": sorted(exception_hits),
+        "reviewed_license_mappings_used": sorted(mapping_hits),
     }, errors
 
 

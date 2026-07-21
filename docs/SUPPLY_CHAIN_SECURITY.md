@@ -96,7 +96,7 @@ A baseline is not a statement that a vulnerability is harmless. It is a temporar
 
 ## License policy
 
-`artifacts/supply-chain/license-policy.json` evaluates application dependencies cataloged as Python packages. It rejects missing metadata unless an exact package/version exception exists, rejects denied copyleft/source-available tokens, and rejects any license not explicitly allowed.
+`artifacts/supply-chain/license-policy.json` evaluates application dependencies cataloged as Python packages. It rejects missing metadata unless an exact package/version exception exists, rejects denied copyleft/source-available tokens, and rejects any license not explicitly allowed. Ambiguous or non-SPDX metadata is accepted only through an exact package/version/reported-license mapping with reviewed normalized licenses and a recorded reason; unused mappings fail as stale evidence.
 
 The current gate evaluates 21 Python packages:
 

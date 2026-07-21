@@ -340,6 +340,7 @@ def main() -> int:
         require_empty_target(before)
         plan = {
             "mode": "apply" if args.apply else "dry-run",
+            "status": "pending" if args.apply else "validated",
             "sqlite": str(args.sqlite.resolve()),
             "source_counts": source_summary,
             "target_counts_before": before,
