@@ -7,6 +7,8 @@ from fastapi.testclient import TestClient
 from agency_runtime.api import create_app
 
 
+ALPHA_KEY = "tenant-alpha-verification-key-2026"
+BETA_KEY = "tenant-beta-verification-key-2026"
 BRIEF = {
     "title": "Evidence-led launch",
     "objective": "Turn a campaign brief into a governed campaign package",
@@ -17,60 +19,212 @@ BRIEF = {
 }
 
 
+def auth(api_key):
+    return {"Authorization": "Bearer {}".format(api_key)}
+
+
 class ApiVerticalSliceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        database = str(Path(self.temp.name) / "memory.sqlite3")
-        self.client = TestClient(create_app(database_path=database, static_dir=Path(self.temp.name) / "missing"))
+        self.database = str(Path(self.temp.name) / "runtime.sqlite3")
+        self.static_dir = Path(self.temp.name) / "missing"
+        self.keys = {"tenant-alpha": ALPHA_KEY, "tenant-beta": BETA_KEY}
 
     def tearDown(self):
-        self.client.close()
         self.temp.cleanup()
 
-    def test_health_contract_is_explicitly_side_effect_free(self):
-        response = self.client.get("/healthz")
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.json()["external_side_effects_enabled"])
+    def client(self, keys=None):
+        return TestClient(
+            create_app(
+                database_path=self.database,
+                static_dir=self.static_dir,
+                tenant_api_keys=self.keys if keys is None else keys,
+            )
+        )
+
+    def test_health_readiness_and_authentication_contracts(self):
+        with self.client() as client:
+            health = client.get("/healthz")
+            self.assertEqual(health.status_code, 200)
+            self.assertFalse(health.json()["external_side_effects_enabled"])
+            self.assertTrue(health.json()["auth_configured"])
+
+            ready = client.get("/readyz")
+            self.assertEqual(ready.status_code, 200)
+            self.assertTrue(ready.json()["durable_run_store"])
+
+            self.assertEqual(client.get("/api/v1/me").status_code, 401)
+            self.assertEqual(
+                client.get(
+                    "/api/v1/me", headers=auth("invalid-credential-value-2026")
+                ).status_code,
+                401,
+            )
+            principal = client.get("/api/v1/me", headers=auth(ALPHA_KEY))
+            self.assertEqual(principal.status_code, 200)
+            self.assertEqual(principal.json()["tenant_id"], "tenant-alpha")
+            self.assertNotIn(ALPHA_KEY, principal.text)
+
+        with self.client(keys={}) as unconfigured:
+            self.assertEqual(unconfigured.get("/healthz").status_code, 200)
+            self.assertEqual(unconfigured.get("/readyz").status_code, 503)
+            self.assertEqual(
+                unconfigured.post("/api/v1/runs", json=BRIEF).status_code, 503
+            )
 
     def test_brief_to_scholar_to_greenlight_to_campaign_package(self):
-        created = self.client.post("/api/v1/runs", json=BRIEF)
-        self.assertEqual(created.status_code, 201)
-        run = created.json()
-        self.assertEqual(run["status"], "awaiting_greenlight")
-        self.assertEqual(len(run["artifacts"]), 7)
-        research = next(item for item in run["artifacts"] if item["kind"] == "research_dossier")
-        self.assertEqual(
-            set(research["payload"]["scholar"]),
-            {"reencuadre_cognitivo", "tension_del_trade_off", "resolucion_operativa"},
-        )
-        self.assertEqual(run["agent_states"]["publisher"]["status"], "waiting_greenlight")
+        with self.client() as client:
+            created = client.post(
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+            )
+            self.assertEqual(created.status_code, 201)
+            run = created.json()
+            self.assertEqual(run["tenant_id"], "tenant-alpha")
+            self.assertEqual(run["status"], "awaiting_greenlight")
+            self.assertEqual(len(run["artifacts"]), 7)
+            research = next(
+                item
+                for item in run["artifacts"]
+                if item["kind"] == "research_dossier"
+            )
+            self.assertEqual(
+                set(research["payload"]["scholar"]),
+                {
+                    "reencuadre_cognitivo",
+                    "tension_del_trade_off",
+                    "resolucion_operativa",
+                },
+            )
+            self.assertEqual(
+                run["agent_states"]["publisher"]["status"],
+                "waiting_greenlight",
+            )
 
-        approved = self.client.post(
-            "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
-            json={"reviewer": "commercial-owner", "note": "Approved sandbox package"},
-        )
-        self.assertEqual(approved.status_code, 200)
-        completed = approved.json()
-        self.assertEqual(completed["status"], "completed")
-        self.assertEqual(len(completed["greenlight"]["approved_artifact_ids"]), 7)
-        self.assertEqual(len(completed["greenlight"]["approved_artifact_hashes"]), 7)
-        self.assertEqual(completed["greenlight"]["authorized_channels"], ["x", "instagram"])
-        package = next(item for item in completed["artifacts"] if item["kind"] == "campaign_package")
-        self.assertFalse(package["payload"]["publication_performed"])
+            approved = client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
+                json={
+                    "reviewer": "commercial-owner",
+                    "note": "Approved sandbox package",
+                },
+                headers=auth(ALPHA_KEY),
+            )
+            self.assertEqual(approved.status_code, 200)
+            completed = approved.json()
+            self.assertEqual(completed["status"], "completed")
+            self.assertEqual(
+                len(completed["greenlight"]["approved_artifact_ids"]), 7
+            )
+            self.assertEqual(
+                len(completed["greenlight"]["approved_artifact_hashes"]), 7
+            )
+            self.assertEqual(
+                completed["greenlight"]["authorized_channels"],
+                ["x", "instagram"],
+            )
+            package = next(
+                item
+                for item in completed["artifacts"]
+                if item["kind"] == "campaign_package"
+            )
+            self.assertFalse(package["payload"]["publication_performed"])
 
-    def test_duplicate_run_and_second_decision_are_conflicts(self):
-        first = self.client.post("/api/v1/runs", json=BRIEF)
-        run_id = first.json()["run_id"]
-        self.assertEqual(self.client.post("/api/v1/runs", json=BRIEF).status_code, 409)
-        decision = {"reviewer": "owner", "note": "reject"}
-        self.assertEqual(
-            self.client.post(f"/api/v1/runs/{run_id}/greenlight/reject", json=decision).status_code,
-            200,
-        )
-        self.assertEqual(
-            self.client.post(f"/api/v1/runs/{run_id}/greenlight/approve", json=decision).status_code,
-            409,
-        )
+    def test_tenant_isolation_and_duplicate_scope(self):
+        beta_brief = dict(BRIEF, title="Beta-only launch")
+        with self.client() as client:
+            alpha = client.post(
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+            )
+            beta = client.post(
+                "/api/v1/runs", json=beta_brief, headers=auth(BETA_KEY)
+            )
+            self.assertEqual(alpha.status_code, 201)
+            self.assertEqual(beta.status_code, 201)
+            beta_run_id = beta.json()["run_id"]
+            self.assertEqual(
+                client.get(
+                    "/api/v1/runs/{}".format(beta_run_id),
+                    headers=auth(ALPHA_KEY),
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                client.get(
+                    "/api/v1/runs/{}".format(beta_run_id),
+                    headers=auth(BETA_KEY),
+                ).status_code,
+                200,
+            )
+
+            same_brief_beta = client.post(
+                "/api/v1/runs", json=BRIEF, headers=auth(BETA_KEY)
+            )
+            self.assertEqual(same_brief_beta.status_code, 201)
+            self.assertEqual(
+                same_brief_beta.json()["run_id"], alpha.json()["run_id"]
+            )
+            self.assertEqual(
+                client.post(
+                    "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+                ).status_code,
+                409,
+            )
+
+    def test_run_and_greenlight_survive_service_restart(self):
+        with self.client() as first_client:
+            created = first_client.post(
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+            )
+            self.assertEqual(created.status_code, 201)
+            run_id = created.json()["run_id"]
+
+        with self.client() as second_client:
+            restored = second_client.get(
+                "/api/v1/runs/{}".format(run_id), headers=auth(ALPHA_KEY)
+            )
+            self.assertEqual(restored.status_code, 200)
+            self.assertEqual(restored.json()["status"], "awaiting_greenlight")
+            approved = second_client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run_id),
+                json={"reviewer": "owner", "note": "durable approval"},
+                headers=auth(ALPHA_KEY),
+            )
+            self.assertEqual(approved.status_code, 200)
+
+        with self.client() as third_client:
+            completed = third_client.get(
+                "/api/v1/runs/{}".format(run_id), headers=auth(ALPHA_KEY)
+            )
+            self.assertEqual(completed.status_code, 200)
+            self.assertEqual(completed.json()["status"], "completed")
+            self.assertEqual(
+                completed.json()["greenlight"]["note"], "durable approval"
+            )
+
+    def test_second_decision_is_a_conflict_after_restore(self):
+        with self.client() as client:
+            first = client.post(
+                "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY)
+            )
+            run_id = first.json()["run_id"]
+            decision = {"reviewer": "owner", "note": "reject"}
+            self.assertEqual(
+                client.post(
+                    "/api/v1/runs/{}/greenlight/reject".format(run_id),
+                    json=decision,
+                    headers=auth(ALPHA_KEY),
+                ).status_code,
+                200,
+            )
+
+        with self.client() as restarted:
+            self.assertEqual(
+                restarted.post(
+                    "/api/v1/runs/{}/greenlight/approve".format(run_id),
+                    json=decision,
+                    headers=auth(ALPHA_KEY),
+                ).status_code,
+                409,
+            )
 
 
 if __name__ == "__main__":

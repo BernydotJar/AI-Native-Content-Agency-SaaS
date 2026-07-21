@@ -6,6 +6,8 @@ CHART_PATH="$REPOSITORY_ROOT/infra/helm/ai-native-content-agency"
 IMAGE_TAG=${IMAGE_TAG:-ai-native-content-agency:production-readiness-local}
 HOST_PORT=${HOST_PORT:-18080}
 CONTAINER_BUILDER=${CONTAINER_BUILDER:-auto}
+AUTH_KEY=${AUTH_KEY:-local-production-verification-key-2026}
+AUTH_JSON=$(AUTH_KEY="$AUTH_KEY" python3 -c 'import json, os; print(json.dumps({"local-verification": os.environ["AUTH_KEY"]}))')
 HELM_BIN=${HELM_BIN:-helm}
 TMP_DIR=$(mktemp -d)
 RUNTIME_KIND=""
@@ -59,6 +61,8 @@ build_with_docker() {
   docker build --pull --tag "$IMAGE_TAG" "$REPOSITORY_ROOT"
   RUNTIME_KIND=docker
   RUNTIME_ID=$(docker run -d --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+    -e "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
+    -e "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
 
@@ -74,7 +78,9 @@ build_with_buildah() {
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs from --name "$RUNTIME_ID" "$IMAGE_TAG" >/dev/null
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
-    --storage-driver vfs config --env "PORT=$HOST_PORT" "$RUNTIME_ID"
+    --storage-driver vfs config --env "PORT=$HOST_PORT" \
+    --env "AGENCY_MEMORY_DB=/tmp/runtime.sqlite3" \
+    --env "AGENCY_TENANT_API_KEYS_JSON=$AUTH_JSON" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
     > "$TMP_DIR/runtime.log" 2>&1 &
@@ -132,25 +138,33 @@ if [ "$ready" -ne 1 ]; then
   exit 4
 fi
 
+curl -fsS "http://127.0.0.1:${HOST_PORT}/readyz" > "$TMP_DIR/ready.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/" > "$TMP_DIR/index.html"
 curl -fsS -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $AUTH_KEY" \
   -d '{"title":"Packaged runtime verification","objective":"Verify the production package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs" > "$TMP_DIR/run.json"
 
-python3 - "$TMP_DIR/health.json" "$TMP_DIR/run.json" <<'PY'
+python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/run.json" <<'PY'
 import json
 import sys
 
 with open(sys.argv[1], encoding="utf-8") as handle:
     health = json.load(handle)
 with open(sys.argv[2], encoding="utf-8") as handle:
+    ready = json.load(handle)
+with open(sys.argv[3], encoding="utf-8") as handle:
     run = json.load(handle)
 
 assert health == {
     "status": "ok",
     "runtime_mode": "deterministic_sandbox",
     "external_side_effects_enabled": False,
+    "auth_configured": True,
 }
+assert ready["status"] == "ready"
+assert ready["auth_configured"] is True
+assert run["tenant_id"] == "local-verification"
 assert run["status"] == "awaiting_greenlight"
 assert run["agent_states"]["publisher"]["status"] == "waiting_greenlight"
 assert [artifact["kind"] for artifact in run["artifacts"]] == [
@@ -163,7 +177,9 @@ assert [artifact["kind"] for artifact in run["artifacts"]] == [
     "risk_report",
 ]
 print("health=pass")
+print("readiness=pass")
 print("spa=pass")
+print("tenant_auth=pass")
 print("api_vertical_slice=pass")
 print("publisher_gate=pass")
 print("external_side_effects_enabled=false")

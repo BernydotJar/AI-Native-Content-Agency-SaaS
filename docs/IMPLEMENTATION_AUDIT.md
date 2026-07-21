@@ -1,6 +1,6 @@
 # Implementation Audit
 
-Fecha de corte: 17 de julio de 2026.
+Fecha de corte: 21 de julio de 2026.
 
 Este documento compara el producto actual con `proposal_and_prompt.md` y con el contrato operativo de `agency_manifesto.md`. La evidencia se refiere a archivos ejecutables o pruebas del repositorio; no a intención futura.
 
@@ -40,9 +40,9 @@ Este documento compara el producto actual con `proposal_and_prompt.md` y con el 
 | Generación/optimización real de media | Adaptadores `VideoOptimizerTool` e `ImageToVideoTool` | **No implementado.** Se crean planes y storyboards; ningún archivo se lee o renderiza. |
 | Context7, browser y GitHub en runtime | Catálogos TS/Python con estados mock | **No implementado como integración.** Los nombres representan contratos de adapter; el producto no hace llamadas, navegación ni cambios remotos. |
 | API Meta Ads y métricas live | Catálogo, dashboard y forecast fixture | **No implementado.** No hay OAuth, cuenta publicitaria, mutación, polling ni spend. |
-| Transporte frontend↔backend | Búsqueda de `fetch`, `WebSocket`, FastAPI y clientes HTTP sin ruta de producto | **No implementado.** Las dos state machines son independientes. |
-| Streaming de eventos | No hay servidor FastAPI/SSE/WebSocket | **No implementado.** La animación web usa timers locales. |
-| Persistencia de producto multiusuario | SQLite local por ruta explícita | **No implementado.** No hay servicio, tenancy, auth, Postgres ni object storage. |
+| Transporte frontend↔backend | FastAPI existe y sirve la SPA, pero `src/App.tsx` no realiza `fetch` ni consume contratos backend | **Parcial.** Backend network-addressable real; frontend aún usa su state machine local. |
+| Streaming de eventos | FastAPI sólo expone request/response REST; no hay SSE/WebSocket | **No implementado.** La animación web usa timers locales. |
+| Persistencia de producto multiusuario | `auth.py`, `persistence.py`, memoria namespaced y pruebas de reinicio/cross-tenant | **Real local, single-node.** Runs y approvals sobreviven reinicios y se particionan por tenant; falta PostgreSQL, identidad individual y object storage. |
 | Accesibilidad y reduced motion | Skip link y semántica en `src/App.tsx`; controles/tab/progressbar en componentes; media queries en `src/index.css` | **Real local, con cobertura automatizada parcial.** Falta auditoría manual completa con browser/lector de pantalla. |
 | Testing y build reproducibles | Tests `src/**/*.test.*`, `backend/tests/`, scripts en [`package.json`](../package.json) | **Real local.** Gates TypeScript, interacción, Python, lint y bundle. |
 
@@ -84,24 +84,26 @@ La verificación automatizada no sustituye QA visual/manual. El browser integrad
 ## Trabajo necesario para una integración real
 
 1. Definir esquemas versionados para brief, eventos, artefactos, evidencia, memoria y Greenlight.
-2. Exponer el runtime mediante FastAPI u otro servicio con auth; elegir SSE/WebSocket sólo para eventos que realmente necesiten streaming.
+2. Conectar el frontend al servicio autenticado y elegir SSE/WebSocket sólo para eventos que realmente necesiten streaming.
 3. Reemplazar cada fixture por un adapter separado, autenticado, observable e idempotente.
-4. Vincular Greenlight a hashes/versiones exactas y hacer revocación efectiva en backend.
-5. Añadir tenancy, secrets management, retención, borrado y auditoría.
+4. Implementar revocación efectiva del Greenlight en backend.
+5. Añadir identidad individual, RBAC, rotación de credenciales, retención, borrado y auditoría exportable.
 6. Conectar el frontend a una única fuente de verdad y retirar la state machine duplicada cuando la paridad esté comprobada.
 7. Realizar QA visual, responsive, accesible y de fallo antes de cualquier piloto con efectos externos.
 
-## Production Readiness increment — 21 July 2026
+## Production Readiness increments — 21 July 2026
 
 | Capability | Evidence | Status |
 |---|---|---|
-| Network-addressable backend | `backend/agency_runtime/api.py` exposes health, run creation/read, approval, and rejection via FastAPI. | **Real local, process-scoped.** |
+| Network-addressable backend | `backend/agency_runtime/api.py` exposes health, readiness, identity, run creation/read, approval, and rejection via FastAPI. | **Real local and packaged.** |
 | Brief → governed campaign package vertical slice | `backend/tests/test_api.py` executes brief → seven pre-gate artifacts → Scholar → Risk → Greenlight → sandbox package. | **Real local with mock external evidence.** |
 | Scholar three-part explanation | `research_dossier.payload.scholar` contains cognitive reframing, trade-off tension, and operational resolution. | **Real deterministic transformation.** |
-| Artifact-bound Greenlight | `Greenlight` records exact artifact IDs and SHA-256-derived hashes, authorized channels, and budget. | **Real local.** Mutation after review is not exposed by the current API. |
-| Unified production process | The production Dockerfile builds React and runs FastAPI, which serves both `/api/v1/*` and the SPA. | **Implemented; local Docker execution unavailable in this workstation.** |
-| HTTP concurrency safety | SQLite is opened with cross-thread access and all operations remain protected by an `RLock`. | **Verified by FastAPI TestClient.** |
-| Authentication and tenant isolation | No identity provider, tenant key, authorization policy, or per-tenant data partition exists. | **Missing; blocks multiuser pilot.** |
-| Durable run persistence | Memory observations persist in SQLite, but `ExecutionRun` objects remain process-local. | **Partial; restart loses runs and approvals.** |
+| Artifact-bound Greenlight | `Greenlight` records exact artifact IDs and SHA-256-derived hashes, authorized channels, and budget. | **Real and durable.** Revocation after approval remains missing. |
+| Tenant authentication | `auth.py` derives tenant identity from bearer credentials supplied server-side and compares SHA-256 fingerprints with constant-time comparison. | **Real local.** Tenant-level keys, not individual identity or RBAC. |
+| Tenant isolation | Run store uses `(tenant_id, run_id)` and memory uses tenant namespaces; cross-tenant reads return `404`. | **Verified.** |
+| Durable run persistence | `persistence.py` serializes the complete execution and restores it before later decisions. | **Verified across multiple service restarts.** |
+| Unified production process | Multi-stage image serves React and FastAPI as non-root UID `10001`; packaged smoke covers health, readiness, auth, SPA and API. | **Verified with Buildah vfs/chroot.** |
+| Kubernetes state and secrets | Helm references an existing Secret, provisions a PVC, uses one replica and `Recreate`, and rejects unsafe SQLite scaling. | **Helm lint/template and negative guards verified locally.** |
+| Horizontal high availability | SQLite remains a single-writer store. | **Missing; requires shared database adapter.** |
 
-Verification on 21 July 2026: Oxlint passed, 28 Vitest tests passed, Vite production build passed, 19 Python tests passed, and live HTTP smoke returned `200` for health/SPA and `201` for run creation. Helm CLI was not installed in the workstation, so Helm validation was not claimed locally; the workflow retains `helm lint` and `helm template` gates.
+Verification on 21 July 2026: Oxlint passed, 28 Vitest tests passed, Vite production build passed, 23 Python tests passed, Helm lint/template passed, both Helm safety guards passed, and the packaged image passed health/readiness/auth/SPA/API smoke. Docker's nested `vfs` daemon failed to register a base-image layer; the documented Buildah `vfs` + `chroot` alternative completed the identical Dockerfile and runtime smoke.

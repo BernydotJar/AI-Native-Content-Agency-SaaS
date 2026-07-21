@@ -1,3 +1,6 @@
+{{- if and .Values.persistence.enabled (gt (int .Values.replicaCount) 1) }}
+{{- fail "persistence.enabled with SQLite requires replicaCount=1; use a shared database before scaling replicas" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +10,10 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
+{{- if .Values.persistence.enabled }}
+  strategy:
+    type: Recreate
+{{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "agency.name" . }}
@@ -28,10 +35,21 @@ spec:
               containerPort: 8080
           env:
             - name: AGENCY_MEMORY_DB
-              value: {{ .Values.runtime.memoryDatabase | quote }}
-          readinessProbe:
+              value: {{ .Values.runtime.databasePath | quote }}
+            - name: AGENCY_TENANT_API_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
+                  key: {{ required "runtime.auth.tenantApiKeysKey is required" .Values.runtime.auth.tenantApiKeysKey | quote }}
+          startupProbe:
             httpGet:
               path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
               port: http
             initialDelaySeconds: 2
             periodSeconds: 5
@@ -46,12 +64,17 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
-            - name: nginx-cache
-              mountPath: /var/cache/nginx
-            - name: nginx-run
-              mountPath: /var/run
+            - name: runtime-data
+              mountPath: /var/lib/agency
+            - name: runtime-tmp
+              mountPath: /tmp
       volumes:
-        - name: nginx-cache
+        - name: runtime-data
+{{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "agency.fullname" . }}
+{{- else }}
           emptyDir: {}
-        - name: nginx-run
+{{- end }}
+        - name: runtime-tmp
           emptyDir: {}

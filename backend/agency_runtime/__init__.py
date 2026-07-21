@@ -1,6 +1,8 @@
 """Typed, deterministic sandbox runtime for the AI-native content agency."""
 
+from .auth import TenantAuthenticator, TenantPrincipal
 from .memory import SQLiteMemory
+from .persistence import SQLiteRunStore
 from .manifest import load_flow_manifest
 from .models import (
     AGENT_SEQUENCE,
@@ -45,6 +47,9 @@ from .tools import (
 
 __all__ = [
     "AGENT_SEQUENCE",
+    "TenantAuthenticator",
+    "TenantPrincipal",
+    "SQLiteRunStore",
     "AgencyOrchestrator",
     "AgentRole",
     "AgentStatus",

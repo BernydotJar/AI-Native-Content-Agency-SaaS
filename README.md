@@ -2,7 +2,7 @@
 
 Webapp cinematográfica y sandbox local para representar una agencia de contenido AI-native de ocho agentes. El repositorio ya no es sólo una maqueta de frontend: contiene una experiencia React/TypeScript ejecutable, un runtime Python determinista con memoria SQLite y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: prototipo local verificable con dos rutas de ejecución independientes. La UI simula campañas dentro del navegador; el runtime Python ejecuta un flujo determinista separado. No existe todavía transporte entre ambos. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
+> Estado actual: vertical slice backend verificable y empaquetado de producción con autenticación tenant-scoped y persistencia SQLite durable. La UI cinematográfica todavía ejecuta su simulación en el navegador y no consume la API. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
 
 ## Qué funciona hoy
 
@@ -11,7 +11,8 @@ Webapp cinematográfica y sandbox local para representar una agencia de contenid
 - Tres misiones de UI: video a paquete de entrega, imagen a manifiesto de motion y tesis a campaña orgánica + paid sandbox.
 - Runtime TypeScript puro y determinista para mezclar señales mock de X, Facebook, TikTok e Instagram, aplicar skills y empaquetar artefactos de campaña sandbox.
 - Inspector accesible por agente, outputs, progreso y Greenlight manual.
-- Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria SQLite y un límite duro entre Risk y Publisher.
+- Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
+- FastAPI con bearer auth por tenant, `/readyz`, aislamiento cross-tenant y restauración de ejecuciones después de reiniciar el servicio.
 - `DynamicSkillCreator` para crear borradores Markdown locales dentro de una raíz explícita, con validación de slug, protección contra traversal/symlinks y overwrite opt-in.
 - Biblioteca local con instrucciones por agente, base de conocimiento y skills editoriales/de plataforma.
 - Pruebas de interacción frontend y pruebas unitarias del runtime, memoria, fachada y creador de skills.
@@ -25,11 +26,12 @@ React 19 + TypeScript + Vite
 ├── contratos/fixtures puros en src/lib/simulationRuntime.ts
 └── sin fetch, WebSocket ni llamada al backend
 
-agency.py
-└── backend/agency_runtime (Python estándar)
+agency.py + FastAPI
+└── backend/agency_runtime
     ├── orquestador secuencial de ocho agentes
-    ├── Greenlight local antes de Publisher
-    ├── SQLite Observe → Store → Search → Recall
+    ├── Greenlight ligado a IDs y hashes de artefactos
+    ├── bearer auth con identidad tenant derivada del servidor
+    ├── SQLite durable: runs, approvals y memoria por tenant
     ├── adaptadores deterministas sandbox
     └── creador seguro de borradores de skill
 
@@ -39,7 +41,7 @@ Contenido operativo local
 └── skills/*.md
 ```
 
-La UI y Python modelan el mismo concepto, pero no comparten estado ni artefactos en tiempo de ejecución. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
+La UI y Python modelan el mismo concepto, pero la UI todavía no consume el estado ni los artefactos de la API en tiempo de ejecución. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
 
 Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la matriz requisito → evidencia → estado y las desviaciones deliberadas respecto de la propuesta inicial.
 
@@ -57,8 +59,9 @@ Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la ma
 ### Runtime local
 
 - Python 3.9 o superior
-- Biblioteca estándar para orquestación, modelos, CLI y SQLite
-- `setuptools` para empaquetado opcional
+- Biblioteca estándar para orquestación, modelos y SQLite
+- FastAPI, Pydantic y Uvicorn para el servicio HTTP
+- `setuptools` para empaquetado
 - Sin dependencia de `agency_swarm` ni de un framework externo de agentes
 
 Durante la implementación se consultó Context7 mediante su CLI para contrastar la integración oficial de Tailwind CSS 4 con Vite y la configuración vigente de Vitest 4. Esa consulta fue tooling de desarrollo; `Context7DocsTool` dentro del producto sigue siendo un adapter mock y no hace solicitudes remotas.
@@ -141,8 +144,8 @@ Las siguientes capacidades son contratos mock o representaciones visuales, no co
 - APIs de X, LinkedIn, Facebook, TikTok, Instagram o cualquier publisher;
 - navegador/Puppeteer, GitHub y Context7 durante el runtime de producto;
 - generación, edición o lectura real de video e imagen;
-- FastAPI, REST, SSE o WebSocket entre frontend y Python;
-- autenticación, autorización, secrets management y tenancy;
+- transporte frontend→FastAPI y streaming SSE/WebSocket;
+- identidad de usuario final, RBAC y proveedor externo de autenticación;
 - PostgreSQL, almacenamiento de objetos y sincronización cloud;
 - ingestión automática de `agents/`, `knowledge/` y `skills/` por el orquestador.
 
@@ -173,20 +176,26 @@ El mismo runtime Python ya está disponible mediante FastAPI. La imagen de produ
 cd backend
 python3 -m venv .venv
 .venv/bin/pip install -e . httpx
+export AGENCY_MEMORY_DB=/tmp/agency-runtime.sqlite3
+export AGENCY_TENANT_API_KEYS_JSON='{"local-tenant":"replace-with-a-strong-local-key"}'
 .venv/bin/agency-api
 ```
 
 Endpoints iniciales:
 
 - `GET /healthz`
+- `GET /readyz`
+- `GET /api/v1/me`
 - `POST /api/v1/runs`
 - `GET /api/v1/runs/{run_id}`
 - `POST /api/v1/runs/{run_id}/greenlight/approve`
 - `POST /api/v1/runs/{run_id}/greenlight/reject`
 
+Todos los endpoints `/api/v1/*` requieren `Authorization: Bearer <key>`. El tenant se deriva de la credencial configurada en el servidor; nunca de un header o campo elegido por el cliente.
+
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
-Este servicio todavía usa estado de ejecuciones en memoria de proceso y SQLite local para memoria semántica básica. Autenticación, tenancy y persistencia durable de runs siguen siendo requisitos bloqueantes para un piloto multiusuario.
+El servicio persiste runs, trazas, evidencia, artefactos y Greenlights en SQLite por `(tenant_id, run_id)`, y también particiona la memoria por tenant. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, identidad individual y RBAC siguen siendo requisitos para escalamiento horizontal o un piloto público.
 
 ## Verificación del paquete de producción
 
@@ -198,4 +207,4 @@ HELM_BIN=/home/agent/.local/bin/helm \
 ./scripts/verify-production-package.sh
 ```
 
-La verificación lint/renderiza Helm, construye la imagen multi-stage, inicia el artefacto como usuario no root y prueba health, SPA, API, siete artefactos y el gate de Publisher. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
+La verificación lint/renderiza Helm, construye la imagen multi-stage, inicia el artefacto como usuario no root y prueba health, readiness, bearer auth, SPA, API, siete artefactos y el gate de Publisher. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.

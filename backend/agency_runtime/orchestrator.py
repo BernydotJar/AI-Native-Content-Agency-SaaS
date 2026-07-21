@@ -112,6 +112,11 @@ class AgencyOrchestrator:
         except KeyError as error:
             raise KeyError("run not found: {}".format(run_id)) from error
 
+    def restore_run(self, run: ExecutionRun) -> ExecutionRun:
+        """Hydrate a durable run before applying a state transition."""
+        self._runs[run.run_id] = run
+        return run
+
     def _decide(
         self,
         run_id: str,

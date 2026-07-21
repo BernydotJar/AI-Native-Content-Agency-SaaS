@@ -1,4 +1,6 @@
-replicaCount: 2
+# SQLite is the current durable store. Keep one replica until a shared database
+# adapter (for example PostgreSQL) replaces the single-writer runtime.
+replicaCount: 1
 
 image:
   repository: ai-native-content-agency
@@ -6,7 +8,17 @@ image:
   pullPolicy: IfNotPresent
 
 runtime:
-  memoryDatabase: ":memory:"
+  databasePath: "/var/lib/agency/runtime.sqlite3"
+  auth:
+    existingSecret: "ai-native-content-agency-runtime"
+    tenantApiKeysKey: "tenant-api-keys.json"
+
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  storageClassName: ""
 
 service:
   type: ClusterIP
@@ -23,9 +35,10 @@ resources:
 
 podSecurityContext:
   runAsNonRoot: true
-  runAsUser: 101
-  runAsGroup: 101
-  fsGroup: 101
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
@@ -34,5 +47,7 @@ containerSecurityContext:
     drop: ["ALL"]
 
 podDisruptionBudget:
-  enabled: true
+  # A PDB cannot create availability for a single SQLite writer. Enable after
+  # moving to a shared store and increasing replicaCount.
+  enabled: false
   minAvailable: 1
