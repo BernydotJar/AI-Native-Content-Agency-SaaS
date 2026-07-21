@@ -6,7 +6,7 @@ GOV-004,governance,Producer critic fixer verifier separation,weak_evidence,Role-
 GOV-005,governance,No unsupported production claims,proven,README/audit reconciled and validator bans stale claims,Continue claim review per slice,WS-12
 PROD-001,product,Critical brief to governed package journey,proven,backend API tests and production console tests,Preserve regression,WS-04
 PROD-002,product,External publication and spend disabled,proven,health API tool adapters and package assertions,Keep fail closed,WS-08
-PROD-003,product,Loading empty partial degraded and failure states,incomplete,ProductionRuntimePanel has some loading/error states,Complete state matrix,WS-05
+PROD-003,product,Loading empty partial degraded and failure states,proven,4f101221d3ddfb426aded5e7f4caec9c87985b32; src/components/ProductionRuntimePanel.tsx; 20 focused operator-state tests; 48 frontend regression tests; non-root package smoke,Preserve regression; complete manual assistive-technology and visual evidence under INC-008,WS-05
 PROD-004,product,No critical placeholders or misleading mocks,incomplete,Cinematic simulation remains parallel and mocks are explicit,Unify source of truth and label remaining mocks,WS-05
 PROD-005,product,Target users and jobs documented,incomplete,Goal and current program docs,Add user journeys and acceptance evidence,WS-02
 ENG-001,engineering,Architecture reviewed and current,weak_evidence,program/architecture.md plus branch comparison,Independent architecture review,WS-01

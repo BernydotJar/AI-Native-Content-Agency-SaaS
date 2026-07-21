@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T22:21:05Z
+Updated: 2026-07-21T22:34:58Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,14 +9,19 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-005-operability`
-- Stacked base: `agent/inc-004-idempotency@d228656b40e456c249477ee3b01e376ae3cfb46f`
-- Exact remotely verified INC-005 head: `8e837e77c0e4274cdc4d32c9615f941b147b30b8`
-- GitHub Actions: run `29873268944`, eight of eight jobs successful
-- Draft PR: `#5`, base `agent/inc-004-idempotency`, clean and mergeable
-- PR `#4`: draft, green, stacked on PR `#3`
-- PR `#3`: ready, green, normal merge blocked by `REVIEW_REQUIRED`
-- Merge: authorized by the user and attempted normally for PR `#3`; no admin bypass or auto-merge was used
+- Active branch: `agent/inc-007-operator-journey`
+- Stacked base: `agent/inc-005-operability@ca9caf80320c3279d631f6b08d8f37f0508035be`
+- Verifier repair commit: `bdd908c9cfcbb81c5620229b9a31b0c3fe1fc33a`
+- INC-007 implementation commit: `4f101221d3ddfb426aded5e7f4caec9c87985b32`
+- Local program checkpoint: the commit containing this document, directly above `4f10122`
+- Active branch remote: absent
+- Draft PR for INC-007: absent
+- Exact-head CI for INC-007: not triggered
+- Exact verified stacked-base CI: run `29873483636`, eight of eight jobs successful at `ca9caf8`
+- PR `#5`: draft and green on `agent/inc-005-operability`
+- PR `#4`: draft and green, stacked on PR `#3`
+- PR `#3`: ready and green; normal merge remains blocked by `REVIEW_REQUIRED`
+- Merge: user-authorized and previously attempted normally for PR `#3`; no bypass, force or auto-merge was used
 - Deployment, persistent infrastructure, package publication and spend: not authorized and not performed
 
 ## Completed checkpoints
@@ -25,63 +30,72 @@ Cloud recommendation: `DENY_APPLY`
 
 Status: `done`
 
-Exact head `c52684b` and run `29869283309` prove the non-owner PostgreSQL runtime boundary. `F-009` is closed.
+Exact published head and CI prove the non-owner PostgreSQL runtime boundary. `F-009` is closed.
 
 ### INC-004 — Durable command idempotency and Greenlight fencing
 
 Status: `done`
 
-Exact head `d228656` and run `29871542530` prove durable compatible replay, uniform conflicts, authenticated decision identity, Greenlight revocation/fencing and cross-replica package-once behavior. `F-002` is closed.
+Exact published head and CI prove durable compatible replay, uniform conflicts, authenticated decision identity, Greenlight revocation/fencing and cross-replica package-once behavior. `F-002` is closed.
 
 ## External-gated checkpoint
 
 ### INC-005 — SLOs, alert exercises, backup freshness and rollback operations
 
 Status: `blocked`
-Owner: SRE / Production Engineer
+
+Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29873483636` prove all safe repository-local work, including SLO/alert contracts, backup freshness signals, rollback exercises, package/infrastructure regression and supply-chain evidence.
+
+`INC-005` remains blocked because persistent monitoring, pager delivery, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO evidence require an authorized environment and accountable humans. `F-008` remains HIGH/open.
+
+## Active increment
+
+### INC-007 — Backend-first operator journey and degraded states
+
+Status: `review`
+Owner: Frontend Engineer / Production UX Reviewer
 External effects: none
 
-Exact head `8e837e7` and GitHub Actions run `29873268944` prove all safe repository-local work:
+Implementation commit `4f101221d3ddfb426aded5e7f4caec9c87985b32` delivers:
 
-- four versioned SLOs and exact error budgets;
-- cumulative request-duration histograms;
-- seven Prometheus alerts and eight deterministic exercises;
-- failed/absent readiness and stale/absent backup-signal detection;
-- private atomic validated backup freshness textfiles for SQLite/PostgreSQL;
-- opt-in Helm/Terraform `PrometheusRule` rendering;
-- incident, rollback, capacity and tracing-decision runbooks;
-- Helm upgrade/rollback/configuration restoration in disposable agentless K3s;
-- complete package, infrastructure, secret and supply-chain regression.
+- explicit HttpOnly session restoration, signed-out and authenticated states;
+- server-role guidance for viewer, operator, approver and admin while backend authorization remains authoritative;
+- tenant-scoped run lookup for viewers/approvers without create authority;
+- operator create flow without Greenlight decision authority;
+- approver/admin decision and revocation controls;
+- bounded `401`, `403`, `404`, `409`, `422`, `429`, `500` and `503` operator states;
+- request correlation without raw backend detail or permission disclosure;
+- `Retry-After` guidance;
+- stable idempotency keys across ambiguous retries;
+- stale-run reload;
+- fail-closed clearing of protected local state on `401`;
+- loading, empty, success and degraded audit states;
+- persistent visible `publication=false` boundary.
 
-Verification:
+Local verification:
 
 ```text
-Operability validator                    PASS — 4 SLOs, 7 alerts, 8 exercises
-Focused operability/backup/metrics       PASS — 19 tests
-Locked Python wheel                      PASS — 100 tests, 11 PostgreSQL-only skips
-PostgreSQL multi-replica/recovery        PASS — 101/101
-Frontend lint/tests/build                PASS — 0 findings, 35/35, build
-Production package                      PASS — non-root smoke and opt-in rules
-Helm/Terraform/K3s                      PASS — both storage modes and rollback drill
-Workflow and secret gates               PASS
-Supply chain                            PASS — clean source, SBOM, policy, provenance, Cosign offline
-GitHub Actions 29873268944                  PASS — 8/8 at 8e837e7
+Focused operator/client tests             PASS — 20/20
+Frontend regression                       PASS — 48/48
+Oxlint                                    PASS — 0 warnings, 0 errors
+TypeScript/Vite build                     PASS
+Program validator                        PASS — 79 requirements, 12 tasks
+Buildah non-root package/runtime smoke    PASS
+Helm/operability contract                PASS
+Actionlint                               PASS
+Gitleaks current worktree                PASS
+Whitespace                               PASS
 ```
 
-`INC-005` is blocked rather than done because persistent production controls are absent:
+The package gate also exposed and repaired an unset `PYTHON_BIN` in `scripts/verify-production-package.sh` under `set -u`.
 
-- monitoring rules are not loaded in an authorized persistent system;
-- no pager delivery or human incident drill exists;
-- no scheduler, KMS/encryption, immutable off-host destination or approved retention exists;
-- no workload/traffic rollback, measured RTO, load/soak or failover evidence exists.
-
-`F-008` remains HIGH/OPEN. Local execution cannot safely substitute for these environment/human gates.
+`INC-007` is not done because its branch is not pushed, no draft PR exists and no exact-head CI exists. Manual assistive-technology and visual accessibility evidence remains explicitly outside this slice and owned by `INC-008`.
 
 ## Open global HIGH release findings
 
 1. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; externally gated.
 2. **F-007 — Manual accessibility evidence.** Owner: `INC-008`.
-3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local freshness/alert controls proven; external controls remain.
+3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local controls proven; external controls remain.
 4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Owner: `INC-011` plus accountable human reviewers.
 5. **F-011 — Semantic/adversarial evaluation harness.** Owner: `INC-010`.
 
@@ -120,11 +134,12 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Publish this INC-005 external-gate checkpoint and require exact-head CI for the documentation-only change.
-2. Begin `INC-010` semantic/adversarial evals on a new stacked branch.
-3. Continue `INC-008` operator states/accessibility independently.
-4. Keep `F-008` open until exact external backup/monitoring gates are supplied.
+1. Commit and publish the INC-007 program checkpoint.
+2. Verify remote SHA and create a draft PR against `agent/inc-005-operability`.
+3. Require all eight exact-head CI jobs and repair failures.
+4. After INC-007 is exact-head green, mark it done and begin `INC-008` manual/accessibility and theme evidence.
+5. Keep all external integrations, publication and spend disabled.
 
 ## Exact continuation condition
 
-Push the checkpoint commit on `agent/inc-005-operability`, verify remote equality and require all eight jobs. Then continue `INC-010` from the exact green head. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Start from the clean program-checkpoint commit above `4f101221d3ddfb426aded5e7f4caec9c87985b32`. Push `agent/inc-007-operator-journey`, verify exact remote equality, create a draft PR with base `agent/inc-005-operability`, inspect all eight jobs and repair any failure. Do not mark INC-007 done or start INC-008 before exact-head CI. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.

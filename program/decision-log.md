@@ -97,3 +97,12 @@ Status: accepted locally at `6a885827b7e89d06111c87c34293250eab196d47`; external
 Decision: successful SQLite/PostgreSQL backup commands may atomically write a private Prometheus textfile only after manifest/artifact integrity validation. The signal contains backend, bytes and timestamp only.
 
 Consequence: stale/missing signals are locally testable without leaking paths or credentials. Scheduler, KMS, encryption, immutable off-host retention and real alert delivery remain explicit external gates.
+
+## D-012 — Frontend role capabilities are guidance, never authority
+
+Date: 2026-07-21
+Status: accepted locally at `4f101221d3ddfb426aded5e7f4caec9c87985b32`; remote CI pending
+
+Decision: the production console derives visible create/decision controls from the server-issued session role, but every request remains subject to backend authorization. Viewers and approvers can load a tenant-scoped run by ID without acquiring create authority. Public failure states are selected from bounded HTTP/status contracts and never reflect raw exception detail or permission names.
+
+Consequence: the interface is understandable and avoids predictable forbidden requests, while frontend state cannot elevate authority or replace tenant/RBAC enforcement. Manual accessibility evidence remains owned by `INC-008`.

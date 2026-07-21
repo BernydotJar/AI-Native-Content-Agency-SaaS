@@ -363,11 +363,19 @@
       ],
       "read_only_paths": [],
       "role": "Frontend Engineer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-007",
-      "validation_commands": [],
+      "validation_commands": [
+        "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
+        "npm test -- --reporter=dot",
+        "npm run lint",
+        "npm run build",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir . --redact"
+      ],
       "workstream_id": "WS-05",
-      "write_lock": "unclaimed"
+      "write_lock": "agent/inc-007-operator-journey"
     },
     {
       "acceptance_criteria": [
@@ -634,7 +642,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T20:37:52Z",
+  "updated_at": "2026-07-21T22:34:58Z",
   "workstreams": [
     {
       "acceptance_criteria": [

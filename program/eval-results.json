@@ -188,9 +188,37 @@
       "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
       "result": "PASS",
       "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
+      "id": "INC007-OPERATOR-CONTRACTS",
+      "observed": "20/20 session restoration, role capability, run lookup, idempotent retry, 401/403/404/409/422/429/500/503, audit loading/empty/degraded and stale-run recovery tests PASS",
+      "result": "PASS",
+      "scope": "backend-first operator journey and degraded states"
+    },
+    {
+      "command": "npm test -- --reporter=dot && npm run lint && npm run build",
+      "id": "INC007-FRONTEND-REGRESSION",
+      "observed": "48/48 frontend tests; zero lint warnings/errors; TypeScript and Vite production build PASS",
+      "result": "PASS",
+      "scope": "frontend regression and bundle"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC007-PACKAGE-RUNTIME",
+      "observed": "Helm/operability contract, non-root OCI runtime, SPA, HttpOnly/CSRF, RBAC, Greenlight, audit, metrics and publication=false PASS; package verifier PYTHON_BIN defect repaired",
+      "result": "PASS",
+      "scope": "packaged runtime integration"
+    },
+    {
+      "command": "actionlint .github/workflows/*.yml && gitleaks dir . --redact && git diff --check",
+      "id": "INC007-HYGIENE",
+      "observed": "workflow lint, current-worktree secret scan and whitespace checks PASS",
+      "result": "PASS",
+      "scope": "workflow, secrets and repository hygiene"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "8e837e77c0e4274cdc4d32c9615f941b147b30b8",
-  "updated_at": "2026-07-21T22:20:38Z"
+  "source_commit": "4f101221d3ddfb426aded5e7f4caec9c87985b32",
+  "updated_at": "2026-07-21T22:34:58Z"
 }

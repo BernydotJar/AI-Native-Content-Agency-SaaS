@@ -103,8 +103,25 @@
       "owner": "INC-005",
       "severity": "MEDIUM",
       "status": "OPEN"
+    },
+    {
+      "description": "Approver and viewer roles had no path to load an existing tenant-scoped run, leaving server-authorized review authority unusable from the production console.",
+      "evidence": "4f101221d3ddfb426aded5e7f4caec9c87985b32; ProductionRuntimePanel run lookup and approver contract test prove GET-by-ID without create authority.",
+      "id": "F-014",
+      "owner": "INC-007",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The previous console rendered generic backend exception detail and collapsed authorization, conflict, rate limit, validation and dependency failures into one message.",
+      "evidence": "4f101221d3ddfb426aded5e7f4caec9c87985b32; bounded notice classifier and tests prove non-reflection plus distinct 401/403/404/409/422/429/500/503 states and request correlation.",
+      "id": "F-015",
+      "owner": "INC-007",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "updated_at": "2026-07-21T20:37:52Z"
+  "source_commit": "4f101221d3ddfb426aded5e7f4caec9c87985b32",
+  "updated_at": "2026-07-21T22:34:58Z"
 }
