@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T22:16:27Z
+Updated: 2026-07-21T22:21:05Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -11,10 +11,11 @@ Cloud recommendation: `DENY_APPLY`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
 - Active branch: `agent/inc-005-operability`
 - Stacked base: `agent/inc-004-idempotency@d228656b40e456c249477ee3b01e376ae3cfb46f`
-- Exact locally verified INC-005 implementation: `6a885827b7e89d06111c87c34293250eab196d47`
-- Active branch remote: absent; push pending after the checkpoint commit containing this document
-- PR `#4`: draft, eight of eight jobs green at `d228656`, stacked on PR `#3`
-- PR `#3`: ready, eight of eight jobs green, normal merge blocked by `REVIEW_REQUIRED`
+- Exact remotely verified INC-005 head: `8e837e77c0e4274cdc4d32c9615f941b147b30b8`
+- GitHub Actions: run `29873268944`, eight of eight jobs successful
+- Draft PR: `#5`, base `agent/inc-004-idempotency`, clean and mergeable
+- PR `#4`: draft, green, stacked on PR `#3`
+- PR `#3`: ready, green, normal merge blocked by `REVIEW_REQUIRED`
 - Merge: authorized by the user and attempted normally for PR `#3`; no admin bypass or auto-merge was used
 - Deployment, persistent infrastructure, package publication and spend: not authorized and not performed
 
@@ -32,29 +33,27 @@ Status: `done`
 
 Exact head `d228656` and run `29871542530` prove durable compatible replay, uniform conflicts, authenticated decision identity, Greenlight revocation/fencing and cross-replica package-once behavior. `F-002` is closed.
 
-## Active increment
+## External-gated checkpoint
 
 ### INC-005 — SLOs, alert exercises, backup freshness and rollback operations
 
-Status: `review`
+Status: `blocked`
 Owner: SRE / Production Engineer
 External effects: none
 
-Exact local commit `6a88582` implements:
+Exact head `8e837e7` and GitHub Actions run `29873268944` prove all safe repository-local work:
 
-- a versioned catalog of four SLOs and exact 30-day error budgets;
-- cumulative request-duration histograms suitable for p95 calculations;
-- seven versioned Prometheus alerts with bounded labels and repository runbooks;
-- eight deterministic healthy/failure alert exercises and fail-closed parity validation;
-- explicit distributed-tracing deferral with a mandatory future OpenTelemetry/staging gate;
-- private atomic `0600` backup freshness textfiles after validated SQLite/PostgreSQL backups;
-- stale and missing backup-signal alerts;
-- opt-in Helm/Terraform `PrometheusRule` rendering for an existing operator;
-- incident response, release rollback and capacity-assumption runbooks;
-- an agentless K3s Helm upgrade/rollback drill that restores the original revision/configuration and verifies deployed status;
-- CI/package integration for the operability contract.
+- four versioned SLOs and exact error budgets;
+- cumulative request-duration histograms;
+- seven Prometheus alerts and eight deterministic exercises;
+- failed/absent readiness and stale/absent backup-signal detection;
+- private atomic validated backup freshness textfiles for SQLite/PostgreSQL;
+- opt-in Helm/Terraform `PrometheusRule` rendering;
+- incident, rollback, capacity and tracing-decision runbooks;
+- Helm upgrade/rollback/configuration restoration in disposable agentless K3s;
+- complete package, infrastructure, secret and supply-chain regression.
 
-## Exact local verification at `6a88582`
+Verification:
 
 ```text
 Operability validator                    PASS — 4 SLOs, 7 alerts, 8 exercises
@@ -66,24 +65,23 @@ Production package                      PASS — non-root smoke and opt-in rules
 Helm/Terraform/K3s                      PASS — both storage modes and rollback drill
 Workflow and secret gates               PASS
 Supply chain                            PASS — clean source, SBOM, policy, provenance, Cosign offline
-Static/whitespace                       PASS
+GitHub Actions 29873268944                  PASS — 8/8 at 8e837e7
 ```
 
-Evidence limitations:
+`INC-005` is blocked rather than done because persistent production controls are absent:
 
-- the active branch is not yet pushed and has no exact-head CI;
-- synthetic alert exercises do not prove rules loaded, telemetry observed, paging delivered or human response;
-- agentless K3s proves control-plane rollback, not workload scheduling, traffic recovery or RTO;
-- no production backup scheduler, KMS/encryption, immutable off-host storage or approved retention exists;
-- no persistent database, cloud resource, traffic, pager or monitoring system was changed.
+- monitoring rules are not loaded in an authorized persistent system;
+- no pager delivery or human incident drill exists;
+- no scheduler, KMS/encryption, immutable off-host destination or approved retention exists;
+- no workload/traffic rollback, measured RTO, load/soak or failover evidence exists.
 
-`F-008` remains HIGH/OPEN because the external production-backup controls are not available. `OPS-004` and `OPS-006` are proven locally; `OPS-005`, `OPS-010`, `OPS-011` and `OPS-012` remain weak evidence pending persistent staging/human exercises.
+`F-008` remains HIGH/OPEN. Local execution cannot safely substitute for these environment/human gates.
 
 ## Open global HIGH release findings
 
 1. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; externally gated.
 2. **F-007 — Manual accessibility evidence.** Owner: `INC-008`.
-3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local freshness/alert controls implemented; external controls remain.
+3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local freshness/alert controls proven; external controls remain.
 4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Owner: `INC-011` plus accountable human reviewers.
 5. **F-011 — Semantic/adversarial evaluation harness.** Owner: `INC-010`.
 
@@ -109,9 +107,9 @@ Open CRITICAL findings: zero.
 ### BLK-BACKUP-PROD-001
 
 - Category: infrastructure / permission / credential / human decision
-- Evidence: local backup freshness and restore gates pass; no authorized scheduler, KMS, encrypted immutable off-host destination, retention lock or real alert delivery exists.
+- Evidence: local freshness, alert and restore gates pass; no authorized scheduler, KMS, encrypted immutable off-host destination, retention lock or real alert delivery exists.
 - Independent work remaining: yes.
-- Resume condition: authorized target/storage/KMS, approved retention, reviewed scheduler configuration, alert delivery and staging restore exercise.
+- Resume condition: authorized target/storage/KMS, approved retention, reviewed scheduler, alert delivery and staging restore/incident exercise.
 
 ### BLK-PRIVACY-001
 
@@ -122,11 +120,11 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit this INC-005 checkpoint, push `agent/inc-005-operability`, verify remote SHA and create a stacked draft PR against `agent/inc-004-idempotency`.
-2. Require all eight exact-head CI jobs and repair failures.
-3. Continue `INC-010` semantic/adversarial evals and `INC-008` operator/accessibility work independently.
-4. Keep `F-008` open until the exact external backup/monitoring gates are supplied.
+1. Publish this INC-005 external-gate checkpoint and require exact-head CI for the documentation-only change.
+2. Begin `INC-010` semantic/adversarial evals on a new stacked branch.
+3. Continue `INC-008` operator states/accessibility independently.
+4. Keep `F-008` open until exact external backup/monitoring gates are supplied.
 
 ## Exact continuation condition
 
-Resume from the checkpoint commit directly above `6a885827b7e89d06111c87c34293250eab196d47`. Push normally, verify the remote ref, create the stacked draft PR with base `agent/inc-004-idempotency`, inspect all exact-head checks and repair every failure. Do not retarget or merge stacked PRs before PR `#3` receives the required independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Push the checkpoint commit on `agent/inc-005-operability`, verify remote equality and require all eight jobs. Then continue `INC-010` from the exact green head. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.

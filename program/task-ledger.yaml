@@ -235,7 +235,7 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Executable local operability is complete: SLO/error budgets, cumulative latency histogram, alert rules/exercises, private backup freshness signals, incident/rollback/capacity runbooks and an agentless Helm rollback drill. Persistent monitoring/paging, production scheduler/KMS/off-host retention and staging workload observation remain external gates.",
+      "context": "Exact published head 8e837e77c0e4274cdc4d32c9615f941b147b30b8 passed all eight jobs in GitHub Actions run 29873268944. All safe local operability work is complete. Persistent monitoring/paging, production scheduler/KMS/encrypted immutable off-host retention, approved retention and staging workload/incident exercises remain external gates.",
       "dependencies": [
         "INC-002",
         "INC-003"
@@ -254,17 +254,17 @@
         "merge",
         "production or external effect when applicable"
       ],
-      "implementation_commit": "6a885827b7e89d06111c87c34293250eab196d47",
+      "implementation_commit": "8e837e77c0e4274cdc4d32c9615f941b147b30b8",
       "objective": "Define SLOs, alert rules, alert exercises, incident response and rollback drills.",
       "prohibited_paths": [
         "protected branches",
         "production",
         "external side effects without human gate"
       ],
-      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
+      "publication_state": "REMOTE_CI_GREEN_EXTERNAL_GATES_OPEN",
       "read_only_paths": [],
       "role": "Production Reviewer",
-      "status": "review",
+      "status": "blocked",
       "task_id": "INC-005",
       "validation_commands": [
         "python3 scripts/verify-operability.py",
@@ -851,7 +851,7 @@
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "review",
+      "status": "blocked",
       "validation": [],
       "write_locks": []
     },

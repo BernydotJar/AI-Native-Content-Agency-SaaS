@@ -54,7 +54,7 @@
         "INC-003"
       ],
       "id": "INC-005",
-      "status": "review"
+      "status": "blocked"
     },
     {
       "depends_on": [

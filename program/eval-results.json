@@ -181,9 +181,16 @@
       "observed": "100 locked-wheel tests with 11 PostgreSQL-only skips; frontend lint/35 tests/build; non-root package and opt-in PrometheusRule render; actionlint/Gitleaks; clean-source SBOM/policy/provenance/Cosign PASS",
       "result": "PASS",
       "scope": "reproducibility, UI, package and supply chain"
+    },
+    {
+      "command": "gh run view 29873268944",
+      "id": "INC005-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "6a885827b7e89d06111c87c34293250eab196d47",
-  "updated_at": "2026-07-21T22:15:56Z"
+  "source_commit": "8e837e77c0e4274cdc4d32c9615f941b147b30b8",
+  "updated_at": "2026-07-21T22:20:38Z"
 }

@@ -3,8 +3,8 @@
 Date: 2026-07-21
 Branch: `agent/inc-005-operability`
 Base: `agent/inc-004-idempotency@d228656b40e456c249477ee3b01e376ae3cfb46f`
-Exact verified implementation commit: `6a885827b7e89d06111c87c34293250eab196d47`
-Status: `LOCAL_VERIFIED_PENDING_PUSH_CI_AND_EXTERNAL_GATES`
+Exact remotely verified checkpoint: `8e837e77c0e4274cdc4d32c9615f941b147b30b8`
+Status: `LOCAL_CHECKPOINT_COMPLETED_EXTERNAL_GATES_OPEN`
 
 ## Outcome
 
@@ -13,10 +13,10 @@ All safe local operability work is implemented and verified. Persistent monitori
 ```yaml
 increment: INC-005
 workstream: WS-09
-status: REVIEW
+status: BLOCKED_EXTERNAL_GATES
 implementation_head: 6a885827b7e89d06111c87c34293250eab196d47
-push: PENDING
-exact_head_ci: PENDING
+push: VERIFIED
+exact_head_ci: PASS_29873268944
 F_008: OPEN
 production_status: DENY_RELEASE
 cloud_status: DENY_APPLY
@@ -71,4 +71,4 @@ These are tracked by `F-004`, `F-008`, `BLK-GCP-001`, `BLK-BACKUP-PROD-001` and 
 
 ## Exact continuation
 
-Commit the program checkpoint, push `agent/inc-005-operability`, verify the remote SHA and create a draft PR based on `agent/inc-004-idempotency`. Require all eight jobs. Do not close `F-008` from local evidence and do not create external monitoring, storage, KMS or scheduled resources without separate authorization.
+All repository-local work is published at `8e837e77c0e4274cdc4d32c9615f941b147b30b8` and GitHub Actions run `29873268944` passed eight of eight jobs. Keep the increment blocked until authorized monitoring/paging, scheduler/KMS/off-host retention and staging exercises exist. Continue independent work without creating external resources.
