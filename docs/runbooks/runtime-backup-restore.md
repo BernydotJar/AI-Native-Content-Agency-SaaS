@@ -113,7 +113,7 @@ The command verifies runtime schema version `1`, creates a custom-format dump wi
 
 ## PostgreSQL restore drill
 
-The operator creates the restore database and grants the intended role outside this tool. The target must contain zero non-system tables.
+The operator creates the restore database with migration/restore ownership outside this tool. The target must contain zero non-system tables. Do not restore with the long-running application credential and do not grant that credential ownership temporarily.
 
 ```bash
 export AGENCY_RESTORE_DATABASE_URL='postgresql://agency_restore@db.example/agency_restore?sslmode=verify-full&sslrootcert=/etc/ssl/agency-ca.pem'
@@ -124,7 +124,13 @@ python3 scripts/manage-runtime-backup.py postgres-restore \
 
 Restore uses `pg_restore --single-transaction --exit-on-error --no-owner --no-privileges`. It does not create/drop a database and does not clean a non-empty target. After restore it verifies runtime schema version and the presence of runtime tables.
 
-Then point an isolated application instance at the restored database and verify:
+Before starting an application, apply the exact non-owner runtime grants from [PostgreSQL Schema and Runtime Role Runbook](postgresql-schema-rollout.md), then run:
+
+```bash
+agency-runtime-schema validate --database-url-env AGENCY_DATABASE_URL
+```
+
+Then point an isolated application instance using only the runtime URL at the restored database and verify:
 
 - `/readyz` reports PostgreSQL shared state;
 - representative tenant runs are readable;

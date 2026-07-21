@@ -260,6 +260,7 @@ postgresql_database_url_key      = "database-url"
 postgresql_pool_min_size         = 1
 postgresql_pool_max_size         = 8
 postgresql_connect_timeout_seconds = 20
+postgresql_schema_mode           = "validate"
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = ""
 runtime_auth_identity_credentials_key = "identity-credentials.json"
@@ -320,6 +321,7 @@ assert environment["AGENCY_DATABASE_URL"]["valueFrom"]["secretKeyRef"] == {
 assert environment["AGENCY_DATABASE_POOL_MIN_SIZE"]["value"] == "1"
 assert environment["AGENCY_DATABASE_POOL_MAX_SIZE"]["value"] == "8"
 assert environment["AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS"]["value"] == "20"
+assert environment["AGENCY_POSTGRES_SCHEMA_MODE"]["value"] == "validate"
 assert all(
     volume["name"] != "runtime-data"
     for volume in deployment["spec"]["template"]["spec"]["volumes"]

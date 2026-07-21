@@ -71,6 +71,11 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.storage.postgresql.schemaMode"
+    value = lower(trimspace(var.postgresql_schema_mode))
+  }
+
+  set {
     name  = "persistence.enabled"
     value = tostring(var.persistence_enabled)
   }

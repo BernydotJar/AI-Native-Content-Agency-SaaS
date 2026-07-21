@@ -17,11 +17,14 @@ from agency_runtime.postgres import (
 
 
 DATABASE_URL = os.environ.get("AGENCY_TEST_DATABASE_URL", "")
+MIGRATION_DATABASE_URL = os.environ.get(
+    "AGENCY_TEST_MIGRATION_DATABASE_URL", DATABASE_URL
+)
 
 
 @contextmanager
-def raw_connection():
-    connection = _connect_database_url(DATABASE_URL, timeout_seconds=10)
+def raw_connection(database_url=DATABASE_URL):
+    connection = _connect_database_url(database_url, timeout_seconds=10)
     try:
         yield connection
         connection.commit()
@@ -137,9 +140,14 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
         finally:
             pool_database.close()
 
-        bootstrap = PostgresRuntimeDatabase(DATABASE_URL, min_size=1, max_size=2)
-        bootstrap.close()
-        with raw_connection() as connection:
+        validated = PostgresRuntimeDatabase(
+            DATABASE_URL,
+            min_size=1,
+            max_size=2,
+            schema_mode="validate",
+        )
+        validated.close()
+        with raw_connection(MIGRATION_DATABASE_URL) as connection:
             cursor = connection.cursor()
             cursor.execute(
                 "UPDATE runtime_schema_meta SET value = '999' WHERE key = 'schema_version'"
@@ -149,7 +157,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 RuntimeError, "unsupported PostgreSQL runtime schema version: 999"
             ):
                 PostgresRuntimeDatabase(DATABASE_URL, min_size=1, max_size=2)
-            with raw_connection() as connection:
+            with raw_connection(MIGRATION_DATABASE_URL) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
                     "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
@@ -157,7 +165,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 row = cursor.fetchone()
             self.assertEqual(row[0], "999")
         finally:
-            with raw_connection() as connection:
+            with raw_connection(MIGRATION_DATABASE_URL) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
                     "UPDATE runtime_schema_meta SET value = '1' WHERE key = 'schema_version'"

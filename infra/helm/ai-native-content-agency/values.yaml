@@ -20,6 +20,8 @@ runtime:
       poolMinSize: 1
       poolMaxSize: 10
       connectTimeoutSeconds: 15
+      # Long-running pods validate an operator-initialized schema and never run DDL.
+      schemaMode: "validate"
   auth:
     existingSecret: "ai-native-content-agency-runtime"
     # Legacy tenant-level keys can overlap during migration. Set to "" to disable.

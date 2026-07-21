@@ -81,6 +81,8 @@ grep -q 'name: AGENCY_DATABASE_URL' "$TMP_DIR/postgresql.yaml"
 grep -q 'name: AGENCY_DATABASE_POOL_MIN_SIZE' "$TMP_DIR/postgresql.yaml"
 grep -q 'name: AGENCY_DATABASE_POOL_MAX_SIZE' "$TMP_DIR/postgresql.yaml"
 grep -q 'name: AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS' "$TMP_DIR/postgresql.yaml"
+grep -q 'name: AGENCY_POSTGRES_SCHEMA_MODE' "$TMP_DIR/postgresql.yaml"
+grep -A1 'name: AGENCY_POSTGRES_SCHEMA_MODE' "$TMP_DIR/postgresql.yaml" | grep -q 'value: "validate"'
 if grep -q 'name: AGENCY_MEMORY_DB' "$TMP_DIR/postgresql.yaml"; then
   printf 'PostgreSQL render unexpectedly contains SQLite configuration\n' >&2
   exit 3
@@ -118,6 +120,13 @@ fi
 if "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.storage.backend=postgresql >/dev/null 2>&1; then
   printf 'Helm PostgreSQL Secret guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.storage.backend=postgresql \
+  --set runtime.storage.postgresql.existingSecret=agency-postgresql \
+  --set runtime.storage.postgresql.schemaMode=initialize >/dev/null 2>&1; then
+  printf 'Helm PostgreSQL runtime schema-mode guard did not fail\n' >&2
   exit 3
 fi
 if "$HELM_BIN" template agency "$CHART_PATH" \

@@ -18,10 +18,15 @@ RUN_ID="${RANDOM}${RANDOM}"
 SHARED_DB="agency_shared_${RUN_ID}"
 MIGRATION_DB="agency_migration_${RUN_ID}"
 RESTORE_DB="agency_restore_${RUN_ID}"
+MIGRATION_ROLE="agency_migrator_${RUN_ID}"
+RUNTIME_ROLE="agency_runtime_${RUN_ID}"
 ADMIN_URL=""
+SHARED_MIGRATION_URL=""
 DATABASE_URL=""
 MIGRATION_URL=""
+MIGRATION_RUNTIME_URL=""
 RESTORE_URL=""
+RESTORE_RUNTIME_URL=""
 
 log() {
   printf '[postgresql-verification] %s\n' "$*"
@@ -44,7 +49,7 @@ run_as_postgres() {
 
 drop_database() {
   database_name=$1
-  "$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" -v ON_ERROR_STOP=1 \
+  "$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
     --set=database_name="$database_name" >/dev/null <<'SQL'
 SELECT pg_terminate_backend(pid)
 FROM pg_stat_activity
@@ -54,13 +59,83 @@ DROP DATABASE IF EXISTS :"database_name";
 SQL
 }
 
+drop_role() {
+  role_name=$1
+  "$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --set=role_name="$role_name" >/dev/null <<'SQL'
+DROP ROLE IF EXISTS :"role_name";
+SQL
+}
+
 create_database() {
   database_name=$1
+  owner_name=$2
   drop_database "$database_name"
-  "$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" -v ON_ERROR_STOP=1 \
-    --set=database_name="$database_name" >/dev/null <<'SQL'
-CREATE DATABASE :"database_name";
+  "$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --set=database_name="$database_name" \
+    --set=owner_name="$owner_name" \
+    --set=runtime_role="$RUNTIME_ROLE" >/dev/null <<'SQL'
+CREATE DATABASE :"database_name" OWNER :"owner_name";
+REVOKE CONNECT, TEMPORARY ON DATABASE :"database_name" FROM PUBLIC;
+GRANT CONNECT ON DATABASE :"database_name" TO :"runtime_role";
 SQL
+}
+
+prepare_runtime_schema_access() {
+  migration_url=$1
+  "$POSTGRES_BIN_DIR/psql" "$migration_url" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --set=runtime_role="$RUNTIME_ROLE" >/dev/null <<'SQL'
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO :"runtime_role";
+SQL
+}
+
+grant_runtime_privileges() {
+  migration_url=$1
+  "$POSTGRES_BIN_DIR/psql" "$migration_url" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --set=migration_role="$MIGRATION_ROLE" \
+    --set=runtime_role="$RUNTIME_ROLE" >/dev/null <<'SQL'
+REVOKE ALL ON TABLE public.runtime_schema_meta FROM PUBLIC;
+REVOKE ALL ON TABLE public.runtime_runs FROM PUBLIC;
+REVOKE ALL ON TABLE public.audit_events FROM PUBLIC;
+REVOKE ALL ON TABLE public.runtime_sessions FROM PUBLIC;
+REVOKE ALL ON TABLE public.authentication_rate_limits FROM PUBLIC;
+REVOKE ALL ON TABLE public.memories FROM PUBLIC;
+REVOKE ALL ON SEQUENCE public.audit_events_sequence_seq FROM PUBLIC;
+
+GRANT SELECT ON TABLE public.runtime_schema_meta TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_runs TO :"runtime_role";
+GRANT SELECT, INSERT ON TABLE public.audit_events TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_sessions TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authentication_rate_limits TO :"runtime_role";
+GRANT SELECT, INSERT ON TABLE public.memories TO :"runtime_role";
+GRANT USAGE, SELECT ON SEQUENCE public.audit_events_sequence_seq TO :"runtime_role";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
+  REVOKE ALL ON TABLES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
+  REVOKE ALL ON SEQUENCES FROM PUBLIC;
+SQL
+}
+
+expect_runtime_denied() {
+  operation=$1
+  statement=$2
+  log_file="$TMP_DIR/runtime-denied-${operation}.log"
+  set +e
+  "$POSTGRES_BIN_DIR/psql" "$DATABASE_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --command "$statement" >"$log_file" 2>&1
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    printf 'runtime PostgreSQL role unexpectedly completed %s\n' "$operation" >&2
+    exit 1
+  fi
+  if ! grep -Eqi 'permission denied|must be owner' "$log_file"; then
+    printf 'runtime PostgreSQL %s denial was not a permission failure\n' "$operation" >&2
+    exit 1
+  fi
+  printf 'postgresql_runtime_%s_denied=pass\n' "$operation"
 }
 
 cleanup() {
@@ -68,6 +143,8 @@ cleanup() {
     drop_database "$SHARED_DB" >/dev/null 2>&1 || true
     drop_database "$MIGRATION_DB" >/dev/null 2>&1 || true
     drop_database "$RESTORE_DB" >/dev/null 2>&1 || true
+    drop_role "$RUNTIME_ROLE" >/dev/null 2>&1 || true
+    drop_role "$MIGRATION_ROLE" >/dev/null 2>&1 || true
     run_as_postgres "$POSTGRES_BIN_DIR/pg_ctl" -D "$PG_DATA" -m fast stop \
       >/dev/null 2>&1 || true
   fi
@@ -141,17 +218,276 @@ run_as_postgres "$POSTGRES_BIN_DIR/pg_ctl" -D "$PG_DATA" -l "$PG_LOG" \
   -o "-F -h 127.0.0.1 -p $PG_PORT -k $PG_SOCKET" -w start
 PG_STARTED=true
 ADMIN_URL="postgresql://${POSTGRES_RUN_USER}@127.0.0.1:${PG_PORT}/postgres?sslmode=disable"
-DATABASE_URL="postgresql://${POSTGRES_RUN_USER}@127.0.0.1:${PG_PORT}/${SHARED_DB}?sslmode=disable"
-MIGRATION_URL="postgresql://${POSTGRES_RUN_USER}@127.0.0.1:${PG_PORT}/${MIGRATION_DB}?sslmode=disable"
-RESTORE_URL="postgresql://${POSTGRES_RUN_USER}@127.0.0.1:${PG_PORT}/${RESTORE_DB}?sslmode=disable"
-create_database "$SHARED_DB"
-create_database "$MIGRATION_DB"
-create_database "$RESTORE_DB"
+
+log "creating distinct migration and runtime login roles"
+"$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --set=migration_role="$MIGRATION_ROLE" \
+  --set=runtime_role="$RUNTIME_ROLE" >/dev/null <<'SQL'
+CREATE ROLE :"migration_role"
+  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE :"runtime_role"
+  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+SQL
+
+SHARED_MIGRATION_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${SHARED_DB}?sslmode=disable"
+DATABASE_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${SHARED_DB}?sslmode=disable"
+MIGRATION_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${MIGRATION_DB}?sslmode=disable"
+MIGRATION_RUNTIME_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${MIGRATION_DB}?sslmode=disable"
+RESTORE_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${RESTORE_DB}?sslmode=disable"
+RESTORE_RUNTIME_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${RESTORE_DB}?sslmode=disable"
+create_database "$SHARED_DB" "$MIGRATION_ROLE"
+create_database "$MIGRATION_DB" "$MIGRATION_ROLE"
+create_database "$RESTORE_DB" "$MIGRATION_ROLE"
+prepare_runtime_schema_access "$SHARED_MIGRATION_URL"
+prepare_runtime_schema_access "$MIGRATION_URL"
+prepare_runtime_schema_access "$RESTORE_URL"
+
+log "proving validate mode fails closed before schema initialization"
+set +e
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL >"$TMP_DIR/schema-absent.log" 2>&1
+SCHEMA_ABSENT_STATUS=$?
+set -e
+if [ "$SCHEMA_ABSENT_STATUS" -eq 0 ]; then
+  printf 'runtime schema validation unexpectedly initialized an absent schema\n' >&2
+  exit 1
+fi
+grep -q 'PostgreSQL runtime schema is incomplete' "$TMP_DIR/schema-absent.log"
+printf 'postgresql_schema_absent_guard=pass\n'
+
+log "initializing shared schema with migration authority"
+AGENCY_MIGRATION_DATABASE_URL="$SHARED_MIGRATION_URL" \
+  "$VENV/bin/agency-runtime-schema" initialize \
+  --database-url-env AGENCY_MIGRATION_DATABASE_URL \
+  >"$TMP_DIR/schema-initialize.json"
+grant_runtime_privileges "$SHARED_MIGRATION_URL"
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL \
+  >"$TMP_DIR/schema-validate.json"
+printf 'postgresql_schema_validate=pass\n'
+
+log "proving application connections use a fixed safe search path"
+REPOSITORY_ROOT="$REPOSITORY_ROOT" DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/python" - <<'PYSEARCHPATH'
+import os
+import sys
+from pathlib import Path
+
+root = Path(os.environ["REPOSITORY_ROOT"])
+sys.path.insert(0, str(root / "backend"))
+
+from agency_runtime.postgres import PostgresRuntimeDatabase
+
+runtime = PostgresRuntimeDatabase(os.environ["DATABASE_URL"], schema_mode="validate")
+try:
+    with runtime.pool.connection() as connection:
+        row = connection.execute("SHOW search_path").fetchone()
+        if row is None or str(row["search_path"]).replace(" ", "") != "pg_catalog,public":
+            raise SystemExit("unexpected runtime search_path: {}".format(row))
+
+        database_privileges = connection.execute(
+            """
+            SELECT
+              has_database_privilege(current_user, current_database(), 'CONNECT') AS connect,
+              has_database_privilege(current_user, current_database(), 'TEMP') AS temporary
+            """
+        ).fetchone()
+        if database_privileges != {"connect": True, "temporary": False}:
+            raise SystemExit(
+                "unexpected runtime database privileges: {}".format(database_privileges)
+            )
+
+        schema_privileges = connection.execute(
+            """
+            SELECT
+              has_schema_privilege(current_user, 'public', 'USAGE') AS usage,
+              has_schema_privilege(current_user, 'public', 'CREATE') AS create
+            """
+        ).fetchone()
+        if schema_privileges != {"usage": True, "create": False}:
+            raise SystemExit(
+                "unexpected runtime schema privileges: {}".format(schema_privileges)
+            )
+
+        expected_table_privileges = {
+            "runtime_schema_meta": {"SELECT"},
+            "runtime_runs": {"SELECT", "INSERT", "UPDATE"},
+            "audit_events": {"SELECT", "INSERT"},
+            "runtime_sessions": {"SELECT", "INSERT", "UPDATE"},
+            "authentication_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
+            "memories": {"SELECT", "INSERT"},
+        }
+        all_table_privileges = {
+            "SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"
+        }
+        for table, expected in expected_table_privileges.items():
+            for privilege in all_table_privileges:
+                observed = connection.execute(
+                    "SELECT has_table_privilege(current_user, %s, %s) AS allowed",
+                    ("public.{}".format(table), privilege),
+                ).fetchone()
+                if observed is None or bool(observed["allowed"]) != (privilege in expected):
+                    raise SystemExit(
+                        "unexpected runtime privilege {} on {}: {}".format(
+                            privilege, table, observed
+                        )
+                    )
+
+        for privilege, expected in {"USAGE": True, "SELECT": True, "UPDATE": False}.items():
+            observed = connection.execute(
+                "SELECT has_sequence_privilege(current_user, %s, %s) AS allowed",
+                ("public.audit_events_sequence_seq", privilege),
+            ).fetchone()
+            if observed is None or bool(observed["allowed"]) != expected:
+                raise SystemExit(
+                    "unexpected runtime sequence privilege {}: {}".format(
+                        privilege, observed
+                    )
+                )
+finally:
+    runtime.close()
+print("postgresql_runtime_search_path=pass")
+print("postgresql_runtime_grant_matrix=pass")
+PYSEARCHPATH
+
+log "proving incompatible and incomplete schemas fail closed"
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "UPDATE public.runtime_schema_meta SET value = '999' WHERE key = 'schema_version'" \
+  >/dev/null
+set +e
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL >"$TMP_DIR/schema-incompatible.log" 2>&1
+SCHEMA_INCOMPATIBLE_STATUS=$?
+set -e
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "UPDATE public.runtime_schema_meta SET value = '1' WHERE key = 'schema_version'" \
+  >/dev/null
+if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
+  printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
+  exit 1
+fi
+grep -q 'unsupported PostgreSQL runtime schema version' "$TMP_DIR/schema-incompatible.log"
+printf 'postgresql_schema_incompatible_guard=pass\n'
+
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "ALTER TABLE public.memories RENAME TO memories_schema_probe" >/dev/null
+set +e
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL >"$TMP_DIR/schema-incomplete.log" 2>&1
+SCHEMA_INCOMPLETE_STATUS=$?
+set -e
+if [ "$SCHEMA_INCOMPLETE_STATUS" -eq 0 ]; then
+  printf 'runtime schema validation unexpectedly accepted an incomplete schema\n' >&2
+  exit 1
+fi
+grep -q 'table:memories:missing' "$TMP_DIR/schema-incomplete.log"
+printf 'postgresql_schema_incomplete_guard=pass\n'
+
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "CREATE VIEW public.memories AS SELECT 1 AS placeholder" >/dev/null
+set +e
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL >"$TMP_DIR/schema-wrong-type.log" 2>&1
+SCHEMA_WRONG_TYPE_STATUS=$?
+set -e
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "DROP VIEW public.memories" >/dev/null
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "ALTER TABLE public.memories_schema_probe RENAME TO memories" >/dev/null
+if [ "$SCHEMA_WRONG_TYPE_STATUS" -eq 0 ]; then
+  printf 'runtime schema validation unexpectedly accepted a wrong-type relation\n' >&2
+  exit 1
+fi
+grep -q 'table:memories:wrong_type' "$TMP_DIR/schema-wrong-type.log"
+printf 'postgresql_schema_relation_type_guard=pass\n'
+
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "ALTER TABLE public.memories RENAME COLUMN content TO content_schema_probe" \
+  >/dev/null
+set +e
+AGENCY_DATABASE_URL="$DATABASE_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL >"$TMP_DIR/schema-missing-column.log" 2>&1
+SCHEMA_MISSING_COLUMN_STATUS=$?
+set -e
+"$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  --command "ALTER TABLE public.memories RENAME COLUMN content_schema_probe TO content" \
+  >/dev/null
+if [ "$SCHEMA_MISSING_COLUMN_STATUS" -eq 0 ]; then
+  printf 'runtime schema validation unexpectedly accepted a missing column\n' >&2
+  exit 1
+fi
+grep -q 'column:memories.content:missing' "$TMP_DIR/schema-missing-column.log"
+printf 'postgresql_schema_column_guard=pass\n'
+
+log "proving the application database identity is least-privilege"
+RUNTIME_ROLE_FACTS=$("$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc \
+  --tuples-only --no-align --set=ON_ERROR_STOP=1 \
+  --set=runtime_role="$RUNTIME_ROLE" --command "
+SELECT rolsuper::text || '|' || rolcreatedb::text || '|' ||
+       rolcreaterole::text || '|' || rolreplication::text || '|' ||
+       rolbypassrls::text
+FROM pg_catalog.pg_roles
+WHERE rolname = :'runtime_role';
+")
+if [ "$RUNTIME_ROLE_FACTS" != "false|false|false|false|false" ]; then
+  printf 'runtime PostgreSQL role is overprivileged: observed %s\n' \
+    "$RUNTIME_ROLE_FACTS" >&2
+  exit 1
+fi
+printf 'postgresql_runtime_role_attributes=pass\n'
+
+RUNTIME_OWNED_OBJECTS=$("$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" \
+  --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 \
+  --set=runtime_role="$RUNTIME_ROLE" --command "
+WITH runtime_role AS (
+  SELECT oid FROM pg_catalog.pg_roles WHERE rolname = :'runtime_role'
+)
+SELECT
+  (SELECT COUNT(*) FROM pg_catalog.pg_database, runtime_role
+   WHERE datdba = runtime_role.oid) +
+  (SELECT COUNT(*) FROM pg_catalog.pg_namespace, runtime_role
+   WHERE nspowner = runtime_role.oid) +
+  (SELECT COUNT(*) FROM pg_catalog.pg_class, runtime_role
+   WHERE relowner = runtime_role.oid
+     AND relkind IN ('r', 'p', 'S', 'v', 'm', 'f'));
+")
+if [ "$RUNTIME_OWNED_OBJECTS" != "0" ]; then
+  printf 'runtime PostgreSQL role owns database/schema/runtime objects: %s\n' \
+    "$RUNTIME_OWNED_OBJECTS" >&2
+  exit 1
+fi
+printf 'postgresql_runtime_role_ownership=pass\n'
+
+expect_runtime_denied create_table \
+  "CREATE TABLE public.runtime_forbidden_probe(id integer)"
+expect_runtime_denied create_temp_table \
+  "CREATE TEMP TABLE runtime_forbidden_temp_probe(id integer)"
+expect_runtime_denied alter_table \
+  "ALTER TABLE public.runtime_runs ADD COLUMN forbidden_probe integer"
+expect_runtime_denied drop_table \
+  "DROP TABLE public.memories"
+expect_runtime_denied truncate_table \
+  "TRUNCATE TABLE public.runtime_runs"
+expect_runtime_denied schema_meta_update \
+  "UPDATE public.runtime_schema_meta SET value = '999' WHERE key = 'schema_version'"
+expect_runtime_denied grant_escalation \
+  "GRANT UPDATE ON public.runtime_schema_meta TO PUBLIC"
+expect_runtime_denied set_migration_role \
+  "SET ROLE \"$MIGRATION_ROLE\""
+printf 'postgresql_runtime_ddl_denied=pass\n'
 
 log "running complete backend suite against shared PostgreSQL state"
 (
   cd "$REPOSITORY_ROOT"
   AGENCY_TEST_DATABASE_URL="$DATABASE_URL" \
+  AGENCY_TEST_MIGRATION_DATABASE_URL="$SHARED_MIGRATION_URL" \
+  AGENCY_POSTGRES_SCHEMA_MODE=validate \
     "$VENV/bin/python" -m unittest discover -s backend/tests -v
 )
 
@@ -341,6 +677,12 @@ print("sqlite_restore_application_read=pass")
 PYSQLITEVERIFY
 printf 'sqlite_backup_restore=pass\n'
 
+log "initializing the SQLite migration target with migration authority"
+AGENCY_MIGRATION_DATABASE_URL="$MIGRATION_URL" \
+  "$VENV/bin/agency-runtime-schema" initialize \
+  --database-url-env AGENCY_MIGRATION_DATABASE_URL \
+  >"$TMP_DIR/migration-schema-initialize.json"
+
 log "validating the migration plan without mutating PostgreSQL"
 AGENCY_DATABASE_URL="$MIGRATION_URL" \
   "$VENV/bin/python" "$REPOSITORY_ROOT/scripts/migrate-sqlite-to-postgresql.py" \
@@ -360,9 +702,14 @@ log "applying the SQLite migration exactly once"
 AGENCY_DATABASE_URL="$MIGRATION_URL" \
   "$VENV/bin/python" "$REPOSITORY_ROOT/scripts/migrate-sqlite-to-postgresql.py" \
   --sqlite "$LEGACY_DB" --apply >"$TMP_DIR/migration-apply.json"
+grant_runtime_privileges "$MIGRATION_URL"
+AGENCY_DATABASE_URL="$MIGRATION_RUNTIME_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL \
+  >"$TMP_DIR/migration-schema-validate.json"
 
 log "validating source-to-target equivalence and replay protection"
-REPOSITORY_ROOT="$REPOSITORY_ROOT" MIGRATION_URL="$MIGRATION_URL" \
+REPOSITORY_ROOT="$REPOSITORY_ROOT" MIGRATION_RUNTIME_URL="$MIGRATION_RUNTIME_URL" \
   SOURCE_COUNTS_FILE="$SOURCE_COUNTS_FILE" "$VENV/bin/python" - <<'PY'
 import json
 import os
@@ -377,7 +724,9 @@ from agency_runtime.postgres import PostgresRuntimeDatabase
 expected = json.loads(
     Path(os.environ["SOURCE_COUNTS_FILE"]).read_text(encoding="utf-8")
 )
-runtime = PostgresRuntimeDatabase(os.environ["MIGRATION_URL"])
+runtime = PostgresRuntimeDatabase(
+    os.environ["MIGRATION_RUNTIME_URL"], schema_mode="validate"
+)
 try:
     with runtime.pool.connection() as connection:
         for table in (
@@ -475,9 +824,14 @@ AGENCY_RESTORE_DATABASE_URL="$RESTORE_URL" \
   postgres-restore --manifest "$BACKUP_MANIFEST" \
   --database-url-env AGENCY_RESTORE_DATABASE_URL \
   >"$TMP_DIR/postgresql-restore.json"
+grant_runtime_privileges "$RESTORE_URL"
+AGENCY_DATABASE_URL="$RESTORE_RUNTIME_URL" \
+  "$VENV/bin/agency-runtime-schema" validate \
+  --database-url-env AGENCY_DATABASE_URL \
+  >"$TMP_DIR/restore-schema-validate.json"
 
 log "validating restored schema, counts, failure totals and application readability"
-REPOSITORY_ROOT="$REPOSITORY_ROOT" RESTORE_URL="$RESTORE_URL" \
+REPOSITORY_ROOT="$REPOSITORY_ROOT" RESTORE_RUNTIME_URL="$RESTORE_RUNTIME_URL" \
   SOURCE_COUNTS_FILE="$SOURCE_COUNTS_FILE" "$VENV/bin/python" - <<'PYVERIFY'
 import json
 import os
@@ -492,7 +846,9 @@ from agency_runtime.postgres import PostgresRuntimeDatabase
 expected = json.loads(
     Path(os.environ["SOURCE_COUNTS_FILE"]).read_text(encoding="utf-8")
 )
-runtime = PostgresRuntimeDatabase(os.environ["RESTORE_URL"])
+runtime = PostgresRuntimeDatabase(
+    os.environ["RESTORE_RUNTIME_URL"], schema_mode="validate"
+)
 try:
     with runtime.pool.connection() as connection:
         for table in (

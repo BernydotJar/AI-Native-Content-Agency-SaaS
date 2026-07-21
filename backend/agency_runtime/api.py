@@ -28,7 +28,12 @@ from .memory import MemoryStore, SQLiteMemory
 from .models import ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
 from .orchestrator import AgencyOrchestrator, GreenlightError
-from .postgres import PostgresMemory, PostgresRunStore, PostgresRuntimeDatabase
+from .postgres import (
+    PostgresMemory,
+    PostgresRunStore,
+    PostgresRuntimeDatabase,
+    normalize_postgres_schema_mode,
+)
 from .persistence import (
     AuditEvent,
     AuditWrite,
@@ -265,16 +270,23 @@ class RuntimeService:
         postgres_pool_min_size: int = 1,
         postgres_pool_max_size: int = 10,
         postgres_connect_timeout_seconds: float = 15.0,
+        postgres_schema_mode: str = "validate",
     ) -> None:
         self.database_path = database_path
         self.database_url = database_url.strip() if database_url else ""
         self._postgres_database: Optional[PostgresRuntimeDatabase] = None
         if self.database_url:
+            normalized_schema_mode = normalize_postgres_schema_mode(postgres_schema_mode)
+            if normalized_schema_mode != "validate":
+                raise ValueError(
+                    "application runtime PostgreSQL schema mode must be validate"
+                )
             self._postgres_database = PostgresRuntimeDatabase(
                 self.database_url,
                 min_size=postgres_pool_min_size,
                 max_size=postgres_pool_max_size,
                 connect_timeout_seconds=postgres_connect_timeout_seconds,
+                schema_mode=normalized_schema_mode,
             )
             self.run_store = PostgresRunStore(self._postgres_database)
             self.storage_backend = "postgresql"
@@ -574,6 +586,7 @@ def create_app(
     postgres_pool_min_size: Optional[int] = None,
     postgres_pool_max_size: Optional[int] = None,
     postgres_connect_timeout_seconds: Optional[float] = None,
+    postgres_schema_mode: Optional[str] = None,
     max_request_body_bytes: Optional[int] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
@@ -596,6 +609,11 @@ def create_app(
         float(os.environ.get("AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS", "15"))
         if postgres_connect_timeout_seconds is None
         else postgres_connect_timeout_seconds
+    )
+    schema_mode = (
+        os.environ.get("AGENCY_POSTGRES_SCHEMA_MODE", "validate")
+        if postgres_schema_mode is None
+        else postgres_schema_mode
     )
     cookie_name = os.environ.get("AGENCY_SESSION_COOKIE_NAME", "agency_session")
     cookie_secure = (
@@ -667,6 +685,7 @@ def create_app(
         postgres_pool_min_size=pool_min_size,
         postgres_pool_max_size=pool_max_size,
         postgres_connect_timeout_seconds=connect_timeout_seconds,
+        postgres_schema_mode=schema_mode,
     )
     metrics = RuntimeMetrics()
 

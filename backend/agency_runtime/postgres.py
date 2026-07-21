@@ -37,8 +37,91 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-SCHEMA_VERSION = "1"
+POSTGRES_SCHEMA_VERSION = "1"
+SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
+POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
+POSTGRES_REQUIRED_TABLES = (
+    "runtime_schema_meta",
+    "runtime_runs",
+    "audit_events",
+    "runtime_sessions",
+    "authentication_rate_limits",
+    "memories",
+)
+POSTGRES_REQUIRED_SEQUENCES = ("audit_events_sequence_seq",)
+POSTGRES_REQUIRED_COLUMNS = {
+    "runtime_schema_meta": frozenset({"key", "value"}),
+    "runtime_runs": frozenset(
+        {
+            "tenant_id",
+            "run_id",
+            "status",
+            "document_json",
+            "version",
+            "created_at",
+            "updated_at",
+        }
+    ),
+    "audit_events": frozenset(
+        {
+            "sequence",
+            "event_id",
+            "tenant_id",
+            "request_id",
+            "occurred_at",
+            "action",
+            "resource_type",
+            "resource_id",
+            "actor",
+            "payload_json",
+        }
+    ),
+    "runtime_sessions": frozenset(
+        {
+            "session_id",
+            "tenant_id",
+            "session_token_hash",
+            "csrf_token_hash",
+            "credential_fingerprint",
+            "subject_id",
+            "role",
+            "key_id",
+            "created_at",
+            "expires_at",
+            "revoked_at",
+        }
+    ),
+    "authentication_rate_limits": frozenset(
+        {"bucket_hash", "window_started_at", "failure_count"}
+    ),
+    "memories": frozenset(
+        {
+            "namespace",
+            "memory_id",
+            "observation_id",
+            "content",
+            "provenance_json",
+            "confidence",
+            "tags_json",
+            "observed_at",
+            "stored_at",
+        }
+    ),
+}
 _ALLOWED_CONNECTION_OPTIONS = {"application_name", "sslmode", "sslrootcert"}
+
+
+class PostgresSchemaError(RuntimeError):
+    """Safe schema-state failure suitable for startup and operator reporting."""
+
+
+def normalize_postgres_schema_mode(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError("PostgreSQL schema mode must be a string")
+    normalized = value.strip().lower()
+    if normalized not in POSTGRES_SCHEMA_MODES:
+        raise ValueError("PostgreSQL schema mode must be initialize or validate")
+    return normalized
 
 
 def _datetime(value: str) -> datetime:
@@ -149,9 +232,23 @@ def _connection_options(conninfo: str, timeout_seconds: float) -> dict[str, obje
 
 
 def _connect_database_url(conninfo: str, timeout_seconds: float = 15.0) -> Any:
-    """Open one pg8000 DB-API connection without logging connection secrets."""
+    """Open one pg8000 connection with a fixed safe object-resolution path."""
 
-    return dbapi.connect(**_connection_options(conninfo, timeout_seconds))
+    connection = dbapi.connect(**_connection_options(conninfo, timeout_seconds))
+    try:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("SET search_path TO pg_catalog, public")
+        finally:
+            cursor.close()
+        connection.commit()
+        return connection
+    except BaseException:
+        try:
+            connection.close()
+        except Exception:
+            pass
+        raise
 
 
 def _quote_identifier(value: str) -> str:
@@ -362,6 +459,7 @@ class PostgresRuntimeDatabase:
         min_size: int = 1,
         max_size: int = 10,
         connect_timeout_seconds: float = 15.0,
+        schema_mode: str = "validate",
         clock: Clock = utc_now,
     ) -> None:
         normalized = conninfo.strip()
@@ -375,7 +473,9 @@ class PostgresRuntimeDatabase:
             raise ValueError(
                 "PostgreSQL connect timeout must be between 1 and 300 seconds"
             )
+        normalized_schema_mode = normalize_postgres_schema_mode(schema_mode)
         self._clock = clock
+        self.schema_mode = normalized_schema_mode
         self._closed = False
         pool = ConnectionPool(
             conninfo=normalized,
@@ -385,7 +485,10 @@ class PostgresRuntimeDatabase:
         )
         self.pool = pool
         try:
-            self._initialize_schema()
+            if normalized_schema_mode == "initialize":
+                self._initialize_schema()
+            else:
+                self._validate_schema()
         except Exception:
             self._closed = True
             pool.close()
@@ -398,13 +501,13 @@ class PostgresRuntimeDatabase:
     def _initialize_schema(self) -> None:
         statements = (
             """
-            CREATE TABLE IF NOT EXISTS runtime_schema_meta (
+            CREATE TABLE IF NOT EXISTS public.runtime_schema_meta (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             )
             """,
             """
-            CREATE TABLE IF NOT EXISTS runtime_runs (
+            CREATE TABLE IF NOT EXISTS public.runtime_runs (
                 tenant_id TEXT NOT NULL,
                 run_id TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -417,10 +520,10 @@ class PostgresRuntimeDatabase:
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_runtime_runs_tenant_status
-                ON runtime_runs(tenant_id, status, updated_at DESC)
+                ON public.runtime_runs(tenant_id, status, updated_at DESC)
             """,
             """
-            CREATE TABLE IF NOT EXISTS audit_events (
+            CREATE TABLE IF NOT EXISTS public.audit_events (
                 sequence BIGSERIAL PRIMARY KEY,
                 event_id TEXT NOT NULL UNIQUE,
                 tenant_id TEXT NOT NULL,
@@ -435,14 +538,14 @@ class PostgresRuntimeDatabase:
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_audit_events_tenant_sequence
-                ON audit_events(tenant_id, sequence ASC)
+                ON public.audit_events(tenant_id, sequence ASC)
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_audit_events_resource
-                ON audit_events(tenant_id, resource_type, resource_id, sequence ASC)
+                ON public.audit_events(tenant_id, resource_type, resource_id, sequence ASC)
             """,
             """
-            CREATE TABLE IF NOT EXISTS runtime_sessions (
+            CREATE TABLE IF NOT EXISTS public.runtime_sessions (
                 session_id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 session_token_hash TEXT NOT NULL UNIQUE,
@@ -458,21 +561,21 @@ class PostgresRuntimeDatabase:
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_runtime_sessions_tenant
-                ON runtime_sessions(tenant_id, expires_at DESC)
+                ON public.runtime_sessions(tenant_id, expires_at DESC)
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_runtime_sessions_active
-                ON runtime_sessions(session_token_hash, revoked_at, expires_at)
+                ON public.runtime_sessions(session_token_hash, revoked_at, expires_at)
             """,
             """
-            CREATE TABLE IF NOT EXISTS authentication_rate_limits (
+            CREATE TABLE IF NOT EXISTS public.authentication_rate_limits (
                 bucket_hash TEXT PRIMARY KEY,
                 window_started_at TIMESTAMPTZ NOT NULL,
                 failure_count INTEGER NOT NULL CHECK (failure_count >= 0)
             )
             """,
             """
-            CREATE TABLE IF NOT EXISTS memories (
+            CREATE TABLE IF NOT EXISTS public.memories (
                 namespace TEXT NOT NULL,
                 memory_id TEXT NOT NULL,
                 observation_id TEXT NOT NULL,
@@ -489,7 +592,7 @@ class PostgresRuntimeDatabase:
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_memories_namespace_confidence
-                ON memories(namespace, confidence DESC, stored_at DESC)
+                ON public.memories(namespace, confidence DESC, stored_at DESC)
             """,
         )
         with self.pool.connection() as connection:
@@ -501,28 +604,79 @@ class PostgresRuntimeDatabase:
                 connection.execute(statement)
             connection.execute(
                 """
-                INSERT INTO runtime_schema_meta(key, value)
+                INSERT INTO public.runtime_schema_meta(key, value)
                 VALUES ('schema_version', %s)
                 ON CONFLICT (key) DO NOTHING
                 """,
                 (SCHEMA_VERSION,),
             )
-            row = connection.execute(
-                "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
-            ).fetchone()
-            actual_version = None if row is None else str(row["value"])
-            if actual_version != SCHEMA_VERSION:
-                raise RuntimeError(
-                    "unsupported PostgreSQL runtime schema version: {} (expected {})".format(
-                        actual_version or "missing", SCHEMA_VERSION
+        self._validate_schema()
+
+    def _validate_schema(self) -> None:
+        invalid: list[str] = []
+        expected_relkinds = {
+            "table": frozenset({"r", "p"}),
+            "sequence": frozenset({"S"}),
+        }
+        with self.pool.connection() as connection:
+            for relation_type, names in (
+                ("table", POSTGRES_REQUIRED_TABLES),
+                ("sequence", POSTGRES_REQUIRED_SEQUENCES),
+            ):
+                for name in names:
+                    row = connection.execute(
+                        """
+                        SELECT relation.relkind AS kind
+                        FROM pg_catalog.pg_class AS relation
+                        JOIN pg_catalog.pg_namespace AS namespace
+                          ON namespace.oid = relation.relnamespace
+                        WHERE namespace.nspname = %s AND relation.relname = %s
+                        """,
+                        ("public", name),
+                    ).fetchone()
+                    if row is None:
+                        invalid.append("{}:{}:missing".format(relation_type, name))
+                    elif str(row["kind"]) not in expected_relkinds[relation_type]:
+                        invalid.append("{}:{}:wrong_type".format(relation_type, name))
+                    elif relation_type == "table":
+                        columns = connection.execute(
+                            """
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_schema = %s AND table_name = %s
+                            """,
+                            ("public", name),
+                        ).fetchall()
+                        observed_columns = {str(item["column_name"]) for item in columns}
+                        for column in sorted(
+                            POSTGRES_REQUIRED_COLUMNS[name] - observed_columns
+                        ):
+                            invalid.append(
+                                "column:{}.{}:missing".format(name, column)
+                            )
+            if invalid:
+                raise PostgresSchemaError(
+                    "PostgreSQL runtime schema is incomplete: {}".format(
+                        ", ".join(sorted(invalid))
                     )
                 )
+            row = connection.execute(
+                """
+                SELECT value
+                FROM public.runtime_schema_meta
+                WHERE key = 'schema_version'
+                """
+            ).fetchone()
+        actual_version = None if row is None else str(row["value"])
+        if actual_version != POSTGRES_SCHEMA_VERSION:
+            raise PostgresSchemaError(
+                "unsupported PostgreSQL runtime schema version: {} (expected {})".format(
+                    actual_version or "missing", POSTGRES_SCHEMA_VERSION
+                )
+            )
 
     def check(self) -> None:
-        with self.pool.connection() as connection:
-            row = connection.execute("SELECT 1 AS ready").fetchone()
-        if row is None or int(row["ready"]) != 1:
-            raise RuntimeError("PostgreSQL readiness query failed")
+        self._validate_schema()
 
     def close(self) -> None:
         if self._closed:

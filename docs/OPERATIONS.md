@@ -140,6 +140,21 @@ curl -H "Authorization: Bearer $AGENCY_API_KEY" \
 
 The current ledger is append-only through application interfaces but is not cryptographically signed or exported to immutable storage. Retention, legal hold, subject pseudonymization, tamper-evident hashing, and external SIEM export remain future production controls.
 
+## PostgreSQL schema and role boundary
+
+PostgreSQL application pods use `AGENCY_POSTGRES_SCHEMA_MODE=validate`. They require a pre-initialized schema and a non-owner runtime URL; readiness checks the required relations and schema version without running DDL.
+
+Schema initialization, SQLite migration and restore use a separate migration/operator URL through the packaged command:
+
+```bash
+agency-runtime-schema initialize --database-url-env AGENCY_MIGRATION_DATABASE_URL
+agency-runtime-schema validate --database-url-env AGENCY_DATABASE_URL
+```
+
+The runtime role must own no application objects and must not have schema `CREATE`, DDL, `TRUNCATE` or schema-metadata mutation. The deployment chart rejects `initialize` for long-running pods and never injects migration credentials. Follow [PostgreSQL Schema and Runtime Role Runbook](runbooks/postgresql-schema-rollout.md) before a PostgreSQL rollout or restore. Persistent role, schema, Secret or traffic changes remain human-gated.
+
+The repository implementation and verifier contract are present, but `INC-012` is not considered verified until the exact-commit PostgreSQL, Helm, Terraform, package and regression gates are executed and recorded.
+
 ## Backup, restore and data rollback
 
 `scripts/manage-runtime-backup.py` creates strict, checksummed `agency-runtime-backup.v1` artifacts for SQLite and PostgreSQL. SQLite uses the online backup API and atomic restore; PostgreSQL uses custom-format `pg_dump`, validates with `pg_restore --list`, refuses non-empty targets and restores in one transaction. Connection URLs remain in named environment variables and passwords are removed from tool errors.

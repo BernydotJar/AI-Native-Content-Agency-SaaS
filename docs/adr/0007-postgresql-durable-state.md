@@ -26,7 +26,7 @@ When `AGENCY_DATABASE_URL` is configured, one `PostgresRuntimeDatabase` owns a b
 
 Use `pg8000` instead of weakening the license policy. Pin the driver and transitive dependency graph by hash.
 
-Initialize schema version `1` under a PostgreSQL advisory transaction lock. Insert a missing version, but fail startup when an existing version is not exactly supported.
+Separate schema authority from runtime authority. An explicit `agency-runtime-schema initialize` command, executed with a migration/operator credential, initializes schema version `1` under a PostgreSQL advisory transaction lock. Long-running application processes default to `validate`, perform only read-only relation/version checks and fail startup when schema is absent, incomplete or incompatible. Helm and Terraform permit only `validate` for application pods.
 
 Use transactions, row locks, uniqueness constraints and optimistic run versions to preserve cross-replica consistency. A committed Greenlight decision cannot be replaced by another replica.
 
@@ -42,7 +42,8 @@ Provide an offline SQLite-to-PostgreSQL utility that is dry-run by default, requ
 
 - Sessions, rate limits, run state, audits and memories are consistent across replicas.
 - PostgreSQL transactions bind a business-state mutation to its audit event.
-- Startup detects unsupported schema versions instead of silently rewriting metadata.
+- Startup detects absent, incomplete or unsupported schema instead of executing DDL or rewriting metadata.
+- A compromised runtime credential is not an object owner and cannot initialize, alter, drop or truncate runtime schema.
 - SQLite remains a lightweight local path and existing default behavior remains available.
 - The driver remains compatible with the repository license policy.
 - Terraform state contains Secret references, not database credentials.
@@ -50,6 +51,7 @@ Provide an offline SQLite-to-PostgreSQL utility that is dry-run by default, requ
 ### Negative
 
 - Operators must provision, secure, back up and monitor PostgreSQL separately.
+- Operators must manage a distinct migration credential, execute schema rollout before application rollout and review exact DML grants for every schema change.
 - Each replica consumes up to its configured pool maximum.
 - The SQLite migration requires a write outage and does not provide continuous synchronization or reverse migration.
 - Schema upgrades beyond version `1` require a future migration framework and ADR.

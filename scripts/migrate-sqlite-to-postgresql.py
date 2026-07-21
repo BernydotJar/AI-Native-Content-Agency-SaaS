@@ -333,7 +333,12 @@ def main() -> int:
         )
 
     source = source_connection(args.sqlite.resolve())
-    database = PostgresRuntimeDatabase(postgres_url, min_size=1, max_size=2)
+    database = PostgresRuntimeDatabase(
+        postgres_url,
+        min_size=1,
+        max_size=2,
+        schema_mode="validate",
+    )
     try:
         source_summary = source_counts(source)
         before = target_counts(database)

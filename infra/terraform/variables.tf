@@ -112,6 +112,17 @@ variable "postgresql_connect_timeout_seconds" {
   }
 }
 
+variable "postgresql_schema_mode" {
+  description = "Schema behavior for long-running PostgreSQL application pods. Only validate is permitted; initialize belongs to an explicit migration command."
+  type        = string
+  default     = "validate"
+
+  validation {
+    condition     = lower(trimspace(var.postgresql_schema_mode)) == "validate"
+    error_message = "postgresql_schema_mode must be validate for long-running application pods."
+  }
+}
+
 variable "runtime_auth_existing_secret" {
   description = "Name of a pre-provisioned Kubernetes Secret containing required individual identity JSON and optional legacy tenant keys. Secret values are never stored in Terraform state."
   type        = string

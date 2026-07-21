@@ -20,6 +20,9 @@
 {{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 1) (gt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 300)) }}
 {{- fail "runtime.storage.postgresql.connectTimeoutSeconds must be between 1 and 300" }}
 {{- end }}
+{{- if and (eq $backend "postgresql") (ne (lower .Values.runtime.storage.postgresql.schemaMode) "validate") }}
+{{- fail "runtime.storage.postgresql.schemaMode must be validate for long-running application pods" }}
+{{- end }}
 {{- if and .Values.podDisruptionBudget.enabled (ne $backend "postgresql") }}
 {{- fail "podDisruptionBudget requires the PostgreSQL backend" }}
 {{- end }}
@@ -101,6 +104,8 @@ spec:
               value: {{ .Values.runtime.storage.postgresql.poolMaxSize | quote }}
             - name: AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS
               value: {{ .Values.runtime.storage.postgresql.connectTimeoutSeconds | quote }}
+            - name: AGENCY_POSTGRES_SCHEMA_MODE
+              value: {{ lower .Values.runtime.storage.postgresql.schemaMode | quote }}
 {{- end }}
 {{- if .Values.runtime.auth.tenantApiKeysKey }}
             - name: AGENCY_TENANT_API_KEYS_JSON
