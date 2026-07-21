@@ -9,6 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/install-actionlint.sh
+      - run: |
+          "$HOME/.local/bin/actionlint" .github/workflows/*.yml
+
   python-locks:
     runs-on: ubuntu-latest
     steps:
@@ -62,6 +70,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
+        with:
+          version: v4.2.0
       - run: helm lint infra/helm/ai-native-content-agency
       - run: helm template agency infra/helm/ai-native-content-agency > /tmp/rendered.yaml
 
@@ -70,6 +80,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
       - run: terraform -chdir=infra/terraform fmt -check -recursive
       - run: terraform -chdir=infra/terraform init -backend=false
       - run: terraform -chdir=infra/terraform validate

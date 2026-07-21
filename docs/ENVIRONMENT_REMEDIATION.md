@@ -94,3 +94,31 @@ Buildah and packages installed with it can be removed with:
 apt-get remove --purge buildah
 apt-get autoremove --purge
 ```
+
+
+## Terraform and Kubernetes tooling
+
+Additional production-readiness tooling was installed locally and checksum verified:
+
+| Tool | Version | SHA-256 | Source type |
+|---|---|---|---|
+| Terraform | 1.15.8 | `8891e9dcedc9e3b8950bc6af9d4d8af1f4cfade3062f53b9dc403a89f6ce8c9c` | Official HashiCorp ARM64 release archive and SHA256SUMS |
+| kubectl | v1.36.2 | `c957eb8c4bea27a3bb35b269edd9082e27f027f7b76b20b5bf4afebc726c6d3e` | Official Kubernetes ARM64 binary and checksum |
+| K3s | v1.36.2+k3s1 | `0ea2000c70a1ec48bfa70c187643e4f0ced11875556b2f1f5edb6ef916176682` | Official K3s ARM64 release and checksum |
+
+`iproute2 6.1.0-3` was installed from Debian bookworm to provide interface and socket diagnostics.
+
+Terraform fmt/init/validate passed locally with locked, signed providers. Full-node K3s reached API readiness but kubelet could not write the host's read-only cgroup hierarchy. Agentless K3s then validated Helm and Terraform against a real Kubernetes API. See [Local Infrastructure Validation](LOCAL_INFRASTRUCTURE_VALIDATION.md) and checkpoint 008 for commands, errors, alternatives, evidence, cleanup, and the exact condition for full-node validation.
+
+
+## GitHub Actions workflow validation
+
+`actionlint 1.7.11` was installed as a checksum-verified local binary from the official release archive.
+
+- SHA-256: `2b65d6542df67ed865349f37750738ec83e027f6acc17f6889a46dbd07a14335`
+- Destination: `/home/agent/.local/bin/actionlint`
+- Reproducible installer: `scripts/install-actionlint.sh`
+
+The production-readiness workflow passes actionlint locally, and CI now installs the same pinned release before validating all workflow YAML files. Removal is reversible with `rm -f /home/agent/.local/bin/actionlint`.
+
+During integration, actionlint caught an invalid YAML command scalar in the new workflow job. The command was changed to a block scalar and the workflow then passed. This failure and correction demonstrate that the gate validates the actual workflow rather than only confirming the binary is installed.

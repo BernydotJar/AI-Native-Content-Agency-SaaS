@@ -1,4 +1,11 @@
-kubeconfig_path = "~/.kube/config"
-namespace       = "ai-native-content-agency"
-image_repository = "ai-native-content-agency"
-image_tag        = "local"
+kubeconfig_path                 = "~/.kube/config"
+namespace                       = "ai-native-content-agency"
+image_repository                = "ai-native-content-agency"
+image_tag                       = "local"
+replica_count                   = 1
+persistence_enabled             = true
+runtime_auth_existing_secret    = "ai-native-content-agency-runtime"
+runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
+session_cookie_secure           = true
+helm_wait                       = true
+helm_timeout_seconds            = 300

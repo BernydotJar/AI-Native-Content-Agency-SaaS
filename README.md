@@ -235,6 +235,18 @@ Los grafos de runtime, test y build se declaran en `backend/requirements*.in` y 
 
 Las actualizaciones se realizan únicamente mediante `./scripts/update-python-locks.sh`. Consulta [Python Dependency Locking](docs/DEPENDENCY_LOCKING.md) y [ADR 0004](docs/adr/0004-reproducible-python-dependency-graph.md).
 
+## Verificación local de infraestructura
+
+Terraform y Kubernetes se validan contra un control plane K3s real y efímero:
+
+```bash
+./scripts/install-local-infra-tools.sh
+export PATH="$HOME/.local/bin:$PATH"
+./scripts/verify-local-infrastructure.sh
+```
+
+El gate ejecuta Terraform plan/apply/destroy, Helm y `dry-run=server`, mantiene el Secret fuera del state y limpia todo. K3s se ejecuta en modo agentless porque el cgroup heredado de esta workstation es read-only para kubelet; por ello valida API/admission/orquestación, no scheduling de pods. El runtime de la imagen se valida por separado con Buildah. Consulta [Local Infrastructure Validation](docs/LOCAL_INFRASTRUCTURE_VALIDATION.md).
+
 ## Verificación del paquete de producción
 
 Helm y la imagen completa pueden validarse localmente con un único comando. El script acepta Docker o Buildah; en workstations con overlay anidado se recomienda Buildah con `vfs` y aislamiento `chroot`:
