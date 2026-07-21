@@ -38,6 +38,7 @@ from .persistence import (
 )
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
+from .version import VERSION
 
 
 class BriefRequest(BaseModel):
@@ -440,7 +441,7 @@ def create_app(
 
     app = FastAPI(
         title="AI Native Content Agency API",
-        version="0.7.0",
+        version=VERSION,
         description=(
             "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
             "state, durable rate limiting, HttpOnly browser sessions and audit evidence. No endpoint "
@@ -638,6 +639,7 @@ def create_app(
     def healthz() -> Dict[str, object]:
         return {
             "status": "ok",
+            "version": VERSION,
             "runtime_mode": "deterministic_sandbox",
             "external_side_effects_enabled": False,
             "auth_configured": authenticator.configured,
@@ -660,6 +662,7 @@ def create_app(
             ) from error
         return {
             "status": "ready",
+            "version": VERSION,
             "auth_configured": True,
             "storage_backend": service.storage_backend,
             "shared_state": service.shared_state,

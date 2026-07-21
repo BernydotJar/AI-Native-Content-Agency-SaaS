@@ -1,0 +1,110 @@
+{
+  "blockers": [
+    {
+      "affected_workstreams": [
+        "WS-09"
+      ],
+      "attempted_resolutions": [
+        "read-only repository/PR/issue inspection"
+      ],
+      "category": [
+        "credential",
+        "permission",
+        "infrastructure",
+        "human_decision"
+      ],
+      "evidence": "No authorized target/open billing/saved plan/apply; issue #1 and PR #2 remain DENY_APPLY.",
+      "exact_resume_condition": "Authorized target with open billing, granular preflight, reviewed saved plan, ALLOW_DEV_APPLY, and explicit external-infrastructure/spend authorization.",
+      "id": "BLK-GCP-001",
+      "independent_work_remaining": true,
+      "retry_count": 0
+    }
+  ],
+  "nodes": [
+    {
+      "depends_on": [],
+      "id": "INC-001",
+      "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-001"
+      ],
+      "id": "INC-002",
+      "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-001"
+      ],
+      "id": "INC-003",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-001",
+        "INC-003"
+      ],
+      "id": "INC-004",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-002",
+        "INC-003"
+      ],
+      "id": "INC-005",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-002",
+        "INC-004",
+        "INC-005"
+      ],
+      "id": "INC-006",
+      "status": "blocked"
+    },
+    {
+      "depends_on": [
+        "INC-004"
+      ],
+      "id": "INC-007",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-007"
+      ],
+      "id": "INC-008",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-003",
+        "INC-004"
+      ],
+      "id": "INC-009",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-003",
+        "INC-004",
+        "INC-008"
+      ],
+      "id": "INC-010",
+      "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-003",
+        "INC-009"
+      ],
+      "id": "INC-011",
+      "status": "pending"
+    }
+  ],
+  "schema_version": "program-task-graph.v1",
+  "updated_at": "2026-07-21T17:39:13Z"
+}

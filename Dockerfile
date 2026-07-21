@@ -17,6 +17,9 @@ COPY backend ./backend
 RUN python -m build --no-isolation --wheel --outdir /wheels ./backend
 
 FROM python:3.13-alpine3.23@sha256:9fdbf2e3e82628351513560b121e2ee6ce31cac212be9e070c5a5e2769fb5e76 AS runtime
+LABEL org.opencontainers.image.title="AI Native Content Agency" \
+      org.opencontainers.image.version="0.7.0" \
+      org.opencontainers.image.description="Governed deterministic sandbox for an AI-native content agency"
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \

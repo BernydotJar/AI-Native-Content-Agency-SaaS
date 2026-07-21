@@ -140,6 +140,20 @@ curl -H "Authorization: Bearer $AGENCY_API_KEY" \
 
 The current ledger is append-only through application interfaces but is not cryptographically signed or exported to immutable storage. Retention, legal hold, subject pseudonymization, tamper-evident hashing, and external SIEM export remain future production controls.
 
+## Backup, restore and data rollback
+
+`scripts/manage-runtime-backup.py` creates strict, checksummed `agency-runtime-backup.v1` artifacts for SQLite and PostgreSQL. SQLite uses the online backup API and atomic restore; PostgreSQL uses custom-format `pg_dump`, validates with `pg_restore --list`, refuses non-empty targets and restores in one transaction. Connection URLs remain in named environment variables and passwords are removed from tool errors.
+
+The deterministic repository drill is part of:
+
+```bash
+./scripts/verify-postgresql-runtime.sh
+```
+
+It restores representative SQLite and PostgreSQL state, compares run/audit/session/rate-limit/memory counts and proves application-level readability. This is local ephemeral recovery evidence, not an encrypted scheduled backup service or production/staging disaster-recovery exercise.
+
+Use [Runtime Backup and Restore Runbook](runbooks/runtime-backup-restore.md) for commands, manifests, security boundaries, rollback separation and exact human gates. Any replacement of persistent data, database cutover, deletion or loss-acceptance decision requires explicit human approval.
+
 ## Alerting baseline
 
 Recommended initial alerts:

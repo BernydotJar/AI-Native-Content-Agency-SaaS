@@ -1,14 +1,15 @@
 {
   "name": "ai-native-content-agency-saas",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate:program": "python3 scripts/validate-program-state.py"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",

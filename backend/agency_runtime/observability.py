@@ -9,6 +9,8 @@ import uuid
 from collections import Counter, defaultdict
 from typing import Dict, Mapping, Optional, Tuple
 
+from .version import VERSION
+
 
 _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$")
 HTTP_LOGGER = logging.getLogger("agency_runtime.http")
@@ -119,7 +121,9 @@ class RuntimeMetrics:
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
             "# TYPE agency_runtime_info gauge",
-            'agency_runtime_info{mode="deterministic_sandbox",version="0.7.0"} 1',
+            'agency_runtime_info{{mode="deterministic_sandbox",version="{}"}} 1'.format(
+                VERSION
+            ),
             "# HELP agency_http_requests_total HTTP requests by method, route template, and status.",
             "# TYPE agency_http_requests_total counter",
         ]

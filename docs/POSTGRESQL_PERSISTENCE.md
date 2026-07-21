@@ -7,7 +7,7 @@ The runtime supports two persistence modes:
 - **SQLite** remains the default for single-process development, local smoke tests and one-replica deployments.
 - **PostgreSQL** is the shared-state backend for multiple application replicas. It is selected only when `AGENCY_DATABASE_URL` is non-empty.
 
-The PostgreSQL path stores execution runs, the append-only audit ledger, browser sessions, authentication rate-limit buckets and tenant-scoped memories in one database. It does not provision PostgreSQL, manage backups or implement database failover.
+The PostgreSQL path stores execution runs, the append-only audit ledger, browser sessions, authentication rate-limit buckets and tenant-scoped memories in one database. It does not provision PostgreSQL or implement failover. The repository provides checksummed backup/restore tooling and an ephemeral drill, but it does not schedule, encrypt, upload, retain or delete production backups.
 
 ## Runtime configuration
 
@@ -143,9 +143,27 @@ Recommended cutover sequence:
 
 Rollback means stopping the PostgreSQL-backed deployment and restoring the pre-cutover SQLite deployment and backup. There is no reverse migration utility.
 
+## Backup and restore
+
+Create a validated custom-format archive without placing the connection URL or password in process arguments:
+
+```bash
+export AGENCY_DATABASE_URL='postgresql://agency@db.example/agency?sslmode=verify-full&sslrootcert=/etc/ssl/agency-ca.pem'
+python3 scripts/manage-runtime-backup.py postgres-backup   --database-url-env AGENCY_DATABASE_URL   --output-dir /secure/agency-backups
+```
+
+Restore only into an operator-created empty database:
+
+```bash
+export AGENCY_RESTORE_DATABASE_URL='postgresql://agency_restore@db.example/agency_restore?sslmode=verify-full&sslrootcert=/etc/ssl/agency-ca.pem'
+python3 scripts/manage-runtime-backup.py postgres-restore   --manifest /secure/agency-backups/agency-postgresql-....manifest.json   --database-url-env AGENCY_RESTORE_DATABASE_URL
+```
+
+The tool verifies manifest schema, byte size, SHA-256, archive listing, empty target, restored schema version and runtime tables. It never creates/drops a database or cleans a target. See [Runtime Backup and Restore Runbook](runbooks/runtime-backup-restore.md) for SQLite commands, application-read checks, encryption/retention gaps and destructive-data human gates.
+
 ## Local verification
 
-The repository gate builds and installs the backend wheel from hash-locked dependencies, starts PostgreSQL as a non-root local process, executes the complete backend test suite against shared state, performs dry-run and applied migration checks, validates source-to-target counts and confirms replay protection:
+The repository gate builds and installs the backend wheel from hash-locked dependencies, starts PostgreSQL as a non-root local process, executes the complete backend test suite against shared state, restores representative SQLite state, performs dry-run and applied migration checks, validates source-to-target counts and replay protection, then backs up and restores PostgreSQL into a fresh database and verifies schema/count/application readability:
 
 ```bash
 ./scripts/verify-postgresql-runtime.sh
@@ -157,7 +175,7 @@ The gate is daemonless with respect to containers and removes its virtual enviro
 
 A production operator must provide:
 
-- PostgreSQL high availability and tested restore procedures;
+- PostgreSQL high availability, scheduled encrypted off-host backups and restore exercises in an authorized environment;
 - encryption in transit and at rest;
 - credential rotation and least-privilege roles;
 - database monitoring, capacity limits and connection-budget alerts;

@@ -1,0 +1,77 @@
+{
+  "results": [
+    {
+      "command": "npm run lint",
+      "id": "BASE-FE-LINT",
+      "observed": "0 warnings, 0 errors",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": "npm test -- --reporter=dot",
+      "id": "BASE-FE-TEST",
+      "observed": "33/33 tests",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": "npm run build",
+      "id": "BASE-FE-BUILD",
+      "observed": "Vite production bundle built",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": ".venv/bin/python -m unittest discover -s backend/tests -v",
+      "id": "BASE-BE-DIRECT",
+      "observed": "persisted venv missing pg8000; use locked wheel verifier",
+      "result": "NOT_VALID",
+      "scope": "backend"
+    },
+    {
+      "command": "gh pr view 3",
+      "id": "BASE-CI",
+      "observed": "8/8 checks successful at b9e88fe",
+      "result": "PASS",
+      "scope": "remote"
+    },
+    {
+      "command": "npm run validate:program",
+      "id": "INC001-PROGRAM-GATE",
+      "observed": "version 0.7.0; 78 requirements; 11 tasks; 22 required files",
+      "result": "PASS",
+      "scope": "program/version"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_program_state -v",
+      "id": "INC001-PROGRAM-NEGATIVE",
+      "observed": "6/6 negative and positive validation tests",
+      "result": "PASS",
+      "scope": "program/version"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_backup_restore -v",
+      "id": "INC002-BACKUP-UNIT",
+      "observed": "11/11 integrity, tamper, overwrite, URL, timeout and durability tests",
+      "result": "PASS",
+      "scope": "backup/restore"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC002-RECOVERY-DRILL",
+      "observed": "68/68 tests; SQLite restore; migration/replay guard; PostgreSQL non-empty guard and application-readable restore",
+      "result": "PASS",
+      "scope": "SQLite/PostgreSQL application state"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC001-LOCKED-WHEEL",
+      "observed": "hash-locked agency-runtime 0.7.0 wheel; pip check; 68 tests with 7 PostgreSQL-only skips",
+      "result": "PASS",
+      "scope": "Python reproducibility"
+    }
+  ],
+  "schema_version": "program-eval-results.v1",
+  "source_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
+  "updated_at": "2026-07-21T17:39:13Z"
+}

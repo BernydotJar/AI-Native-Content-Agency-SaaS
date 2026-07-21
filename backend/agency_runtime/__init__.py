@@ -61,6 +61,7 @@ from .tools import (
     VideoOptimizerTool,
     build_sandbox_toolset,
 )
+from .version import VERSION
 
 __all__ = [
     "AGENT_SEQUENCE",
@@ -116,6 +117,7 @@ __all__ = [
     "SkillDocument",
     "UnsafeSkillPathError",
     "VideoOptimizerTool",
+    "VERSION",
     "build_sandbox_toolset",
     "load_flow_manifest",
 ]

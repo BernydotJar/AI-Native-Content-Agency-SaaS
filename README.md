@@ -1,8 +1,8 @@
 # Native / War Room
 
-Webapp cinematográfica y sandbox local para representar una agencia de contenido AI-native de ocho agentes. El repositorio ya no es sólo una maqueta de frontend: contiene una experiencia React/TypeScript ejecutable, un runtime Python determinista con memoria SQLite y un corpus local de instrucciones, conocimiento y skills.
+Aplicación full-stack y sandbox gobernado para operar una agencia de contenido AI-native de ocho agentes. El repositorio combina una experiencia React/TypeScript, una consola conectada a FastAPI, persistencia SQLite/PostgreSQL y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: vertical slice full-stack verificable y empaquetado de producción. La UI consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece como sandbox separado. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
+> Estado actual: candidato sandbox full-stack `0.7.0`, verificable localmente y empaquetado como imagen OCI/Helm. La consola consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece separado. No existe evidencia de deployment GCP/staging/producción y ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto. El estado operacional vigente está en [`program/current-state.md`](program/current-state.md).
 
 ## Qué funciona hoy
 
@@ -22,10 +22,9 @@ Webapp cinematográfica y sandbox local para representar una agencia de contenid
 
 ```text
 React 19 + TypeScript + Vite
-├── UI cinematográfica y accesible
-├── state machine de misiones en App.tsx
+├── experiencia cinematográfica sandbox en App.tsx
 ├── contratos/fixtures puros en src/lib/simulationRuntime.ts
-└── sin fetch, WebSocket ni llamada al backend
+└── ProductionRuntimePanel + src/lib/runtimeApi.ts → FastAPI same-origin
 
 agency.py + FastAPI
 └── backend/agency_runtime
@@ -33,7 +32,7 @@ agency.py + FastAPI
     ├── Greenlight ligado a IDs y hashes de artefactos
     ├── identidad individual + RBAC y rotación superpuesta de credenciales
     ├── rate limiting durable por credencial y por origen confiable
-    ├── SQLite durable: runs, approvals, sesiones y memoria por tenant
+    ├── SQLite para local/single-replica y PostgreSQL para estado compartido
     ├── adaptadores deterministas sandbox
     └── creador seguro de borradores de skill
 
@@ -150,7 +149,7 @@ Las siguientes capacidades son contratos mock o representaciones visuales, no co
 - generación, edición o lectura real de video e imagen;
 - streaming SSE/WebSocket;
 - proveedor administrado de identidad, SSO y MFA;
-- PostgreSQL, almacenamiento de objetos y sincronización cloud;
+- almacenamiento de objetos, sincronización cloud y deployment administrado;
 - ingestión automática de `agents/`, `knowledge/` y `skills/` por el orquestador.
 
 Antes de activar servicios externos deben añadirse contratos versionados, autenticación, idempotencia, reintentos acotados, auditoría, revocación y un gate de aprobación ligado a la versión exacta de los artefactos.
@@ -160,13 +159,11 @@ Antes de activar servicios externos deben añadirse contratos versionados, auten
 Gate ejecutado el 17 de julio de 2026 en el entorno local del repositorio:
 
 ```bash
-rtk test npm run lint
-rtk test npm test
-rtk test npm run build
-
-cd backend
-python3 -m unittest discover -s tests -v
-cd ..
+python3 scripts/validate-program-state.py
+npm run lint
+npm test
+npm run build
+./scripts/verify-python-locks.sh
 python3 agency.py demo --approve --json
 ```
 
@@ -219,7 +216,7 @@ Los clientes máquina pueden usar `Authorization: Bearer <key>`. El navegador in
 
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
-El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones y contadores de abuso en SQLite por tenant. Las credenciales, cookies y CSRF nunca se persisten en claro. La rotación admite claves superpuestas por sujeto y revoca bearer/sesiones derivados cuando una clave deja de estar activa. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, un IdP administrado, SSO/MFA y almacenamiento de objetos siguen siendo requisitos para escalamiento horizontal o un piloto público.
+El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones y contadores de abuso en SQLite o PostgreSQL, siempre bajo claves tenant-scoped. Las credenciales, cookies y CSRF nunca se persisten en claro. La rotación admite claves superpuestas por sujeto y revoca bearer/sesiones derivados cuando una clave deja de estar activa. SQLite queda limitado a local/single-replica; PostgreSQL soporta estado compartido y tiene un gate efímero de migración, pero aún faltan backup/restore operacional, failover, capacidad medida, un IdP administrado, SSO/MFA y almacenamiento de objetos antes de un piloto público.
 
 ## Consola de producción
 
@@ -231,7 +228,7 @@ La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artef
 
 Cada respuesta incluye `X-Request-ID`. Los logs de aplicación son JSON y registran route templates, no query strings, headers ni cuerpos. `/metrics` expone contadores Prometheus sin labels de tenant, run o contenido. Las mutaciones `run.created` y `greenlight.*` se guardan en un ledger tenant-scoped dentro de la misma transacción SQLite que modifica el run.
 
-Consulta [Runtime Operations](docs/OPERATIONS.md) para el contrato de logs, métricas, paginación de auditoría y alertas iniciales; y [ADR 0002](docs/adr/0002-observability-and-audit-ledger.md) para las decisiones y limitaciones.
+Consulta [Runtime Operations](docs/OPERATIONS.md) para el contrato de logs, métricas, paginación de auditoría y alertas iniciales; [Runtime Backup and Restore](docs/runbooks/runtime-backup-restore.md) para los drills SQLite/PostgreSQL y sus gates humanos; y [ADR 0002](docs/adr/0002-observability-and-audit-ledger.md) para las decisiones y limitaciones.
 
 ## Dependencias Python reproducibles
 

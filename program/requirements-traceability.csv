@@ -1,0 +1,79 @@
+requirement_id,domain,requirement,classification,authoritative_evidence,next_action,owner
+GOV-001,governance,AGENTS policy is authoritative,proven,AGENTS.md and baseline command evidence,Keep enforced,WS-01
+GOV-002,governance,Persistent current state and ledgers,proven,program artifacts parse and validator passes,Maintain at every increment,WS-02
+GOV-003,governance,Global requirement traceability,proven,78 unique requirements and all domains pass executable validation,Expand when new requirements appear,WS-02
+GOV-004,governance,Producer critic fixer verifier separation,weak_evidence,Role-separated process declared but same model executes,Record explicit reviews and require human release review,WS-10
+GOV-005,governance,No unsupported production claims,proven,README/audit reconciled and validator bans stale claims,Continue claim review per slice,WS-12
+PROD-001,product,Critical brief to governed package journey,proven,backend API tests and production console tests,Preserve regression,WS-04
+PROD-002,product,External publication and spend disabled,proven,health API tool adapters and package assertions,Keep fail closed,WS-08
+PROD-003,product,Loading empty partial degraded and failure states,incomplete,ProductionRuntimePanel has some loading/error states,Complete state matrix,WS-05
+PROD-004,product,No critical placeholders or misleading mocks,incomplete,Cinematic simulation remains parallel and mocks are explicit,Unify source of truth and label remaining mocks,WS-05
+PROD-005,product,Target users and jobs documented,incomplete,Goal and current program docs,Add user journeys and acceptance evidence,WS-02
+ENG-001,engineering,Architecture reviewed and current,weak_evidence,program/architecture.md plus branch comparison,Independent architecture review,WS-01
+ENG-002,engineering,Schemas and migrations reviewed,weak_evidence,SQLite schema PostgreSQL schema migration gate,Add formal schema compatibility audit,WS-03
+ENG-003,engineering,Versioned API contracts,incomplete,/api/v1 and FastAPI metadata,Add checked OpenAPI and structured error contract,WS-04
+ENG-004,engineering,Data correctness and transactions,weak_evidence,SQLite/PostgreSQL tests and transactional audit,Expand invariants and restore verification,WS-03
+ENG-005,engineering,Durable command idempotency,missing,Duplicate run returns 409 and Greenlight has no idempotency key,Implement INC-004,WS-04
+ENG-006,engineering,Concurrency correctness,weak_evidence,PostgreSQL Greenlight/rate-limit concurrency tests,Add duplicate run/idempotency races and load evidence,WS-04
+ENG-007,engineering,Application and data rollback,missing,Only narrative migration rollback exists,Implement rollback drill and runbook,WS-09
+ENG-008,engineering,Reproducible builds and tests,proven,hash locks wheel gates npm lock CI,Preserve,WS-12
+ENG-009,engineering,Version consistency across artifacts,proven,npm Python API metrics OCI and Helm all report 0.7.0,Bump through shared version contract,WS-12
+DATA-001,data,SQLite durable single-replica state,proven,persistence tests and package smoke,Add backup/restore,WS-03
+DATA-002,data,PostgreSQL shared tenant state,proven,PostgreSQL tests migration and CI,Add backup/restore/capacity evidence,WS-03
+DATA-003,data,SQLite to PostgreSQL migration,proven,verify-postgresql-runtime migration dry-run/apply/replay checks,Add cutover drill documentation,WS-03
+DATA-004,data,Backup encryption and retention,missing,No implementation in active branch,Specify operator controls,WS-03
+SEC-001,security,Server-side authentication,proven,auth.py bearer/session tests,Threat review,WS-07
+SEC-002,security,Server-side RBAC authorization,proven,viewer operator approver admin tests,Review audit visibility,WS-07
+SEC-003,security,Tenant binding and cross-tenant denial,proven,tenant-scoped keys and negative tests,Add metadata leakage red team,WS-07
+SEC-004,security,Threat model for selected architecture,missing,Only parallel branch has a non-authoritative model,Implement INC-003,WS-07
+SEC-005,security,Privacy model and data classification,missing,Scattered notes only,Implement INC-003,WS-07
+SEC-006,security,Secret handling and no frontend secrets,weak_evidence,session boundary Helm existingSecret supply-chain gates,Add repository secret scan evidence to program,WS-07
+SEC-007,security,Audit ledger and denial evidence,incomplete,Mutation audit exists but authorization denials are not all durable,Audit denial behavior,WS-07
+SEC-008,security,Dependency vulnerability and license review,proven,SBOM Grype license policy provenance Cosign gates,Monitor expiry,WS-11
+SEC-009,security,Zero open CRITICAL/HIGH findings,contradicted,Four HIGH findings open or externally blocked,Close or classify before release,WS-10
+SEC-010,security,Uniform errors and metadata leakage prevention,weak_evidence,Cross-tenant 404 but raw detail strings remain,Add structured uniform error tests,WS-07
+SEC-011,security,Rate limiting and abuse controls,proven,Durable credential/source buckets and tests,Add distributed edge strategy,WS-07
+SEC-012,security,Revocation behavior,incomplete,Credential/session revocation works but Greenlight revocation missing,Implement policy before external effects,WS-04
+UX-001,ux,Documented design system,incomplete,Existing CSS/component language without complete token document,Create design-system record,WS-06
+UX-002,ux,Four political themes plus paid premium theme,missing,No theme implementation,Implement accessible gated theme slice,WS-06
+UX-003,ux,Responsive behavior,weak_evidence,CSS and component tests only,Manual responsive review,WS-06
+UX-004,ux,Keyboard and focus,weak_evidence,Some semantic controls and skip link,Manual keyboard gate,WS-06
+UX-005,ux,Screen-reader semantics,missing,No manual screen-reader evidence,Execute review,WS-06
+UX-006,ux,Contrast and non-color-only status,missing,No measured contrast report,Audit and repair,WS-06
+UX-007,ux,Zoom and reflow,missing,No executed evidence,Audit at 200 and 400 percent,WS-06
+UX-008,ux,Reduced motion,weak_evidence,CSS media queries and motion controls,Manual verify,WS-06
+UX-009,ux,No keyboard traps,weak_evidence,Automated interaction tests only,Manual verify,WS-06
+OPS-001,operations,Environment strategy development test staging production,incomplete,Helm/Terraform local path and no authorized cloud target,Define target strategy,WS-09
+OPS-002,operations,Structured logs metrics health readiness,proven,observability.py endpoints tests,Observe in staging,WS-09
+OPS-003,operations,Distributed tracing or explicit decision,incomplete,No tracing and no formal decision,Record ADR or implement,WS-09
+OPS-004,operations,Alert definitions,missing,Only recommendations in docs/OPERATIONS.md,Add rules and validation,WS-09
+OPS-005,operations,Alert exercised,missing,No alert runtime exercise,Implement exercise harness,WS-09
+OPS-006,operations,SLOs and error budgets,missing,No SLO contract,Specify measurable SLOs,WS-09
+OPS-007,operations,Backup implementation,incomplete,checksummed SQLite/PostgreSQL tooling and local drills pass; no scheduled encrypted off-host service,Implement in authorized environment,WS-03
+OPS-008,operations,Restore drill,proven,representative SQLite/PostgreSQL restores preserve counts/schema and application readability,Repeat in authorized staging,WS-03
+OPS-009,operations,Deployment runbook,incomplete,Local infrastructure docs only,Add authorized environment runbook,WS-09
+OPS-010,operations,Rollback runbook and drill,missing,Narrative fragments only,Implement and exercise,WS-09
+OPS-011,operations,Incident response,incomplete,No active-branch incident runbook,Port and adapt donor document,WS-09
+OPS-012,operations,Capacity assumptions,weak_evidence,PostgreSQL pool ceiling documented,Add workload model and load test,WS-09
+OPS-013,operations,Staging workload verification,missing,No authorized staging or pod execution,External blocker plus independent local work,WS-09
+DLV-001,delivery,Frontend deterministic gates,proven,lint 33 tests build in session,Preserve,WS-10
+DLV-002,delivery,Backend locked wheel gates,proven,baseline CI eight jobs success,Re-run after changes,WS-10
+DLV-003,delivery,Container Helm Terraform supply-chain gates,proven,Baseline PR #3 checks success with documented scope,Re-run after changes,WS-09
+DLV-004,delivery,Local and remote SHA verified,proven,b9e88fe local equals remote at baseline,Repeat after push,WS-12
+DLV-005,delivery,Draft PR reviewable,weak_evidence,PR #3 open draft with green baseline,Update body and exact evidence,WS-12
+DLV-006,delivery,Merge and production separated as human gates,proven,AGENTS and program release plan,Preserve,WS-12
+DLV-007,delivery,Release notes and upgrade path,incomplete,No release and partial migration docs,Create when candidate is ready,WS-12
+EVAL-001,testing,Unit integration API and migration tests,proven,Frontend backend PostgreSQL migration CI,Expand missing behaviors,WS-10
+EVAL-002,testing,Functional journey and failure evals,incomplete,Core journey and some denials exist,Add retry cancel conflict backup rollback,WS-10
+EVAL-003,testing,Semantic groundedness and citation fidelity,missing,No semantic eval harness,Implement,WS-10
+EVAL-004,testing,Prompt injection and adversarial evals,incomplete,Some input and tenant tests but no complete catalog,Implement red-team catalog,WS-10
+EVAL-005,testing,Independent exact-commit verification,missing,No distinct final verifier for new tree,Require before release,WS-10
+LEGAL-001,legal,License policy and third-party inventory,proven,License policy SBOM and MIT repository license,Review video-use before adoption,WS-11
+LEGAL-002,legal,Privacy review with jurisdiction and retention,missing,No selected policy or reviewer,Human/legal gate,WS-11
+LEGAL-003,legal,No legal overclaim,weak_evidence,Sandbox copy and risk agent instructions,Add semantic eval and review,WS-11
+INT-001,integrations,External integrations disabled by default,proven,Mock tool adapters and zero side effects,Preserve,WS-08
+INT-002,integrations,Versioned external adapter contracts,missing,Names only and no effect contract,Specify before activation,WS-08
+INT-003,integrations,browser-use video-use evaluation,missing,User-provided candidate not yet reviewed,Perform architecture license and safety review,WS-08
+SUP-001,supply_chain,Digest-pinned bases and SHA-pinned actions,proven,Dockerfile workflow and supply-chain evidence,Preserve,WS-11
+SUP-002,supply_chain,SBOM vulnerability provenance signature verification,proven,verify-supply-chain gate,Re-run on exact tree,WS-11
+SUP-003,supply_chain,Expiring vulnerability exceptions managed,weak_evidence,Five HIGH exceptions expire 2026-08-21,Create expiry task and remove before deadline,WS-11

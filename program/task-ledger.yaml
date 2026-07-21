@@ -1,0 +1,792 @@
+{
+  "branch": "agent/production-readiness",
+  "schema_version": "program-task-ledger.v1",
+  "tasks": [
+    {
+      "acceptance_criteria": [
+        "validator passes",
+        "frontend gates pass",
+        "backend locked gate passes",
+        "git diff --check passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/001-program-baseline/**",
+        "README.md",
+        "package*.json",
+        "backend/agency_runtime/**",
+        "Dockerfile",
+        ".github/workflows/production-readiness.yml",
+        "scripts/validate-program-state.py",
+        "backend/tests/test_program_state.py"
+      ],
+      "authoritative_inputs": [
+        "AGENTS.md",
+        "goal",
+        "Git",
+        "PR #2",
+        "PR #3",
+        "current code/tests"
+      ],
+      "context": "Baseline HEAD b9e88fe; PR #3 selected; PR #2 donor branch.",
+      "dependencies": [],
+      "expected_outputs": [
+        "validated program state",
+        "version 0.7.0 consistency",
+        "truthful README",
+        "completion audit"
+      ],
+      "human_gates": [
+        "merge",
+        "release",
+        "production"
+      ],
+      "objective": "Bootstrap operational program state, reconcile architecture, normalize version, repair stale claims, and add an executable governance gate.",
+      "prohibited_paths": [
+        ".git/**",
+        "main",
+        "external infrastructure"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Producer",
+      "status": "done",
+      "task_id": "INC-001",
+      "validation_commands": [
+        "python3 scripts/validate-program-state.py",
+        "npm run lint",
+        "npm test",
+        "npm run build",
+        "./scripts/verify-python-locks.sh"
+      ],
+      "workstream_id": "WS-01",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "SQLite restore preserves state",
+        "tamper rejected",
+        "existing target rejected without explicit replace",
+        "PostgreSQL dump/restore equivalence passes"
+      ],
+      "allowed_paths": [
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "backend/tests/test_backup_restore.py",
+        "docs/**",
+        "program/**",
+        "specs/002-backup-restore/**"
+      ],
+      "authoritative_inputs": [
+        "docs/POSTGRESQL_PERSISTENCE.md",
+        "persistence.py",
+        "postgres.py",
+        "operations policy"
+      ],
+      "context": "Backup/restore is a global release gate and currently lacks executable evidence.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "expected_outputs": [
+        "checksummed manifests",
+        "atomic SQLite restore",
+        "empty-target PostgreSQL restore",
+        "drill evidence"
+      ],
+      "human_gates": [
+        "restore against persistent data",
+        "destructive replacement"
+      ],
+      "objective": "Implement fail-closed SQLite/PostgreSQL backup and restore tools and execute ephemeral restore drills.",
+      "prohibited_paths": [
+        "persistent production data",
+        "external databases"
+      ],
+      "read_only_paths": [],
+      "role": "Producer",
+      "status": "done",
+      "task_id": "INC-002",
+      "validation_commands": [
+        "python -m unittest backend.tests.test_backup_restore",
+        "./scripts/verify-postgresql-runtime.sh"
+      ],
+      "workstream_id": "WS-03",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "all trust boundaries covered",
+        "zero open HIGH code findings in slice"
+      ],
+      "allowed_paths": [
+        "docs/security/**",
+        "docs/privacy/**",
+        "backend/tests/**",
+        "program/**",
+        "specs/**"
+      ],
+      "authoritative_inputs": [
+        "selected architecture",
+        "auth.py",
+        "api.py",
+        "persistence.py",
+        "postgres.py"
+      ],
+      "context": "Parallel-branch threat model is not authoritative for PR #3.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "expected_outputs": [
+        "threat model",
+        "privacy model",
+        "adversarial tests"
+      ],
+      "human_gates": [
+        "retention/deletion approval",
+        "legal privacy review"
+      ],
+      "objective": "Create selected-architecture threat/privacy models and close executable HIGH findings.",
+      "prohibited_paths": [
+        "credential rotation",
+        "data deletion"
+      ],
+      "read_only_paths": [],
+      "role": "Security Reviewer",
+      "status": "pending",
+      "task_id": "INC-003",
+      "validation_commands": [],
+      "workstream_id": "WS-07",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "identical replay returns original response",
+        "different payload returns uniform 409",
+        "provider work executes once"
+      ],
+      "allowed_paths": [
+        "backend/**",
+        "src/lib/runtimeApi*",
+        "src/components/ProductionRuntimePanel*",
+        "docs/**",
+        "program/**",
+        "specs/**"
+      ],
+      "authoritative_inputs": [
+        "API v1",
+        "SQLite/PostgreSQL stores",
+        "Greenlight invariants"
+      ],
+      "context": "Current deterministic IDs reject duplicate delivery instead of replaying the committed response.",
+      "dependencies": [
+        "INC-001",
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "idempotency ledger",
+        "race tests",
+        "API contract"
+      ],
+      "human_gates": [],
+      "objective": "Add durable idempotency keys, compatible replay, conflict behavior, and structured errors for mutable APIs.",
+      "prohibited_paths": [
+        "external side effects"
+      ],
+      "read_only_paths": [],
+      "role": "Backend Engineer",
+      "status": "pending",
+      "task_id": "INC-004",
+      "validation_commands": [],
+      "workstream_id": "WS-04",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-002",
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Define SLOs, alert rules, alert exercises, incident response and rollback drills.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Production Reviewer",
+      "status": "pending",
+      "task_id": "INC-005",
+      "validation_commands": [],
+      "workstream_id": "WS-09",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-002",
+        "INC-004",
+        "INC-005"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Demonstrate an authorized staging workload and runtime observation.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Release Reviewer",
+      "status": "blocked",
+      "task_id": "INC-006",
+      "validation_commands": [],
+      "workstream_id": "WS-09",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-004"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Unify the backend-backed operator journey and complete degraded states.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Frontend Engineer",
+      "status": "pending",
+      "task_id": "INC-007",
+      "validation_commands": [],
+      "workstream_id": "WS-05",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-007"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Implement accessible themes and complete manual accessibility gates.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Accessibility Reviewer",
+      "status": "pending",
+      "task_id": "INC-008",
+      "validation_commands": [],
+      "workstream_id": "WS-06",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-003",
+        "INC-004"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Evaluate browser/video integration contracts without side effects.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Security Reviewer",
+      "status": "pending",
+      "task_id": "INC-009",
+      "validation_commands": [],
+      "workstream_id": "WS-08",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-003",
+        "INC-004",
+        "INC-008"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Eval Engineer",
+      "status": "pending",
+      "task_id": "INC-010",
+      "validation_commands": [],
+      "workstream_id": "WS-10",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-003",
+        "INC-009"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Complete licensing, privacy, third-party and legal-overclaim release review.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Privacy Reviewer",
+      "status": "pending",
+      "task_id": "INC-011",
+      "validation_commands": [],
+      "workstream_id": "WS-11",
+      "write_lock": "unclaimed"
+    }
+  ],
+  "updated_at": "2026-07-21T17:39:13Z",
+  "workstreams": [
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-01",
+      "name": "Baseline and Product Architecture",
+      "next_ready_task": "INC-001",
+      "objective": "Reconcile branches, runtime truth, architecture and completion audit.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-02",
+      "name": "Specifications and Requirements Traceability",
+      "next_ready_task": "INC-001",
+      "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "in_progress",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-03",
+      "name": "Data Model, SQLite, PostgreSQL and Migration",
+      "next_ready_task": "INC-002",
+      "objective": "Prove durable correctness, migration, backup and restore.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-04",
+      "name": "Backend, APIs and Agent Runtime",
+      "next_ready_task": "INC-004",
+      "objective": "Close idempotency, structured errors, revocation and runtime gaps.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-05",
+      "name": "Frontend and Production Console",
+      "next_ready_task": "INC-007",
+      "objective": "Unify critical journeys and backend authority.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-06",
+      "name": "Design System, UX, Motion and Accessibility",
+      "next_ready_task": "INC-008",
+      "objective": "Add themes, complete states and accessibility gates.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-07",
+      "name": "Identity, Security, Privacy and Tenant Isolation",
+      "next_ready_task": "INC-003",
+      "objective": "Threat/privacy models, retention and adversarial verification.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-08",
+      "name": "Integrations, Contracts and Sandbox Boundaries",
+      "next_ready_task": "INC-009",
+      "objective": "Evaluate integrations without activating side effects.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-09",
+      "name": "Platform, Deployment and Operations",
+      "next_ready_task": "INC-005",
+      "objective": "SLOs, alerts, rollback and authorized staging evidence.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-10",
+      "name": "Testing, Evals, Red Team and Quality",
+      "next_ready_task": "INC-010",
+      "objective": "Expand functional, semantic, adversarial and independent gates.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-11",
+      "name": "Legal, Licensing and Compliance",
+      "next_ready_task": "INC-011",
+      "objective": "Maintain license, privacy, third-party and legal-overclaim controls.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-12",
+      "name": "Documentation, Versioning and Release Readiness",
+      "next_ready_task": "INC-001",
+      "objective": "Keep versions, claims, runbooks and release evidence coherent.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "in_progress",
+      "validation": [],
+      "write_locks": []
+    }
+  ]
+}

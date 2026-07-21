@@ -1,0 +1,70 @@
+{
+  "findings": [
+    {
+      "description": "Backup/restore lacks executed evidence.",
+      "evidence": "SQLite and PostgreSQL tools, 11 adversarial tests and representative application-readable restore drills pass.",
+      "id": "F-001",
+      "owner": "INC-002",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Mutable commands lack durable idempotency-key replay.",
+      "evidence": "POST /runs returns duplicate 409; Greenlight accepts no idempotency key.",
+      "id": "F-002",
+      "owner": "INC-004",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "Selected architecture lacks threat and privacy models.",
+      "evidence": "No active-branch docs/security or docs/privacy model.",
+      "id": "F-003",
+      "owner": "INC-003",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "No staging/cloud runtime observation.",
+      "evidence": "No authorized target or apply evidence.",
+      "id": "F-004",
+      "owner": "INC-006",
+      "severity": "HIGH",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "description": "Product version drifted between frontend and runtime/chart.",
+      "evidence": "All npm/Python/API/metrics/OCI/Helm version surfaces are 0.7.0 and validator detects drift.",
+      "id": "F-005",
+      "owner": "INC-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "README contains mutually contradictory architecture claims.",
+      "evidence": "README and implementation audit now match backend transport, PostgreSQL and deployment evidence boundaries.",
+      "id": "F-006",
+      "owner": "INC-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Manual accessibility evidence is absent.",
+      "evidence": "Historical audit records browser/manual QA unavailable.",
+      "id": "F-007",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "OPEN"
+    },
+    {
+      "description": "Backups are not scheduled, encrypted, immutable/off-host or exercised in an authorized environment.",
+      "evidence": "Repository tooling and ephemeral drills pass; deployment backup service and policy remain absent.",
+      "id": "F-008",
+      "owner": "INC-005",
+      "severity": "MEDIUM",
+      "status": "OPEN"
+    }
+  ],
+  "schema_version": "program-critique-findings.v1",
+  "updated_at": "2026-07-21T17:39:13Z"
+}

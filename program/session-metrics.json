@@ -1,0 +1,18 @@
+{
+  "backend_tests_passed_locked": 68,
+  "backend_tests_passed_postgresql": 68,
+  "backup_restore_tests_passed": 11,
+  "baseline_ci_jobs_failed": 0,
+  "baseline_ci_jobs_passed": 8,
+  "baseline_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
+  "commits_created": 0,
+  "critical_findings_open": 0,
+  "date": "2026-07-21",
+  "frontend_tests_failed": 0,
+  "frontend_tests_passed": 33,
+  "high_findings_open_or_blocked": 3,
+  "program_state_tests_passed": 6,
+  "pushes_verified": 0,
+  "schema_version": "program-session-metrics.v1",
+  "tool_calls_recorded": 0
+}
