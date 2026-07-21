@@ -5,9 +5,9 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
-from typing import Dict, List, Mapping, Optional
+from typing import Dict, List, Mapping, Optional, Tuple
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
@@ -16,8 +16,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from .auth import AuthenticationError, TenantAuthenticator, TenantPrincipal
 from .memory import SQLiteMemory
 from .models import ExecutionRun, MissionBrief, Platform
+from .observability import (
+    RequestTimer,
+    RuntimeMetrics,
+    request_id_from_header,
+    structured_http_log,
+)
 from .orchestrator import AgencyOrchestrator, GreenlightError
-from .persistence import SQLiteRunStore
+from .persistence import AuditEvent, AuditWrite, SQLiteRunStore
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
 
@@ -81,40 +87,140 @@ class RuntimeService:
             campaign_goal=request.campaign_goal,
         )
 
-    def start(self, tenant_id: str, request: BriefRequest) -> ExecutionRun:
+    def start(
+        self,
+        tenant_id: str,
+        request: BriefRequest,
+        request_id: str,
+        actor: str,
+    ) -> ExecutionRun:
         brief = self._brief(request)
         run_id = stable_id("run", brief)
         with self._lock:
             if self.run_store.exists(tenant_id, run_id):
                 raise ValueError("run already exists for tenant: {}".format(run_id))
             run = self._runtime_for(tenant_id).orchestrator.start(brief)
-            return self.run_store.create(tenant_id, run)
+            return self.run_store.create(
+                tenant_id,
+                run,
+                audit=AuditWrite(
+                    request_id=request_id,
+                    action="run.created",
+                    resource_type="execution_run",
+                    resource_id=run.run_id,
+                    actor=actor,
+                    payload={
+                        "status": run.status.value,
+                        "artifact_ids": [item.artifact_id for item in run.artifacts],
+                        "platforms": [item.value for item in run.brief.platforms],
+                        "budget_cents": run.brief.budget_cents,
+                    },
+                ),
+            )
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
         with self._lock:
             return self.run_store.get(tenant_id, run_id)
 
     def approve(
-        self, tenant_id: str, run_id: str, request: GreenlightRequest
+        self,
+        tenant_id: str,
+        run_id: str,
+        request: GreenlightRequest,
+        request_id: str,
+        actor: str,
     ) -> ExecutionRun:
-        with self._lock:
-            runtime = self._runtime_for(tenant_id)
-            runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
-            run = runtime.orchestrator.approve(
-                run_id, request.reviewer, request.note
-            )
-            return self.run_store.save(tenant_id, run)
+        return self._decide(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            request=request,
+            request_id=request_id,
+            actor=actor,
+            decision="approved",
+        )
 
     def reject(
-        self, tenant_id: str, run_id: str, request: GreenlightRequest
+        self,
+        tenant_id: str,
+        run_id: str,
+        request: GreenlightRequest,
+        request_id: str,
+        actor: str,
+    ) -> ExecutionRun:
+        return self._decide(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            request=request,
+            request_id=request_id,
+            actor=actor,
+            decision="rejected",
+        )
+
+    def _decide(
+        self,
+        tenant_id: str,
+        run_id: str,
+        request: GreenlightRequest,
+        request_id: str,
+        actor: str,
+        decision: str,
     ) -> ExecutionRun:
         with self._lock:
             runtime = self._runtime_for(tenant_id)
             runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
-            run = runtime.orchestrator.reject(
-                run_id, request.reviewer, request.note
+            if decision == "approved":
+                run = runtime.orchestrator.approve(
+                    run_id, request.reviewer, request.note
+                )
+            else:
+                run = runtime.orchestrator.reject(
+                    run_id, request.reviewer, request.note
+                )
+            greenlight = run.greenlight
+            if greenlight is None:
+                raise GreenlightError("Greenlight decision was not recorded")
+            return self.run_store.save(
+                tenant_id,
+                run,
+                audit=AuditWrite(
+                    request_id=request_id,
+                    action="greenlight.{}".format(decision),
+                    resource_type="execution_run",
+                    resource_id=run.run_id,
+                    actor=actor,
+                    payload={
+                        "greenlight_id": greenlight.greenlight_id,
+                        "decision": greenlight.decision.value,
+                        "reviewer": greenlight.reviewer,
+                        "note": greenlight.note,
+                        "approved_artifact_ids": list(
+                            greenlight.approved_artifact_ids
+                        ),
+                        "approved_artifact_hashes": list(
+                            greenlight.approved_artifact_hashes
+                        ),
+                        "authorized_channels": [
+                            item.value for item in greenlight.authorized_channels
+                        ],
+                        "authorized_budget_cents": (
+                            greenlight.authorized_budget_cents
+                        ),
+                    },
+                ),
             )
-            return self.run_store.save(tenant_id, run)
+
+    def audit_events(
+        self,
+        tenant_id: str,
+        after_sequence: int,
+        limit: int,
+    ) -> Tuple[AuditEvent, ...]:
+        with self._lock:
+            return self.run_store.audit_events(
+                tenant_id=tenant_id,
+                after_sequence=after_sequence,
+                limit=limit,
+            )
 
     def close(self) -> None:
         with self._lock:
@@ -132,6 +238,10 @@ def _run_document(run: ExecutionRun, tenant_id: str) -> Dict[str, object]:
     return document
 
 
+def _actor(principal: TenantPrincipal) -> str:
+    return "tenant-key:{}".format(principal.credential_fingerprint)
+
+
 def create_app(
     database_path: Optional[str] = None,
     static_dir: Optional[Path] = None,
@@ -139,6 +249,7 @@ def create_app(
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     service = RuntimeService(db_path)
+    metrics = RuntimeMetrics()
     authenticator = (
         TenantAuthenticator(tenant_api_keys)
         if tenant_api_keys is not None
@@ -156,18 +267,48 @@ def create_app(
 
     app = FastAPI(
         title="AI Native Content Agency API",
-        version="0.3.0",
+        version="0.4.0",
         description=(
-            "Tenant-scoped deterministic sandbox. No endpoint publishes content, "
-            "spends budget, renders media, or contacts external services."
+            "Tenant-scoped deterministic sandbox with durable audit evidence. "
+            "No endpoint publishes content, spends budget, renders media, or "
+            "contacts external services."
         ),
         lifespan=lifespan,
     )
     app.state.runtime_service = service
     app.state.authenticator = authenticator
+    app.state.metrics = metrics
     bearer = HTTPBearer(auto_error=False)
 
+    @app.middleware("http")
+    async def observe_http(request: Request, call_next):
+        request_id = request_id_from_header(request.headers.get("X-Request-ID"))
+        request.state.request_id = request_id
+        timer = RequestTimer()
+        response = None
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            elapsed = timer.elapsed_seconds()
+            route_object = request.scope.get("route")
+            route = getattr(route_object, "path", "unmatched")
+            metrics.record_http(request.method, route, status_code, elapsed)
+            structured_http_log(
+                request_id=request_id,
+                method=request.method,
+                route=route,
+                status_code=status_code,
+                duration_ms=elapsed * 1000.0,
+                tenant_id=getattr(request.state, "tenant_id", ""),
+            )
+            if response is not None:
+                response.headers["X-Request-ID"] = request_id
+
     def require_principal(
+        request: Request,
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
     ) -> TenantPrincipal:
         if not authenticator.configured:
@@ -182,13 +323,15 @@ def create_app(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         try:
-            return authenticator.authenticate(credentials.credentials)
+            principal = authenticator.authenticate(credentials.credentials)
         except AuthenticationError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=str(error),
                 headers={"WWW-Authenticate": "Bearer"},
             ) from error
+        request.state.tenant_id = principal.tenant_id
+        return principal
 
     @app.get("/healthz", tags=["operations"])
     def healthz() -> Dict[str, object]:
@@ -212,23 +355,54 @@ def create_app(
             "durable_run_store": db_path != ":memory:",
         }
 
+    @app.get("/metrics", tags=["operations"], include_in_schema=False)
+    def prometheus_metrics() -> Response:
+        return Response(
+            content=metrics.render(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
     @app.get("/api/v1/me", tags=["authentication"])
     def current_tenant(
         principal: TenantPrincipal = Depends(require_principal),
     ) -> Dict[str, object]:
         return {"tenant_id": principal.tenant_id}
 
+    @app.get("/api/v1/audit-events", tags=["audit"])
+    def list_audit_events(
+        principal: TenantPrincipal = Depends(require_principal),
+        after_sequence: int = Query(default=0, ge=0),
+        limit: int = Query(default=100, ge=1, le=200),
+    ) -> Dict[str, object]:
+        events = service.audit_events(
+            principal.tenant_id, after_sequence, limit + 1
+        )
+        page = events[:limit]
+        return {
+            "events": [to_primitive(item) for item in page],
+            "next_after_sequence": (
+                page[-1].sequence if page else after_sequence
+            ),
+            "has_more": len(events) > limit,
+        }
+
     @app.post(
         "/api/v1/runs", status_code=status.HTTP_201_CREATED, tags=["runs"]
     )
     def create_run(
-        request: BriefRequest,
+        request: Request,
+        brief_request: BriefRequest,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> Dict[str, object]:
         try:
-            return _run_document(
-                service.start(principal.tenant_id, request), principal.tenant_id
+            run = service.start(
+                principal.tenant_id,
+                brief_request,
+                request.state.request_id,
+                _actor(principal),
             )
+            metrics.run_started()
+            return _run_document(run, principal.tenant_id)
         except ValueError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 
@@ -249,14 +423,20 @@ def create_app(
     )
     def approve_run(
         run_id: str,
-        request: GreenlightRequest,
+        request: Request,
+        decision_request: GreenlightRequest,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> Dict[str, object]:
         try:
-            return _run_document(
-                service.approve(principal.tenant_id, run_id, request),
+            run = service.approve(
                 principal.tenant_id,
+                run_id,
+                decision_request,
+                request.state.request_id,
+                _actor(principal),
             )
+            metrics.greenlight_decided("approved")
+            return _run_document(run, principal.tenant_id)
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
         except GreenlightError as error:
@@ -267,14 +447,20 @@ def create_app(
     )
     def reject_run(
         run_id: str,
-        request: GreenlightRequest,
+        request: Request,
+        decision_request: GreenlightRequest,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> Dict[str, object]:
         try:
-            return _run_document(
-                service.reject(principal.tenant_id, run_id, request),
+            run = service.reject(
                 principal.tenant_id,
+                run_id,
+                decision_request,
+                request.state.request_id,
+                _actor(principal),
             )
+            metrics.greenlight_decided("rejected")
+            return _run_document(run, principal.tenant_id)
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
         except GreenlightError as error:

@@ -58,7 +58,7 @@ Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la ma
 
 ### Runtime local
 
-- Python 3.9 o superior
+- Python 3.10 o superior
 - Biblioteca estándar para orquestación, modelos y SQLite
 - FastAPI, Pydantic y Uvicorn para el servicio HTTP
 - `setuptools` para empaquetado
@@ -185,7 +185,9 @@ Endpoints iniciales:
 
 - `GET /healthz`
 - `GET /readyz`
+- `GET /metrics`
 - `GET /api/v1/me`
+- `GET /api/v1/audit-events`
 - `POST /api/v1/runs`
 - `GET /api/v1/runs/{run_id}`
 - `POST /api/v1/runs/{run_id}/greenlight/approve`
@@ -196,6 +198,12 @@ Todos los endpoints `/api/v1/*` requieren `Authorization: Bearer <key>`. El tena
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
 El servicio persiste runs, trazas, evidencia, artefactos y Greenlights en SQLite por `(tenant_id, run_id)`, y también particiona la memoria por tenant. Esta etapa usa una sola réplica con PVC y estrategia `Recreate`; PostgreSQL, identidad individual y RBAC siguen siendo requisitos para escalamiento horizontal o un piloto público.
+
+## Observabilidad y auditoría
+
+Cada respuesta incluye `X-Request-ID`. Los logs de aplicación son JSON y registran route templates, no query strings, headers ni cuerpos. `/metrics` expone contadores Prometheus sin labels de tenant, run o contenido. Las mutaciones `run.created` y `greenlight.*` se guardan en un ledger tenant-scoped dentro de la misma transacción SQLite que modifica el run.
+
+Consulta [Runtime Operations](docs/OPERATIONS.md) para el contrato de logs, métricas, paginación de auditoría y alertas iniciales; y [ADR 0002](docs/adr/0002-observability-and-audit-ledger.md) para las decisiones y limitaciones.
 
 ## Verificación del paquete de producción
 

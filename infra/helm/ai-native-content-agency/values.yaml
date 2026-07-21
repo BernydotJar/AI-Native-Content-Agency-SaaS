@@ -20,6 +20,12 @@ persistence:
   size: 1Gi
   storageClassName: ""
 
+observability:
+  metrics:
+    enabled: true
+    path: "/metrics"
+    port: "8080"
+
 service:
   type: ClusterIP
   port: 80

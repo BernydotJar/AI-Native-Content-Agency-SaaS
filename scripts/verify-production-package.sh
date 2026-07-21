@@ -53,6 +53,8 @@ mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
 "$HELM_BIN" lint "$CHART_PATH"
 "$HELM_BIN" template agency "$CHART_PATH" > "$TMP_DIR/rendered.yaml"
 grep -q 'path: /healthz' "$TMP_DIR/rendered.yaml"
+grep -q 'path: /readyz' "$TMP_DIR/rendered.yaml"
+grep -q 'prometheus.io/scrape' "$TMP_DIR/rendered.yaml"
 grep -q 'containerPort: 8080' "$TMP_DIR/rendered.yaml"
 
 build_with_docker() {
@@ -140,12 +142,25 @@ fi
 
 curl -fsS "http://127.0.0.1:${HOST_PORT}/readyz" > "$TMP_DIR/ready.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/" > "$TMP_DIR/index.html"
-curl -fsS -H 'Content-Type: application/json' \
+curl -fsS -D "$TMP_DIR/run.headers" -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $AUTH_KEY" \
+  -H 'X-Request-ID: package-create-0001' \
   -d '{"title":"Packaged runtime verification","objective":"Verify the production package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs" > "$TMP_DIR/run.json"
+RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/run.json")
+curl -fsS -D "$TMP_DIR/approval.headers" -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $AUTH_KEY" \
+  -H 'X-Request-ID: package-approve-0001' \
+  -d '{"reviewer":"package-verifier","note":"Verified packaged sandbox release"}' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/greenlight/approve" \
+  > "$TMP_DIR/approved.json"
+curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events" > "$TMP_DIR/audit.json"
+curl -fsS "http://127.0.0.1:${HOST_PORT}/metrics" > "$TMP_DIR/metrics.txt"
 
-python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/run.json" <<'PY'
+python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/run.json" \
+  "$TMP_DIR/approved.json" "$TMP_DIR/audit.json" "$TMP_DIR/metrics.txt" \
+  "$TMP_DIR/run.headers" "$TMP_DIR/approval.headers" <<'PY'
 import json
 import sys
 
@@ -155,6 +170,16 @@ with open(sys.argv[2], encoding="utf-8") as handle:
     ready = json.load(handle)
 with open(sys.argv[3], encoding="utf-8") as handle:
     run = json.load(handle)
+with open(sys.argv[4], encoding="utf-8") as handle:
+    approved = json.load(handle)
+with open(sys.argv[5], encoding="utf-8") as handle:
+    audit = json.load(handle)
+with open(sys.argv[6], encoding="utf-8") as handle:
+    metrics = handle.read()
+with open(sys.argv[7], encoding="utf-8") as handle:
+    run_headers = handle.read().lower()
+with open(sys.argv[8], encoding="utf-8") as handle:
+    approval_headers = handle.read().lower()
 
 assert health == {
     "status": "ok",
@@ -176,13 +201,37 @@ assert [artifact["kind"] for artifact in run["artifacts"]] == [
     "media_plan",
     "risk_report",
 ]
+assert approved["status"] == "completed"
+package = next(item for item in approved["artifacts"] if item["kind"] == "campaign_package")
+assert package["payload"]["publication_performed"] is False
+assert [item["action"] for item in audit["events"]] == [
+    "run.created",
+    "greenlight.approved",
+]
+assert [item["request_id"] for item in audit["events"]] == [
+    "package-create-0001",
+    "package-approve-0001",
+]
+assert "agency_runs_started_total 1" in metrics
+assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
+assert "x-request-id: package-create-0001" in run_headers
+assert "x-request-id: package-approve-0001" in approval_headers
 print("health=pass")
 print("readiness=pass")
 print("spa=pass")
 print("tenant_auth=pass")
+print("request_correlation=pass")
 print("api_vertical_slice=pass")
 print("publisher_gate=pass")
+print("sandbox_package=pass")
+print("durable_audit=pass")
+print("prometheus_metrics=pass")
 print("external_side_effects_enabled=false")
 PY
+
+if [ -f "$TMP_DIR/runtime.log" ] && grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null; then
+  printf 'runtime logs leaked the bearer credential\n' >&2
+  exit 5
+fi
 
 log "production package verification passed with ${RUNTIME_KIND}"
