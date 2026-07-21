@@ -67,8 +67,8 @@ The script prints the installed versions of the application and load-bearing fra
 The Dockerfile uses three stages:
 
 1. Node builds the React bundle from `package-lock.json`;
-2. Python 3.12 installs the hashed build lock and creates a wheel without isolated build dependency resolution;
-3. Python 3.12 installs the hashed runtime lock, installs the wheel with `--no-deps`, runs `pip check`, and copies only the built SPA.
+2. Python 3.13 on Alpine 3.23 installs the hashed build lock and creates a wheel without isolated build dependency resolution;
+3. Python 3.13 on Alpine 3.23 installs the hashed runtime lock, installs the wheel with `--no-deps`, runs `pip check`, and copies only the built SPA.
 
 This prevents `pip install ./backend` from resolving a different graph during image creation.
 
@@ -83,7 +83,7 @@ The current verified core includes:
 - `pydantic==2.13.4`;
 - `httpx==0.28.1` in the test graph.
 
-The locks were generated and byte-regenerated with Python 3.11. The production image installed the same runtime pins under Python 3.12 and passed `pip check` plus the full packaged HTTP smoke.
+The locks were generated and byte-regenerated with Python 3.11. CI verifies the wheel under Python 3.13, and the production image installs the same runtime pins under Python 3.13.14 on Alpine 3.23 before `pip check` and the full packaged HTTP smoke.
 
 ## Rollback
 
@@ -95,14 +95,13 @@ A dependency update is rolled back by reverting the `.in` and generated lockfile
 ./scripts/verify-production-package.sh
 ```
 
-## Remaining supply-chain controls
+## Supply-chain controls
 
-The Python graph is reproducible at the package level, but this is not a complete software supply-chain program. Remaining controls include:
+The repository now pins container base images by digest and GitHub Actions by commit SHA. `verify-supply-chain.sh` generates a CycloneDX SBOM, Grype report, exact expiring vulnerability policy result, application license policy result, in-toto/SLSA-style provenance and offline Cosign verification evidence. See `docs/SUPPLY_CHAIN_SECURITY.md`.
 
-- pinning container base images by immutable digest;
-- pinning GitHub Actions by commit SHA;
-- generating and retaining SBOMs;
-- vulnerability and license policy gates;
-- signing images and provenance attestations;
-- publishing through an immutable registry promotion workflow;
-- verifying package indexes through an approved mirror or repository policy.
+Controls still required for an external production release are:
+
+- immutable registry promotion by digest;
+- protected keyless OIDC or KMS-backed signing identity;
+- public transparency-log verification and deployment admission policy;
+- approved Python/npm package mirrors or organization repository policy.

@@ -35,3 +35,5 @@ crash.log
 
 # Local Python environments
 .venv/
+# Generated supply-chain evidence
+artifacts/supply-chain/generated/

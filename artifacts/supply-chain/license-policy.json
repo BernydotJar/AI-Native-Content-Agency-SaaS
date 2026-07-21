@@ -1,0 +1,26 @@
+{
+  "scope": "Application dependencies cataloged as Python packages in the runtime image. Operating-system package licenses remain in the retained SBOM for legal review.",
+  "package_types": [
+    "python"
+  ],
+  "allowed_licenses": [
+    "BSD-3-Clause",
+    "MIT",
+    "MIT License",
+    "PSF-2.0"
+  ],
+  "denied_tokens": [
+    "AGPL",
+    "BUSL",
+    "GPL",
+    "LGPL",
+    "SSPL"
+  ],
+  "missing_license_exceptions": [
+    {
+      "package": "annotated-types",
+      "version": "0.7.0",
+      "reason": "The installed package metadata is not surfaced as a license by Syft; this exact transitive version was reviewed separately."
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 Webapp cinematográfica y sandbox local para representar una agencia de contenido AI-native de ocho agentes. El repositorio ya no es sólo una maqueta de frontend: contiene una experiencia React/TypeScript ejecutable, un runtime Python determinista con memoria SQLite y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: vertical slice full-stack verificable y empaquetado de producción. La UI incluye una consola que consume el backend durable mediante cookie HttpOnly + CSRF; el simulador cinematográfico original permanece como sandbox separado. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
+> Estado actual: vertical slice full-stack verificable y empaquetado de producción. La UI consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece como sandbox separado. Ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto.
 
 ## Qué funciona hoy
 
@@ -258,3 +258,15 @@ HELM_BIN=/home/agent/.local/bin/helm \
 ```
 
 La verificación lint/renderiza Helm, construye el wheel y la imagen multi-stage con locks hash-verified, inicia el artefacto como usuario no root y prueba health, readiness, SPA, sesión HttpOnly, CSRF, API, artefactos, Greenlight, auditoría, métricas y revocación. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
+
+## Verificación de supply chain
+
+La imagen usa Node y Python/Alpine fijados por digest. El gate genera SBOM CycloneDX, reporte Grype, política exacta y expirable de vulnerabilidades, validación de licencias Python, provenance in-toto/SLSA y firmas Cosign offline:
+
+```bash
+./scripts/install-supply-chain-tools.sh
+export PATH="$HOME/.local/bin:$PATH"
+CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh
+```
+
+El resultado verificado contiene cero hallazgos Critical, cinco High aceptados por coincidencia exacta hasta el 21 de agosto de 2026 y ocho Medium reportados. Cualquier Critical, High nuevo, fix reportado sin excepción explícita, excepción obsoleta o baseline vencida falla. Los artefactos generados se ignoran en Git y CI los retiene durante 30 días; no se publica ninguna imagen. Consulta [Software Supply-Chain Security](docs/SUPPLY_CHAIN_SECURITY.md) y [ADR 0005](docs/adr/0005-supply-chain-evidence-and-policy.md).

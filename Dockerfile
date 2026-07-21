@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-bookworm-slim AS web-build
+FROM node:22-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS web-build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ COPY public ./public
 COPY src ./src
 RUN npm run build
 
-FROM python:3.12-slim AS backend-build
+FROM python:3.13-alpine3.23@sha256:9fdbf2e3e82628351513560b121e2ee6ce31cac212be9e070c5a5e2769fb5e76 AS backend-build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
 COPY backend/requirements-build.lock ./requirements-build.lock
@@ -16,7 +16,7 @@ RUN python -m pip install --no-cache-dir --require-hashes -r requirements-build.
 COPY backend ./backend
 RUN python -m build --no-isolation --wheel --outdir /wheels ./backend
 
-FROM python:3.12-slim AS runtime
+FROM python:3.13-alpine3.23@sha256:9fdbf2e3e82628351513560b121e2ee6ce31cac212be9e070c5a5e2769fb5e76 AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -24,8 +24,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     AGENCY_STATIC_DIR=/app/dist \
     AGENCY_MEMORY_DB=:memory:
 WORKDIR /app
-RUN addgroup --system --gid 10001 agency \
-    && adduser --system --uid 10001 --ingroup agency --home /nonexistent --no-create-home agency
+RUN addgroup -S -g 10001 agency \
+    && adduser -S -D -H -u 10001 -G agency agency
 COPY backend/requirements.lock ./backend/requirements.lock
 RUN python -m pip install --no-cache-dir --require-hashes -r backend/requirements.lock
 COPY --from=backend-build /wheels /wheels

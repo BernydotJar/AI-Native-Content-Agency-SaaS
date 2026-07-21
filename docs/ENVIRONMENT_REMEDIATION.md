@@ -122,3 +122,13 @@ Terraform fmt/init/validate passed locally with locked, signed providers. Full-n
 The production-readiness workflow passes actionlint locally, and CI now installs the same pinned release before validating all workflow YAML files. Removal is reversible with `rm -f /home/agent/.local/bin/actionlint`.
 
 During integration, actionlint caught an invalid YAML command scalar in the new workflow job. The command was changed to a block scalar and the workflow then passed. This failure and correction demonstrate that the gate validates the actual workflow rather than only confirming the binary is installed.
+## Supply-chain tooling — 21 July 2026
+
+The following release binaries were installed reversibly in `$HOME/.local/bin` with official SHA-256 verification and then codified in `scripts/install-supply-chain-tools.sh`:
+
+- Syft `1.48.0`;
+- Grype `0.116.0`;
+- Cosign `3.1.2`;
+- Crane `0.21.7`.
+
+The first Debian-slim scans exposed a substantially larger operating-system vulnerability surface. Python 3.13.14 on Alpine 3.23 was evaluated, passed runtime verification and reduced the observed result to 0 Critical and 5 High findings. See `docs/SUPPLY_CHAIN_SECURITY.md` for exact policy and limitations.
