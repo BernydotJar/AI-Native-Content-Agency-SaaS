@@ -159,9 +159,17 @@
       "owner": "INC-008",
       "severity": "LOW",
       "status": "CLOSED"
+    },
+    {
+      "description": "The Chromium accessibility gate derived a fixed-range CDP port from process PID and accepted any HTTP 200 as Vite readiness, producing nondeterministic exact-head CI and allowing an unrelated server to masquerade as the production bundle.",
+      "evidence": "Failed run 29876550199 at 6eb2b6b3ee7a253ef67dae64a888198de6594330; repair a3fa52f6c3e0e5e503527f5ba446badf4ee52070 uses system-assigned preview port, Chromium DevToolsActivePort, strict compiled-bundle fingerprint, child exit diagnostics, stale-artifact removal, negative occupied-port proof and three consecutive positive runs.",
+      "id": "F-021",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "8ecf77e7f58789d1e5b47826b595b172bac6fa89",
-  "updated_at": "2026-07-21T23:08:52Z"
+  "source_commit": "a3fa52f6c3e0e5e503527f5ba446badf4ee52070",
+  "updated_at": "2026-07-21T23:21:31Z"
 }

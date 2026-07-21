@@ -272,9 +272,23 @@
       "observed": "workflow-lint, verify (including Chromium accessibility and artifact upload), python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
       "result": "PASS",
       "scope": "remote exact-head automated delivery"
+    },
+    {
+      "command": "gh run view 29876550199",
+      "id": "INC008-CLOSURE-CI-FAIL",
+      "observed": "7/8 jobs SUCCESS; verify failed because Chromium CDP did not become ready on PID-derived port",
+      "result": "FAIL",
+      "scope": "remote closure checkpoint"
+    },
+    {
+      "command": "npm run verify:accessibility-browser x3 plus occupied preview-port negative case",
+      "id": "INC008-BROWSER-HARNESS-REPAIR",
+      "observed": "Three consecutive positive runs PASS; occupied-port case fails in 2 seconds with Vite process diagnostic; no residual listeners; stale output removed before each run",
+      "result": "PASS",
+      "scope": "deterministic accessibility browser gate"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "3a0e545182b3595e6094298a487da7c3e355a42a",
-  "updated_at": "2026-07-21T23:15:28Z"
+  "source_commit": "a3fa52f6c3e0e5e503527f5ba446badf4ee52070",
+  "updated_at": "2026-07-21T23:21:31Z"
 }

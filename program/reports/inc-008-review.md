@@ -5,7 +5,7 @@ Branch: `agent/inc-008-accessible-themes`
 Stacked base: `agent/inc-007-operator-journey@dad71025bf14281930b8fafa2edae81e2a7c6c84`
 Identity/entitlement commit: `f63a58648eec0579d53a007c8ed83ff376b95727`
 Theme/browser commit: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
-Status: `CHECKPOINT_COMPLETED_AUTOMATED — MANUAL_REVIEW_BLOCKED`
+Status: `REVIEW — REMOTE_BROWSER_GATE_REPAIR_PENDING`
 External effects: none
 
 ## Review contract
@@ -108,6 +108,22 @@ Manual screen-reader review                 NOT_RUN
 Rendered contrast/visual review             NOT_RUN
 Human 400% zoom/reflow review               NOT_RUN
 ```
+
+## Exact-head CI regression and repair
+
+Closure head `6eb2b6b3ee7a253ef67dae64a888198de6594330` produced GitHub Actions run `29876550199`: seven jobs passed and `verify` failed while waiting for a PID-derived Chromium CDP port. The earlier green implementation run is retained as historical evidence but is not reused for the newer head.
+
+Repair `a3fa52f6c3e0e5e503527f5ba446badf4ee52070`:
+
+- requests an ephemeral preview port from the operating system and uses Vite `--strictPort`;
+- uses Chromium `--remote-debugging-port=0` and reads `DevToolsActivePort`;
+- validates that preview serves the compiled `/assets/` bundle, not merely any HTTP 200 or source `index.html`;
+- fails immediately when Vite/Chromium exits and includes bounded diagnostics;
+- removes stale evidence before execution and removes temporary profiles/process groups afterward;
+- passes three consecutive positive runs;
+- rejects an occupied preview port in two seconds with the expected process diagnostic.
+
+Remote CI for the repaired head remains pending.
 
 ## Evidence boundary
 
