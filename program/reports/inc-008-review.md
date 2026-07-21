@@ -5,7 +5,7 @@ Branch: `agent/inc-008-accessible-themes`
 Stacked base: `agent/inc-007-operator-journey@dad71025bf14281930b8fafa2edae81e2a7c6c84`
 Identity/entitlement commit: `f63a58648eec0579d53a007c8ed83ff376b95727`
 Theme/browser commit: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
-Status: `REVIEW — LOCAL_AUTOMATED_GATES_PASS_MANUAL_REVIEW_BLOCKED`
+Status: `CHECKPOINT_COMPLETED_AUTOMATED — MANUAL_REVIEW_BLOCKED`
 External effects: none
 
 ## Review contract
@@ -125,14 +125,15 @@ package_verified_local: yes
 reviewed_local: yes
 manual_accessibility_review: no
 committed: yes
-pushed: no
-remote_sha_verified: no
-draft_pr: no
-exact_head_ci: no
+pushed: yes — 3a0e545182b3595e6094298a487da7c3e355a42a
+remote_sha_verified: yes
+draft_pr: yes — #7
+exact_head_ci: yes — run 29876402303, 8/8
+accessibility_artifact: yes — retained through 2026-08-20
 merged: no
 deployed: no
 ```
 
 ## Exact continuation condition
 
-Create the program checkpoint commit, run clean-source supply-chain evidence, push `agent/inc-008-accessible-themes`, verify remote equality, create a draft PR against `agent/inc-007-operator-journey`, and require all exact-head jobs including the uploaded accessibility artifact. After CI, mark the repository work blocked rather than done until an accountable human executes the manual protocol and repairs every material finding.
+Repository automation and delivery are complete. Keep INC-008 blocked until an accountable human executes `docs/accessibility/manual-review-protocol.md` against the exact production bundle and repairs or accepts every material finding under release policy.

@@ -265,9 +265,16 @@
       "observed": "human screen-reader, rendered contrast, 400% zoom/reflow and visual screenshot review not executed",
       "result": "BLOCKED",
       "scope": "manual accessibility release evidence"
+    },
+    {
+      "command": "gh run view 29876402303",
+      "id": "INC008-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify (including Chromium accessibility and artifact upload), python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head automated delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "8ecf77e7f58789d1e5b47826b595b172bac6fa89",
-  "updated_at": "2026-07-21T23:08:52Z"
+  "source_commit": "3a0e545182b3595e6094298a487da7c3e355a42a",
+  "updated_at": "2026-07-21T23:15:28Z"
 }

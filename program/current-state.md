@@ -14,9 +14,10 @@ Cloud recommendation: `DENY_APPLY`
 - Identity/entitlement implementation: `f63a58648eec0579d53a007c8ed83ff376b95727`
 - Theme/browser implementation: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
 - Local program checkpoint: the commit containing this document, directly above `8ecf77e`
-- Active branch remote: absent
-- Draft PR for INC-008: absent
-- Exact-head CI for INC-008: not triggered
+- Active branch remote: `3a0e545182b3595e6094298a487da7c3e355a42a`
+- Draft PR for INC-008: `#7`, base `agent/inc-007-operator-journey`, clean and mergeable
+- Exact-head CI for INC-008: run `29876402303`, eight of eight jobs successful
+- Accessibility artifact: uploaded, 142915 bytes, retained through 2026-08-20
 - Exact verified stacked-base CI: run `29874693956`, eight of eight jobs successful at `dad7102`
 - PR `#6`: draft and green on `agent/inc-007-operator-journey`
 - PR `#5`: draft and green on `agent/inc-005-operability`
@@ -57,7 +58,7 @@ Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29
 
 ### INC-008 — Accessible themes and accessibility evidence
 
-Status: `review`
+Status: `blocked`
 Owner: Accessibility Reviewer / Frontend Engineer / Identity Engineer
 External effects: none
 
@@ -113,7 +114,7 @@ Human 400% zoom and viewport review         NOT_RUN
 Physical-device behavior                    NOT_RUN
 ```
 
-`INC-008` is not done. The code and automated-browser scope are locally verified, but the branch is unpublished and `F-007` remains HIGH/open until accountable human evidence exists.
+`INC-008` has completed every safe automated repository and delivery gate, including exact remote SHA, draft PR, eight-job CI and retained browser evidence. It remains `blocked`, not `done`, because `F-007` requires accountable human evidence.
 
 ## Open global HIGH release findings
 
@@ -166,13 +167,11 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit and publish the INC-008 local-review checkpoint.
-2. Run clean-source supply-chain evidence.
-3. Verify remote SHA and create a draft PR against `agent/inc-007-operator-journey`.
-4. Require exact-head CI including the accessibility artifact and repair failures.
-5. After exact CI, mark INC-008 `blocked` rather than `done` under `BLK-A11Y-MANUAL-001`.
-6. Continue independent work according to the task DAG without claiming F-007 closed.
+1. Publish this external-gate checkpoint and verify its documentation-only CI.
+2. Continue an independent ready workstream according to the task DAG.
+3. Keep F-007 and INC-008 blocked until accountable human review.
+4. Keep all external integrations, billing, publication and spend disabled.
 
 ## Exact continuation condition
 
-Start from the clean local checkpoint above `8ecf77e7f58789d1e5b47826b595b172bac6fa89`. Run clean-source supply-chain verification, push `agent/inc-008-accessible-themes`, verify exact remote equality, create a draft PR with base `agent/inc-007-operator-journey`, inspect all exact-head jobs and repair any failure. After CI, preserve `DENY_RELEASE` and the manual accessibility blocker. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Publish this closure checkpoint above exact green head `3a0e545182b3595e6094298a487da7c3e355a42a` and verify its documentation-only CI. Then select the next independent DAG node. Preserve `DENY_RELEASE`, F-007 and BLK-A11Y-MANUAL-001 until human evidence exists. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
