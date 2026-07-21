@@ -50,6 +50,11 @@ persistence:
 observability:
   metrics:
     enabled: true
+  prometheusRule:
+    # Requires an existing Prometheus Operator. The chart never installs one.
+    enabled: false
+    # Empty uses the release namespace.
+    namespace: ""
     path: "/metrics"
     port: "8080"
 

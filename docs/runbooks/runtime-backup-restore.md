@@ -206,3 +206,18 @@ Treat any of these as a failed backup/restore gate:
 - post-restore schema/count/application-read failure.
 
 Do not alter a manifest, disable checksum/integrity checks or add `--clean` to make a failed restore pass. Preserve the command result and sanitized logs, classify the blocker and select another verified recovery point or repair the cause.
+
+## Stale or missing backup signal
+
+Backup commands may write a Prometheus textfile after the backup manifest and artifact have passed integrity validation:
+
+```bash
+python3 scripts/manage-runtime-backup.py sqlite-backup \
+  --database /var/lib/agency/runtime.sqlite3 \
+  --output-dir /var/backups/agency \
+  --metrics-file /var/lib/node-exporter/textfile/agency-backup.prom
+```
+
+The atomic private file exposes only backend, validated artifact size and last-success timestamp. It never contains a database URL, source path, tenant, request, credential or backup filename. `AgencyBackupStale` fires when the timestamp is older than 25 hours.
+
+A repository exercise proves rule logic only. Production readiness still requires an authorized scheduler, encrypted immutable off-host storage, KMS/key lifecycle, retention policy, alert delivery and a staging restore drill.

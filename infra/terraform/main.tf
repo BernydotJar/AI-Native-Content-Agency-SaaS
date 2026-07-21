@@ -76,6 +76,11 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "observability.prometheusRule.enabled"
+    value = tostring(var.prometheus_rule_enabled)
+  }
+
+  set {
     name  = "persistence.enabled"
     value = tostring(var.persistence_enabled)
   }

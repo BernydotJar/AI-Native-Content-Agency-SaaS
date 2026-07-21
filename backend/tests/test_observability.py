@@ -85,6 +85,37 @@ class ObservabilityTests(unittest.TestCase):
             self.assertNotIn(ALPHA_KEY, body)
             self.assertNotRegex(body, re.escape("query-secret-must-not-log"))
 
+    def test_request_duration_histogram_is_cumulative_and_has_infinity_bucket(self):
+        metrics = RuntimeMetrics()
+        metrics.record_http("GET", "/api/v1/runs/{run_id}", 200, 0.004)
+        metrics.record_http("GET", "/api/v1/runs/{run_id}", 200, 0.8)
+        metrics.record_http("GET", "/api/v1/runs/{run_id}", 500, 12.0)
+
+        rendered = metrics.render()
+        self.assertIn(
+            "# TYPE agency_http_request_duration_seconds histogram", rendered
+        )
+        self.assertIn(
+            'agency_http_request_duration_seconds_bucket{le="0.005",method="GET",'
+            'route="/api/v1/runs/{run_id}"} 1',
+            rendered,
+        )
+        self.assertIn(
+            'agency_http_request_duration_seconds_bucket{le="1",method="GET",'
+            'route="/api/v1/runs/{run_id}"} 2',
+            rendered,
+        )
+        self.assertIn(
+            'agency_http_request_duration_seconds_bucket{le="+Inf",method="GET",'
+            'route="/api/v1/runs/{run_id}"} 3',
+            rendered,
+        )
+        self.assertIn(
+            'agency_http_request_duration_seconds_count{method="GET",route="/api/v1/runs/{run_id}"} 3',
+            rendered,
+        )
+        self.assertNotIn("tenant", rendered)
+
     def test_security_denial_metric_rejects_unbounded_reasons(self):
         metrics = RuntimeMetrics()
         metrics.security_denial("authorization")

@@ -83,6 +83,37 @@ class RuntimeBackupRestoreTests(unittest.TestCase):
                     connection.execute("PRAGMA integrity_check").fetchone()[0], "ok"
                 )
 
+    def test_backup_metrics_textfile_is_private_atomic_and_sanitized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.sqlite3"
+            metrics_directory = root / "metrics"
+            metrics_directory.mkdir(mode=0o750)
+            metrics = metrics_directory / "backup.prom"
+            seed_database(source)
+            manifest_path = BACKUP.create_sqlite_backup(
+                source, root / "backups", now=FIXED_TIME
+            )
+
+            BACKUP.write_backup_metrics(metrics, manifest_path)
+
+            content = metrics.read_text()
+            self.assertEqual(stat.S_IMODE(metrics.stat().st_mode), 0o600)
+            self.assertEqual(
+                stat.S_IMODE(metrics_directory.stat().st_mode), 0o750
+            )
+            self.assertIn(
+                'agency_backup_last_success_timestamp_seconds{backend="sqlite"} 1784656800',
+                content,
+            )
+            self.assertIn(
+                'agency_backup_artifact_bytes{backend="sqlite"}', content
+            )
+            self.assertIn('agency_backup_success{backend="sqlite"} 1', content)
+            self.assertNotIn(str(source), content)
+            self.assertNotIn(str(manifest_path), content)
+            self.assertFalse(any(metrics.parent.glob(".*.tmp")))
+
     def test_tampered_backup_fails_before_target_mutation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

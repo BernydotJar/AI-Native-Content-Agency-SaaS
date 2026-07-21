@@ -1,0 +1,124 @@
+{
+  "schema_version": "agency-alert-exercises.v1",
+  "scenarios": [
+    {
+      "id": "healthy",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": []
+    },
+    {
+      "id": "availability-fast-burn",
+      "metrics": {
+        "api_error_ratio_5m": 0.02,
+        "api_error_ratio_1h": 0.02,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyApiAvailabilityFastBurn",
+        "AgencyApiAvailabilitySlowBurn"
+      ]
+    },
+    {
+      "id": "availability-slow-burn",
+      "metrics": {
+        "api_error_ratio_5m": 0.001,
+        "api_error_ratio_1h": 0.007,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyApiAvailabilitySlowBurn"
+      ]
+    },
+    {
+      "id": "latency-slo-violation",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 1.5,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyApiLatencySloViolation"
+      ]
+    },
+    {
+      "id": "runtime-unavailable",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 0.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyRuntimeUnavailable"
+      ]
+    },
+    {
+      "id": "authentication-abuse",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 1.5,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyAuthenticationAbuse"
+      ]
+    },
+    {
+      "id": "backup-stale",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 90001,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 1.0
+      },
+      "expected_alerts": [
+        "AgencyBackupStale"
+      ]
+    },
+    {
+      "id": "backup-signal-missing",
+      "metrics": {
+        "api_error_ratio_5m": 0.0,
+        "api_error_ratio_1h": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "readiness_probe_success": 1.0,
+        "backup_signal_present": 0.0
+      },
+      "expected_alerts": [
+        "AgencyBackupSignalMissing"
+      ]
+    }
+  ]
+}

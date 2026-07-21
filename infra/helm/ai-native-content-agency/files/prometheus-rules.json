@@ -1,0 +1,107 @@
+{
+  "groups": [
+    {
+      "name": "ai-native-content-agency.operability",
+      "rules": [
+        {
+          "alert": "AgencyApiAvailabilityFastBurn",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#api-availability-burn",
+            "summary": "API availability error budget is burning rapidly"
+          },
+          "expr": "sum(rate(agency_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(agency_http_requests_total[5m])), 1) > 0.0144",
+          "for": "5m",
+          "labels": {
+            "owner": "WS-09",
+            "severity": "critical",
+            "slo": "SLO-API-AVAILABILITY"
+          }
+        },
+        {
+          "alert": "AgencyApiAvailabilitySlowBurn",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#api-availability-burn",
+            "summary": "API availability error budget is burning persistently"
+          },
+          "expr": "sum(rate(agency_http_requests_total{status=~\"5..\"}[1h])) / clamp_min(sum(rate(agency_http_requests_total[1h])), 1) > 0.006",
+          "for": "30m",
+          "labels": {
+            "owner": "WS-09",
+            "severity": "warning",
+            "slo": "SLO-API-AVAILABILITY"
+          }
+        },
+        {
+          "alert": "AgencyApiLatencySloViolation",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#api-latency",
+            "summary": "API p95 latency exceeds one second"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(agency_http_request_duration_seconds_bucket[15m]))) > 1",
+          "for": "15m",
+          "labels": {
+            "owner": "WS-09",
+            "severity": "warning",
+            "slo": "SLO-API-LATENCY-P95"
+          }
+        },
+        {
+          "alert": "AgencyRuntimeUnavailable",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#runtime-unavailable",
+            "summary": "The application readiness probe is failing or absent"
+          },
+          "expr": "max(probe_success{job=\"ai-native-content-agency-readiness\"}) < 1 or absent(probe_success{job=\"ai-native-content-agency-readiness\"})",
+          "for": "5m",
+          "labels": {
+            "owner": "WS-09",
+            "severity": "critical",
+            "slo": "SLO-READINESS"
+          }
+        },
+        {
+          "alert": "AgencyAuthenticationAbuse",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#authentication-abuse",
+            "summary": "Authentication denials exceed the reviewed abuse threshold"
+          },
+          "expr": "sum(rate(agency_security_denials_total{reason=\"authentication\"}[5m])) > 1",
+          "for": "10m",
+          "labels": {
+            "owner": "WS-07",
+            "severity": "warning",
+            "slo": "SEC-011"
+          }
+        },
+        {
+          "alert": "AgencyBackupStale",
+          "annotations": {
+            "runbook_url": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+            "summary": "The last validated runtime backup is older than 25 hours"
+          },
+          "expr": "time() - agency_backup_last_success_timestamp_seconds > 90000",
+          "for": "15m",
+          "labels": {
+            "owner": "WS-03",
+            "severity": "critical",
+            "slo": "SLO-BACKUP-FRESHNESS"
+          }
+        },
+        {
+          "alert": "AgencyBackupSignalMissing",
+          "annotations": {
+            "runbook_url": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+            "summary": "No validated runtime backup freshness signal is available"
+          },
+          "expr": "absent(agency_backup_last_success_timestamp_seconds)",
+          "for": "15m",
+          "labels": {
+            "owner": "WS-03",
+            "severity": "critical",
+            "slo": "SLO-BACKUP-FRESHNESS"
+          }
+        }
+      ]
+    }
+  ]
+}

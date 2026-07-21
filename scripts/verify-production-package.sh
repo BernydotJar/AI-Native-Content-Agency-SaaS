@@ -55,7 +55,20 @@ export XDG_CONFIG_HOME="$TMP_DIR/xdg/config"
 export XDG_DATA_HOME="$TMP_DIR/xdg/data"
 mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
 "$HELM_BIN" lint "$CHART_PATH"
+"$PYTHON_BIN" "$REPOSITORY_ROOT/scripts/verify-operability.py"
 "$HELM_BIN" template agency "$CHART_PATH" > "$TMP_DIR/rendered.yaml"
+if grep -q 'kind: PrometheusRule' "$TMP_DIR/rendered.yaml"; then
+  printf 'default render unexpectedly contains PrometheusRule\n' >&2
+  exit 3
+fi
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set observability.prometheusRule.enabled=true > "$TMP_DIR/alerts.yaml"
+grep -q 'kind: PrometheusRule' "$TMP_DIR/alerts.yaml"
+grep -q 'alert: AgencyApiAvailabilityFastBurn' "$TMP_DIR/alerts.yaml"
+grep -q 'alert: AgencyBackupStale' "$TMP_DIR/alerts.yaml"
+grep -q 'alert: AgencyBackupSignalMissing' "$TMP_DIR/alerts.yaml"
+printf 'operability_contract=pass\n'
+printf 'prometheus_rule_render=pass\n'
 grep -q 'path: /healthz' "$TMP_DIR/rendered.yaml"
 grep -q 'path: /readyz' "$TMP_DIR/rendered.yaml"
 grep -q 'prometheus.io/scrape' "$TMP_DIR/rendered.yaml"

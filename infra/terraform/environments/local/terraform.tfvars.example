@@ -5,6 +5,7 @@ image_tag                       = "local"
 replica_count                   = 1
 storage_backend                 = "sqlite"
 persistence_enabled             = true
+prometheus_rule_enabled          = false
 # For a shared deployment set storage_backend="postgresql", replica_count>=2,
 # persistence_enabled=false, and reference a pre-provisioned URL Secret:
 postgresql_existing_secret      = ""

@@ -1,0 +1,110 @@
+{
+  "schema_version": "agency-alert-catalog.v1",
+  "alerts": [
+    {
+      "name": "AgencyApiAvailabilityFastBurn",
+      "expression": "sum(rate(agency_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(agency_http_requests_total[5m])), 1) > 0.0144",
+      "for": "5m",
+      "severity": "critical",
+      "owner": "WS-09",
+      "slo": "SLO-API-AVAILABILITY",
+      "summary": "API availability error budget is burning rapidly",
+      "runbook": "docs/runbooks/incident-response.md#api-availability-burn",
+      "exercise_condition": {
+        "metric": "api_error_ratio_5m",
+        "operator": ">",
+        "threshold": 0.0144
+      }
+    },
+    {
+      "name": "AgencyApiAvailabilitySlowBurn",
+      "expression": "sum(rate(agency_http_requests_total{status=~\"5..\"}[1h])) / clamp_min(sum(rate(agency_http_requests_total[1h])), 1) > 0.006",
+      "for": "30m",
+      "severity": "warning",
+      "owner": "WS-09",
+      "slo": "SLO-API-AVAILABILITY",
+      "summary": "API availability error budget is burning persistently",
+      "runbook": "docs/runbooks/incident-response.md#api-availability-burn",
+      "exercise_condition": {
+        "metric": "api_error_ratio_1h",
+        "operator": ">",
+        "threshold": 0.006
+      }
+    },
+    {
+      "name": "AgencyApiLatencySloViolation",
+      "expression": "histogram_quantile(0.95, sum by (le) (rate(agency_http_request_duration_seconds_bucket[15m]))) > 1",
+      "for": "15m",
+      "severity": "warning",
+      "owner": "WS-09",
+      "slo": "SLO-API-LATENCY-P95",
+      "summary": "API p95 latency exceeds one second",
+      "runbook": "docs/runbooks/incident-response.md#api-latency",
+      "exercise_condition": {
+        "metric": "api_p95_latency_seconds",
+        "operator": ">",
+        "threshold": 1.0
+      }
+    },
+    {
+      "name": "AgencyRuntimeUnavailable",
+      "expression": "max(probe_success{job=\"ai-native-content-agency-readiness\"}) < 1 or absent(probe_success{job=\"ai-native-content-agency-readiness\"})",
+      "for": "5m",
+      "severity": "critical",
+      "owner": "WS-09",
+      "slo": "SLO-READINESS",
+      "summary": "The application readiness probe is failing or absent",
+      "runbook": "docs/runbooks/incident-response.md#runtime-unavailable",
+      "exercise_condition": {
+        "metric": "readiness_probe_success",
+        "operator": "<",
+        "threshold": 1.0
+      }
+    },
+    {
+      "name": "AgencyAuthenticationAbuse",
+      "expression": "sum(rate(agency_security_denials_total{reason=\"authentication\"}[5m])) > 1",
+      "for": "10m",
+      "severity": "warning",
+      "owner": "WS-07",
+      "slo": "SEC-011",
+      "summary": "Authentication denials exceed the reviewed abuse threshold",
+      "runbook": "docs/runbooks/incident-response.md#authentication-abuse",
+      "exercise_condition": {
+        "metric": "authentication_denials_per_second",
+        "operator": ">",
+        "threshold": 1.0
+      }
+    },
+    {
+      "name": "AgencyBackupStale",
+      "expression": "time() - agency_backup_last_success_timestamp_seconds > 90000",
+      "for": "15m",
+      "severity": "critical",
+      "owner": "WS-03",
+      "slo": "SLO-BACKUP-FRESHNESS",
+      "summary": "The last validated runtime backup is older than 25 hours",
+      "runbook": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+      "exercise_condition": {
+        "metric": "backup_age_seconds",
+        "operator": ">",
+        "threshold": 90000
+      }
+    },
+    {
+      "name": "AgencyBackupSignalMissing",
+      "expression": "absent(agency_backup_last_success_timestamp_seconds)",
+      "for": "15m",
+      "severity": "critical",
+      "owner": "WS-03",
+      "slo": "SLO-BACKUP-FRESHNESS",
+      "summary": "No validated runtime backup freshness signal is available",
+      "runbook": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+      "exercise_condition": {
+        "metric": "backup_signal_present",
+        "operator": "<",
+        "threshold": 1.0
+      }
+    }
+  ]
+}

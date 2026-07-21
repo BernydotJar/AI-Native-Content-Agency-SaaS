@@ -13,6 +13,19 @@ from .version import VERSION
 
 
 _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$")
+HTTP_DURATION_BUCKETS = (
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+)
 HTTP_LOGGER = logging.getLogger("agency_runtime.http")
 HTTP_LOGGER.setLevel(logging.INFO)
 
@@ -52,6 +65,10 @@ def _escape_label(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
 
 
+def _bucket_label(value: float) -> str:
+    return "{:g}".format(value)
+
+
 def _labels(values: Mapping[str, str]) -> str:
     content = ",".join(
         '{}="{}"'.format(key, _escape_label(value))
@@ -68,6 +85,7 @@ class RuntimeMetrics:
         self._requests: Counter[Tuple[str, str, str]] = Counter()
         self._duration_sum: Dict[Tuple[str, str], float] = defaultdict(float)
         self._duration_count: Counter[Tuple[str, str]] = Counter()
+        self._duration_buckets: Counter[Tuple[str, str, float]] = Counter()
         self._runs_started = 0
         self._greenlights: Counter[str] = Counter()
         self._sessions: Counter[str] = Counter()
@@ -86,10 +104,12 @@ class RuntimeMetrics:
         status_label = str(status_code)
         with self._lock:
             self._requests[(method_label, route_label, status_label)] += 1
-            self._duration_sum[(method_label, route_label)] += max(
-                0.0, duration_seconds
-            )
+            observed_duration = max(0.0, duration_seconds)
+            self._duration_sum[(method_label, route_label)] += observed_duration
             self._duration_count[(method_label, route_label)] += 1
+            for boundary in HTTP_DURATION_BUCKETS:
+                if observed_duration <= boundary:
+                    self._duration_buckets[(method_label, route_label, boundary)] += 1
 
     def run_started(self) -> None:
         with self._lock:
@@ -120,6 +140,7 @@ class RuntimeMetrics:
             requests = dict(self._requests)
             duration_sum = dict(self._duration_sum)
             duration_count = dict(self._duration_count)
+            duration_buckets = dict(self._duration_buckets)
             runs_started = self._runs_started
             greenlights = dict(self._greenlights)
             sessions = dict(self._sessions)
@@ -150,26 +171,40 @@ class RuntimeMetrics:
             )
         lines.extend(
             [
-                "# HELP agency_http_request_duration_seconds_sum Cumulative HTTP request duration.",
-                "# TYPE agency_http_request_duration_seconds_sum counter",
+                "# HELP agency_http_request_duration_seconds HTTP request duration histogram.",
+                "# TYPE agency_http_request_duration_seconds histogram",
             ]
         )
-        for (method, route), value in sorted(duration_sum.items()):
+        for method, route in sorted(duration_count):
+            for boundary in HTTP_DURATION_BUCKETS:
+                lines.append(
+                    "agency_http_request_duration_seconds_bucket{} {}".format(
+                        _labels(
+                            {
+                                "le": _bucket_label(boundary),
+                                "method": method,
+                                "route": route,
+                            }
+                        ),
+                        duration_buckets.get((method, route, boundary), 0),
+                    )
+                )
             lines.append(
-                "agency_http_request_duration_seconds_sum{} {:.9f}".format(
-                    _labels({"method": method, "route": route}), value
+                "agency_http_request_duration_seconds_bucket{} {}".format(
+                    _labels({"le": "+Inf", "method": method, "route": route}),
+                    duration_count[(method, route)],
                 )
             )
-        lines.extend(
-            [
-                "# HELP agency_http_request_duration_seconds_count Observed HTTP request durations.",
-                "# TYPE agency_http_request_duration_seconds_count counter",
-            ]
-        )
-        for (method, route), value in sorted(duration_count.items()):
+            lines.append(
+                "agency_http_request_duration_seconds_sum{} {:.9f}".format(
+                    _labels({"method": method, "route": route}),
+                    duration_sum[(method, route)],
+                )
+            )
             lines.append(
                 "agency_http_request_duration_seconds_count{} {}".format(
-                    _labels({"method": method, "route": route}), value
+                    _labels({"method": method, "route": route}),
+                    duration_count[(method, route)],
                 )
             )
         lines.extend(

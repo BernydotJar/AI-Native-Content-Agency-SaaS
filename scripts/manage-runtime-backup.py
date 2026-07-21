@@ -138,6 +138,71 @@ def atomic_json(path: Path, value: Mapping[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def atomic_text(path: Path, content: str) -> None:
+    destination = path.parent
+    if destination.exists():
+        if destination.is_symlink() or not destination.is_dir():
+            raise BackupError("metrics directory must be a regular directory")
+    else:
+        destination.mkdir(mode=0o700, parents=True, exist_ok=False)
+        os.chmod(destination, 0o700)
+    resolved = destination / path.name
+    if resolved.is_symlink():
+        raise BackupError("metrics file must not be a symlink")
+    temporary = resolved.with_name(f".{resolved.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, resolved)
+        os.chmod(resolved, 0o600)
+        fsync_directory(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def write_backup_metrics(metrics_path: Path | str, manifest_path: Path | str) -> None:
+    path = Path(manifest_path)
+    if path.is_symlink() or not path.is_file():
+        raise BackupError("backup manifest must be an existing regular file")
+    if path.stat().st_size > MAX_MANIFEST_BYTES:
+        raise BackupError("backup manifest exceeds the maximum size")
+    try:
+        candidate = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise BackupError("backup manifest is not valid JSON") from error
+    backend = candidate.get("backend") if isinstance(candidate, dict) else None
+    if backend not in VALIDATION_BY_BACKEND:
+        raise BackupError("backup manifest backend is unsupported")
+    manifest, _ = load_and_verify_manifest(path, expected_backend=str(backend))
+    created_at = datetime.fromisoformat(
+        str(manifest["created_at"]).replace("Z", "+00:00")
+    )
+    timestamp = int(created_at.timestamp())
+    content = "\n".join(
+        (
+            "# HELP agency_backup_last_success_timestamp_seconds "
+            "Unix timestamp of the last validated backup.",
+            "# TYPE agency_backup_last_success_timestamp_seconds gauge",
+            'agency_backup_last_success_timestamp_seconds{{backend="{}"}} {}'.format(
+                backend, timestamp
+            ),
+            "# HELP agency_backup_artifact_bytes Size of the last validated backup artifact.",
+            "# TYPE agency_backup_artifact_bytes gauge",
+            'agency_backup_artifact_bytes{{backend="{}"}} {}'.format(
+                backend, manifest["bytes"]
+            ),
+            "# HELP agency_backup_success Last backup command success marker.",
+            "# TYPE agency_backup_success gauge",
+            'agency_backup_success{{backend="{}"}} 1'.format(backend),
+            "",
+        )
+    )
+    atomic_text(Path(metrics_path), content)
+
+
 def backup_stem(backend: str, now: datetime) -> str:
     if now.tzinfo is None:
         raise BackupError("backup timestamp must be timezone-aware")
@@ -604,6 +669,7 @@ def build_parser() -> argparse.ArgumentParser:
     sqlite_backup = commands.add_parser("sqlite-backup")
     sqlite_backup.add_argument("--database", type=Path, required=True)
     sqlite_backup.add_argument("--output-dir", type=Path, required=True)
+    sqlite_backup.add_argument("--metrics-file", type=Path)
 
     sqlite_restore = commands.add_parser("sqlite-restore")
     sqlite_restore.add_argument("--manifest", type=Path, required=True)
@@ -615,6 +681,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--database-url-env", default="AGENCY_DATABASE_URL"
     )
     postgres_backup.add_argument("--output-dir", type=Path, required=True)
+    postgres_backup.add_argument("--metrics-file", type=Path)
 
     postgres_restore = commands.add_parser("postgres-restore")
     postgres_restore.add_argument("--manifest", type=Path, required=True)
@@ -629,10 +696,17 @@ def main(argv: Iterable[str] | None = None) -> int:
     try:
         if arguments.command == "sqlite-backup":
             manifest = create_sqlite_backup(arguments.database, arguments.output_dir)
+            if arguments.metrics_file is not None:
+                write_backup_metrics(arguments.metrics_file, manifest)
             result: Mapping[str, Any] = {
                 "status": "created",
                 "backend": "sqlite",
                 "manifest": str(manifest),
+                "metrics_file": (
+                    str(arguments.metrics_file)
+                    if arguments.metrics_file is not None
+                    else None
+                ),
             }
         elif arguments.command == "sqlite-restore":
             result = restore_sqlite_backup(
@@ -642,10 +716,17 @@ def main(argv: Iterable[str] | None = None) -> int:
             manifest = create_postgresql_backup(
                 arguments.database_url_env, arguments.output_dir
             )
+            if arguments.metrics_file is not None:
+                write_backup_metrics(arguments.metrics_file, manifest)
             result = {
                 "status": "created",
                 "backend": "postgresql",
                 "manifest": str(manifest),
+                "metrics_file": (
+                    str(arguments.metrics_file)
+                    if arguments.metrics_file is not None
+                    else None
+                ),
             }
         else:
             result = restore_postgresql_backup(

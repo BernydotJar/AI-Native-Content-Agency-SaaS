@@ -40,6 +40,12 @@ variable "replica_count" {
   }
 }
 
+variable "prometheus_rule_enabled" {
+  description = "Render the PrometheusRule for an existing Prometheus Operator. This module never installs the operator."
+  type        = bool
+  default     = false
+}
+
 variable "persistence_enabled" {
   description = "Provision the chart PVC when storage_backend is sqlite. Ignored by PostgreSQL-backed pods."
   type        = bool

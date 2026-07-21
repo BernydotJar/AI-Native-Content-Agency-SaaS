@@ -862,7 +862,17 @@ BACKUP_REPORT="$TMP_DIR/postgresql-backup.json"
 AGENCY_DATABASE_URL="$MIGRATION_URL" \
   "$VENV/bin/python" "$REPOSITORY_ROOT/scripts/manage-runtime-backup.py" \
   postgres-backup --database-url-env AGENCY_DATABASE_URL \
-  --output-dir "$BACKUP_DIR" >"$BACKUP_REPORT"
+  --output-dir "$BACKUP_DIR" \
+  --metrics-file "$TMP_DIR/postgresql-backup.prom" >"$BACKUP_REPORT"
+grep -q 'agency_backup_last_success_timestamp_seconds{backend="postgresql"}' \
+  "$TMP_DIR/postgresql-backup.prom"
+grep -q 'agency_backup_success{backend="postgresql"} 1' \
+  "$TMP_DIR/postgresql-backup.prom"
+if [ "$(stat -c '%a' "$TMP_DIR/postgresql-backup.prom")" != "600" ]; then
+  printf 'PostgreSQL backup metric file is not private\n' >&2
+  exit 1
+fi
+printf 'backup_freshness_metrics=pass\n'
 BACKUP_MANIFEST=$("$VENV/bin/python" - "$BACKUP_REPORT" <<'PYREPORT'
 import json
 import sys
