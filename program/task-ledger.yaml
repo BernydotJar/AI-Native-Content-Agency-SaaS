@@ -549,7 +549,7 @@
         "scripts/verify-postgresql-runtime.sh",
         "program/requirements-traceability.csv"
       ],
-      "context": "INC-003 threat review found implicit PostgreSQL runtime DDL authority. Authority separation was introduced at df7fc7f878d8beb34fc956746a6bdfe34794f9f0; effective local implementation head 23bfee60f8536d2fcd7e3c5ca20636103f9401c8 additionally makes schema initialization atomic and encodes rollback evidence. Behavioral, PostgreSQL, package, deployment and CI gates remain NOT_RUN.",
+      "context": "Exact local commit 612e03c1a90f644a8cd26fde785f3980491bab9d passes complete least-privilege, migration, recovery, package, infrastructure, frontend, secret and supply-chain gates. Remote publication, exact-head CI and authorized persistent-environment observation remain pending.",
       "dependencies": [
         "INC-003"
       ],
@@ -570,7 +570,7 @@
         "production database role creation or credential rotation",
         "persistent schema migration"
       ],
-      "implementation_commit": "23bfee60f8536d2fcd7e3c5ca20636103f9401c8",
+      "implementation_commit": "612e03c1a90f644a8cd26fde785f3980491bab9d",
       "objective": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation.",
       "prohibited_paths": [
         "external databases",
@@ -578,12 +578,12 @@
         "credential rotation",
         "protected branches"
       ],
-      "publication_state": "LOCAL_COMMITS_NOT_PUSHED",
+      "publication_state": "LOCAL_VERIFIED_PENDING_PUSH_CI",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Security Reviewer / Data Engineer",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-012",
       "validation_commands": [
         "python3 -m unittest backend.tests.test_postgres_schema_cli -v",

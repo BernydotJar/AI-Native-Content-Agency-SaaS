@@ -99,21 +99,21 @@
       "scope": "deployment request-size configuration"
     },
     {
-      "command": "static implementation review only; no command gate executed",
+      "command": "./scripts/verify-postgresql-runtime.sh",
       "id": "INC012-POSTGRESQL-RUNTIME-ROLE",
-      "observed": "Effective local head implements initialize/validate, fixed search_path, relation/column validation, exact grants, DDL/TEMP/role-escalation denials and same-transaction initialization with rollback fixture; behavioral PostgreSQL gate intentionally not rerun",
-      "result": "NOT_RUN",
-      "scope": "PostgreSQL migration/runtime authority separation"
+      "observed": "PostgreSQL 15.18; 85/85; distinct non-owner runtime role; zero ownership; exact grants; safe search_path; schema guards; atomic rollback; DDL/TEMP/metadata/GRANT/SET ROLE denials; migration replay and SQLite/PostgreSQL restore readability PASS",
+      "result": "PASS",
+      "scope": "PostgreSQL migration/runtime authority separation and recovery"
     },
     {
-      "command": "static manifest/configuration review only; no Helm/Terraform gate executed",
+      "command": "./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
       "id": "INC012-DEPLOYMENT-CONTRACT",
-      "observed": "Effective local head encodes Helm/Terraform runtime schemaMode=validate and application initialize rejection; render/fmt/validate/plan/package gates not rerun",
-      "result": "NOT_RUN",
-      "scope": "Helm/Terraform runtime schema mode"
+      "observed": "Helm validate-only schema mode; Buildah non-root runtime smoke; Terraform 1.15.8 plan/apply/destroy for SQLite and PostgreSQL against agentless K3s; database URL absent from state; workload scheduling not claimed",
+      "result": "PASS",
+      "scope": "Helm/Terraform/package runtime boundary"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "23bfee60f8536d2fcd7e3c5ca20636103f9401c8",
-  "updated_at": "2026-07-21T20:37:52Z"
+  "source_commit": "612e03c1a90f644a8cd26fde785f3980491bab9d",
+  "updated_at": "2026-07-21T21:07:57Z"
 }

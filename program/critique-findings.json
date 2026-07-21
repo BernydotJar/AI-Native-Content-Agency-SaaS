@@ -66,11 +66,11 @@
     },
     {
       "description": "PostgreSQL migration and runtime authority are not separated; a non-owner least-privilege runtime role is not demonstrated.",
-      "evidence": "Effective local implementation 23bfee60f8536d2fcd7e3c5ca20636103f9401c8 separates operator initialize from runtime validate, fixes search_path, validates relation types/columns, makes initialize transactional, and encodes exact non-owner grants plus negative schema/DDL/TEMP/role-escalation and partial-DDL rollback checks. Behavioral gates, push/CI and persistent environment observation remain NOT_RUN.",
+      "evidence": "Exact local commit 612e03c1a90f644a8cd26fde785f3980491bab9d passed 85/85 PostgreSQL tests under a non-owner runtime role, zero ownership, exact grants, fixed search_path, atomic initialize rollback, negative DDL/TEMP/metadata/GRANT/SET ROLE checks, migration/replay and both restores. Locked-wheel, package, Helm/Terraform/K3s, frontend, program, workflow, secret and supply-chain gates also passed. Push, exact-head CI and authorized persistent-environment observation remain pending.",
       "id": "F-009",
       "owner": "INC-012",
       "severity": "HIGH",
-      "status": "OPEN"
+      "status": "IN_PROGRESS"
     },
     {
       "description": "No approved retention, deletion, legal-hold or data-subject workflow exists for runs, memories, audit, telemetry and backups.",

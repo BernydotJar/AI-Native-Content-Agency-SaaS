@@ -41,11 +41,11 @@ Producer/critic/fixer/verifier passes can be role-separated in-session, but fina
 
 ## OI-007 — PostgreSQL runtime role authority
 
-Category: code / permission / data correctness
+Category: delivery / persistent-environment observation
 
-Effective local head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8` (foundation `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`) implements explicit migration/runtime schema modes, a packaged operator command, fixed `search_path`, atomic initialization, Helm/Terraform `validate` enforcement, distinct ephemeral roles, exact grants and negative ownership/DDL/TEMP/escalation plus incompatible-initialize rollback checks. This remains executable work, not an external blocker, because the revised exact-commit behavioral gates have not been run.
+Exact local commit `612e03c1a90f644a8cd26fde785f3980491bab9d` passes the complete non-owner PostgreSQL, migration, recovery, package, infrastructure, secret and supply-chain gates. The code defect is locally remediated. Push and exact-head CI remain executable delivery work; persistent managed-role observation remains a human/infrastructure gate.
 
-Acceptance condition: the exact local commit proves migration authority is explicit and separate; runtime role is non-superuser, owns no schema/table, has no TEMP/schema CREATE, cannot DDL/TRUNCATE/schema-metadata/GRANT/SET ROLE escalation, and passes every application/tenant/recovery/Helm/Terraform/package gate. Persistent role creation and environment observation remain human/infrastructure gates.
+Acceptance condition: remote SHA equals the reviewed head and all required CI jobs pass; production additionally requires authorized persistent-environment evidence.
 
 ## OI-008 — Retention, deletion and legal hold
 
