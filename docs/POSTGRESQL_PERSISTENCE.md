@@ -97,6 +97,8 @@ agency-runtime-schema validate \
 
 Successful output is bounded JSON containing status, mode, runtime version and schema version. Known schema failures use safe operator messages; unexpected driver failures expose only the exception type.
 
+Initialization holds the advisory lock, executes DDL, writes schema metadata and applies the complete validation contract in one transaction. An incompatible metadata version therefore rolls back every partial DDL change.
+
 Validation checks these explicit `public` relations:
 
 - `runtime_schema_meta`;

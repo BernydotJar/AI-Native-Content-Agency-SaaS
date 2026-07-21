@@ -18,6 +18,7 @@ RUN_ID="${RANDOM}${RANDOM}"
 SHARED_DB="agency_shared_${RUN_ID}"
 MIGRATION_DB="agency_migration_${RUN_ID}"
 RESTORE_DB="agency_restore_${RUN_ID}"
+INCOMPATIBLE_DB="agency_incompatible_${RUN_ID}"
 MIGRATION_ROLE="agency_migrator_${RUN_ID}"
 RUNTIME_ROLE="agency_runtime_${RUN_ID}"
 ADMIN_URL=""
@@ -27,6 +28,7 @@ MIGRATION_URL=""
 MIGRATION_RUNTIME_URL=""
 RESTORE_URL=""
 RESTORE_RUNTIME_URL=""
+INCOMPATIBLE_URL=""
 
 log() {
   printf '[postgresql-verification] %s\n' "$*"
@@ -143,6 +145,7 @@ cleanup() {
     drop_database "$SHARED_DB" >/dev/null 2>&1 || true
     drop_database "$MIGRATION_DB" >/dev/null 2>&1 || true
     drop_database "$RESTORE_DB" >/dev/null 2>&1 || true
+    drop_database "$INCOMPATIBLE_DB" >/dev/null 2>&1 || true
     drop_role "$RUNTIME_ROLE" >/dev/null 2>&1 || true
     drop_role "$MIGRATION_ROLE" >/dev/null 2>&1 || true
     run_as_postgres "$POSTGRES_BIN_DIR/pg_ctl" -D "$PG_DATA" -m fast stop \
@@ -235,9 +238,11 @@ MIGRATION_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${MIGRATION_D
 MIGRATION_RUNTIME_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${MIGRATION_DB}?sslmode=disable"
 RESTORE_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${RESTORE_DB}?sslmode=disable"
 RESTORE_RUNTIME_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${RESTORE_DB}?sslmode=disable"
+INCOMPATIBLE_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${INCOMPATIBLE_DB}?sslmode=disable"
 create_database "$SHARED_DB" "$MIGRATION_ROLE"
 create_database "$MIGRATION_DB" "$MIGRATION_ROLE"
 create_database "$RESTORE_DB" "$MIGRATION_ROLE"
+create_database "$INCOMPATIBLE_DB" "$MIGRATION_ROLE"
 prepare_runtime_schema_access "$SHARED_MIGRATION_URL"
 prepare_runtime_schema_access "$MIGRATION_URL"
 prepare_runtime_schema_access "$RESTORE_URL"
@@ -255,6 +260,42 @@ if [ "$SCHEMA_ABSENT_STATUS" -eq 0 ]; then
 fi
 grep -q 'PostgreSQL runtime schema is incomplete' "$TMP_DIR/schema-absent.log"
 printf 'postgresql_schema_absent_guard=pass\n'
+
+log "proving incompatible initialization rolls back partial DDL"
+"$POSTGRES_BIN_DIR/psql" "$INCOMPATIBLE_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+  >/dev/null <<'SQL'
+CREATE TABLE public.runtime_schema_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+INSERT INTO public.runtime_schema_meta(key, value)
+VALUES ('schema_version', '999');
+SQL
+set +e
+AGENCY_MIGRATION_DATABASE_URL="$INCOMPATIBLE_URL" \
+  "$VENV/bin/agency-runtime-schema" initialize \
+  --database-url-env AGENCY_MIGRATION_DATABASE_URL \
+  >"$TMP_DIR/schema-initialize-incompatible.log" 2>&1
+INCOMPATIBLE_INITIALIZE_STATUS=$?
+set -e
+if [ "$INCOMPATIBLE_INITIALIZE_STATUS" -eq 0 ]; then
+  printf 'incompatible schema initialization unexpectedly succeeded\n' >&2
+  exit 1
+fi
+grep -q 'unsupported PostgreSQL runtime schema version' \
+  "$TMP_DIR/schema-initialize-incompatible.log"
+INCOMPATIBLE_ROLLBACK_STATE=$("$POSTGRES_BIN_DIR/psql" "$INCOMPATIBLE_URL" \
+  --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --command "
+SELECT COALESCE(to_regclass('public.runtime_runs')::text, 'missing') || '|' || value
+FROM public.runtime_schema_meta
+WHERE key = 'schema_version';
+")
+if [ "$INCOMPATIBLE_ROLLBACK_STATE" != "missing|999" ]; then
+  printf 'incompatible initialization left partial schema state: %s\n' \
+    "$INCOMPATIBLE_ROLLBACK_STATE" >&2
+  exit 1
+fi
+printf 'postgresql_schema_initialize_rollback=pass\n'
 
 log "initializing shared schema with migration authority"
 AGENCY_MIGRATION_DATABASE_URL="$SHARED_MIGRATION_URL" \

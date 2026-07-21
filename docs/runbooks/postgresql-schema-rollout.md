@@ -107,7 +107,7 @@ Expected bounded output:
 {"mode":"initialize","runtime_version":"0.7.0","schema_version":"1","status":"pass"}
 ```
 
-The command serializes DDL with an advisory transaction lock. It refuses an incompatible existing schema version.
+The command serializes DDL with an advisory transaction lock and validates before commit. An incompatible metadata version must preserve its original value and leave no partially created runtime table.
 
 ### 3. Apply runtime grants
 

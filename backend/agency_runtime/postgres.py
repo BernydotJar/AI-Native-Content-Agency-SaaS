@@ -610,63 +610,60 @@ class PostgresRuntimeDatabase:
                 """,
                 (SCHEMA_VERSION,),
             )
-        self._validate_schema()
+            self._validate_schema_connection(connection)
 
-    def _validate_schema(self) -> None:
+    def _validate_schema_connection(self, connection: _MappingConnection) -> None:
         invalid: list[str] = []
         expected_relkinds = {
             "table": frozenset({"r", "p"}),
             "sequence": frozenset({"S"}),
         }
-        with self.pool.connection() as connection:
-            for relation_type, names in (
-                ("table", POSTGRES_REQUIRED_TABLES),
-                ("sequence", POSTGRES_REQUIRED_SEQUENCES),
-            ):
-                for name in names:
-                    row = connection.execute(
+        for relation_type, names in (
+            ("table", POSTGRES_REQUIRED_TABLES),
+            ("sequence", POSTGRES_REQUIRED_SEQUENCES),
+        ):
+            for name in names:
+                row = connection.execute(
+                    """
+                    SELECT relation.relkind AS kind
+                    FROM pg_catalog.pg_class AS relation
+                    JOIN pg_catalog.pg_namespace AS namespace
+                      ON namespace.oid = relation.relnamespace
+                    WHERE namespace.nspname = %s AND relation.relname = %s
+                    """,
+                    ("public", name),
+                ).fetchone()
+                if row is None:
+                    invalid.append("{}:{}:missing".format(relation_type, name))
+                elif str(row["kind"]) not in expected_relkinds[relation_type]:
+                    invalid.append("{}:{}:wrong_type".format(relation_type, name))
+                elif relation_type == "table":
+                    columns = connection.execute(
                         """
-                        SELECT relation.relkind AS kind
-                        FROM pg_catalog.pg_class AS relation
-                        JOIN pg_catalog.pg_namespace AS namespace
-                          ON namespace.oid = relation.relnamespace
-                        WHERE namespace.nspname = %s AND relation.relname = %s
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema = %s AND table_name = %s
                         """,
                         ("public", name),
-                    ).fetchone()
-                    if row is None:
-                        invalid.append("{}:{}:missing".format(relation_type, name))
-                    elif str(row["kind"]) not in expected_relkinds[relation_type]:
-                        invalid.append("{}:{}:wrong_type".format(relation_type, name))
-                    elif relation_type == "table":
-                        columns = connection.execute(
-                            """
-                            SELECT column_name
-                            FROM information_schema.columns
-                            WHERE table_schema = %s AND table_name = %s
-                            """,
-                            ("public", name),
-                        ).fetchall()
-                        observed_columns = {str(item["column_name"]) for item in columns}
-                        for column in sorted(
-                            POSTGRES_REQUIRED_COLUMNS[name] - observed_columns
-                        ):
-                            invalid.append(
-                                "column:{}.{}:missing".format(name, column)
-                            )
-            if invalid:
-                raise PostgresSchemaError(
-                    "PostgreSQL runtime schema is incomplete: {}".format(
-                        ", ".join(sorted(invalid))
-                    )
+                    ).fetchall()
+                    observed_columns = {str(item["column_name"]) for item in columns}
+                    for column in sorted(
+                        POSTGRES_REQUIRED_COLUMNS[name] - observed_columns
+                    ):
+                        invalid.append("column:{}.{}:missing".format(name, column))
+        if invalid:
+            raise PostgresSchemaError(
+                "PostgreSQL runtime schema is incomplete: {}".format(
+                    ", ".join(sorted(invalid))
                 )
-            row = connection.execute(
-                """
-                SELECT value
-                FROM public.runtime_schema_meta
-                WHERE key = 'schema_version'
-                """
-            ).fetchone()
+            )
+        row = connection.execute(
+            """
+            SELECT value
+            FROM public.runtime_schema_meta
+            WHERE key = 'schema_version'
+            """
+        ).fetchone()
         actual_version = None if row is None else str(row["value"])
         if actual_version != POSTGRES_SCHEMA_VERSION:
             raise PostgresSchemaError(
@@ -674,6 +671,10 @@ class PostgresRuntimeDatabase:
                     actual_version or "missing", POSTGRES_SCHEMA_VERSION
                 )
             )
+
+    def _validate_schema(self) -> None:
+        with self.pool.connection() as connection:
+            self._validate_schema_connection(connection)
 
     def check(self) -> None:
         self._validate_schema()

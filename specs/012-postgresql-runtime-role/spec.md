@@ -48,6 +48,7 @@ Separate schema bootstrap/migration authority from runtime authority, make runti
 ## Invariants
 
 - a runtime connection in `validate` mode issues zero CREATE/ALTER/DROP/TRUNCATE/GRANT/REVOKE statements;
+- initialize holds its advisory lock through DDL, metadata insertion and validation so failure rolls back the full transaction;
 - migration credentials are never required by the application runtime;
 - runtime role cannot grant itself more authority;
 - schema validation checks authoritative metadata, relation types and required columns, not only connection success;
@@ -73,6 +74,7 @@ The migration role is highly privileged and must not be mounted into runtime pod
 
 - the verifier first fails when the current bootstrap role is treated as runtime;
 - explicit initialize creates schema and explicit validate never executes DDL;
+- incompatible initialize preserves the prior metadata version and leaves no partial runtime relation;
 - validate mode rejects absent, wrong-type, missing-column and incompatible schema in tests;
 - runtime connections prove the fixed safe search path and reject a caller-supplied `search_path` option;
 - runtime-role privilege inventory proves all forbidden capabilities false and no ownership;
