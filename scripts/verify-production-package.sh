@@ -248,6 +248,71 @@ set +e
 viewer_create_status=$(curl -sS -o "$TMP_DIR/viewer-denied.json" -w '%{http_code}'   -H 'Content-Type: application/json'   -H "Authorization: Bearer $VIEWER_KEY"   -H 'X-Request-ID: package-viewer-denied-0001'   -H 'Idempotency-Key: package-viewer-create-0001'   -d '{"title":"Viewer must not create","objective":"Verify least privilege","audience":"reviewers","platforms":["x"],"budget_cents":0,"campaign_goal":"verification"}'   "http://127.0.0.1:${HOST_PORT}/api/v1/runs")
 set -e
 [ "$viewer_create_status" = "403" ]
+curl -fsS \
+  -H "Authorization: Bearer $VIEWER_KEY" \
+  -H 'X-Request-ID: package-integrations-list-0001' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/integrations" \
+  > "$TMP_DIR/integrations.json"
+curl -fsS \
+  -H "Authorization: Bearer $VIEWER_KEY" \
+  -H 'X-Request-ID: package-integrations-detail-0001' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/integrations/video-use" \
+  > "$TMP_DIR/integration-detail.json"
+curl -fsS "http://127.0.0.1:${HOST_PORT}/openapi.json" > "$TMP_DIR/openapi.json"
+set +e
+integration_execute_status=$(curl -sS -o "$TMP_DIR/integration-execute-denied.json" -w '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $VIEWER_KEY" \
+  -H 'X-Request-ID: package-integration-execute-denied-0001' \
+  -d '{"operation":"render_video"}' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/integrations/video-use/execute")
+set -e
+case "$integration_execute_status" in
+  404|405) ;;
+  *) printf 'integration execution route returned unsafe status: %s\n' "$integration_execute_status" >&2; exit 4 ;;
+esac
+python3 - "$TMP_DIR/integrations.json" "$TMP_DIR/integration-detail.json" \
+  "$TMP_DIR/openapi.json" "$TMP_DIR/integration-execute-denied.json" <<'PYINTEGRATION'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    listing = json.load(handle)
+with open(sys.argv[2], encoding="utf-8") as handle:
+    detail = json.load(handle)
+with open(sys.argv[3], encoding="utf-8") as handle:
+    openapi = json.load(handle)
+with open(sys.argv[4], encoding="utf-8") as handle:
+    denied = json.load(handle)
+
+assert listing["tenant_id"] == "local-verification"
+assert len(listing["integrations"]) == 1
+integration = listing["integrations"][0]
+assert integration["integration_id"] == "video-use"
+assert integration["upstream_commit"] == "92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66"
+assert integration["review_status"] == "reviewed_disabled"
+assert integration["activation_allowed"] is False
+assert integration["execution_available"] is False
+assert integration["external_effects_enabled"] is False
+assert integration["required_binaries"] == ["ffmpeg", "ffprobe"]
+assert integration["optional_binaries"] == ["yt-dlp"]
+assert detail == {"tenant_id": "local-verification", "integration": integration}
+paths = {
+    path: methods
+    for path, methods in openapi["paths"].items()
+    if path.startswith("/api/v1/integrations")
+}
+assert set(paths) == {
+    "/api/v1/integrations",
+    "/api/v1/integrations/{integration_id}",
+}
+assert all(set(methods) == {"get"} for methods in paths.values())
+assert denied["code"] in {"resource_not_found", "method_not_allowed"}
+assert denied["detail"] in {"resource not found", "method not allowed"}
+print("integration_review_manifest=pass")
+print("integration_read_only_api=pass")
+print("integration_execution_disabled=pass")
+PYINTEGRATION
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
   -H 'Content-Type: application/json' \
   -H 'X-Request-ID: package-session-0001' \
@@ -403,7 +468,7 @@ assert denial["payload"] == {
 assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
 assert 'agency_browser_sessions_total{action="created"} 1' in metrics
-assert 'agency_authentication_attempts_total{outcome="succeeded"} 2' in metrics
+assert 'agency_authentication_attempts_total{outcome="succeeded"} 4' in metrics
 assert "x-request-id: package-session-0001" in session_headers
 assert "x-request-id: package-create-0001" in run_headers
 assert "x-request-id: package-approve-0001" in approval_headers

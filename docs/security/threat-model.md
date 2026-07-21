@@ -173,7 +173,7 @@ No trust is assigned merely because traffic originates from the browser, a priva
 | T-015 | Elevation of privilege | Viewer/operator performs approval/admin action. | Explicit permission matrix enforced in dependencies; denials audited; role/session change tests. | Static configuration changes are operator-controlled and not independently approved. | Controlled / config governance |
 | T-016 | Elevation of privilege | Compromise overprivileged PostgreSQL runtime account. | Exact-head CI and local verifier prove explicit initialize/validate separation, non-superuser/non-owner runtime, exact DML grants and DDL/TEMP/TRUNCATE/schema-metadata/role-escalation denial. | No persistent staging/production role has been observed; tracked by the environment gate. | Controlled in code/delivery; staging gate |
 | T-017 | Elevation / supply chain | Malicious package/action/base image executes in build/runtime. | Hash locks, SHA/digest pins, SBOM, vulnerability/license policy, provenance, offline Cosign verification, non-root image. | Five expiring HIGH exceptions require remediation by 2026-08-21; external registry/publisher controls untested. | MEDIUM open |
-| T-018 | Prompt/content injection | Campaign content instructs agents/tools to bypass policy or publish. | Deterministic local adapters, no provider/browser/publisher effect, explicit Greenlight boundary. | Semantic prompt-injection and groundedness eval harness is incomplete; any future browser/video adapter is HIGH risk until isolated. | HIGH open before integrations |
+| T-018 | Prompt/content injection | Campaign, page, media or transcript content instructs agents/tools to bypass policy or publish. | Deterministic local adapters, no provider/browser/publisher effect, explicit Greenlight boundary, exact `video-use` review manifest and no execution route. | Semantic prompt-injection and groundedness eval harness is incomplete; any future browser/video adapter is HIGH risk until isolated. | HIGH open before integrations |
 | T-019 | Human authority | Technical success is mistaken for merge/deploy/publication authorization. | Program state explicitly separates committed/pushed/CI/deployed/observed; `DENY_RELEASE`/`DENY_APPLY`; no automatic merge/deploy. | Human process can still override; accountable release reviewer required. | Human gate |
 
 ## 8. Security controls verified in INC-003
@@ -205,6 +205,13 @@ The following prevent a production-ready declaration:
 7. Semantic prompt-injection/adversarial evals remain incomplete.
 
 ## 10. Required security review for future integrations
+
+
+The exact `browser-use/video-use` commit
+`92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66` has now been reviewed but not
+adopted. The packaged manifest records open HIGH path-containment, external media
+upload and missing product authority/receipt findings. Read-only API visibility
+does not change the trust boundary or authorize execution.
 
 Before activating `browser-use/video-use`, a publisher, model or media provider, require:
 

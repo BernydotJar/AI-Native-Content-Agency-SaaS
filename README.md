@@ -14,6 +14,7 @@ Aplicación full-stack y sandbox gobernado para operar una agencia de contenido 
 - Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
 - FastAPI con identidad individual, RBAC (`viewer`, `operator`, `approver`, `admin`), bearer auth para máquinas, sesiones HttpOnly + CSRF para navegador, rate limiting durable y aislamiento cross-tenant.
 - Consola React de producción para ejecutar briefs, inspeccionar Scholar/artefactos, decidir Greenlight y consultar auditoría durable.
+- Registro autenticado y sólo lectura de candidatos de integración revisados; `video-use` está pinneado como `reviewed_disabled` y no tiene ruta de ejecución.
 - `DynamicSkillCreator` para crear borradores Markdown locales dentro de una raíz explícita, con validación de slug, protección contra traversal/symlinks y overwrite opt-in.
 - Biblioteca local con instrucciones por agente, base de conocimiento y skills editoriales/de plataforma.
 - Pruebas de interacción frontend y pruebas unitarias del runtime, memoria, fachada y creador de skills.
@@ -34,6 +35,7 @@ agency.py + FastAPI
     ├── rate limiting durable por credencial y por origen confiable
     ├── SQLite para local/single-replica y PostgreSQL para estado compartido
     ├── adaptadores deterministas sandbox
+    ├── registro de revisión de integraciones GET-only (sin ejecución)
     └── creador seguro de borradores de skill
 
 Contenido operativo local
@@ -45,6 +47,7 @@ Contenido operativo local
 La nueva consola de producción consume estado y artefactos de FastAPI. La state machine cinematográfica original sigue ejecutándose de forma independiente hasta demostrar paridad completa antes de retirarla. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
 
 Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la matriz requisito → evidencia → estado y las desviaciones deliberadas respecto de la propuesta inicial.
+La evaluación exacta de `browser-use/video-use`, sus hallazgos y la lista de activación están en [docs/integrations/video-use-review.md](docs/integrations/video-use-review.md).
 
 ## Stack
 

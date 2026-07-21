@@ -25,6 +25,7 @@ from .auth import (
     TenantPrincipal,
 )
 from .memory import MemoryStore, SQLiteMemory
+from .integrations import IntegrationContractError, IntegrationRegistry
 from .models import ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
 from .orchestrator import AgencyOrchestrator, GreenlightError
@@ -933,6 +934,7 @@ def create_app(
     app.state.runtime_service = service
     app.state.authenticator = authenticator
     app.state.metrics = metrics
+    app.state.integration_registry = IntegrationRegistry.default()
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
@@ -1403,6 +1405,32 @@ def create_app(
             "permissions": list(principal.permissions),
             "entitlements": list(principal.entitlements),
             "auth_method": principal.auth_method,
+        }
+
+    @app.get("/api/v1/integrations", tags=["integrations"])
+    def list_integrations(
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        return {
+            "tenant_id": principal.tenant_id,
+            "integrations": [
+                manifest.public_dict()
+                for manifest in app.state.integration_registry.list()
+            ],
+        }
+
+    @app.get("/api/v1/integrations/{integration_id}", tags=["integrations"])
+    def get_integration(
+        integration_id: str,
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        try:
+            manifest = app.state.integration_registry.get(integration_id)
+        except (IntegrationContractError, KeyError) as error:
+            raise HTTPException(status_code=404, detail="integration not found") from error
+        return {
+            "tenant_id": principal.tenant_id,
+            "integration": manifest.public_dict(),
         }
 
     @app.get("/api/v1/audit-events", tags=["audit"])

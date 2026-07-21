@@ -63,6 +63,8 @@ Operational derivative data
 
 No active adapter transmits campaign content to a model provider, social network, browser automation service, media generator, analytics vendor or ad platform. Enabling any such transmission changes the processor/subprocessor and international-transfer boundary and requires a new privacy review and explicit human authorization.
 
+The `video-use` registry entry contains only public upstream metadata, source hashes and review findings. It contains no tenant media, transcript, credential or provider response. The reviewed upstream transcription path would disclose extracted audio to ElevenLabs, so it remains disabled pending provider/subprocessor, region, retention, deletion, training-use and data-subject review.
+
 ## 5. Privacy principles applied
 
 ### Purpose limitation
@@ -173,7 +175,7 @@ No destructive action is authorized by this document.
 | P-004 | Audit stores excess identity/security detail. | Bounded payload; no token/body/raw IP. | Define audit purpose/retention, pseudonymization and immutable export. | MEDIUM open |
 | P-005 | Data retained indefinitely or deleted inconsistently. | No silent auto-deletion; destructive actions human-gated. | Approve policy and implement/test primary, backup and processor deletion. | HIGH open |
 | P-006 | Backup copied without encryption/access controls. | Private local files, checksums, URL/password redaction, restore drill. | Encrypted immutable off-host storage, least privilege, retention/monitoring. | HIGH deployment |
-| P-007 | Future provider/browser/publisher receives data without review. | All external adapters disabled. | Contract/subprocessor/transfer/training/telemetry review per adapter. | Controlled until activation |
+| P-007 | Future provider/browser/publisher receives data without review. | All external adapters disabled; exact `video-use` source/egress review is packaged read-only with no executor. | Provider contract, subprocessor/transfer/training/telemetry/deletion review and explicit activation per adapter. | Controlled until activation |
 | P-008 | Operator/admin over-access inside tenant. | RBAC and tenant audit. | Field/campaign scoping, periodic access review and managed identity lifecycle. | MEDIUM open |
 | P-009 | Political campaign output used for harmful profiling/targeting or unsupported claims. | Deterministic sandbox, zero spend/publication, Greenlight. | Product policy, semantic/legal evals and accountable review before effects. | HIGH open |
 | P-010 | Data-subject request cannot be fulfilled completely. | Manual inventory and human gate. | Implement verified export/correction/deletion and backup handling after policy. | HIGH open |

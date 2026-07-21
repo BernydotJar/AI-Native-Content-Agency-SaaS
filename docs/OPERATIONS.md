@@ -11,6 +11,8 @@
 | `GET /api/v1/sessions/current` | HttpOnly cookie | active identity | Restores the browser session and rotates CSRF. |
 | `DELETE /api/v1/sessions/current` | cookie + CSRF | active identity | Revokes the durable browser session. |
 | `GET /api/v1/me` | bearer or cookie | `identity:read` | Returns tenant, subject, role, key ID, permissions, and authentication method. |
+| `GET /api/v1/integrations` | bearer or cookie | `identity:read` | Lists immutable reviewed integration candidates and their disabled/activation state. |
+| `GET /api/v1/integrations/{integration_id}` | bearer or cookie | `identity:read` | Reads one exact pinned review manifest; no execution route exists. |
 | `GET /api/v1/audit-events` | bearer or cookie | `audit:read` | Durable, tenant-scoped mutation ledger with cursor pagination. |
 | `POST /api/v1/runs` | bearer or cookie + CSRF + `Idempotency-Key` | `runs:create` | Starts or compatibly replays one governed sandbox run. |
 | `GET /api/v1/runs/{run_id}` | bearer or cookie | `runs:read` | Reads a tenant-scoped run. |
@@ -18,6 +20,15 @@
 | `POST /api/v1/runs/{run_id}/greenlight/revoke` | bearer or cookie + CSRF + `Idempotency-Key` | `greenlight:revoke` | Revokes active approval and increments its fencing token. |
 
 `/metrics` intentionally contains no tenant ID, subject ID, key ID, run ID, request ID, objective, reviewer, credential fingerprint, or user content. It is designed for cluster-internal scraping. The Helm chart emits standard Prometheus pod annotations when `observability.metrics.enabled=true`.
+
+### Reviewed integrations
+
+The integration endpoints expose review evidence only. `video-use` is pinned to commit
+`92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66` with status
+`reviewed_disabled`. The runtime imports no upstream code and exposes no POST,
+render, transcribe, upload, download or credential endpoint. A valid review-only
+plan still has `execution_permitted=false`; execution and receipt creation fail
+closed. See [the exact review](integrations/video-use-review.md).
 
 ## Individual identity and RBAC
 

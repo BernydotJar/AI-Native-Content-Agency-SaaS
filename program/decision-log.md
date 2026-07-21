@@ -115,3 +115,20 @@ Status: accepted locally at `f63a58648eec0579d53a007c8ed83ff376b95727` and `8ecf
 Decision: expose four politically neutral free themes and one premium theme. Theme never changes role, permission, Greenlight, risk or recommendation. Premium activates only from the exact allowlisted `theme:premium` entitlement on the active server-managed identity. The SPA refreshes `/me`, falls back to blue when entitlement disappears, stores no theme/entitlement in browser persistence and treats CSS as inspectable rather than DRM.
 
 Consequence: administrators can grant/revoke supported premium UI without billing infrastructure or database schema changes. Checkout, invoicing and subscription lifecycle remain separate unimplemented systems. Manual accessibility review remains a human release gate.
+
+## D-014 — External integration review is data, not execution authority
+
+Date: 2026-07-21
+Status: accepted locally; exact-head CI pending
+
+Decision: review `browser-use/video-use` at exact commit
+`92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66`, package its source hashes and
+findings, and expose that evidence through authenticated GET endpoints only.
+Define strict product-owned plan and future receipt shapes, but keep
+`activation_allowed`, `execution_available`, `execution_permitted` and
+`external_effects_enabled` false. Do not install, import or invoke upstream code.
+
+Consequence: operators can inspect a reproducible architecture/license/security
+review without gaining provider authority. Path traversal, media disclosure,
+supply-chain reproducibility, isolated worker, outbound idempotency/receipt,
+privacy and semantic-eval requirements remain mandatory before any activation.

@@ -14,6 +14,7 @@ React 19 / TypeScript / Vite SPA
        -> PostgresRunStore + PostgresMemory for shared replicas
        -> deterministic eight-agent AgencyOrchestrator
        -> sandbox-only tool adapters
+       -> immutable integration-review registry (GET-only; no executor)
   -> durable audit, sessions, rate-limit state, runs and Greenlight
 ```
 
@@ -25,8 +26,9 @@ The multi-stage OCI image serves the SPA and FastAPI as UID/GID 10001. Helm and 
 - Browser sessions use HttpOnly/SameSite cookies and an in-memory CSRF token.
 - Machine clients use bearer credentials.
 - Runs, sessions, audit events, authentication-rate buckets, and memories are stored in SQLite or PostgreSQL.
-- Greenlight stores exact artifact IDs and hashes but currently lacks a client idempotency-key contract and post-approval revocation.
+- Inbound run/Greenlight commands use durable idempotency, exact artifact binding, revocation and fencing for the current sandbox. Future outbound providers still require a transactional outbox and provider receipt.
 - Tools are deterministic sandbox adapters. They perform no external publication, media generation, navigation, repository mutation, or ad spend.
+- Reviewed external candidates are immutable package data exposed through authenticated GET endpoints; `video-use` remains `reviewed_disabled` with no executable adapter.
 
 ## Deployment evidence boundary
 
@@ -53,9 +55,8 @@ Agentless K3s does not prove pod scheduling. OCI smoke does not prove Kubernetes
 
 ## Known architectural gaps
 
-- no durable idempotency-key ledger for mutable API commands;
-- no post-approval Greenlight revocation protocol;
-- no asynchronous lease/outbox/worker model for future effectful tools;
+- no asynchronous lease/outbox/worker model or provider receipt for future effectful tools;
+- no enabled browser/video provider adapter; the exact `video-use` review remains disabled on HIGH findings;
 - no object store for media or large artifacts;
 - no managed IdP, SSO, MFA, recovery, or lifecycle provisioning;
 - no implemented retention/deletion engine;
