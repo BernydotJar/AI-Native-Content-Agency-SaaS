@@ -187,3 +187,15 @@ Endpoints iniciales:
 El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del Trade-off` y `Resolución Operativa`. El Greenlight conserva los IDs y hashes exactos de los siete artefactos revisados, además de canales y presupuesto autorizados. Publisher sólo crea un manifiesto sandbox y mantiene `publication_performed=false`.
 
 Este servicio todavía usa estado de ejecuciones en memoria de proceso y SQLite local para memoria semántica básica. Autenticación, tenancy y persistencia durable de runs siguen siendo requisitos bloqueantes para un piloto multiusuario.
+
+## Verificación del paquete de producción
+
+Helm y la imagen completa pueden validarse localmente con un único comando. El script acepta Docker o Buildah; en workstations con overlay anidado se recomienda Buildah con `vfs` y aislamiento `chroot`:
+
+```bash
+CONTAINER_BUILDER=buildah \
+HELM_BIN=/home/agent/.local/bin/helm \
+./scripts/verify-production-package.sh
+```
+
+La verificación lint/renderiza Helm, construye la imagen multi-stage, inicia el artefacto como usuario no root y prueba health, SPA, API, siete artefactos y el gate de Publisher. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
