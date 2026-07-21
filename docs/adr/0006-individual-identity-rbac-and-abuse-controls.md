@@ -12,7 +12,7 @@ A public or multi-operator pilot requires least privilege, accountable actors, c
 
 ## Decision
 
-1. Configure individual credentials through `AGENCY_IDENTITY_CREDENTIALS_JSON` with `tenant_id`, `subject_id`, `role`, `key_id`, `api_key`, and `active`.
+1. Configure individual credentials through `AGENCY_IDENTITY_CREDENTIALS_JSON` with `tenant_id`, `subject_id`, `role`, `key_id`, `api_key`, `active`, and an optional exact-allowlisted `entitlements` array.
 2. Support four fixed roles:
    - `viewer`: identity, run, and audit read;
    - `operator`: viewer plus run creation;
@@ -30,6 +30,7 @@ A public or multi-operator pilot requires least privilege, accountable actors, c
 10. Trust forwarded source addresses only from `FORWARDED_ALLOW_IPS`, passed explicitly to Uvicorn. The production chart defaults to loopback and requires operators to list known proxies.
 11. Record audit actors as `api-key:<subject_id>` or `browser-session:<subject_id>` instead of exposing a credential fingerprint.
 12. Fail Helm rendering when individual identity is absent or when rate-limit bounds are invalid. Mirror the same settings and ordering precondition in Terraform.
+13. Treat `theme:premium` as the only current product entitlement. It is server-owned, consistent across simultaneously active keys for one subject, returned by identity/session responses, revalidated on session-authenticated requests, absent from persisted session rows and audit payloads, and independent from RBAC permissions.
 
 ## Consequences
 
@@ -41,11 +42,13 @@ A public or multi-operator pilot requires least privilege, accountable actors, c
 - Failed attempts survive process restart and do not store credential or source plaintext.
 - Password-spray control is distinct from credential lockout, reducing shared-ingress denial-of-service risk.
 - Browser and machine clients use the same permission model.
+- Product entitlements can be revoked through the same active-identity revalidation without granting operational permissions.
 - Helm and Terraform encode the production identity and proxy-trust contract.
 
 ### Trade-offs
 
-- Identity remains application-managed static configuration. SSO, MFA, SCIM/lifecycle provisioning, recovery, device posture, and IdP token validation are not implemented.
+- Identity remains application-managed static configuration. SSO, MFA, SCIM/lifecycle provisioning, recovery, device posture, IdP token validation, checkout and billing are not implemented.
+- `theme:premium` controls the supported UI path but is not DRM; frontend assets and CSS remain inspectable.
 - Configuration changes require a Secret update and workload restart/redeploy.
 - SQLite rate limiting is correct only for the current single-writer deployment. Horizontal replicas require a shared atomic limiter.
 - `subject_id` appears in tenant-scoped audit events. Deployments with stricter privacy requirements should use opaque pseudonymous subjects and maintain the directory mapping elsewhere.

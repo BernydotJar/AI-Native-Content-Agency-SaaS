@@ -12,6 +12,7 @@ _TENANT_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 _SUBJECT_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9@._:-]{0,127}$")
 _KEY_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _VALID_ROLES = frozenset({"viewer", "operator", "approver", "admin"})
+_VALID_ENTITLEMENTS = frozenset({"theme:premium"})
 _ROLE_PERMISSIONS = {
     "viewer": frozenset({"identity:read", "runs:read", "audit:read"}),
     "operator": frozenset(
@@ -58,6 +59,7 @@ class TenantPrincipal:
     role: str
     key_id: str
     credential_fingerprint: str
+    entitlements: Tuple[str, ...] = ()
     auth_method: str = "bearer"
     session_id: str = ""
 
@@ -82,6 +84,7 @@ class _CredentialEntry:
     subject_id: str
     role: str
     key_id: str
+    entitlements: Tuple[str, ...] = ()
     legacy: bool = False
 
     def principal(self, auth_method: str = "bearer", session_id: str = "") -> TenantPrincipal:
@@ -91,6 +94,7 @@ class _CredentialEntry:
             role=self.role,
             key_id=self.key_id,
             credential_fingerprint=self.digest,
+            entitlements=self.entitlements,
             auth_method=auth_method,
             session_id=session_id,
         )
@@ -101,7 +105,7 @@ class TenantAuthenticator:
 
     The legacy tenant-to-key mapping remains supported and is translated into an
     administrator identity. The preferred identity configuration is an array of
-    records with tenant_id, subject_id, role, key_id, api_key and optional active.
+    records with tenant_id, subject_id, role, key_id, api_key, optional active and exact allowlisted entitlements.
     Multiple active key IDs for the same subject enable overlap during rotation.
     """
 
@@ -113,6 +117,7 @@ class TenantAuthenticator:
         entries = []
         seen_digests = set()
         seen_key_ids = set()
+        subject_authority = {}
 
         def add_entry(
             *,
@@ -121,12 +126,14 @@ class TenantAuthenticator:
             role: str,
             key_id: str,
             api_key: str,
+            entitlements: Sequence[str],
             legacy: bool,
         ) -> None:
             normalized_tenant = self._tenant_id(tenant_id)
             normalized_subject = self._subject_id(subject_id)
             normalized_role = self._role(role)
             normalized_key_id = self._key_id(key_id)
+            normalized_entitlements = self._entitlements(entitlements)
             self._validate_api_key(api_key)
             digest = self.fingerprint(api_key)
             if digest in seen_digests:
@@ -140,6 +147,14 @@ class TenantAuthenticator:
                         normalized_key_id
                     )
                 )
+            authority_identity = (normalized_tenant, normalized_subject)
+            authority = (normalized_role, normalized_entitlements)
+            existing_authority = subject_authority.get(authority_identity)
+            if existing_authority is not None and existing_authority != authority:
+                raise AuthConfigurationError(
+                    "active keys for one subject must share role and entitlements"
+                )
+            subject_authority[authority_identity] = authority
             seen_digests.add(digest)
             seen_key_ids.add(key_identity)
             entries.append(
@@ -149,6 +164,7 @@ class TenantAuthenticator:
                     subject_id=normalized_subject,
                     role=normalized_role,
                     key_id=normalized_key_id,
+                    entitlements=normalized_entitlements,
                     legacy=legacy,
                 )
             )
@@ -161,6 +177,7 @@ class TenantAuthenticator:
                 role="admin",
                 key_id="legacy:{}".format(normalized_tenant),
                 api_key=api_key,
+                entitlements=(),
                 legacy=True,
             )
 
@@ -182,12 +199,14 @@ class TenantAuthenticator:
                     "identity credential at index {} must contain string tenant_id, "
                     "subject_id, role, key_id and api_key".format(index)
                 )
+            entitlements = self._entitlements(raw.get("entitlements", ()))
             add_entry(
                 tenant_id=str(raw["tenant_id"]),
                 subject_id=str(raw["subject_id"]),
                 role=str(raw["role"]),
                 key_id=str(raw["key_id"]),
                 api_key=str(raw["api_key"]),
+                entitlements=entitlements,
                 legacy=False,
             )
 
@@ -338,6 +357,26 @@ class TenantAuthenticator:
                 "role must be one of: {}".format(", ".join(sorted(_VALID_ROLES)))
             )
         return normalized
+
+    @staticmethod
+    def _entitlements(value: object) -> Tuple[str, ...]:
+        if value is None:
+            return ()
+        if not isinstance(value, (list, tuple)) or isinstance(value, (str, bytes)):
+            raise AuthConfigurationError("identity entitlements must be an array")
+        if not all(isinstance(item, str) for item in value):
+            raise AuthConfigurationError("identity entitlements must contain strings")
+        normalized = tuple(item.strip().lower() for item in value)
+        if any(not item for item in normalized):
+            raise AuthConfigurationError("identity entitlements must not be empty")
+        if len(set(normalized)) != len(normalized):
+            raise AuthConfigurationError("identity entitlements must not contain duplicates")
+        unknown = sorted(set(normalized) - _VALID_ENTITLEMENTS)
+        if unknown:
+            raise AuthConfigurationError(
+                "unsupported identity entitlement: {}".format(", ".join(unknown))
+            )
+        return tuple(sorted(normalized))
 
     @staticmethod
     def _validate_api_key(api_key: str) -> None:

@@ -1336,6 +1336,7 @@ def create_app(
             "subject_id": issue.subject_id,
             "role": issue.role,
             "key_id": issue.key_id,
+            "entitlements": list(principal.entitlements),
             "csrf_token": issue.csrf_token,
             "expires_at": issue.expires_at,
         }
@@ -1360,6 +1361,7 @@ def create_app(
             "subject_id": principal.subject_id,
             "role": principal.role,
             "key_id": principal.key_id,
+            "entitlements": list(principal.entitlements),
             "csrf_token": issue.csrf_token,
             "expires_at": issue.expires_at,
         }
@@ -1399,6 +1401,7 @@ def create_app(
             "role": principal.role,
             "key_id": principal.key_id,
             "permissions": list(principal.permissions),
+            "entitlements": list(principal.entitlements),
             "auth_method": principal.auth_method,
         }
 

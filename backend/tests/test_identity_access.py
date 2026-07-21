@@ -8,7 +8,11 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from agency_runtime.api import create_app, run
-from agency_runtime.auth import AuthConfigurationError, TenantAuthenticator
+from agency_runtime.auth import (
+    AuthConfigurationError,
+    AuthenticationError,
+    TenantAuthenticator,
+)
 
 
 VIEWER_KEY = "viewer-tenant-alpha-key-material-2026"
@@ -37,8 +41,9 @@ def identity(
     *,
     active=True,
     tenant_id="tenant-alpha",
+    entitlements=None,
 ):
-    return {
+    result = {
         "tenant_id": tenant_id,
         "subject_id": subject_id,
         "role": role,
@@ -46,6 +51,9 @@ def identity(
         "api_key": api_key,
         "active": active,
     }
+    if entitlements is not None:
+        result["entitlements"] = entitlements
+    return result
 
 
 def auth(api_key, idempotency_key=None):
@@ -436,6 +444,91 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
             forwarded_allow_ips="10.0.0.0/8,192.0.2.10",
         )
 
+    def test_premium_theme_entitlement_is_server_owned_and_revocable(self):
+        entitled = [
+            identity(
+                "admin@example.com",
+                "admin",
+                "admin-v1",
+                ADMIN_KEY,
+                entitlements=["theme:premium"],
+            )
+        ]
+        authenticator = TenantAuthenticator(identity_credentials=entitled)
+        principal = authenticator.authenticate(ADMIN_KEY)
+        self.assertEqual(principal.entitlements, ("theme:premium",))
+
+        with self.client(entitled) as client:
+            opened = client.post("/api/v1/sessions", json={"api_key": ADMIN_KEY})
+            self.assertEqual(opened.status_code, 201)
+            self.assertEqual(opened.json()["entitlements"], ["theme:premium"])
+            session_cookie = client.cookies.get("agency_session")
+            self.assertIsNotNone(session_cookie)
+            self.assertEqual(
+                client.get("/api/v1/sessions/current").json()["entitlements"],
+                ["theme:premium"],
+            )
+            self.assertEqual(
+                client.get("/api/v1/me").json()["entitlements"],
+                ["theme:premium"],
+            )
+
+        self.assertNotIn(b"theme:premium", self.database.read_bytes())
+
+        revoked = [identity("admin@example.com", "admin", "admin-v1", ADMIN_KEY)]
+        with self.client(revoked) as restarted:
+            restarted.cookies.set("agency_session", session_cookie)
+            current = restarted.get("/api/v1/sessions/current")
+            self.assertEqual(current.status_code, 200)
+            self.assertEqual(current.json()["entitlements"], [])
+            self.assertEqual(restarted.get("/api/v1/me").json()["entitlements"], [])
+
+    def test_inactive_key_does_not_block_entitlement_rotation(self):
+        authenticator = TenantAuthenticator(
+            identity_credentials=[
+                identity(
+                    "admin@example.com",
+                    "admin",
+                    "admin-v1",
+                    ADMIN_KEY,
+                    active=False,
+                    entitlements=["theme:premium"],
+                ),
+                identity(
+                    "admin@example.com",
+                    "admin",
+                    "admin-v2",
+                    OPERATOR_NEW_KEY,
+                ),
+            ]
+        )
+        self.assertEqual(
+            authenticator.authenticate(OPERATOR_NEW_KEY).entitlements,
+            (),
+        )
+        with self.assertRaises(AuthenticationError):
+            authenticator.authenticate(ADMIN_KEY)
+
+    def test_identity_entitlements_are_exact_allowlisted_configuration(self):
+        for invalid in (
+            "theme:premium",
+            ["theme:unknown"],
+            ["theme:premium", "theme:premium"],
+            [1],
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(AuthConfigurationError):
+                TenantAuthenticator(
+                    identity_credentials=[
+                        identity(
+                            "admin@example.com",
+                            "admin",
+                            "admin-v1",
+                            ADMIN_KEY,
+                            entitlements=invalid,
+                        )
+                    ]
+                )
+
     def test_identity_configuration_rejects_unsafe_or_ambiguous_records(self):
         with self.assertRaises(AuthConfigurationError):
             TenantAuthenticator(
@@ -455,6 +548,24 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                 identity_credentials=[
                     identity("one@example.com", "viewer", "one", VIEWER_KEY),
                     identity("two@example.com", "viewer", "two", VIEWER_KEY),
+                ]
+            )
+        with self.assertRaises(AuthConfigurationError):
+            TenantAuthenticator(
+                identity_credentials=[
+                    identity(
+                        "one@example.com",
+                        "viewer",
+                        "one-v1",
+                        VIEWER_KEY,
+                        entitlements=["theme:premium"],
+                    ),
+                    identity(
+                        "one@example.com",
+                        "viewer",
+                        "one-v2",
+                        OPERATOR_OLD_KEY,
+                    ),
                 ]
             )
 

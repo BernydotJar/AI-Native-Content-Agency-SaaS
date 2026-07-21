@@ -65,9 +65,11 @@ class BrowserSessionTests(unittest.TestCase):
             self.assertEqual(me.json()["role"], "admin")
             self.assertEqual(me.json()["key_id"], "legacy:browser-tenant")
             self.assertEqual(me.json()["auth_method"], "session")
+            self.assertEqual(me.json()["entitlements"], [])
             self.assertIn("greenlight:decide", me.json()["permissions"])
             resumed = client.get("/api/v1/sessions/current")
             self.assertEqual(resumed.status_code, 200)
+            self.assertEqual(resumed.json()["entitlements"], [])
             rotated_csrf = resumed.json()["csrf_token"]
             self.assertNotEqual(rotated_csrf, csrf_token)
 
@@ -113,8 +115,10 @@ class BrowserSessionTests(unittest.TestCase):
             restored = restarted.get("/api/v1/me")
             self.assertEqual(restored.status_code, 200)
             self.assertEqual(restored.json()["auth_method"], "session")
+            self.assertEqual(restored.json()["entitlements"], [])
             resumed_after_restart = restarted.get("/api/v1/sessions/current")
             self.assertEqual(resumed_after_restart.status_code, 200)
+            self.assertEqual(resumed_after_restart.json()["entitlements"], [])
             restart_csrf = resumed_after_restart.json()["csrf_token"]
 
             revoked = restarted.delete(

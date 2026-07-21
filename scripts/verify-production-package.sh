@@ -9,7 +9,7 @@ CONTAINER_BUILDER=${CONTAINER_BUILDER:-auto}
 AUTH_KEY=${AUTH_KEY:-local-production-verification-key-2026}
 VIEWER_KEY=${VIEWER_KEY:-local-viewer-verification-key-2026}
 IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import json, os; print(json.dumps([
-    {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True},
+    {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True,"entitlements":["theme:premium"]},
     {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
 ]))')
 HELM_BIN=${HELM_BIN:-helm}
@@ -350,11 +350,13 @@ assert session["tenant_id"] == "local-verification"
 assert session["subject_id"] == "package-admin"
 assert session["role"] == "admin"
 assert session["key_id"] == "package-admin-v1"
+assert session["entitlements"] == ["theme:premium"]
 assert session["csrf_token"]
 assert resumed_session["tenant_id"] == "local-verification"
 assert resumed_session["subject_id"] == "package-admin"
 assert resumed_session["role"] == "admin"
 assert resumed_session["key_id"] == "package-admin-v1"
+assert resumed_session["entitlements"] == ["theme:premium"]
 assert resumed_session["csrf_token"]
 assert resumed_session["csrf_token"] != session["csrf_token"]
 assert "httponly" in session_headers

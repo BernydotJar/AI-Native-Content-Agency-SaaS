@@ -15,6 +15,7 @@ const adminSession: BrowserRuntimeSession = {
   subject_id: "admin@example.com",
   role: "admin",
   key_id: "admin-v2",
+  entitlements: [],
   csrf_token: "csrf-session-value",
   expires_at: "2026-07-21T20:00:00+00:00",
 };
@@ -127,6 +128,15 @@ function buildApi(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
   return {
     createSession: vi.fn().mockResolvedValue(adminSession),
     resumeSession: vi.fn().mockResolvedValue(null),
+    currentIdentity: vi.fn().mockResolvedValue({
+      tenant_id: "tenant-alpha",
+      subject_id: "admin@example.com",
+      role: "admin",
+      key_id: "admin-v2",
+      permissions: ["identity:read", "runs:read", "runs:create", "audit:read", "greenlight:decide"],
+      entitlements: [],
+      auth_method: "session",
+    }),
     createRun: vi.fn().mockResolvedValue(awaitingRun),
     getRun: vi.fn().mockResolvedValue(awaitingRun),
     approveRun: vi.fn().mockResolvedValue(completedRun),
@@ -150,6 +160,62 @@ afterEach(() => {
 });
 
 describe("ProductionRuntimePanel", () => {
+  it("publishes server-derived premium entitlement and clears it on session revoke", async () => {
+    const user = userEvent.setup();
+    const onEntitlementsChange = vi.fn();
+    const premiumSession = {
+      ...adminSession,
+      entitlements: ["theme:premium"],
+    };
+    const api = buildApi({
+      resumeSession: vi.fn().mockResolvedValue(premiumSession),
+      currentIdentity: vi.fn().mockResolvedValue({
+        tenant_id: "tenant-alpha",
+        subject_id: "admin@example.com",
+        role: "admin",
+        key_id: "admin-v2",
+        permissions: [],
+        entitlements: ["theme:premium"],
+        auth_method: "session",
+      }),
+    });
+    render(
+      <ProductionRuntimePanel
+        api={api}
+        onEntitlementsChange={onEntitlementsChange}
+      />,
+    );
+
+    await screen.findByText("admin@example.com");
+    expect(onEntitlementsChange).toHaveBeenCalledWith(["theme:premium"]);
+    await user.click(screen.getByRole("button", { name: /Revoke browser session/i }));
+    expect(onEntitlementsChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it("removes premium entitlement after server identity refresh", async () => {
+    const user = userEvent.setup();
+    const onEntitlementsChange = vi.fn();
+    const premiumSession = { ...adminSession, entitlements: ["theme:premium"] };
+    const api = buildApi({
+      resumeSession: vi.fn().mockResolvedValue(premiumSession),
+      currentIdentity: vi.fn()
+        .mockResolvedValueOnce({
+          tenant_id: "tenant-alpha", subject_id: "admin@example.com", role: "admin",
+          key_id: "admin-v2", permissions: [], entitlements: ["theme:premium"], auth_method: "session",
+        })
+        .mockResolvedValueOnce({
+          tenant_id: "tenant-alpha", subject_id: "admin@example.com", role: "admin",
+          key_id: "admin-v2", permissions: [], entitlements: [], auth_method: "session",
+        }),
+    });
+    render(<ProductionRuntimePanel api={api} onEntitlementsChange={onEntitlementsChange} />);
+
+    await screen.findByText("admin@example.com");
+    await waitFor(() => expect(onEntitlementsChange).toHaveBeenCalledWith(["theme:premium"]));
+    await user.click(screen.getByRole("button", { name: /Refresh durable audit/i }));
+    await waitFor(() => expect(onEntitlementsChange).toHaveBeenLastCalledWith([]));
+  });
+
   it("announces session restoration before rendering signed-out controls", async () => {
     const pending = deferred<BrowserRuntimeSession | null>();
     const api = buildApi({ resumeSession: vi.fn(() => pending.promise) });

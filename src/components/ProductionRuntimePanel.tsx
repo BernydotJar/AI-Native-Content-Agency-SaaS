@@ -24,7 +24,10 @@ import type {
 
 interface ProductionRuntimePanelProps {
   api?: RuntimeApi;
+  onEntitlementsChange?: (entitlements: readonly string[]) => void;
 }
+
+const ignoreEntitlements = () => undefined;
 
 type SessionPhase = "restoring" | "signed_out" | "authenticated";
 type AuditPhase = "idle" | "loading" | "ready" | "error";
@@ -164,7 +167,10 @@ function scholarFromRun(run: RuntimeRun | null) {
   return { reframe, tradeoff, resolution };
 }
 
-export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePanelProps) {
+export function ProductionRuntimePanel({
+  api = runtimeApi,
+  onEntitlementsChange = ignoreEntitlements,
+}: ProductionRuntimePanelProps) {
   const [apiKey, setApiKey] = useState("");
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>("restoring");
   const [session, setSession] = useState<BrowserRuntimeSession | null>(null);
@@ -201,6 +207,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
     setAuditPhase("idle");
     setSessionPhase("signed_out");
     commandKeys.current.clear();
+    onEntitlementsChange([]);
   };
 
   const handleFailure = (caught: unknown, canReloadRun = false) => {
@@ -215,8 +222,12 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
   const refreshAudit = async () => {
     setAuditPhase("loading");
     try {
-      const events = await api.auditEvents();
+      const [events, identity] = await Promise.all([
+        api.auditEvents(),
+        api.currentIdentity(),
+      ]);
       setAuditEvents(events);
+      onEntitlementsChange(identity.entitlements);
       setAuditPhase("ready");
     } catch (caught) {
       setAuditPhase("error");
@@ -232,15 +243,18 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
         if (!active) return;
         if (!resumed) {
           setSessionPhase("signed_out");
+          onEntitlementsChange([]);
           return;
         }
         setSession(resumed);
         setSessionPhase("authenticated");
+        onEntitlementsChange(resumed.entitlements);
         setAuditPhase("loading");
-        void api.auditEvents()
-          .then((events) => {
+        void Promise.all([api.auditEvents(), api.currentIdentity()])
+          .then(([events, identity]) => {
             if (!active) return;
             setAuditEvents(events);
+            onEntitlementsChange(identity.entitlements);
             setAuditPhase("ready");
           })
           .catch((caught) => {
@@ -252,6 +266,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
               setAuditPhase("idle");
               setSessionPhase("signed_out");
               commandKeys.current.clear();
+              onEntitlementsChange([]);
             } else {
               setAuditPhase("error");
             }
@@ -261,12 +276,13 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
       .catch((caught) => {
         if (!active) return;
         setSessionPhase("signed_out");
+        onEntitlementsChange([]);
         setNotice(noticeFromError(caught));
       });
     return () => {
       active = false;
     };
-  }, [api]);
+  }, [api, onEntitlementsChange]);
 
   const updateBrief = (patch: Partial<RuntimeBrief>) => {
     clearCommandKey("run:create");
@@ -285,6 +301,7 @@ export function ProductionRuntimePanel({ api = runtimeApi }: ProductionRuntimePa
       const opened = await api.createSession(apiKey.trim());
       setSession(opened);
       setSessionPhase("authenticated");
+      onEntitlementsChange(opened.entitlements);
       setRun(null);
       commandKeys.current.clear();
       await refreshAudit();

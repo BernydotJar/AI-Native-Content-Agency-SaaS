@@ -19,6 +19,7 @@ describe("runtime API client", () => {
         subject_id: "operator@example.com",
         role: "operator",
         key_id: "operator-v2",
+        entitlements: ["theme:premium"],
         csrf_token: "csrf-token-123",
         expires_at: "2026-07-21T20:00:00+00:00",
       }, 201))
@@ -107,6 +108,7 @@ describe("runtime API client", () => {
       subject_id: "operator@example.com",
       role: "operator",
       key_id: "operator-v2",
+      entitlements: [],
       csrf_token: "rotated-csrf-token",
       expires_at: "2026-07-21T21:00:00+00:00",
     }));
@@ -117,10 +119,32 @@ describe("runtime API client", () => {
       subject_id: "operator@example.com",
       role: "operator",
       key_id: "operator-v2",
+      entitlements: [],
       csrf_token: "rotated-csrf-token",
     }));
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/sessions/current",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("loads the current server-derived identity entitlement", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      tenant_id: "tenant-alpha",
+      subject_id: "admin@example.com",
+      role: "admin",
+      key_id: "admin-v2",
+      permissions: ["identity:read"],
+      entitlements: ["theme:premium"],
+      auth_method: "session",
+    }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.currentIdentity()).resolves.toEqual(
+      expect.objectContaining({ entitlements: ["theme:premium"] }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/me",
       expect.objectContaining({ credentials: "include" }),
     );
   });

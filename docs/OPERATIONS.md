@@ -31,10 +31,13 @@ Production configuration uses `AGENCY_IDENTITY_CREDENTIALS_JSON`, an array of re
     "role": "operator",
     "key_id": "operator-v2",
     "api_key": "${AGENCY_OPERATOR_API_KEY}",
-    "active": true
+    "active": true,
+    "entitlements": ["theme:premium"]
   }
 ]
 ```
+
+`entitlements` is optional and exact allowlisted. The only current value is `theme:premium`. It is server-owned, returned by bearer/session identity responses, revalidated on every session request, and must be consistent across simultaneously active keys for one subject. Removing it from the active identity configuration revokes premium access on the next request. It is not a role permission and is not written to audit payloads or browser storage. Billing and payment-provider integration are not implemented.
 
 Roles are intentionally fixed and fail closed:
 

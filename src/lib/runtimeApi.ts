@@ -5,6 +5,7 @@ export interface BrowserRuntimeSession {
   subject_id: string;
   role: "viewer" | "operator" | "approver" | "admin";
   key_id: string;
+  entitlements: string[];
   csrf_token: string;
   expires_at: string;
 }
@@ -59,6 +60,17 @@ export interface RuntimeRun {
   external_side_effects_enabled: boolean;
 }
 
+
+export interface RuntimeIdentity {
+  tenant_id: string;
+  subject_id: string;
+  role: "viewer" | "operator" | "approver" | "admin";
+  key_id: string;
+  permissions: string[];
+  entitlements: string[];
+  auth_method: "bearer" | "session";
+}
+
 export interface RuntimeAuditEvent {
   sequence: number;
   event_id: string;
@@ -102,6 +114,7 @@ export class RuntimeApiError extends Error {
 export interface RuntimeApi {
   createSession(apiKey: string): Promise<BrowserRuntimeSession>;
   resumeSession(): Promise<BrowserRuntimeSession | null>;
+  currentIdentity(): Promise<RuntimeIdentity>;
   createRun(brief: RuntimeBrief, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   getRun(runId: string): Promise<RuntimeRun>;
   approveRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
@@ -165,6 +178,9 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         if (error instanceof RuntimeApiError && error.status === 401) return null;
         throw error;
       }
+    },
+    currentIdentity() {
+      return requestJson<RuntimeIdentity>(fetchImpl, "/api/v1/me");
     },
     createRun(brief, csrfToken, idempotencyKey) {
       return requestJson<RuntimeRun>(fetchImpl, "/api/v1/runs", {
