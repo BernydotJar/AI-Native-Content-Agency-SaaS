@@ -205,6 +205,49 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 ["run.created", "greenlight.approved"],
             )
 
+    def test_authorization_denial_is_shared_and_public_error_is_uniform(self):
+        with TestClient(self.app()) as first, TestClient(self.app()) as second:
+            request_id = "postgres-authz-denial-{}".format(self.tenant)
+            denied = first.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Denied {}".format(self.tenant)),
+                headers={
+                    **auth(self.viewer_key),
+                    "X-Request-ID": request_id,
+                },
+            )
+            self.assertEqual(denied.status_code, 403)
+            self.assertEqual(
+                denied.json(),
+                {
+                    "code": "authorization_denied",
+                    "detail": "request not permitted",
+                    "request_id": request_id,
+                },
+            )
+            self.assertNotIn("viewer", denied.text)
+            self.assertNotIn("runs:create", denied.text)
+
+            events = second.get(
+                "/api/v1/audit-events", headers=auth(self.viewer_key)
+            ).json()["events"]
+            denial = next(
+                event for event in events if event["request_id"] == request_id
+            )
+            self.assertEqual(denial["action"], "authorization.denied")
+            self.assertEqual(denial["tenant_id"], self.tenant)
+            self.assertEqual(
+                denial["payload"],
+                {
+                    "auth_method": "bearer",
+                    "reason": "authorization",
+                    "role": "viewer",
+                },
+            )
+            serialized = repr(denial)
+            self.assertNotIn(self.viewer_key, serialized)
+            self.assertNotIn(self.operator_key, serialized)
+
     def test_second_replica_cannot_overwrite_greenlight_decision(self):
         first = TestClient(self.app())
         second = TestClient(self.app())

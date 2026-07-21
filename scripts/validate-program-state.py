@@ -71,6 +71,11 @@ REQUIRED_FILES = {
     "specs/001-program-baseline/plan.md",
     "specs/001-program-baseline/tasks.md",
     "specs/002-backup-restore/spec.md",
+    "specs/003-security-privacy/spec.md",
+    "docs/security/threat-model.md",
+    "docs/privacy/privacy-model.md",
+    "docs/privacy/data-classification-retention.md",
+    "program/reports/inc-003-review.md",
 }
 TRACEABILITY_COLUMNS = {
     "requirement_id",

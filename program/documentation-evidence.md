@@ -21,3 +21,8 @@ Known documentation repairs in `INC-001`:
 - align version claims at `0.7.0`;
 - distinguish local package/K3s evidence from deployment;
 - point readers to `program/current-state.md` for live status.
+
+| `docs/security/threat-model.md` | selected-runtime security model | records implemented controls and open HIGH production gates; not release approval |
+| `docs/privacy/privacy-model.md` | privacy architecture and uncertainty | jurisdiction/policy remain UNKNOWN and human-gated |
+| `docs/privacy/data-classification-retention.md` | data inventory and retention decision register | no policy or destructive execution is authorized |
+| `program/reports/inc-003-review.md` | bounded security/privacy review | local working-tree evidence until commit/push/exact CI |

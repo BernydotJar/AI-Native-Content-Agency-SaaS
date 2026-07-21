@@ -153,7 +153,7 @@
       ],
       "read_only_paths": [],
       "role": "Security Reviewer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-003",
       "validation_commands": [],
       "workstream_id": "WS-07",
@@ -508,9 +508,72 @@
       "validation_commands": [],
       "workstream_id": "WS-11",
       "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "runtime role is not superuser and owns no runtime table/schema",
+        "runtime role cannot CREATE, ALTER, DROP or TRUNCATE runtime schema objects",
+        "runtime role can execute all supported application operations",
+        "migration role alone can initialize/upgrade schema",
+        "tenant isolation and recovery gates remain green"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/api.py",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_api.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "docs/POSTGRESQL_PERSISTENCE.md",
+        "docs/security/**",
+        "program/**",
+        "specs/012-postgresql-runtime-role/**"
+      ],
+      "authoritative_inputs": [
+        "docs/security/threat-model.md",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/api.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "program/requirements-traceability.csv"
+      ],
+      "context": "INC-003 threat review found that the selected PostgreSQL adapter initializes schema and no production-like non-owner runtime role has been demonstrated.",
+      "dependencies": [
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "explicit schema bootstrap/migration mode",
+        "runtime startup that fails closed when schema is absent or incompatible",
+        "non-owner PostgreSQL role fixture with exact grants",
+        "negative DDL/ownership/tenant tests",
+        "operator documentation and evidence"
+      ],
+      "human_gates": [
+        "production database role creation or credential rotation",
+        "persistent schema migration"
+      ],
+      "objective": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation.",
+      "prohibited_paths": [
+        "external databases",
+        "persistent production data",
+        "credential rotation",
+        "protected branches"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Security Reviewer / Data Engineer",
+      "status": "pending",
+      "task_id": "INC-012",
+      "validation_commands": [
+        "./scripts/verify-postgresql-runtime.sh",
+        "./scripts/verify-python-locks.sh",
+        "npm run validate:program",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-07",
+      "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T17:39:13Z",
+  "updated_at": "2026-07-21T18:18:03Z",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -656,22 +719,34 @@
         "applicable validation passes"
       ],
       "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "docs/privacy/**",
+        "docs/security/**",
         "program/**",
-        "specs/**"
+        "scripts/verify-postgresql-runtime.sh",
+        "specs/003-security-privacy/**",
+        "specs/012-postgresql-runtime-role/**",
+        "src/lib/runtimeApi*"
       ],
       "artifacts": [],
       "dependencies": [],
       "evals": [],
       "id": "WS-07",
       "name": "Identity, Security, Privacy and Tenant Isolation",
-      "next_ready_task": "INC-003",
+      "next_ready_task": "INC-012",
       "objective": "Threat/privacy models, retention and adversarial verification.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "pending",
+      "status": "in_progress",
       "validation": [],
-      "write_locks": []
+      "write_locks": [
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/observability.py"
+      ]
     },
     {
       "acceptance_criteria": [

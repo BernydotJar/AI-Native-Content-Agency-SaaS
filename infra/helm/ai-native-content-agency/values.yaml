@@ -8,6 +8,8 @@ image:
   pullPolicy: IfNotPresent
 
 runtime:
+  # FastAPI ASGI body limit; allowed range is 1 KiB to 10 MiB.
+  maxRequestBodyBytes: 1048576
   storage:
     backend: "sqlite"
     sqlite:

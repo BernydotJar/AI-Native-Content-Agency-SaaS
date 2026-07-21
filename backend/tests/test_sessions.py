@@ -94,7 +94,12 @@ class BrowserSessionTests(unittest.TestCase):
             self.assertEqual(audit.status_code, 200)
             self.assertEqual(
                 [item["action"] for item in audit.json()["events"]],
-                ["session.created", "run.created"],
+                [
+                    "session.created",
+                    "request.verification_denied",
+                    "request.verification_denied",
+                    "run.created",
+                ],
             )
 
         database_bytes = self.database.read_bytes()
@@ -128,7 +133,13 @@ class BrowserSessionTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["action"] for item in bearer_audit.json()["events"]],
-                ["session.created", "run.created", "session.revoked"],
+                [
+                    "session.created",
+                    "request.verification_denied",
+                    "request.verification_denied",
+                    "run.created",
+                    "session.revoked",
+                ],
             )
             metrics = restarted.get("/metrics").text
             self.assertIn(

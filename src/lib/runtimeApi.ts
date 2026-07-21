@@ -75,12 +75,14 @@ interface AuditPage {
 
 export class RuntimeApiError extends Error {
   readonly status: number;
+  readonly code: string;
   readonly requestId: string;
 
-  constructor(status: number, message: string, requestId = "") {
+  constructor(status: number, message: string, requestId = "", code = "request_failed") {
     super(message);
     this.name = "RuntimeApiError";
     this.status = status;
+    this.code = code;
     this.requestId = requestId;
   }
 }
@@ -111,13 +113,15 @@ async function requestJson<T>(
       ...init.headers,
     },
   });
-  const requestId = response.headers.get("X-Request-ID") ?? "";
   const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
     const detail = typeof payload.detail === "string"
       ? payload.detail
       : `Runtime request failed with status ${response.status}`;
-    throw new RuntimeApiError(response.status, detail, requestId);
+    const code = typeof payload.code === "string" ? payload.code : "request_failed";
+    const requestId = response.headers.get("X-Request-ID")
+      ?? (typeof payload.request_id === "string" ? payload.request_id : "");
+    throw new RuntimeApiError(response.status, detail, requestId, code);
   }
   return payload as T;
 }

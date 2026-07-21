@@ -72,6 +72,7 @@ class RuntimeMetrics:
         self._greenlights: Counter[str] = Counter()
         self._sessions: Counter[str] = Counter()
         self._authentication: Counter[str] = Counter()
+        self._security_denials: Counter[str] = Counter()
 
     def record_http(
         self,
@@ -108,6 +109,12 @@ class RuntimeMetrics:
         with self._lock:
             self._authentication[outcome] += 1
 
+    def security_denial(self, reason: str) -> None:
+        if reason not in {"authorization", "csrf"}:
+            raise ValueError("unsupported security denial reason")
+        with self._lock:
+            self._security_denials[reason] += 1
+
     def render(self) -> str:
         with self._lock:
             requests = dict(self._requests)
@@ -117,6 +124,7 @@ class RuntimeMetrics:
             greenlights = dict(self._greenlights)
             sessions = dict(self._sessions)
             authentication = dict(self._authentication)
+            security_denials = dict(self._security_denials)
 
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
@@ -201,6 +209,18 @@ class RuntimeMetrics:
             lines.append(
                 "agency_authentication_attempts_total{} {}".format(
                     _labels({"outcome": outcome}), value
+                )
+            )
+        lines.extend(
+            [
+                "# HELP agency_security_denials_total Authenticated security denials by bounded reason.",
+                "# TYPE agency_security_denials_total counter",
+            ]
+        )
+        for reason, value in sorted(security_denials.items()):
+            lines.append(
+                "agency_security_denials_total{} {}".format(
+                    _labels({"reason": reason}), value
                 )
             )
         return "\n".join(lines) + "\n"

@@ -18,11 +18,11 @@
     },
     {
       "description": "Selected architecture lacks threat and privacy models.",
-      "evidence": "No active-branch docs/security or docs/privacy model.",
+      "evidence": "Selected-runtime threat model, privacy model and data-classification/retention register exist and the bounded error/denial findings were repaired and tested.",
       "id": "F-003",
       "owner": "INC-003",
       "severity": "HIGH",
-      "status": "OPEN"
+      "status": "CLOSED"
     },
     {
       "description": "No staging/cloud runtime observation.",
@@ -49,22 +49,62 @@
       "status": "CLOSED"
     },
     {
-      "description": "Manual accessibility evidence is absent.",
+      "description": "Manual keyboard, screen-reader, contrast, zoom/reflow and reduced-motion release evidence is absent.",
       "evidence": "Historical audit records browser/manual QA unavailable.",
       "id": "F-007",
       "owner": "INC-008",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "status": "OPEN"
     },
     {
       "description": "Backups are not scheduled, encrypted, immutable/off-host or exercised in an authorized environment.",
-      "evidence": "Repository tooling and ephemeral drills pass; deployment backup service and policy remain absent.",
+      "evidence": "Repository tooling and ephemeral restore drills pass; production backup storage, KMS, scheduling, retention and alerting do not exist.",
       "id": "F-008",
+      "owner": "INC-005",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "PostgreSQL migration and runtime authority are not separated; a non-owner least-privilege runtime role is not demonstrated.",
+      "evidence": "The selected PostgreSQL adapter initializes schema and existing tests use a database role with schema/database authority.",
+      "id": "F-009",
+      "owner": "INC-012",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "No approved retention, deletion, legal-hold or data-subject workflow exists for runs, memories, audit, telemetry and backups.",
+      "evidence": "Privacy model and classification register explicitly record UNKNOWN jurisdiction and no effective policy or deletion engine.",
+      "id": "F-010",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "Prompt-injection, groundedness, citation fidelity, harmful-use and legal-overclaim semantic/adversarial evals are incomplete.",
+      "evidence": "Deterministic unit/integration tests exist, but no complete semantic eval harness or release threshold exists.",
+      "id": "F-011",
+      "owner": "INC-010",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "The audit ledger is transactional but is not hash-chained, signed or exported to immutable storage.",
+      "evidence": "Database owners/operators can alter rows outside the application interface.",
+      "id": "F-012",
+      "owner": "INC-005",
+      "severity": "MEDIUM",
+      "status": "OPEN"
+    },
+    {
+      "description": "A valid principal can amplify denial-audit storage because no general authenticated request quota exists.",
+      "evidence": "Credential authentication is rate limited; successful principals can repeatedly invoke forbidden actions.",
+      "id": "F-013",
       "owner": "INC-005",
       "severity": "MEDIUM",
       "status": "OPEN"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "updated_at": "2026-07-21T17:39:13Z"
+  "updated_at": "2026-07-21T18:18:03Z"
 }

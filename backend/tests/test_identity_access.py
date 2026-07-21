@@ -138,10 +138,35 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
 
             audit = client.get("/api/v1/audit-events", headers=auth(VIEWER_KEY))
             self.assertEqual(audit.status_code, 200)
-            actors = [item["actor"] for item in audit.json()["events"]]
+            events = audit.json()["events"]
             self.assertEqual(
-                actors,
-                ["api-key:operator@example.com", "api-key:approver@example.com"],
+                [item["action"] for item in events],
+                [
+                    "authorization.denied",
+                    "run.created",
+                    "authorization.denied",
+                    "authorization.denied",
+                    "greenlight.approved",
+                ],
+            )
+            self.assertEqual(
+                [item["actor"] for item in events],
+                [
+                    "api-key:viewer@example.com",
+                    "api-key:operator@example.com",
+                    "api-key:operator@example.com",
+                    "api-key:approver@example.com",
+                    "api-key:approver@example.com",
+                ],
+            )
+            denial_payloads = [
+                item["payload"]
+                for item in events
+                if item["action"] == "authorization.denied"
+            ]
+            self.assertEqual(
+                [payload["role"] for payload in denial_payloads],
+                ["viewer", "operator", "approver"],
             )
             self.assertNotIn(OPERATOR_OLD_KEY, audit.text)
             self.assertNotIn(APPROVER_KEY, audit.text)
@@ -165,8 +190,15 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                 headers={"X-CSRF-Token": csrf},
             )
             self.assertEqual(denied.status_code, 403)
-            self.assertIn("runs:create", denied.json()["detail"])
-            self.assertEqual(client.get("/api/v1/audit-events").status_code, 200)
+            self.assertEqual(denied.json()["code"], "authorization_denied")
+            self.assertEqual(denied.json()["detail"], "request not permitted")
+            self.assertNotIn("runs:create", denied.text)
+            audit = client.get("/api/v1/audit-events")
+            self.assertEqual(audit.status_code, 200)
+            self.assertEqual(
+                [item["action"] for item in audit.json()["events"]],
+                ["session.created", "authorization.denied"],
+            )
 
     def test_overlapping_rotation_and_inactive_key_revoke_existing_session(self):
         with self.client() as client:
@@ -208,9 +240,9 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
             restarted.cookies.set("agency_session", session_cookie)
             revoked = restarted.get("/api/v1/me")
             self.assertEqual(revoked.status_code, 401)
-            self.assertEqual(
-                revoked.json()["detail"], "session credential is no longer active"
-            )
+            self.assertEqual(revoked.json()["code"], "authentication_failed")
+            self.assertEqual(revoked.json()["detail"], "authentication failed")
+            self.assertNotIn("active", revoked.json()["detail"])
             current = restarted.get("/api/v1/me", headers=auth(OPERATOR_NEW_KEY))
             self.assertEqual(current.status_code, 200)
             self.assertEqual(current.json()["key_id"], "operator-v2")

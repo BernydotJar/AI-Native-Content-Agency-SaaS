@@ -23,7 +23,7 @@ class ProgramStateValidationTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["version"], "0.7.0")
         self.assertGreaterEqual(result["requirements"], 60)
-        self.assertEqual(result["tasks"], 11)
+        self.assertEqual(result["tasks"], 12)
 
     def test_duplicate_task_id_is_rejected(self):
         ledger = json.loads((ROOT / "program/task-ledger.yaml").read_text())

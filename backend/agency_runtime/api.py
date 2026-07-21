@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,10 +11,12 @@ from threading import RLock
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
-from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth import (
     AuthenticationError,
@@ -41,12 +45,193 @@ from .utils import stable_id, to_primitive
 from .version import VERSION
 
 
+API_LOGGER = logging.getLogger("agency_runtime.api")
+_PUBLIC_ERROR_CODE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
+_MAX_PUBLIC_ERROR_DETAIL = 200
+_DEFAULT_MAX_REQUEST_BODY_BYTES = 1024 * 1024
+_MAX_CONFIGURED_REQUEST_BODY_BYTES = 10 * 1024 * 1024
+_SAFE_HTTP_ERRORS = {
+    status.HTTP_400_BAD_REQUEST: ("invalid_request", "invalid request"),
+    status.HTTP_401_UNAUTHORIZED: ("authentication_failed", "authentication failed"),
+    status.HTTP_403_FORBIDDEN: ("authorization_denied", "request not permitted"),
+    status.HTTP_404_NOT_FOUND: ("resource_not_found", "resource not found"),
+    status.HTTP_405_METHOD_NOT_ALLOWED: ("method_not_allowed", "method not allowed"),
+    status.HTTP_409_CONFLICT: ("resource_state_conflict", "resource state conflict"),
+    status.HTTP_413_CONTENT_TOO_LARGE: ("request_too_large", "request too large"),
+    status.HTTP_422_UNPROCESSABLE_CONTENT: (
+        "request_validation_failed",
+        "request validation failed",
+    ),
+    status.HTTP_429_TOO_MANY_REQUESTS: (
+        "authentication_rate_limited",
+        "authentication temporarily rate limited",
+    ),
+    status.HTTP_503_SERVICE_UNAVAILABLE: ("service_unavailable", "service unavailable"),
+}
+
+
+class PublicApiError(HTTPException):
+    """An HTTP error whose code and detail are safe to serialize publicly."""
+
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        code: str,
+        detail: str,
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> None:
+        if status_code < 400 or status_code > 599:
+            raise ValueError("public API errors require a 4xx or 5xx status")
+        if not _PUBLIC_ERROR_CODE.fullmatch(code):
+            raise ValueError("public API error code is invalid")
+        if (
+            not detail
+            or len(detail) > _MAX_PUBLIC_ERROR_DETAIL
+            or any(ord(character) < 32 or ord(character) == 127 for character in detail)
+        ):
+            raise ValueError("public API error detail is invalid")
+        super().__init__(status_code=status_code, detail=detail, headers=dict(headers or {}))
+        self.code = code
+
+
+def _error_body(code: str, detail: str, request_id: str) -> Dict[str, object]:
+    return {"code": code, "detail": detail, "request_id": request_id}
+
+
+class RequestBodyLimitMiddleware:
+    """Bound and replay request-body messages before application dispatch."""
+
+    def __init__(self, app: object, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: object, receive: object, send: object) -> None:
+        if not isinstance(scope, dict) or scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        raw_headers = scope.get("headers", ())
+        header_pairs = [
+            (bytes(name).lower(), bytes(value))
+            for name, value in raw_headers
+            if isinstance(name, (bytes, bytearray))
+            and isinstance(value, (bytes, bytearray))
+        ]
+        headers = dict(header_pairs)
+        request_id = request_id_from_header(
+            headers.get(b"x-request-id", b"").decode("latin-1") or None
+        )
+        content_length_values = [
+            value for name, value in header_pairs if name == b"content-length"
+        ]
+        transfer_encoding_values = [
+            value.lower()
+            for name, value in header_pairs
+            if name == b"transfer-encoding"
+        ]
+        if len(content_length_values) > 1 or len(transfer_encoding_values) > 1:
+            response = JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=_error_body(
+                    "invalid_request", "invalid request", request_id
+                ),
+                headers={"X-Request-ID": request_id},
+            )
+            await response(scope, receive, send)
+            return
+        content_length = (
+            content_length_values[0] if content_length_values else None
+        )
+        transfer_encoding = (
+            transfer_encoding_values[0] if transfer_encoding_values else b""
+        )
+        if transfer_encoding and transfer_encoding != b"chunked":
+            response = JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=_error_body(
+                    "invalid_request", "invalid request", request_id
+                ),
+                headers={"X-Request-ID": request_id},
+            )
+            await response(scope, receive, send)
+            return
+        if content_length is not None:
+            try:
+                declared_length = int(content_length.decode("ascii"))
+            except (UnicodeDecodeError, ValueError):
+                declared_length = -1
+            if declared_length < 0 or transfer_encoding:
+                response = JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content=_error_body(
+                        "invalid_request", "invalid request", request_id
+                    ),
+                    headers={"X-Request-ID": request_id},
+                )
+                await response(scope, receive, send)
+                return
+            if declared_length > self.max_bytes:
+                response = JSONResponse(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    content=_error_body(
+                        "request_too_large", "request too large", request_id
+                    ),
+                    headers={"X-Request-ID": request_id},
+                )
+                await response(scope, receive, send)
+                return
+
+        method = str(scope.get("method", "GET")).upper()
+        should_buffer = (
+            method in {"POST", "PUT", "PATCH", "DELETE"}
+            or content_length is not None
+            or bool(transfer_encoding)
+        )
+        if not should_buffer:
+            await self.app(scope, receive, send)
+            return
+
+        buffered: List[object] = []
+        received = 0
+        while True:
+            message = await receive()
+            buffered.append(message)
+            if not isinstance(message, dict):
+                break
+            if message.get("type") == "http.disconnect":
+                break
+            if message.get("type") != "http.request":
+                continue
+            body = message.get("body", b"")
+            if isinstance(body, (bytes, bytearray)):
+                received += len(body)
+                if received > self.max_bytes:
+                    response = JSONResponse(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        content=_error_body(
+                            "request_too_large", "request too large", request_id
+                        ),
+                        headers={"X-Request-ID": request_id},
+                    )
+                    await response(scope, receive, send)
+                    return
+            if not message.get("more_body", False):
+                break
+
+        async def replay_receive() -> object:
+            if buffered:
+                return buffered.pop(0)
+            return await receive()
+
+        await self.app(scope, replay_receive, send)
+
+
 class BriefRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=1, max_length=200)
     objective: str = Field(min_length=1, max_length=4000)
     audience: str = Field(min_length=1, max_length=1000)
-    platforms: List[Platform] = Field(min_length=1)
+    platforms: List[Platform] = Field(min_length=1, max_length=4)
     budget_cents: int = Field(default=0, ge=0)
     source_asset: str = Field(default="sandbox://brief/no-external-asset", max_length=2000)
     campaign_goal: str = Field(default="awareness", min_length=1, max_length=200)
@@ -169,6 +354,42 @@ class RuntimeService:
         with self._lock:
             self.run_store.record_authentication_failure(
                 bucket_limits, window_seconds=window_seconds
+            )
+
+    def record_security_denial(
+        self,
+        principal: TenantPrincipal,
+        request_id: str,
+        reason: str,
+        permission: str = "",
+    ) -> None:
+        if reason == "authorization":
+            if not permission:
+                raise ValueError("authorization denial requires a permission")
+            action = "authorization.denied"
+            resource_type = "permission"
+            resource_id = permission
+        elif reason == "csrf":
+            action = "request.verification_denied"
+            resource_type = "request"
+            resource_id = "mutation"
+        else:
+            raise ValueError("unsupported security denial reason")
+        with self._lock:
+            self.run_store.append_audit(
+                principal.tenant_id,
+                AuditWrite(
+                    request_id=request_id,
+                    action=action,
+                    resource_type=resource_type,
+                    resource_id=resource_id,
+                    actor=_actor(principal),
+                    payload={
+                        "reason": reason,
+                        "auth_method": principal.auth_method,
+                        "role": principal.role,
+                    },
+                ),
             )
 
     def verify_browser_csrf(self, session_id: str, csrf_token: str) -> None:
@@ -353,6 +574,7 @@ def create_app(
     postgres_pool_min_size: Optional[int] = None,
     postgres_pool_max_size: Optional[int] = None,
     postgres_connect_timeout_seconds: Optional[float] = None,
+    max_request_body_bytes: Optional[int] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     db_url = (
@@ -411,6 +633,22 @@ def create_app(
         )
     if rate_window_seconds < 10 or rate_window_seconds > 86400:
         raise ValueError("login window must be between 10 and 86400 seconds")
+    body_limit = (
+        int(
+            os.environ.get(
+                "AGENCY_MAX_REQUEST_BODY_BYTES",
+                str(_DEFAULT_MAX_REQUEST_BODY_BYTES),
+            )
+        )
+        if max_request_body_bytes is None
+        else max_request_body_bytes
+    )
+    if body_limit < 1024 or body_limit > _MAX_CONFIGURED_REQUEST_BODY_BYTES:
+        raise ValueError(
+            "request body limit must be between 1024 and {} bytes".format(
+                _MAX_CONFIGURED_REQUEST_BODY_BYTES
+            )
+        )
 
     if tenant_api_keys is not None or identity_credentials is not None:
         authenticator = TenantAuthenticator(
@@ -457,6 +695,80 @@ def create_app(
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
 
+    def _request_id(request: Request) -> str:
+        return getattr(request.state, "request_id", request_id_from_header(None))
+
+    @app.exception_handler(PublicApiError)
+    async def public_api_error_handler(
+        request: Request, error: PublicApiError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=error.status_code,
+            content=_error_body(error.code, str(error.detail), _request_id(request)),
+            headers=error.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(
+        request: Request, error: RequestValidationError
+    ) -> JSONResponse:
+        sanitized = []
+        for item in error.errors()[:20]:
+            location = []
+            for component in item.get("loc", ()):
+                if isinstance(component, int):
+                    location.append(component)
+                else:
+                    location.append(str(component)[:64])
+            sanitized.append(
+                {
+                    "location": location,
+                    "type": str(item.get("type", "validation_error"))[:128],
+                }
+            )
+        content = _error_body(
+            "request_validation_failed",
+            "request validation failed",
+            _request_id(request),
+        )
+        content["errors"] = sanitized
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content=content,
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def safe_http_error_handler(
+        request: Request, error: StarletteHTTPException
+    ) -> JSONResponse:
+        code, detail = _SAFE_HTTP_ERRORS.get(
+            error.status_code, ("request_failed", "request failed")
+        )
+        return JSONResponse(
+            status_code=error.status_code,
+            content=_error_body(code, detail, _request_id(request)),
+            headers=error.headers,
+        )
+
+    @app.exception_handler(Exception)
+    async def safe_internal_error_handler(
+        request: Request, error: Exception
+    ) -> JSONResponse:
+        API_LOGGER.error(
+            "api_internal_error request_id=%s exception_type=%s",
+            _request_id(request),
+            type(error).__name__,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=_error_body(
+                "internal_error", "internal service error", _request_id(request)
+            ),
+        )
+
+    app.add_middleware(RequestBodyLimitMiddleware, max_bytes=body_limit)
+    app.state.max_request_body_bytes = body_limit
+
     @app.middleware("http")
     async def observe_http(request: Request, call_next):
         request_id = request_id_from_header(request.headers.get("X-Request-ID"))
@@ -483,6 +795,20 @@ def create_app(
             )
             if response is not None:
                 response.headers["X-Request-ID"] = request_id
+                response.headers["X-Content-Type-Options"] = "nosniff"
+                response.headers["X-Frame-Options"] = "DENY"
+                response.headers["Referrer-Policy"] = "no-referrer"
+                response.headers["Permissions-Policy"] = (
+                    "camera=(), microphone=(), geolocation=()"
+                )
+                response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+                if request.url.path.startswith("/api/") or request.url.path in {
+                    "/healthz",
+                    "/readyz",
+                    "/metrics",
+                }:
+                    response.headers["Cache-Control"] = "no-store"
+                    response.headers["Pragma"] = "no-cache"
 
     def _authentication_buckets(
         request: Request, api_key: str
@@ -511,8 +837,9 @@ def create_app(
             )
         except AuthenticationRateLimitError as error:
             metrics.authentication_attempt("rate_limited")
-            raise HTTPException(
+            raise PublicApiError(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                code="authentication_rate_limited",
                 detail="authentication temporarily rate limited",
                 headers={"Retry-After": str(error.retry_after_seconds)},
             ) from error
@@ -526,8 +853,9 @@ def create_app(
                 )
             except AuthenticationRateLimitError as error:
                 metrics.authentication_attempt("rate_limited")
-                raise HTTPException(
+                raise PublicApiError(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    code="authentication_rate_limited",
                     detail="authentication temporarily rate limited",
                     headers={"Retry-After": str(error.retry_after_seconds)},
                 ) from error
@@ -541,15 +869,17 @@ def create_app(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
     ) -> TenantPrincipal:
         if not authenticator.configured:
-            raise HTTPException(
+            raise PublicApiError(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="tenant authentication is not configured",
+                code="authentication_unavailable",
+                detail="authentication is unavailable",
             )
         if credentials is not None:
             if credentials.scheme.lower() != "bearer":
-                raise HTTPException(
+                raise PublicApiError(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="bearer credential required",
+                    code="authentication_failed",
+                    detail="authentication failed",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             try:
@@ -557,9 +887,10 @@ def create_app(
                     request, credentials.credentials
                 )
             except AuthenticationError as error:
-                raise HTTPException(
+                raise PublicApiError(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=str(error),
+                    code="authentication_failed",
+                    detail="authentication failed",
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from error
         else:
@@ -574,9 +905,10 @@ def create_app(
                     session_id=session.session_id,
                 )
             except (SessionAuthenticationError, AuthenticationError) as error:
-                raise HTTPException(
+                raise PublicApiError(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=str(error),
+                    code="authentication_failed",
+                    detail="authentication failed",
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from error
         request.state.tenant_id = principal.tenant_id
@@ -585,6 +917,20 @@ def create_app(
         request.state.auth_method = principal.auth_method
         request.state.session_id = principal.session_id
         return principal
+
+    def _record_security_denial(
+        request: Request,
+        principal: TenantPrincipal,
+        reason: str,
+        permission: str = "",
+    ) -> None:
+        service.record_security_denial(
+            principal=principal,
+            request_id=request.state.request_id,
+            reason=reason,
+            permission=permission,
+        )
+        metrics.security_denial(reason)
 
     def require_mutation_principal(
         request: Request,
@@ -596,44 +942,59 @@ def create_app(
                     principal.session_id, request.headers.get("X-CSRF-Token", "")
                 )
             except SessionCsrfError as error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail=str(error)
+                _record_security_denial(request, principal, "csrf")
+                raise PublicApiError(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    code="request_verification_failed",
+                    detail="request verification failed",
                 ) from error
         return principal
 
-    def _authorize(principal: TenantPrincipal, permission: str) -> TenantPrincipal:
+    def _authorize(
+        request: Request, principal: TenantPrincipal, permission: str
+    ) -> TenantPrincipal:
         try:
             principal.require(permission)
         except AuthorizationError as error:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=str(error)
+            _record_security_denial(
+                request, principal, "authorization", permission=permission
+            )
+            raise PublicApiError(
+                status_code=status.HTTP_403_FORBIDDEN,
+                code="authorization_denied",
+                detail="request not permitted",
             ) from error
         return principal
 
     def require_identity_reader(
+        request: Request,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> TenantPrincipal:
-        return _authorize(principal, "identity:read")
+        return _authorize(request, principal, "identity:read")
 
     def require_run_reader(
+        request: Request,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> TenantPrincipal:
-        return _authorize(principal, "runs:read")
+        return _authorize(request, principal, "runs:read")
 
     def require_audit_reader(
+        request: Request,
         principal: TenantPrincipal = Depends(require_principal),
     ) -> TenantPrincipal:
-        return _authorize(principal, "audit:read")
+        return _authorize(request, principal, "audit:read")
 
     def require_run_creator(
+        request: Request,
         principal: TenantPrincipal = Depends(require_mutation_principal),
     ) -> TenantPrincipal:
-        return _authorize(principal, "runs:create")
+        return _authorize(request, principal, "runs:create")
 
     def require_greenlight_approver(
+        request: Request,
         principal: TenantPrincipal = Depends(require_mutation_principal),
     ) -> TenantPrincipal:
-        return _authorize(principal, "greenlight:decide")
+        return _authorize(request, principal, "greenlight:decide")
 
     @app.get("/healthz", tags=["operations"])
     def healthz() -> Dict[str, object]:

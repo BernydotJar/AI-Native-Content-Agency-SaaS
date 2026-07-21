@@ -69,9 +69,37 @@
       "observed": "hash-locked agency-runtime 0.7.0 wheel; pip check; 68 tests with 7 PostgreSQL-only skips",
       "result": "PASS",
       "scope": "Python reproducibility"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC003-LOCKED-WHEEL",
+      "observed": "agency-runtime 0.7.0; pip check; 78 tests with 8 PostgreSQL-only skips",
+      "result": "PASS",
+      "scope": "security/privacy backend"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC003-POSTGRESQL",
+      "observed": "78/78 including cross-instance denial, migration/replay, both restores and cleanup",
+      "result": "PASS",
+      "scope": "shared security/tenant/recovery"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build",
+      "id": "INC003-FRONTEND",
+      "observed": "zero lint findings; 33/33 tests; Vite production build",
+      "result": "PASS",
+      "scope": "TypeScript public-error client and UI regression"
+    },
+    {
+      "command": "./scripts/verify-helm.sh",
+      "id": "INC003-HELM",
+      "observed": "schema, lint, render and safety guards pass with runtime.maxRequestBodyBytes",
+      "result": "PASS",
+      "scope": "deployment request-size configuration"
     }
   ],
   "schema_version": "program-eval-results.v1",
   "source_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
-  "updated_at": "2026-07-21T17:39:13Z"
+  "updated_at": "2026-07-21T18:18:03Z"
 }

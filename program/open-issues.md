@@ -37,3 +37,20 @@ Automated tests do not prove keyboard order, screen-reader output, contrast, zoo
 Category: human decision
 
 Producer/critic/fixer/verifier passes can be role-separated in-session, but final PR approval and any cloud apply require a distinct accountable human reviewer.
+
+
+## OI-007 — PostgreSQL runtime role authority
+
+Category: code / permission / data correctness
+
+The selected adapter initializes schema and existing drills do not prove a non-owner runtime role. This is executable work assigned to `INC-012`, not an external blocker.
+
+Acceptance condition: migration authority is explicit and separate; runtime role is non-superuser, owns no schema/table, cannot DDL/TRUNCATE, and passes every application/tenant/recovery test.
+
+## OI-008 — Retention, deletion and legal hold
+
+Category: human decision / legal review / data
+
+No jurisdiction, effective policy or accountable reviewer is selected. No destructive automation is authorized.
+
+Exact resume condition for policy implementation: identified operating entity/customer/jurisdiction, approved source/version/effective date, retention/legal-hold/backup propagation decisions, privacy/legal reviewer, security reviewer and business data owner.

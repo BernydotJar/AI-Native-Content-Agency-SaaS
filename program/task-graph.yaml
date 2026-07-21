@@ -38,7 +38,7 @@
         "INC-001"
       ],
       "id": "INC-003",
-      "status": "pending"
+      "status": "review"
     },
     {
       "depends_on": [
@@ -103,8 +103,15 @@
       ],
       "id": "INC-011",
       "status": "pending"
+    },
+    {
+      "depends_on": [
+        "INC-003"
+      ],
+      "id": "INC-012",
+      "status": "pending"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-21T17:39:13Z"
+  "updated_at": "2026-07-21T18:18:03Z"
 }

@@ -81,16 +81,21 @@ describe("runtime API client", () => {
     );
   });
 
-  it("returns request correlation on API failures", async () => {
+  it("preserves the safe public error code and request correlation", async () => {
     const api = createRuntimeApi(vi.fn().mockResolvedValue(
-      jsonResponse({ detail: "CSRF token is invalid" }, 403, "request-error-0001"),
+      jsonResponse({
+        code: "request_verification_failed",
+        detail: "request verification failed",
+        request_id: "request-error-0001",
+      }, 403, "request-error-0001"),
     ) as typeof fetch);
 
     await expect(api.rejectRun("run-1", "bad-csrf")).rejects.toEqual(
       expect.objectContaining<Partial<RuntimeApiError>>({
         status: 403,
+        code: "request_verification_failed",
         requestId: "request-error-0001",
-        message: "CSRF token is invalid",
+        message: "request verification failed",
       }),
     );
   });

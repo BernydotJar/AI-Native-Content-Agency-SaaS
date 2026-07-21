@@ -35,3 +35,36 @@
 - Date: 2026-07-21
 - Status: accepted
 - Decision: Backup manifests include backend, size, SHA-256, timestamp, tool version, and validation result. Restore verifies integrity and refuses an existing target unless an explicit replacement flag is supplied. Production restore remains a human destructive-data gate.
+
+## D-006 — Public errors are stable and non-enumerating
+
+Date: 2026-07-21
+Status: accepted for INC-003
+
+Decision: application failures expose only a stable snake-case code, bounded safe detail and request ID. Authentication state variants share one 401; role/permission, foreign IDs, current state, submitted input and internal exception messages are not public contracts.
+
+Rationale: raw framework/application exception text created authentication, authorization, metadata and privacy oracles and made clients depend on internals.
+
+Consequence: server diagnosis uses correlated sanitized logs/audit. Frontend behavior branches on status/code rather than exception prose.
+
+## D-007 — Audit only authenticated denials in the tenant ledger
+
+Date: 2026-07-21
+Status: accepted for INC-003
+
+Decision: authenticated RBAC and CSRF denials are written to the server-derived tenant audit ledger before returning 403. Anonymous authentication failures are not assigned to a tenant and remain in one-way rate buckets, bounded metrics and sanitized route logs.
+
+Rationale: assigning failed/guessed credentials to a tenant would create false evidence and a cross-tenant injection surface.
+
+Consequence: tenant audit is complete for proven-principal denials but is not a global edge/WAF security log.
+
+## D-008 — PostgreSQL migration and runtime authority must be separated
+
+Date: 2026-07-21
+Status: ready for implementation in INC-012
+
+Decision: production-like PostgreSQL verification must use a migration/bootstrap role for schema authority and a non-owner runtime role with exact grants. The runtime must fail closed when schema is absent/incompatible and must not CREATE, ALTER, DROP or TRUNCATE runtime objects.
+
+Rationale: application SQL predicates are a primary tenant boundary; an overprivileged runtime credential turns an application compromise into schema/database control.
+
+Consequence: no production-ready claim until INC-012 passes negative ownership/DDL tests and full application/recovery regression.

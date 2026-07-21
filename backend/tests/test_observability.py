@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from agency_runtime.api import create_app
+from agency_runtime.observability import RuntimeMetrics
 
 
 ALPHA_KEY = "tenant-alpha-observability-key-2026"
@@ -80,6 +81,21 @@ class ObservabilityTests(unittest.TestCase):
             self.assertNotIn("tenant-alpha", body)
             self.assertNotIn(ALPHA_KEY, body)
             self.assertNotRegex(body, re.escape("query-secret-must-not-log"))
+
+    def test_security_denial_metric_rejects_unbounded_reasons(self):
+        metrics = RuntimeMetrics()
+        metrics.security_denial("authorization")
+        metrics.security_denial("csrf")
+        with self.assertRaisesRegex(ValueError, "unsupported security denial"):
+            metrics.security_denial("tenant-alpha:runs:create")
+
+        rendered = metrics.render()
+        self.assertIn(
+            'agency_security_denials_total{reason="authorization"} 1', rendered
+        )
+        self.assertIn('agency_security_denials_total{reason="csrf"} 1', rendered)
+        self.assertNotIn("tenant-alpha", rendered)
+        self.assertNotIn("runs:create", rendered)
 
     def test_audit_ledger_is_transactional_tenant_scoped_and_durable(self):
         with self.client() as client:

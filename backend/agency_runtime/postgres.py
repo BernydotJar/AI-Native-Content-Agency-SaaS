@@ -34,7 +34,7 @@ from .persistence import (
     SessionRecord,
 )
 from .serialization import execution_run_from_document, execution_run_to_document
-from .utils import canonical_json, require_confidence, stable_id
+from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
 SCHEMA_VERSION = "1"
@@ -563,6 +563,11 @@ class PostgresRunStore:
                 canonical_json(dict(audit.payload)),
             ),
         )
+
+    def append_audit(self, tenant_id: str, audit: AuditWrite) -> None:
+        require_non_empty(tenant_id, "tenant_id")
+        with self.database.pool.connection() as connection:
+            self._append_audit(connection, tenant_id, audit)
 
     def create(
         self,

@@ -241,6 +241,11 @@ class SQLiteRunStore:
             ),
         )
 
+    def append_audit(self, tenant_id: str, audit: AuditWrite) -> None:
+        require_non_empty(tenant_id, "tenant_id")
+        with self._lock, self._connection:
+            self._append_audit_locked(tenant_id, audit)
+
     def create(
         self,
         tenant_id: str,
