@@ -68,12 +68,12 @@ EVAL-002,testing,Functional journey and failure evals,incomplete,Core journey an
 EVAL-003,testing,Semantic groundedness and citation fidelity,missing,No semantic eval harness,Implement,WS-10
 EVAL-004,testing,Prompt injection and adversarial evals,missing,Input/tenant abuse tests exist but prompt-injection harmful-use and legal-overclaim semantic catalog is incomplete,Implement INC-010,WS-10
 EVAL-005,testing,Independent exact-commit verification,missing,No distinct final verifier for new tree,Require before release,WS-10
-LEGAL-001,legal,License policy and third-party inventory,proven,License policy SBOM and MIT repository license,Review video-use before adoption,WS-11
+LEGAL-001,legal,License policy and third-party inventory,proven,License policy/SBOM plus MIT review for browser-use/video-use exact commit 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66,Preserve inventory and perform provider/privacy/legal review before activation,WS-11
 LEGAL-002,legal,Privacy review with jurisdiction and retention,missing,Privacy architecture model exists but jurisdiction retention deletion legal hold and accountable approval are unresolved,Human privacy/legal review plus implementation under INC-011,WS-11
 LEGAL-003,legal,No legal overclaim,weak_evidence,Sandbox copy and risk agent instructions,Add semantic eval and review,WS-11
 INT-001,integrations,External integrations disabled by default,proven,Mock tool adapters and zero side effects,Preserve,WS-08
-INT-002,integrations,Versioned external adapter contracts,missing,Names only and no effect contract,Specify before activation,WS-08
-INT-003,integrations,browser-use video-use evaluation,missing,User-provided candidate not yet reviewed,Perform architecture license and safety review,WS-08
+INT-002,integrations,Versioned external adapter contracts,proven,61da89cd5bcc36fc5d99b97dd429d73fbb331959; backend/agency_runtime/integrations.py; packaged agency-integration-review.v1 manifest; authenticated GET-only OpenAPI and 118 locked/PostgreSQL tests,Preserve reviewed_disabled; implement effectful adapter only in a separate authorized increment,WS-08
+INT-003,integrations,browser-use video-use evaluation,proven,Exact browser-use/video-use 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66; 33 SHA-256 hashes; docs/integrations/video-use-review.md; 61da89cd5bcc36fc5d99b97dd429d73fbb331959,Re-review a patched exact commit and close all activation requirements before any execution,WS-08
 SUP-001,supply_chain,Digest-pinned bases and SHA-pinned actions,proven,Dockerfile workflow and supply-chain evidence,Preserve,WS-11
 SUP-002,supply_chain,SBOM vulnerability provenance signature verification,proven,verify-supply-chain gate,Re-run on exact tree,WS-11
 SUP-003,supply_chain,Expiring vulnerability exceptions managed,weak_evidence,Five HIGH exceptions expire 2026-08-21,Create expiry task and remove before deadline,WS-11

@@ -293,9 +293,44 @@
       "observed": "All eight jobs SUCCESS after deterministic browser-harness repair; Chromium accessibility and artifact upload steps PASS.",
       "result": "PASS",
       "scope": "remote repaired-head automated delivery"
+    },
+    {
+      "command": "SHA-256 compare packaged manifest against /tmp/video-use-review exact tree",
+      "id": "INC009-UPSTREAM-INTEGRITY",
+      "observed": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66; 33/33 file hashes match; MIT; no installer/helper/media/provider execution",
+      "result": "PASS",
+      "scope": "external source identity and integrity review"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC009-FAIL-CLOSED-CONTRACTS",
+      "observed": "118 locked-wheel tests and 118/118 PostgreSQL tests PASS; manifest mutation, traversal, encoded traversal, raw secret, arbitrary egress, approval/fence/bounds and disabled execute/receipt cases fail closed",
+      "result": "PASS",
+      "scope": "integration registry, API and shared-runtime regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC009-PACKAGE-BOUNDARY",
+      "observed": "Non-root image packages exact manifest; authenticated list/detail and tenant derivation PASS; OpenAPI has two GET routes only; execute attempt safely 404/405; external_side_effects_enabled=false",
+      "result": "PASS",
+      "scope": "production package read-only integration boundary"
+    },
+    {
+      "command": "frontend, Chromium, lock regeneration, operability, K3s/Helm/Terraform, actionlint, Gitleaks and whitespace gates",
+      "id": "INC009-CROSS-WORKSTREAM",
+      "observed": "66 frontend tests, lint/build, real Chromium, lock byte equality, 4 SLO/7 alert/8 exercise validation, agentless plan/apply/destroy, zero leaks and whitespace PASS",
+      "result": "PASS",
+      "scope": "cross-workstream regression and repository hygiene"
+    },
+    {
+      "command": "GitHub Actions production-readiness",
+      "id": "INC009-EXACT-HEAD-CI",
+      "observed": "Remote branch/PR/exact-head CI not yet created for the local implementation checkpoint",
+      "result": "PENDING",
+      "scope": "remote exact-head delivery verification"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "e83c9533fd277bbba82b2dea956c80b01e037b50",
-  "updated_at": "2026-07-21T23:24:15Z"
+  "source_commit": "61da89cd5bcc36fc5d99b97dd429d73fbb331959",
+  "updated_at": "2026-07-21T23:52:36Z"
 }

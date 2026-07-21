@@ -167,9 +167,33 @@
       "owner": "INC-008",
       "severity": "MEDIUM",
       "status": "CLOSED"
+    },
+    {
+      "description": "A reviewed integration name could be mistaken for executable authority or permit receipt construction without an enabled provider.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; all activation/execution/effect flags false; no POST route; execute and receipt construction raise IntegrationDisabledError; package OpenAPI GET-only.",
+      "id": "F-022",
+      "owner": "INC-009",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Future browser/video paths, secrets or egress could escape the intended worker boundary.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; canonical inputs/outputs roots, absolute/parent/percent rejection, exact secret references, exact operation-specific egress and negative tests.",
+      "id": "F-023",
+      "owner": "INC-009",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Manifest strings could masquerade as sequences or malformed metadata/findings could weaken review integrity.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; exact field/type, timestamp, repository, commit, digest, finding severity and activation-requirement validation plus mutation tests.",
+      "id": "F-024",
+      "owner": "INC-009",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "a3fa52f6c3e0e5e503527f5ba446badf4ee52070",
-  "updated_at": "2026-07-21T23:21:31Z"
+  "source_commit": "61da89cd5bcc36fc5d99b97dd429d73fbb331959",
+  "updated_at": "2026-07-21T23:52:36Z"
 }

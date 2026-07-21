@@ -1,5 +1,5 @@
 {
-  "branch": "agent/production-readiness",
+  "branch": "agent/inc-009-browser-video-contracts",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -448,7 +448,7 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Global production-readiness requirement.",
+      "context": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66 reviewed without installation/execution. Implementation 61da89cd5bcc36fc5d99b97dd429d73fbb331959 packages immutable hashes and exposes authenticated GET-only review data; all execution/effect flags remain false. Local locked-wheel, PostgreSQL, package, infrastructure, frontend/browser, workflow, secret and whitespace gates pass; remote exact-head CI pending.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -470,11 +470,25 @@
       ],
       "read_only_paths": [],
       "role": "Security Reviewer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-009",
-      "validation_commands": [],
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "npm run lint",
+        "npm test -- --run",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/check-python-locks.sh",
+        "npm run validate:operability",
+        "actionlint .github/workflows/production-readiness.yml",
+        "gitleaks git --no-banner --redact --log-opts='--all' .",
+        "git diff --check"
+      ],
       "workstream_id": "WS-08",
-      "write_lock": "unclaimed"
+      "write_lock": "held; local verification complete, remote exact-head CI pending"
     },
     {
       "acceptance_criteria": [
@@ -654,7 +668,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T23:24:15Z",
+  "updated_at": "2026-07-21T23:52:36Z",
   "workstreams": [
     {
       "acceptance_criteria": [

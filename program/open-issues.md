@@ -58,3 +58,19 @@ Category: infrastructure / credential / human decision / data
 Exact local commit `6a885827b7e89d06111c87c34293250eab196d47` implements and exercises backup freshness signals, stale/missing rules, restore regression and alert-contract validation. No authorized scheduler, KMS/key lifecycle, encrypted immutable off-host destination, approved retention or persistent alert delivery exists.
 
 Acceptance condition: authorized target and credentials; reviewed scheduler; encryption/KMS; immutable off-host retention; approved policy; rules loaded; paging delivered; and a staging restore/incident exercise with retained evidence.
+
+## OI-010 — Video Use activation remains denied
+
+Category: integration / security / privacy / supply chain / human decision
+
+Exact commit `92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66` is reproducibly reviewed and
+packaged as `reviewed_disabled`. The current runtime exposes review data only and
+has no executor. Upstream path containment, media disclosure, reproducibility and
+product authority/receipt gaps remain unresolved for activation.
+
+Exact resume condition: select a patched exact source commit; close every HIGH
+finding; hash-lock dependencies/binaries; implement an isolated non-root worker,
+exact egress, short-lived secret references, tenant/artifact-bound Greenlight,
+outbound idempotency/outbox/fence/receipt/revocation, resource/cost limits,
+semantic adversarial tests, provider privacy/legal approval, incident/rollback
+and deletion evidence; then obtain explicit external-effect authorization.

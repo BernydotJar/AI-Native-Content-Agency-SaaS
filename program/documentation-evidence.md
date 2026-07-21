@@ -36,3 +36,6 @@ Known documentation repairs in `INC-001`:
 | `scripts/verify-operability.py` | fail-closed SLO/rule/runbook/exercise validator | 4 SLOs, 7 alerts and 8 exercises pass locally; exact CI pending |
 | `docs/runbooks/incident-response.md` and `docs/runbooks/release-rollback.md` | incident and rollback procedures | local rule linkage and control-plane rollback proven; human/staging drills pending |
 | `program/reports/inc-005-progress.md` | INC-005 bounded review | local evidence at `6a88582`; external backup/monitoring gates remain open |
+| `docs/integrations/video-use-review.md` | exact external browser/video candidate review | commit `92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66`, 33 hashes and activation blockers; implementation remains disabled |
+| `backend/agency_runtime/integration_reviews/video_use.json` | machine-readable integration review evidence | immutable package data only; no upstream code, credential or execution authority |
+| `program/reports/inc-009-review.md` | bounded INC-009 producer/critic/verifier record | local implementation `61da89c`; remote exact-head CI pending |

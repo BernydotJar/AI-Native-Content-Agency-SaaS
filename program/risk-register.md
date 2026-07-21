@@ -16,7 +16,7 @@ Updated: 2026-07-21
 | R-010 | MEDIUM | Version drift makes artifacts and evidence ambiguous. | Version normalization and executable consistency gate. | In progress |
 | R-011 | MEDIUM | Manual accessibility defects escape automation. | Existing semantics/reduced-motion CSS; manual gate remains explicit. | Open |
 | R-012 | MEDIUM | Five supply-chain HIGH exceptions expire without remediation. | Exact, expiring baseline with policy tests. | Open until 2026-08-21 |
-| R-013 | MEDIUM | Future browser/video automation introduces prompt injection or uncontrolled side effects. | No integration activation; adapter evaluation and human gate required. | Controlled |
+| R-013 | MEDIUM | Future browser/video automation introduces prompt injection, path escape, media disclosure or uncontrolled side effects. | Exact `video-use` source/hashes reviewed; strict review-only plan; authenticated GET-only registry; no executor; all effect flags false. | Controlled while disabled; separate activation review required |
 | R-014 | MEDIUM | Audit retention or deletion violates customer/privacy expectations. | No silent deletion; policy and human-gated destructive path required. | Open |
 
 | R-015 | HIGH | PostgreSQL runtime role could initialize/own schema rather than operating with exact non-owner grants. | Exact head `1002d077564618623fe00f27ffae23c2b410aca8` passed local least-privilege gates and eight-job CI run `29868899218`. Persistent staging observation remains under R-002/F-004. | Controlled in code and delivery |
