@@ -119,7 +119,7 @@ class RuntimeMetrics:
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
             "# TYPE agency_runtime_info gauge",
-            'agency_runtime_info{mode="deterministic_sandbox",version="0.6.0"} 1',
+            'agency_runtime_info{mode="deterministic_sandbox",version="0.7.0"} 1',
             "# HELP agency_http_requests_total HTTP requests by method, route template, and status.",
             "# TYPE agency_http_requests_total counter",
         ]

@@ -20,14 +20,16 @@ from .auth import (
     TenantAuthenticator,
     TenantPrincipal,
 )
-from .memory import SQLiteMemory
-from .models import ExecutionRun, MissionBrief, Platform
+from .memory import MemoryStore, SQLiteMemory
+from .models import ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
 from .orchestrator import AgencyOrchestrator, GreenlightError
+from .postgres import PostgresMemory, PostgresRunStore, PostgresRuntimeDatabase
 from .persistence import (
     AuditEvent,
     AuditWrite,
     AuthenticationRateLimitError,
+    RunStateConflictError,
     SQLiteRunStore,
     SessionAuthenticationError,
     SessionCsrfError,
@@ -62,29 +64,60 @@ class BrowserSessionRequest(BaseModel):
 
 @dataclass
 class TenantRuntime:
-    memory: SQLiteMemory
+    memory: MemoryStore
     orchestrator: AgencyOrchestrator
 
 
 class RuntimeService:
-    """Tenant-scoped durable service boundary for the sandbox runtime."""
+    """Tenant-scoped durable service boundary for SQLite or shared PostgreSQL."""
 
-    def __init__(self, database_path: str) -> None:
+    def __init__(
+        self,
+        database_path: str,
+        *,
+        database_url: Optional[str] = None,
+        postgres_pool_min_size: int = 1,
+        postgres_pool_max_size: int = 10,
+        postgres_connect_timeout_seconds: float = 15.0,
+    ) -> None:
         self.database_path = database_path
-        self.run_store = SQLiteRunStore(database_path)
+        self.database_url = database_url.strip() if database_url else ""
+        self._postgres_database: Optional[PostgresRuntimeDatabase] = None
+        if self.database_url:
+            self._postgres_database = PostgresRuntimeDatabase(
+                self.database_url,
+                min_size=postgres_pool_min_size,
+                max_size=postgres_pool_max_size,
+                connect_timeout_seconds=postgres_connect_timeout_seconds,
+            )
+            self.run_store = PostgresRunStore(self._postgres_database)
+            self.storage_backend = "postgresql"
+            self.shared_state = True
+        else:
+            self.run_store = SQLiteRunStore(database_path)
+            self.storage_backend = "sqlite"
+            self.shared_state = False
         self._tenant_runtimes: Dict[str, TenantRuntime] = {}
         self._lock = RLock()
 
     def _runtime_for(self, tenant_id: str) -> TenantRuntime:
         runtime = self._tenant_runtimes.get(tenant_id)
         if runtime is None:
-            memory = SQLiteMemory(self.database_path, namespace=tenant_id)
+            if self._postgres_database is not None:
+                memory: MemoryStore = PostgresMemory(
+                    self._postgres_database, namespace=tenant_id
+                )
+            else:
+                memory = SQLiteMemory(self.database_path, namespace=tenant_id)
             runtime = TenantRuntime(
                 memory=memory,
                 orchestrator=AgencyOrchestrator(build_sandbox_toolset(), memory),
             )
             self._tenant_runtimes[tenant_id] = runtime
         return runtime
+
+    def check(self) -> None:
+        self.run_store.check()
 
     @staticmethod
     def _brief(request: BriefRequest) -> MissionBrief:
@@ -127,9 +160,15 @@ class RuntimeService:
                 bucket_limits, window_seconds
             )
 
-    def record_authentication_failure(self, bucket_hashes: Tuple[str, ...]) -> None:
+    def record_authentication_failure(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
         with self._lock:
-            self.run_store.record_authentication_failure(bucket_hashes)
+            self.run_store.record_authentication_failure(
+                bucket_limits, window_seconds=window_seconds
+            )
 
     def verify_browser_csrf(self, session_id: str, csrf_token: str) -> None:
         with self._lock:
@@ -222,27 +261,41 @@ class RuntimeService:
             greenlight = run.greenlight
             if greenlight is None:
                 raise GreenlightError("Greenlight decision was not recorded")
-            return self.run_store.save(
-                tenant_id,
-                run,
-                audit=AuditWrite(
-                    request_id=request_id,
-                    action="greenlight.{}".format(decision),
-                    resource_type="execution_run",
-                    resource_id=run.run_id,
-                    actor=actor,
-                    payload={
-                        "greenlight_id": greenlight.greenlight_id,
-                        "decision": greenlight.decision.value,
-                        "reviewer": greenlight.reviewer,
-                        "note": greenlight.note,
-                        "approved_artifact_ids": list(greenlight.approved_artifact_ids),
-                        "approved_artifact_hashes": list(greenlight.approved_artifact_hashes),
-                        "authorized_channels": [item.value for item in greenlight.authorized_channels],
-                        "authorized_budget_cents": greenlight.authorized_budget_cents,
-                    },
-                ),
-            )
+            try:
+                return self.run_store.save(
+                    tenant_id,
+                    run,
+                    expected_status=RunStatus.AWAITING_GREENLIGHT.value,
+                    audit=AuditWrite(
+                        request_id=request_id,
+                        action="greenlight.{}".format(decision),
+                        resource_type="execution_run",
+                        resource_id=run.run_id,
+                        actor=actor,
+                        payload={
+                            "greenlight_id": greenlight.greenlight_id,
+                            "decision": greenlight.decision.value,
+                            "reviewer": greenlight.reviewer,
+                            "note": greenlight.note,
+                            "approved_artifact_ids": list(
+                                greenlight.approved_artifact_ids
+                            ),
+                            "approved_artifact_hashes": list(
+                                greenlight.approved_artifact_hashes
+                            ),
+                            "authorized_channels": [
+                                item.value for item in greenlight.authorized_channels
+                            ],
+                            "authorized_budget_cents": (
+                                greenlight.authorized_budget_cents
+                            ),
+                        },
+                    ),
+                )
+            except RunStateConflictError as error:
+                raise GreenlightError(
+                    "Greenlight was already decided by another request"
+                ) from error
 
     def audit_events(
         self, tenant_id: str, after_sequence: int, limit: int
@@ -287,6 +340,7 @@ def _environment_bool(name: str, default: bool) -> bool:
 
 def create_app(
     database_path: Optional[str] = None,
+    database_url: Optional[str] = None,
     static_dir: Optional[Path] = None,
     tenant_api_keys: Optional[Mapping[str, str]] = None,
     identity_credentials: Optional[Sequence[Mapping[str, object]]] = None,
@@ -295,8 +349,31 @@ def create_app(
     login_max_failures: Optional[int] = None,
     login_source_max_failures: Optional[int] = None,
     login_window_seconds: Optional[int] = None,
+    postgres_pool_min_size: Optional[int] = None,
+    postgres_pool_max_size: Optional[int] = None,
+    postgres_connect_timeout_seconds: Optional[float] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
+    db_url = (
+        database_url.strip()
+        if database_url is not None
+        else os.environ.get("AGENCY_DATABASE_URL", "").strip()
+    )
+    pool_min_size = (
+        int(os.environ.get("AGENCY_DATABASE_POOL_MIN_SIZE", "1"))
+        if postgres_pool_min_size is None
+        else postgres_pool_min_size
+    )
+    pool_max_size = (
+        int(os.environ.get("AGENCY_DATABASE_POOL_MAX_SIZE", "10"))
+        if postgres_pool_max_size is None
+        else postgres_pool_max_size
+    )
+    connect_timeout_seconds = (
+        float(os.environ.get("AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS", "15"))
+        if postgres_connect_timeout_seconds is None
+        else postgres_connect_timeout_seconds
+    )
     cookie_name = os.environ.get("AGENCY_SESSION_COOKIE_NAME", "agency_session")
     cookie_secure = (
         _environment_bool("AGENCY_SESSION_COOKIE_SECURE", True)
@@ -334,8 +411,6 @@ def create_app(
     if rate_window_seconds < 10 or rate_window_seconds > 86400:
         raise ValueError("login window must be between 10 and 86400 seconds")
 
-    service = RuntimeService(db_path)
-    metrics = RuntimeMetrics()
     if tenant_api_keys is not None or identity_credentials is not None:
         authenticator = TenantAuthenticator(
             tenant_api_keys=tenant_api_keys,
@@ -347,6 +422,15 @@ def create_app(
             os.environ.get("AGENCY_IDENTITY_CREDENTIALS_JSON"),
         )
 
+    service = RuntimeService(
+        db_path,
+        database_url=db_url or None,
+        postgres_pool_min_size=pool_min_size,
+        postgres_pool_max_size=pool_max_size,
+        postgres_connect_timeout_seconds=connect_timeout_seconds,
+    )
+    metrics = RuntimeMetrics()
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         try:
@@ -356,10 +440,10 @@ def create_app(
 
     app = FastAPI(
         title="AI Native Content Agency API",
-        version="0.6.0",
+        version="0.7.0",
         description=(
-            "Tenant-scoped deterministic sandbox with individual RBAC, durable "
-            "rate limiting, HttpOnly browser sessions and audit evidence. No endpoint "
+            "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
+            "state, durable rate limiting, HttpOnly browser sessions and audit evidence. No endpoint "
             "publishes content, spends "
             "budget, renders media, or contacts external services."
         ),
@@ -434,9 +518,18 @@ def create_app(
         try:
             principal = authenticator.authenticate(api_key)
         except AuthenticationError:
-            service.record_authentication_failure(
-                tuple(bucket_hash for bucket_hash, _ in buckets)
-            )
+            try:
+                service.record_authentication_failure(
+                    buckets,
+                    window_seconds=rate_window_seconds,
+                )
+            except AuthenticationRateLimitError as error:
+                metrics.authentication_attempt("rate_limited")
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="authentication temporarily rate limited",
+                    headers={"Retry-After": str(error.retry_after_seconds)},
+                ) from error
             metrics.authentication_attempt("failed")
             raise
         metrics.authentication_attempt("succeeded")
@@ -558,10 +651,19 @@ def create_app(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="tenant authentication is not configured",
             )
+        try:
+            service.check()
+        except Exception as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="runtime storage is unavailable",
+            ) from error
         return {
             "status": "ready",
             "auth_configured": True,
-            "durable_run_store": db_path != ":memory:",
+            "storage_backend": service.storage_backend,
+            "shared_state": service.shared_state,
+            "durable_run_store": service.shared_state or db_path != ":memory:",
             "individual_identity_configured": authenticator.individual_identity_configured,
             "login_rate_limit": {
                 "credential_max_failures": max_failures,

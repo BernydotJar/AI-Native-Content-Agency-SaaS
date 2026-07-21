@@ -30,7 +30,7 @@ variable "image_tag" {
 
 
 variable "replica_count" {
-  description = "Application replica count. Keep at 1 while SQLite persistence is enabled."
+  description = "Application replica count. SQLite requires one; PostgreSQL supports multiple replicas."
   type        = number
   default     = 1
 
@@ -41,9 +41,75 @@ variable "replica_count" {
 }
 
 variable "persistence_enabled" {
-  description = "Provision the chart PVC and use durable SQLite storage."
+  description = "Provision the chart PVC when storage_backend is sqlite. Ignored by PostgreSQL-backed pods."
   type        = bool
   default     = true
+}
+
+variable "storage_backend" {
+  description = "Runtime state backend: sqlite for local/single-writer operation or postgresql for shared multi-replica state."
+  type        = string
+  default     = "sqlite"
+
+  validation {
+    condition     = contains(["sqlite", "postgresql"], var.storage_backend)
+    error_message = "storage_backend must be sqlite or postgresql."
+  }
+}
+
+variable "postgresql_existing_secret" {
+  description = "Name of a pre-provisioned Kubernetes Secret containing the PostgreSQL connection URL. The URL value is never stored in Terraform state."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.postgresql_existing_secret == "" || can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.postgresql_existing_secret))
+    error_message = "postgresql_existing_secret must be empty or a valid Kubernetes Secret name."
+  }
+}
+
+variable "postgresql_database_url_key" {
+  description = "Key within postgresql_existing_secret containing the postgresql:// connection URL."
+  type        = string
+  default     = "database-url"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+$", var.postgresql_database_url_key))
+    error_message = "postgresql_database_url_key must be a valid Secret data key."
+  }
+}
+
+variable "postgresql_pool_min_size" {
+  description = "Minimum Psycopg connection-pool size per application replica."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.postgresql_pool_min_size >= 1 && var.postgresql_pool_min_size <= 100 && floor(var.postgresql_pool_min_size) == var.postgresql_pool_min_size
+    error_message = "postgresql_pool_min_size must be an integer between 1 and 100."
+  }
+}
+
+variable "postgresql_pool_max_size" {
+  description = "Maximum Psycopg connection-pool size per application replica. Coordinate replica_count times this value with the database connection limit."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.postgresql_pool_max_size >= 1 && var.postgresql_pool_max_size <= 100 && floor(var.postgresql_pool_max_size) == var.postgresql_pool_max_size
+    error_message = "postgresql_pool_max_size must be an integer between 1 and 100."
+  }
+}
+
+variable "postgresql_connect_timeout_seconds" {
+  description = "Maximum startup wait for the PostgreSQL pool to establish a healthy connection."
+  type        = number
+  default     = 15
+
+  validation {
+    condition     = var.postgresql_connect_timeout_seconds >= 1 && var.postgresql_connect_timeout_seconds <= 300 && floor(var.postgresql_connect_timeout_seconds) == var.postgresql_connect_timeout_seconds
+    error_message = "postgresql_connect_timeout_seconds must be an integer between 1 and 300."
+  }
 }
 
 variable "runtime_auth_existing_secret" {

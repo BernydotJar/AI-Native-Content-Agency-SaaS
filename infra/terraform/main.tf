@@ -41,6 +41,36 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.storage.backend"
+    value = var.storage_backend
+  }
+
+  set {
+    name  = "runtime.storage.postgresql.existingSecret"
+    value = var.postgresql_existing_secret
+  }
+
+  set {
+    name  = "runtime.storage.postgresql.databaseUrlKey"
+    value = var.postgresql_database_url_key
+  }
+
+  set {
+    name  = "runtime.storage.postgresql.poolMinSize"
+    value = tostring(var.postgresql_pool_min_size)
+  }
+
+  set {
+    name  = "runtime.storage.postgresql.poolMaxSize"
+    value = tostring(var.postgresql_pool_max_size)
+  }
+
+  set {
+    name  = "runtime.storage.postgresql.connectTimeoutSeconds"
+    value = tostring(var.postgresql_connect_timeout_seconds)
+  }
+
+  set {
     name  = "persistence.enabled"
     value = tostring(var.persistence_enabled)
   }
@@ -89,6 +119,21 @@ resource "helm_release" "app" {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures
       error_message = "login_source_max_failures must be greater than or equal to login_max_failures."
+    }
+
+    precondition {
+      condition     = var.storage_backend != "sqlite" || var.replica_count == 1
+      error_message = "The SQLite backend requires replica_count=1."
+    }
+
+    precondition {
+      condition     = var.storage_backend != "postgresql" || length(trimspace(var.postgresql_existing_secret)) > 0
+      error_message = "postgresql_existing_secret is required for the PostgreSQL backend."
+    }
+
+    precondition {
+      condition     = var.postgresql_pool_max_size >= var.postgresql_pool_min_size
+      error_message = "postgresql_pool_max_size must be greater than or equal to postgresql_pool_min_size."
     }
   }
 }

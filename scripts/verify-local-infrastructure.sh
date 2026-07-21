@@ -14,8 +14,11 @@ KUBECONFIG_PATH="$BASE/kubeconfig.yaml"
 K3S_LOG="$BASE/k3s.log"
 TF_ROOT="$BASE/infra/terraform"
 TF_DATA_DIR="$BASE/terraform-data"
-TF_VARS="$BASE/terraform.tfvars"
-TF_PLAN="$BASE/terraform.plan"
+TF_VARS="$BASE/terraform-sqlite.tfvars"
+TF_PLAN="$BASE/terraform-sqlite.plan"
+TF_PG_VARS="$BASE/terraform-postgresql.tfvars"
+TF_PG_PLAN="$BASE/terraform-postgresql.plan"
+ACTIVE_TF_VARS="$TF_VARS"
 k3s_pid=""
 terraform_applied=0
 
@@ -33,7 +36,7 @@ require_command() {
 cleanup() {
   if [ "$terraform_applied" -eq 1 ] && [ -s "$KUBECONFIG_PATH" ]; then
     TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" destroy \
-      -var-file="$TF_VARS" -auto-approve >/tmp/agency-local-infra-destroy.log 2>&1 || true
+      -var-file="$ACTIVE_TF_VARS" -auto-approve >/tmp/agency-local-infra-destroy.log 2>&1 || true
   fi
   if [ -s "$KUBECONFIG_PATH" ]; then
     kubectl --kubeconfig "$KUBECONFIG_PATH" delete namespace "$NAMESPACE" \
@@ -79,7 +82,13 @@ create_namespace                 = false
 image_repository                 = "$IMAGE_REPOSITORY"
 image_tag                        = "$IMAGE_TAG"
 replica_count                    = 1
+storage_backend                  = "sqlite"
 persistence_enabled              = false
+postgresql_existing_secret       = ""
+postgresql_database_url_key      = "database-url"
+postgresql_pool_min_size         = 1
+postgresql_pool_max_size         = 10
+postgresql_connect_timeout_seconds = 15
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"
@@ -149,6 +158,10 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   ai-native-content-agency-runtime \
   --from-literal='tenant-api-keys.json={"local-validation":"local-kubernetes-verification-key-2026"}' \
   --from-literal='identity-credentials.json=[{"tenant_id":"local-validation","subject_id":"infra-validator","role":"admin","key_id":"infra-v1","api_key":"local-identity-verification-key-2026","active":true}]' \
+  >/dev/null
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
+  ai-native-content-agency-postgresql \
+  --from-literal='database-url=postgresql://runtime:local-validation-only@postgresql.example.invalid:5432/agency' \
   >/dev/null
 
 log "validating Terraform and planning Helm release"
@@ -232,6 +245,107 @@ terraform_applied=0
 
 state_items=$(TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" state list 2>/dev/null | wc -l)
 [ "$state_items" -eq 0 ]
+
+cat > "$TF_PG_VARS" <<VARS
+kubeconfig_path                  = "$KUBECONFIG_PATH"
+namespace                        = "$NAMESPACE"
+create_namespace                 = false
+image_repository                 = "$IMAGE_REPOSITORY"
+image_tag                        = "$IMAGE_TAG"
+replica_count                    = 2
+storage_backend                  = "postgresql"
+persistence_enabled              = false
+postgresql_existing_secret       = "ai-native-content-agency-postgresql"
+postgresql_database_url_key      = "database-url"
+postgresql_pool_min_size         = 1
+postgresql_pool_max_size         = 8
+postgresql_connect_timeout_seconds = 20
+runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
+runtime_auth_tenant_api_keys_key = ""
+runtime_auth_identity_credentials_key = "identity-credentials.json"
+login_max_failures               = 5
+login_source_max_failures        = 50
+login_window_seconds             = 300
+forwarded_allow_ips              = "127.0.0.1"
+session_cookie_secure            = false
+helm_wait                        = false
+helm_timeout_seconds             = 60
+VARS
+
+log "planning and applying PostgreSQL-backed multi-replica release"
+ACTIVE_TF_VARS="$TF_PG_VARS"
+TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" plan \
+  -var-file="$TF_PG_VARS" -out="$TF_PG_PLAN" >/dev/null
+TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" show -json "$TF_PG_PLAN" > "$BASE/plan-postgresql.json"
+python3 - "$BASE/plan-postgresql.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    plan = json.load(handle)
+serialized = json.dumps(plan, sort_keys=True)
+assert "postgresql://runtime:local-validation-only" not in serialized
+changes = plan.get("resource_changes", [])
+assert any(
+    item["address"] == "helm_release.app"
+    and item["change"]["actions"] == ["create"]
+    for item in changes
+)
+assert not any(item.get("type") == "kubernetes_secret_v1" for item in changes)
+print("terraform_postgresql_plan=helm_release_create")
+print("terraform_postgresql_url_in_state=false")
+PY
+TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" apply -auto-approve "$TF_PG_PLAN" >/dev/null
+terraform_applied=1
+
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get deployment \
+  ai-native-content-agency-ai-native-content-agency -o json > "$BASE/deployment-postgresql.json"
+python3 - "$BASE/deployment-postgresql.json" "$IMAGE_REPOSITORY:$IMAGE_TAG" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    deployment = json.load(handle)
+assert deployment["spec"]["replicas"] == 2
+assert deployment["spec"]["strategy"]["type"] == "RollingUpdate"
+container = deployment["spec"]["template"]["spec"]["containers"][0]
+assert container["image"] == sys.argv[2]
+environment = {item["name"]: item for item in container["env"]}
+assert "AGENCY_MEMORY_DB" not in environment
+assert "AGENCY_TENANT_API_KEYS_JSON" not in environment
+assert environment["AGENCY_DATABASE_URL"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-postgresql",
+    "key": "database-url",
+}
+assert environment["AGENCY_DATABASE_POOL_MIN_SIZE"]["value"] == "1"
+assert environment["AGENCY_DATABASE_POOL_MAX_SIZE"]["value"] == "8"
+assert environment["AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS"]["value"] == "20"
+assert all(
+    volume["name"] != "runtime-data"
+    for volume in deployment["spec"]["template"]["spec"]["volumes"]
+)
+print("postgresql_multi_replica_configuration=pass")
+PY
+if kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" get pvc \
+  ai-native-content-agency-ai-native-content-agency >/dev/null 2>&1; then
+  printf 'PostgreSQL-backed release unexpectedly created a runtime PVC\n' >&2
+  exit 3
+fi
+
+helm template ai-native-content-agency "$BASE/infra/helm/ai-native-content-agency" \
+  --namespace "$NAMESPACE" \
+  --set runtime.storage.backend=postgresql \
+  --set runtime.storage.postgresql.existingSecret=ai-native-content-agency-postgresql \
+  --set replicaCount=2 \
+  --set persistence.enabled=false \
+  | kubectl --kubeconfig "$KUBECONFIG_PATH" apply --dry-run=server -f - >/dev/null
+
+log "destroying PostgreSQL-backed Terraform release"
+TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" destroy \
+  -var-file="$TF_PG_VARS" -auto-approve >/dev/null
+terraform_applied=0
+state_items=$(TF_DATA_DIR="$TF_DATA_DIR" terraform -chdir="$TF_ROOT" state list 2>/dev/null | wc -l)
+[ "$state_items" -eq 0 ]
 kubectl --kubeconfig "$KUBECONFIG_PATH" delete namespace "$NAMESPACE" --wait=true >/dev/null
 
 printf 'terraform_version=%s\n' "$(terraform version -json | python3 -c 'import json,sys; print(json.load(sys.stdin)["terraform_version"])')"
@@ -241,6 +355,9 @@ printf 'k3s_version=%s\n' "$(k3s --version | head -n 1 | awk '{print $3}')"
 printf 'kubernetes_api=pass\n'
 printf 'helm_server_dry_run=pass\n'
 printf 'terraform_plan_apply_destroy=pass\n'
+printf 'postgresql_multi_replica_configuration=pass\n'
+printf 'terraform_postgresql_url_in_state=false\n'
+printf 'terraform_postgresql_plan_apply_destroy=pass\n'
 printf 'identity_rbac_configuration=pass\n'
 printf 'workload_execution=not_validated_agentless_control_plane\n'
 printf 'cleanup=pass\n'

@@ -1,5 +1,5 @@
-# SQLite is the current durable store. Keep one replica until a shared database
-# adapter (for example PostgreSQL) replaces the single-writer runtime.
+# SQLite remains the safe local default. Production horizontal availability uses
+# runtime.storage.backend=postgresql and a pre-provisioned database URL Secret.
 replicaCount: 1
 
 image:
@@ -8,7 +8,16 @@ image:
   pullPolicy: IfNotPresent
 
 runtime:
-  databasePath: "/var/lib/agency/runtime.sqlite3"
+  storage:
+    backend: "sqlite"
+    sqlite:
+      databasePath: "/var/lib/agency/runtime.sqlite3"
+    postgresql:
+      existingSecret: ""
+      databaseUrlKey: "database-url"
+      poolMinSize: 1
+      poolMaxSize: 10
+      connectTimeoutSeconds: 15
   auth:
     existingSecret: "ai-native-content-agency-runtime"
     # Legacy tenant-level keys can overlap during migration. Set to "" to disable.
@@ -26,6 +35,7 @@ runtime:
     cookieSecure: true
     ttlSeconds: 28800
 
+# Used only by the SQLite backend. PostgreSQL stores all runtime state externally.
 persistence:
   enabled: true
   accessModes:
@@ -66,7 +76,6 @@ containerSecurityContext:
     drop: ["ALL"]
 
 podDisruptionBudget:
-  # A PDB cannot create availability for a single SQLite writer. Enable after
-  # moving to a shared store and increasing replicaCount.
+  # Enable for PostgreSQL-backed multi-replica deployments.
   enabled: false
   minAvailable: 1

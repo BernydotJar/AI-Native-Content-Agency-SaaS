@@ -7,11 +7,13 @@ from .auth import (
     TenantAuthenticator,
     TenantPrincipal,
 )
-from .memory import SQLiteMemory
+from .memory import MemoryStore, SQLiteMemory
+from .postgres import PostgresMemory, PostgresRunStore, PostgresRuntimeDatabase
 from .persistence import (
     AuditEvent,
     AuditWrite,
     AuthenticationRateLimitError,
+    RunStateConflictError,
     SessionAuthenticationError,
     SessionCsrfError,
     SessionIssue,
@@ -101,7 +103,12 @@ __all__ = [
     "Platform",
     "Provenance",
     "PuppeteerBrowserTool",
+    "RunStateConflictError",
     "RunStatus",
+    "MemoryStore",
+    "PostgresMemory",
+    "PostgresRunStore",
+    "PostgresRuntimeDatabase",
     "SQLiteMemory",
     "SandboxToolset",
     "SkillAlreadyExistsError",

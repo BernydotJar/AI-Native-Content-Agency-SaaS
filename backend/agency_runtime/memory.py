@@ -5,7 +5,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, List, Sequence, Tuple, Union
+from typing import Callable, List, Protocol, Sequence, Tuple, Union
 
 from .models import (
     MemoryObservation,
@@ -21,6 +21,33 @@ Clock = Callable[[], str]
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+class MemoryStore(Protocol):
+    namespace: str
+
+    def observe(
+        self,
+        content: str,
+        provenance: Provenance,
+        confidence: float,
+        tags: Sequence[str] = (),
+    ) -> MemoryObservation: ...
+
+    def store(self, observation: MemoryObservation) -> MemoryRecord: ...
+
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        min_confidence: float = 0.0,
+    ) -> Tuple[MemorySearchResult, ...]: ...
+
+    def recall(self, memory_id: str) -> MemoryRecord: ...
+
+    def count(self) -> int: ...
+
+    def close(self) -> None: ...
 
 
 class SQLiteMemory:

@@ -92,6 +92,10 @@ class AuthenticationRateLimitError(PermissionError):
         self.retry_after_seconds = max(1, retry_after_seconds)
 
 
+class RunStateConflictError(RuntimeError):
+    pass
+
+
 class SQLiteRunStore:
     """Tenant-scoped durable run store and append-only audit ledger."""
 
@@ -275,25 +279,51 @@ class SQLiteRunStore:
         tenant_id: str,
         run: ExecutionRun,
         audit: Optional[AuditWrite] = None,
+        expected_status: Optional[str] = None,
     ) -> ExecutionRun:
         document = canonical_json(execution_run_to_document(run))
         with self._lock, self._connection:
-            cursor = self._connection.execute(
-                """
-                UPDATE runtime_runs
-                SET status = ?, document_json = ?, updated_at = ?
-                WHERE tenant_id = ? AND run_id = ?
-                """,
-                (
-                    run.status.value,
-                    document,
-                    self._clock(),
-                    tenant_id,
-                    run.run_id,
-                ),
-            )
+            if expected_status is None:
+                cursor = self._connection.execute(
+                    """
+                    UPDATE runtime_runs
+                    SET status = ?, document_json = ?, updated_at = ?
+                    WHERE tenant_id = ? AND run_id = ?
+                    """,
+                    (
+                        run.status.value,
+                        document,
+                        self._clock(),
+                        tenant_id,
+                        run.run_id,
+                    ),
+                )
+            else:
+                cursor = self._connection.execute(
+                    """
+                    UPDATE runtime_runs
+                    SET status = ?, document_json = ?, updated_at = ?
+                    WHERE tenant_id = ? AND run_id = ? AND status = ?
+                    """,
+                    (
+                        run.status.value,
+                        document,
+                        self._clock(),
+                        tenant_id,
+                        run.run_id,
+                        expected_status,
+                    ),
+                )
             if cursor.rowcount != 1:
-                raise KeyError("run not found: {}".format(run.run_id))
+                row = self._connection.execute(
+                    "SELECT status FROM runtime_runs WHERE tenant_id = ? AND run_id = ?",
+                    (tenant_id, run.run_id),
+                ).fetchone()
+                if row is None:
+                    raise KeyError("run not found: {}".format(run.run_id))
+                raise RunStateConflictError(
+                    "run state changed before persistence: {}".format(run.run_id)
+                )
             if audit is not None:
                 self._append_audit_locked(tenant_id, audit)
         return run
@@ -579,12 +609,45 @@ class SQLiteRunStore:
                     retry_after = int((retry_at - now).total_seconds()) + 1
                     raise AuthenticationRateLimitError(retry_after)
 
-    def record_authentication_failure(self, bucket_hashes: Tuple[str, ...]) -> None:
+    def record_authentication_failure(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int = 300,
+    ) -> None:
+        if not bucket_limits:
+            raise ValueError("at least one authentication bucket is required")
+        if any(max_failures < 1 for _, max_failures in bucket_limits):
+            raise ValueError("max_failures must be positive")
+        if window_seconds < 1:
+            raise ValueError("window_seconds must be positive")
         occurred_at = self._clock()
+        now = datetime.fromisoformat(occurred_at)
+        cutoff = (now - timedelta(seconds=window_seconds)).isoformat()
         with self._lock, self._connection:
+            self._connection.execute(
+                "DELETE FROM authentication_failures WHERE occurred_at < ?",
+                (cutoff,),
+            )
+            for bucket_hash, max_failures in sorted(bucket_limits):
+                rows = self._connection.execute(
+                    """
+                    SELECT occurred_at FROM authentication_failures
+                    WHERE bucket_hash = ? AND occurred_at >= ?
+                    ORDER BY occurred_at ASC
+                    """,
+                    (bucket_hash, cutoff),
+                ).fetchall()
+                if len(rows) >= max_failures:
+                    earliest = datetime.fromisoformat(str(rows[0]["occurred_at"]))
+                    retry_at = earliest + timedelta(seconds=window_seconds)
+                    retry_after = int((retry_at - now).total_seconds()) + 1
+                    raise AuthenticationRateLimitError(retry_after)
             self._connection.executemany(
                 "INSERT INTO authentication_failures(bucket_hash, occurred_at) VALUES (?, ?)",
-                tuple((bucket_hash, occurred_at) for bucket_hash in bucket_hashes),
+                tuple(
+                    (bucket_hash, occurred_at)
+                    for bucket_hash, _ in sorted(bucket_limits)
+                ),
             )
 
     def authentication_failure_count(self, bucket_hash: str) -> int:
@@ -604,6 +667,12 @@ class SQLiteRunStore:
         with self._lock:
             row = self._connection.execute(sql, parameters).fetchone()
         return int(row["total"])
+
+    def check(self) -> None:
+        with self._lock:
+            row = self._connection.execute("SELECT 1 AS ready").fetchone()
+        if row is None or int(row["ready"]) != 1:
+            raise RuntimeError("SQLite readiness query failed")
 
     def close(self) -> None:
         with self._lock:

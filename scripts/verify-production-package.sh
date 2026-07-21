@@ -63,6 +63,32 @@ grep -q 'containerPort: 8080' "$TMP_DIR/rendered.yaml"
 grep -q 'name: AGENCY_IDENTITY_CREDENTIALS_JSON' "$TMP_DIR/rendered.yaml"
 grep -q 'name: AGENCY_LOGIN_SOURCE_MAX_FAILURES' "$TMP_DIR/rendered.yaml"
 grep -q 'name: FORWARDED_ALLOW_IPS' "$TMP_DIR/rendered.yaml"
+grep -q 'name: AGENCY_MEMORY_DB' "$TMP_DIR/rendered.yaml"
+if grep -q 'name: AGENCY_DATABASE_URL' "$TMP_DIR/rendered.yaml"; then
+  printf 'SQLite render unexpectedly contains PostgreSQL URL configuration\n' >&2
+  exit 3
+fi
+
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.storage.backend=postgresql \
+  --set runtime.storage.postgresql.existingSecret=agency-postgresql \
+  --set replicaCount=2 \
+  --set persistence.enabled=false \
+  --set podDisruptionBudget.enabled=true > "$TMP_DIR/postgresql.yaml"
+grep -q 'replicas: 2' "$TMP_DIR/postgresql.yaml"
+grep -q 'type: RollingUpdate' "$TMP_DIR/postgresql.yaml"
+grep -q 'name: AGENCY_DATABASE_URL' "$TMP_DIR/postgresql.yaml"
+grep -q 'name: AGENCY_DATABASE_POOL_MIN_SIZE' "$TMP_DIR/postgresql.yaml"
+grep -q 'name: AGENCY_DATABASE_POOL_MAX_SIZE' "$TMP_DIR/postgresql.yaml"
+grep -q 'name: AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS' "$TMP_DIR/postgresql.yaml"
+if grep -q 'name: AGENCY_MEMORY_DB' "$TMP_DIR/postgresql.yaml"; then
+  printf 'PostgreSQL render unexpectedly contains SQLite configuration\n' >&2
+  exit 3
+fi
+if grep -q 'kind: PersistentVolumeClaim' "$TMP_DIR/postgresql.yaml"; then
+  printf 'PostgreSQL render unexpectedly contains a runtime PVC\n' >&2
+  exit 3
+fi
 
 "$HELM_BIN" template agency "$CHART_PATH" \
   --set-string runtime.auth.tenantApiKeysKey='' > "$TMP_DIR/identity-only.yaml"
@@ -81,6 +107,22 @@ if "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.auth.loginMaxFailures=5 \
   --set runtime.auth.loginSourceMaxFailures=4 >/dev/null 2>&1; then
   printf 'Helm source rate-limit guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.storage.backend=sqlite \
+  --set replicaCount=2 >/dev/null 2>&1; then
+  printf 'Helm SQLite replica guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.storage.backend=postgresql >/dev/null 2>&1; then
+  printf 'Helm PostgreSQL Secret guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.storage.backend=invalid >/dev/null 2>&1; then
+  printf 'Helm storage backend guard did not fail\n' >&2
   exit 3
 fi
 

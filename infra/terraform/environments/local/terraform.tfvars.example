@@ -3,7 +3,15 @@ namespace                       = "ai-native-content-agency"
 image_repository                = "ai-native-content-agency"
 image_tag                       = "local"
 replica_count                   = 1
+storage_backend                 = "sqlite"
 persistence_enabled             = true
+# For a shared deployment set storage_backend="postgresql", replica_count>=2,
+# persistence_enabled=false, and reference a pre-provisioned URL Secret:
+postgresql_existing_secret      = ""
+postgresql_database_url_key     = "database-url"
+postgresql_pool_min_size        = 1
+postgresql_pool_max_size        = 10
+postgresql_connect_timeout_seconds = 15
 runtime_auth_existing_secret    = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"

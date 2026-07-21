@@ -1,5 +1,33 @@
-{{- if and .Values.persistence.enabled (gt (int .Values.replicaCount) 1) }}
-{{- fail "persistence.enabled with SQLite requires replicaCount=1; use a shared database before scaling replicas" }}
+{{- $backend := lower .Values.runtime.storage.backend -}}
+{{- if not (has $backend (list "sqlite" "postgresql")) }}
+{{- fail "runtime.storage.backend must be sqlite or postgresql" }}
+{{- end }}
+{{- if and (eq $backend "sqlite") (gt (int .Values.replicaCount) 1) }}
+{{- fail "the SQLite backend requires replicaCount=1; select postgresql before scaling replicas" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (not .Values.runtime.storage.postgresql.existingSecret) }}
+{{- fail "runtime.storage.postgresql.existingSecret is required for the PostgreSQL backend" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (not .Values.runtime.storage.postgresql.databaseUrlKey) }}
+{{- fail "runtime.storage.postgresql.databaseUrlKey is required for the PostgreSQL backend" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.poolMinSize) 1) (gt (int .Values.runtime.storage.postgresql.poolMinSize) 100)) }}
+{{- fail "runtime.storage.postgresql.poolMinSize must be between 1 and 100" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.poolMaxSize) (int .Values.runtime.storage.postgresql.poolMinSize)) (gt (int .Values.runtime.storage.postgresql.poolMaxSize) 100)) }}
+{{- fail "runtime.storage.postgresql.poolMaxSize must be between poolMinSize and 100" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 1) (gt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 300)) }}
+{{- fail "runtime.storage.postgresql.connectTimeoutSeconds must be between 1 and 300" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (ne $backend "postgresql") }}
+{{- fail "podDisruptionBudget requires the PostgreSQL backend" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (lt (int .Values.replicaCount) 2) }}
+{{- fail "podDisruptionBudget requires replicaCount of at least 2" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (or (lt (int .Values.podDisruptionBudget.minAvailable) 1) (gt (int .Values.podDisruptionBudget.minAvailable) (int .Values.replicaCount))) }}
+{{- fail "podDisruptionBudget.minAvailable must be between 1 and replicaCount" }}
 {{- end }}
 {{- if not .Values.runtime.auth.identityCredentialsKey }}
 {{- fail "runtime.auth.identityCredentialsKey is required for individual identity and RBAC" }}
@@ -22,9 +50,15 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
-{{- if .Values.persistence.enabled }}
+{{- if eq $backend "sqlite" }}
   strategy:
     type: Recreate
+{{- else }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 {{- end }}
   selector:
     matchLabels:
@@ -52,8 +86,22 @@ spec:
             - name: http
               containerPort: 8080
           env:
+{{- if eq $backend "sqlite" }}
             - name: AGENCY_MEMORY_DB
-              value: {{ .Values.runtime.databasePath | quote }}
+              value: {{ .Values.runtime.storage.sqlite.databasePath | quote }}
+{{- else }}
+            - name: AGENCY_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.storage.postgresql.existingSecret | quote }}
+                  key: {{ .Values.runtime.storage.postgresql.databaseUrlKey | quote }}
+            - name: AGENCY_DATABASE_POOL_MIN_SIZE
+              value: {{ .Values.runtime.storage.postgresql.poolMinSize | quote }}
+            - name: AGENCY_DATABASE_POOL_MAX_SIZE
+              value: {{ .Values.runtime.storage.postgresql.poolMaxSize | quote }}
+            - name: AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS
+              value: {{ .Values.runtime.storage.postgresql.connectTimeoutSeconds | quote }}
+{{- end }}
 {{- if .Values.runtime.auth.tenantApiKeysKey }}
             - name: AGENCY_TENANT_API_KEYS_JSON
               valueFrom:
@@ -104,17 +152,21 @@ spec:
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
+{{- if eq $backend "sqlite" }}
             - name: runtime-data
               mountPath: /var/lib/agency
+{{- end }}
             - name: runtime-tmp
               mountPath: /tmp
       volumes:
+{{- if eq $backend "sqlite" }}
         - name: runtime-data
 {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "agency.fullname" . }}
 {{- else }}
           emptyDir: {}
+{{- end }}
 {{- end }}
         - name: runtime-tmp
           emptyDir: {}

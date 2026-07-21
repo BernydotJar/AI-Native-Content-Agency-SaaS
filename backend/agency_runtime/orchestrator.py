@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple
 
-from .memory import SQLiteMemory, utc_now
+from .memory import MemoryStore, utc_now
 from .models import (
     AGENT_SEQUENCE,
     AgentRole,
@@ -45,7 +45,7 @@ class AgencyOrchestrator:
     def __init__(
         self,
         tools: SandboxToolset,
-        memory: SQLiteMemory,
+        memory: MemoryStore,
         clock: Clock = utc_now,
     ) -> None:
         self.tools = tools
