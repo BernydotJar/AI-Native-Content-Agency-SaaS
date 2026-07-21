@@ -62,7 +62,7 @@ Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la ma
 - Python 3.10 o superior
 - Biblioteca estándar para orquestación, modelos y SQLite
 - FastAPI, Pydantic y Uvicorn para el servicio HTTP
-- `setuptools` para empaquetado
+- wheel reproducible con `build`, `setuptools`, `wheel` y `pip-tools` fijados por hash
 - Sin dependencia de `agency_swarm` ni de un framework externo de agentes
 
 Durante la implementación se consultó Context7 mediante su CLI para contrastar la integración oficial de Tailwind CSS 4 con Vite y la configuración vigente de Vitest 4. Esa consulta fue tooling de desarrollo; `Context7DocsTool` dentro del producto sigue siendo un adapter mock y no hace solicitudes remotas.
@@ -104,12 +104,14 @@ Sin una decisión, el flujo termina en `awaiting_greenlight` y Publisher permane
 python3 agency.py demo --db /tmp/native-agency-memory.sqlite3 --json
 ```
 
-Pruebas del backend:
+Pruebas reproducibles del backend:
 
 ```bash
-cd backend
-python3 -m unittest discover -s tests -v
+./scripts/check-python-locks.sh
+./scripts/verify-python-locks.sh
 ```
+
+El primer comando confirma que los tres lockfiles se regeneran byte por byte. El segundo crea entornos limpios, construye el wheel, instala únicamente artefactos fijados por hash, ejecuta `pip check` y corre las pruebas.
 
 ## Agentes, conocimiento y skills
 
@@ -174,19 +176,29 @@ La demo JSON reporta de forma explícita cero llamadas de red, navegaciones, cam
 El mismo runtime Python ya está disponible mediante FastAPI. La imagen de producción sirve la SPA y la API en el puerto `8080`:
 
 ```bash
-cd backend
-python3 -m venv .venv
-.venv/bin/pip install -e . httpx
+python3 -m venv /tmp/agency-build
+/tmp/agency-build/bin/python -m pip install --require-hashes   -r backend/requirements-build.lock
+/tmp/agency-build/bin/python -m build --no-isolation --wheel   --outdir /tmp/agency-wheels backend
+
+python3 -m venv /tmp/agency-runtime
+/tmp/agency-runtime/bin/python -m pip install --require-hashes   -r backend/requirements.lock
+/tmp/agency-runtime/bin/python -m pip install --no-deps /tmp/agency-wheels/*.whl
 export AGENCY_MEMORY_DB=/tmp/agency-runtime.sqlite3
 export AGENCY_TENANT_API_KEYS_JSON='{"local-tenant":"replace-with-a-strong-local-key"}'
-.venv/bin/agency-api
+export AGENCY_SESSION_COOKIE_SECURE=false  # sólo para HTTP local
+/tmp/agency-runtime/bin/agency-api
 ```
+
+No uses una instalación editable como sustituto del gate reproducible. `./scripts/verify-python-locks.sh` automatiza el build, `pip check` y las pruebas en entornos efímeros.
 
 Endpoints iniciales:
 
 - `GET /healthz`
 - `GET /readyz`
 - `GET /metrics`
+- `POST /api/v1/sessions`
+- `GET /api/v1/sessions/current`
+- `DELETE /api/v1/sessions/current`
 - `GET /api/v1/me`
 - `GET /api/v1/audit-events`
 - `POST /api/v1/runs`
@@ -212,6 +224,17 @@ Cada respuesta incluye `X-Request-ID`. Los logs de aplicación son JSON y regist
 
 Consulta [Runtime Operations](docs/OPERATIONS.md) para el contrato de logs, métricas, paginación de auditoría y alertas iniciales; y [ADR 0002](docs/adr/0002-observability-and-audit-ledger.md) para las decisiones y limitaciones.
 
+## Dependencias Python reproducibles
+
+Los grafos de runtime, test y build se declaran en `backend/requirements*.in` y se resuelven en lockfiles con versiones y hashes exactos. Docker, CI y verificación local construyen el mismo wheel, instalan locks con `--require-hashes`, instalan la aplicación con `--no-deps` y ejecutan `pip check`.
+
+```bash
+./scripts/check-python-locks.sh
+./scripts/verify-python-locks.sh
+```
+
+Las actualizaciones se realizan únicamente mediante `./scripts/update-python-locks.sh`. Consulta [Python Dependency Locking](docs/DEPENDENCY_LOCKING.md) y [ADR 0004](docs/adr/0004-reproducible-python-dependency-graph.md).
+
 ## Verificación del paquete de producción
 
 Helm y la imagen completa pueden validarse localmente con un único comando. El script acepta Docker o Buildah; en workstations con overlay anidado se recomienda Buildah con `vfs` y aislamiento `chroot`:
@@ -222,4 +245,4 @@ HELM_BIN=/home/agent/.local/bin/helm \
 ./scripts/verify-production-package.sh
 ```
 
-La verificación lint/renderiza Helm, construye la imagen multi-stage, inicia el artefacto como usuario no root y prueba health, readiness, bearer auth, SPA, API, siete artefactos y el gate de Publisher. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.
+La verificación lint/renderiza Helm, construye el wheel y la imagen multi-stage con locks hash-verified, inicia el artefacto como usuario no root y prueba health, readiness, SPA, sesión HttpOnly, CSRF, API, artefactos, Greenlight, auditoría, métricas y revocación. Consulta [Environment and Dependency Remediation](docs/ENVIRONMENT_REMEDIATION.md) para versiones, fuentes, fallos evaluados y reversión.

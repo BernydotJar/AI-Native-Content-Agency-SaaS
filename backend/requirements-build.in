@@ -1,0 +1,4 @@
+build>=1.2,<2
+pip-tools==7.6.0
+setuptools>=77,<81
+wheel>=0.45,<1
