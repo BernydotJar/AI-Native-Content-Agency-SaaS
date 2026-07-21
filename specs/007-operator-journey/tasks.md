@@ -10,4 +10,4 @@
 - [x] Cross-workstream regression.
 - [x] Program evidence, commit, push, draft PR and exact-head CI.
 
-- [ ] Push, draft PR and exact-head CI.
+- [x] Push, draft PR and exact-head CI.

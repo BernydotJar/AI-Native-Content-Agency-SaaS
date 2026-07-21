@@ -14,9 +14,9 @@ Cloud recommendation: `DENY_APPLY`
 - Verifier repair commit: `bdd908c9cfcbb81c5620229b9a31b0c3fe1fc33a`
 - INC-007 implementation commit: `4f101221d3ddfb426aded5e7f4caec9c87985b32`
 - Local program checkpoint: the commit containing this document, directly above `4f10122`
-- Active branch remote: absent
-- Draft PR for INC-007: absent
-- Exact-head CI for INC-007: not triggered
+- Active branch remote: `a3cff4305c4f1f98158bdda5d416e5f7544bff47`
+- Draft PR for INC-007: `#6`, base `agent/inc-005-operability`, clean and mergeable
+- Exact-head CI for INC-007: run `29874536962`, eight of eight jobs successful
 - Exact verified stacked-base CI: run `29873483636`, eight of eight jobs successful at `ca9caf8`
 - PR `#5`: draft and green on `agent/inc-005-operability`
 - PR `#4`: draft and green, stacked on PR `#3`
@@ -52,7 +52,7 @@ Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29
 
 ### INC-007 — Backend-first operator journey and degraded states
 
-Status: `review`
+Status: `done`
 Owner: Frontend Engineer / Production UX Reviewer
 External effects: none
 
@@ -89,7 +89,7 @@ Whitespace                               PASS
 
 The package gate also exposed and repaired an unset `PYTHON_BIN` in `scripts/verify-production-package.sh` under `set -u`.
 
-`INC-007` is not done because its branch is not pushed, no draft PR exists and no exact-head CI exists. Manual assistive-technology and visual accessibility evidence remains explicitly outside this slice and owned by `INC-008`.
+`INC-007` is complete as a repository delivery checkpoint: implementation, local gates, clean-source supply chain, exact remote SHA, draft PR and eight-job exact-head CI are proven. Manual assistive-technology and visual accessibility evidence remains explicitly outside this slice and owned by `INC-008`.
 
 ## Open global HIGH release findings
 
@@ -134,12 +134,11 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit and publish the INC-007 program checkpoint.
-2. Verify remote SHA and create a draft PR against `agent/inc-005-operability`.
-3. Require all eight exact-head CI jobs and repair failures.
-4. After INC-007 is exact-head green, mark it done and begin `INC-008` manual/accessibility and theme evidence.
-5. Keep all external integrations, publication and spend disabled.
+1. Publish this INC-007 closure checkpoint and require its exact-head CI.
+2. Begin `INC-008` manual/accessibility and accessible theme evidence from the verified INC-007 branch head.
+3. Keep all external integrations, publication and spend disabled.
+4. Keep F-007 open until manual evidence is captured and independently reviewed.
 
 ## Exact continuation condition
 
-Start from the clean program-checkpoint commit above `4f101221d3ddfb426aded5e7f4caec9c87985b32`. Push `agent/inc-007-operator-journey`, verify exact remote equality, create a draft PR with base `agent/inc-005-operability`, inspect all eight jobs and repair any failure. Do not mark INC-007 done or start INC-008 before exact-head CI. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Publish the closure checkpoint above exact green head `a3cff4305c4f1f98158bdda5d416e5f7544bff47` and require its own documentation-only exact-head CI. Then branch `INC-008` from that verified head and collect manual accessibility/theme evidence. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.

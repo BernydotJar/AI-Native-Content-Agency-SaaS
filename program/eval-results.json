@@ -216,9 +216,16 @@
       "observed": "workflow lint, current-worktree secret scan and whitespace checks PASS",
       "result": "PASS",
       "scope": "workflow, secrets and repository hygiene"
+    },
+    {
+      "command": "gh run view 29874536962",
+      "id": "INC007-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "4f101221d3ddfb426aded5e7f4caec9c87985b32",
-  "updated_at": "2026-07-21T22:34:58Z"
+  "source_commit": "a3cff4305c4f1f98158bdda5d416e5f7544bff47",
+  "updated_at": "2026-07-21T22:42:18Z"
 }

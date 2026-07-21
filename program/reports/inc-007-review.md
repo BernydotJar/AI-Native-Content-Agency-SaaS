@@ -5,7 +5,7 @@ Branch: `agent/inc-007-operator-journey`
 Stacked base: `agent/inc-005-operability@ca9caf80320c3279d631f6b08d8f37f0508035be`
 Verifier repair commit: `bdd908c9cfcbb81c5620229b9a31b0c3fe1fc33a`
 Implementation commit: `4f101221d3ddfb426aded5e7f4caec9c87985b32`
-Status: `REVIEW — LOCAL_GATES_PASS_REMOTE_CI_PENDING`
+Status: `CHECKPOINT_COMPLETED — EXACT_REMOTE_CI_PASS`
 External effects: none
 
 ## Review contract
@@ -97,14 +97,14 @@ tested_local: yes
 package_verified_local: yes
 reviewed_local: yes
 committed: yes
-pushed: no
-remote_sha_verified: no
-draft_pr: no
-exact_head_ci: no
+pushed: yes — a3cff4305c4f1f98158bdda5d416e5f7544bff47
+remote_sha_verified: yes
+draft_pr: yes — #6
+exact_head_ci: yes — run 29874536962, 8/8
 merged: no
 deployed: no
 ```
 
 ## Exact continuation condition
 
-Create the program checkpoint commit, push `agent/inc-007-operator-journey` normally, verify the remote SHA, create a draft PR against `agent/inc-005-operability`, and require all eight exact-head jobs. Repair failures before marking `INC-007` done or starting `INC-008`.
+Publish this closure checkpoint and require its documentation-only exact-head CI. Then start `INC-008` from the verified branch head; manual accessibility evidence remains a separate release gate.

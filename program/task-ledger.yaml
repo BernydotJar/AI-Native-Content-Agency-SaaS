@@ -363,7 +363,7 @@
       ],
       "read_only_paths": [],
       "role": "Frontend Engineer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-007",
       "validation_commands": [
         "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
@@ -375,7 +375,7 @@
         "gitleaks dir . --redact"
       ],
       "workstream_id": "WS-05",
-      "write_lock": "agent/inc-007-operator-journey"
+      "write_lock": "released after exact-head CI"
     },
     {
       "acceptance_criteria": [
@@ -642,7 +642,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T22:34:58Z",
+  "updated_at": "2026-07-21T22:42:18Z",
   "workstreams": [
     {
       "acceptance_criteria": [

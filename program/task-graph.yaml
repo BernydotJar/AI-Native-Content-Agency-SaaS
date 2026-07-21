@@ -70,7 +70,7 @@
         "INC-004"
       ],
       "id": "INC-007",
-      "status": "review"
+      "status": "done"
     },
     {
       "depends_on": [
@@ -113,5 +113,5 @@
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-21T22:34:58Z"
+  "updated_at": "2026-07-21T22:42:18Z"
 }
