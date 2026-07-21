@@ -13,6 +13,7 @@ IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import
     {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
 ]))')
 HELM_BIN=${HELM_BIN:-helm}
+PYTHON_BIN=${PYTHON_BIN:-python3}
 TMP_DIR=$(mktemp -d)
 RUNTIME_KIND=""
 RUNTIME_ID=""
@@ -46,7 +47,7 @@ cleanup() {
 trap cleanup EXIT
 
 require_command curl
-require_command python3
+require_command "$PYTHON_BIN"
 require_command "$HELM_BIN"
 
 log "validating Helm chart with $($HELM_BIN version --short)"
