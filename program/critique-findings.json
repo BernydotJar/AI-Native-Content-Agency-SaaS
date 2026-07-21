@@ -66,7 +66,7 @@
     },
     {
       "description": "PostgreSQL migration and runtime authority are not separated; a non-owner least-privilege runtime role is not demonstrated.",
-      "evidence": "Local implementation df7fc7f878d8beb34fc956746a6bdfe34794f9f0 separates operator initialize from runtime validate, fixes search_path, encodes exact non-owner grants and negative schema/DDL/TEMP/role-escalation checks. Behavioral gates, push/CI and persistent environment observation remain NOT_RUN.",
+      "evidence": "Effective local implementation 23bfee60f8536d2fcd7e3c5ca20636103f9401c8 separates operator initialize from runtime validate, fixes search_path, validates relation types/columns, makes initialize transactional, and encodes exact non-owner grants plus negative schema/DDL/TEMP/role-escalation and partial-DDL rollback checks. Behavioral gates, push/CI and persistent environment observation remain NOT_RUN.",
       "id": "F-009",
       "owner": "INC-012",
       "severity": "HIGH",
@@ -106,5 +106,5 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "updated_at": "2026-07-21T20:28:03Z"
+  "updated_at": "2026-07-21T20:37:52Z"
 }

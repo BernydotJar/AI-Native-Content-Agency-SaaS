@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T20:28:03Z
+Updated: 2026-07-21T20:37:52Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -10,8 +10,9 @@ Cloud recommendation: `DENY_APPLY`
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
 - Branch: `agent/production-readiness`
-- Local implementation commit: `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`
-- Local program checkpoint: the commit containing this document, directly atop `df7fc7f`
+- Foundational implementation commit: `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`
+- Effective local implementation head: `23bfee60f8536d2fcd7e3c5ca20636103f9401c8`
+- Local program checkpoint: the commit containing this document, directly atop `23bfee6`
 - Remote branch HEAD: `a9f063fc7db531a86822b58f603473a71247a903`
 - Upstream: not configured
 - Draft PR: `#3`, open against `main`
@@ -20,7 +21,7 @@ Cloud recommendation: `DENY_APPLY`
 - Merge: not authorized and not performed
 - Deployment/external infrastructure/spend: not authorized and not performed
 
-`INC-012` implementation is preserved in local commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`. The separate program checkpoint commit containing this document sits directly above it. Neither local commit is pushed, remotely verified or represented by current CI.
+`INC-012` authority separation began in `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` and its atomic-initialization repair is preserved at effective local head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8`. The final program checkpoint containing this document sits directly above `23bfee6`. No local commit after remote head `a9f063f` is pushed, remotely verified or represented by current CI.
 
 ## Last remotely verified checkpoint
 
@@ -65,7 +66,7 @@ PR `#3` at `a9f063f` passed:
 - `terraform`;
 - `supply-chain`.
 
-Those results apply to remote head `a9f063f`; they do not validate local implementation commit `df7fc7f`.
+Those results apply to remote head `a9f063f`; they do not validate local effective implementation head `23bfee6`.
 
 ## Active increment
 
@@ -75,18 +76,18 @@ Status: `in_progress`
 Owner: Security Reviewer / Data Engineer
 External effects: none
 
-#### Implementation present in local commit `df7fc7f`
+#### Implementation present through local head `23bfee6`
 
 - `PostgresRuntimeDatabase` has explicit `initialize|validate` schema modes.
 - Long-running runtime defaults to `validate` and no longer executes schema DDL implicitly.
 - `validate` checks required `public` tables, relation types, required columns, audit sequence and exact schema version; readiness reuses that contract.
-- `agency-runtime-schema` provides explicit operator `initialize` and runtime `validate` commands while reading the URL from a named environment variable.
+- `agency-runtime-schema` provides explicit operator `initialize` and runtime `validate` commands while reading the URL from a named environment variable; DDL, metadata insertion and validation share one advisory-locked transaction.
 - The SQLite-to-PostgreSQL migration validates an already initialized target instead of creating schema.
 - The ephemeral PostgreSQL verifier is designed to create distinct bootstrap, migration and runtime identities.
 - The runtime fixture is designed as `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOREPLICATION`, `NOBYPASSRLS`, with zero application-object ownership.
 - Every application connection fixes `search_path=pg_catalog,public`; URL override is rejected and setup failure closes the raw connection.
 - Exact runtime grants are encoded for schema metadata, runs, audit/sequence, sessions, authentication-rate state and memories; database `TEMPORARY` and schema `CREATE` remain denied.
-- Negative verifier cases are encoded for absent, incomplete, wrong-type, missing-column and incompatible schema plus permanent/temporary `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `SET ROLE` and schema-metadata mutation.
+- Negative verifier cases are encoded for absent, incomplete, wrong-type, missing-column and incompatible schema; an incompatible `initialize` must preserve metadata and roll back partial DDL; permanent/temporary `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `SET ROLE` and schema-metadata mutation remain denied.
 - Migration and restore paths use migration authority and revalidate restored data with the runtime identity.
 - Helm and Terraform force `schemaMode=validate` for application pods and do not expose a migration credential.
 - Operator rollout, grants, backup/restore linkage, rollback and human gates are documented.
@@ -97,8 +98,8 @@ Per the explicit user instruction for this iteration, no test or delivery gate w
 
 ```text
 specified: yes
-implemented: LOCAL_COMMIT_df7fc7f
-static_review: PASS_BOUNDED_AST_BASH_CONFIG_HCL_BALANCE_SECRET_MARKERS_WHITESPACE
+implemented: LOCAL_COMMIT_23bfee6
+static_review: PASS_AT_23bfee6_AST_BASH_CONFIG_HCL_BALANCE_SECRET_MARKERS_WHITESPACE
 focused_tests: NOT_RUN_LOCAL_COMMIT
 postgresql_gate: NOT_RUN_LOCAL_COMMIT
 locked_wheel_gate: NOT_RUN_LOCAL_COMMIT
@@ -166,7 +167,7 @@ Open CRITICAL findings: zero.
 
 ## Exact continuation condition
 
-Resume from local implementation commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` plus the local program checkpoint commit that follows it. When test execution is authorized, run focused schema/connection tests, the complete ephemeral PostgreSQL role/grant/search-path/migration/restore gate, locked-wheel and package gates, Helm/Terraform/local-infrastructure checks, frontend/program regression, workflow/secret/supply-chain gates and `git diff --check`. Repair failures before marking `INC-012` reviewed, pushing or updating PR `#3`.
+Resume from effective local implementation head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8` plus the local program checkpoint commit that contains this document. When test execution is authorized, run focused schema/connection tests, the complete ephemeral PostgreSQL role/grant/search-path/atomic-initialize/migration/restore gate, locked-wheel and package gates, Helm/Terraform/local-infrastructure checks, frontend/program regression, workflow/secret/supply-chain gates and `git diff --check`. Repair failures before marking `INC-012` reviewed, pushing or updating PR `#3`.
 
 ## Human gates
 

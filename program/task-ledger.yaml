@@ -549,7 +549,7 @@
         "scripts/verify-postgresql-runtime.sh",
         "program/requirements-traceability.csv"
       ],
-      "context": "INC-003 threat review found implicit PostgreSQL runtime DDL authority. Implementation is preserved locally at df7fc7f878d8beb34fc956746a6bdfe34794f9f0; behavioral, PostgreSQL, package, deployment and CI gates remain NOT_RUN.",
+      "context": "INC-003 threat review found implicit PostgreSQL runtime DDL authority. Authority separation was introduced at df7fc7f878d8beb34fc956746a6bdfe34794f9f0; effective local implementation head 23bfee60f8536d2fcd7e3c5ca20636103f9401c8 additionally makes schema initialization atomic and encodes rollback evidence. Behavioral, PostgreSQL, package, deployment and CI gates remain NOT_RUN.",
       "dependencies": [
         "INC-003"
       ],
@@ -562,13 +562,15 @@
         "negative absent/incompatible/wrong-type/missing-column/DDL/ownership/escalation checks",
         "Helm/Terraform validate-only application configuration",
         "operator rollout and rollback runbooks",
-        "exact-commit behavioral evidence before review"
+        "exact-commit behavioral evidence before review",
+        "atomic initialize rollback fixture"
       ],
+      "foundation_commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
       "human_gates": [
         "production database role creation or credential rotation",
         "persistent schema migration"
       ],
-      "implementation_commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
+      "implementation_commit": "23bfee60f8536d2fcd7e3c5ca20636103f9401c8",
       "objective": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation.",
       "prohibited_paths": [
         "external databases",
@@ -576,7 +578,7 @@
         "credential rotation",
         "protected branches"
       ],
-      "publication_state": "LOCAL_COMMIT_NOT_PUSHED",
+      "publication_state": "LOCAL_COMMITS_NOT_PUSHED",
       "read_only_paths": [
         "checkpoints/**"
       ],
@@ -596,7 +598,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T20:28:03Z",
+  "updated_at": "2026-07-21T20:37:52Z",
   "workstreams": [
     {
       "acceptance_criteria": [

@@ -3,7 +3,8 @@
 Date: 2026-07-21
 Branch: `agent/production-readiness`
 Parent checkpoint: `a9f063fc7db531a86822b58f603473a71247a903`
-Implementation commit: `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`
+Foundation implementation commit: `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`
+Effective implementation head: `23bfee60f8536d2fcd7e3c5ca20636103f9401c8`
 Remote branch head at review: `a9f063fc7db531a86822b58f603473a71247a903`
 Status: `PARTIAL — IMPLEMENTED_LOCAL_STATIC_REVIEW_ONLY`
 
@@ -91,6 +92,7 @@ The rewritten ephemeral verifier is designed to prove:
 | C-012-07 | HIGH | Implicit `$user,public` resolution could permit object shadowing. | Reject URL search-path control and fix every connection to `pg_catalog,public`. | repaired in code; execution pending |
 | C-012-08 | MEDIUM | Denying schema CREATE did not itself prove denial of temporary objects or role/GRANT escalation. | Revoke database TEMPORARY, encode exact privilege matrix and add negative temp/SET ROLE/GRANT cases. | repaired in verifier; execution pending |
 | C-012-09 | MEDIUM | Task ownership and operator documentation did not cover all required CLI, Helm, Terraform and recovery paths. | Expanded bounded task paths and created rollout/recovery documentation. | repaired |
+| C-012-10 | HIGH | `initialize` committed DDL before applying the complete schema contract, so an incompatible existing version could leave partial tables. | Validation now executes on the same advisory-locked transaction before commit; an incompatible-database fixture requires metadata preservation and no partial runtime table. | repaired statically; PostgreSQL execution pending |
 
 No CRITICAL finding was identified in the static review. `F-009` remains HIGH/open because implementation has not yet been executed against its exact commit.
 
@@ -107,7 +109,7 @@ These checks do not constitute the required behavioral or integration gates.
 | HCL delimiter balance | PASS | Basic brace balance only; Terraform binary was unavailable, so fmt/validate/plan were not run |
 | obvious secret marker review | PASS | Added/modified text reviewed for common token/private-key markers; full secret scanner was not run |
 | `git diff --check` / commit whitespace | PASS | No whitespace error in implementation commit |
-| local implementation commit | PASS | `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` created |
+| local implementation commits | PASS | foundation `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` and atomic repair `23bfee60f8536d2fcd7e3c5ca20636103f9401c8` created |
 | push / remote SHA / PR / CI | NOT_RUN | Deliberately withheld to avoid triggering tests after the user's explicit instruction |
 
 ## Required gates not run
@@ -127,7 +129,7 @@ full secret scan
 remote exact-head CI
 ```
 
-No result from `a9f063f` is reused as evidence for `df7fc7f`.
+No result from `a9f063f` is reused as evidence for effective local head `23bfee6`.
 
 ## External and human boundaries
 

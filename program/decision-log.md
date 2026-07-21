@@ -72,9 +72,9 @@ Consequence: no production-ready claim until INC-012 passes negative ownership/D
 ## D-009 — Long-running PostgreSQL pods validate; they never migrate
 
 Date: 2026-07-21
-Status: accepted for INC-012; implemented locally at `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`, behavioral verification pending
+Status: accepted for INC-012; foundation `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`, effective local head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8`, behavioral verification pending
 
-Decision: `PostgresRuntimeDatabase` defaults to `validate`. Only the explicit `agency-runtime-schema initialize` operator command may run schema DDL. Application connections fix `search_path=pg_catalog,public`. Helm and Terraform reject `initialize` for application pods and expose only the runtime-role URL to the Deployment.
+Decision: `PostgresRuntimeDatabase` defaults to `validate`. Only the explicit `agency-runtime-schema initialize` operator command may run schema DDL. DDL, metadata insertion and validation share one advisory-locked transaction. Application connections fix `search_path=pg_catalog,public`. Helm and Terraform reject `initialize` for application pods and expose only the runtime-role URL to the Deployment.
 
 Rationale: application startup is horizontally concurrent and continuously exposed. Giving every replica schema ownership or implicit migration authority expands compromise impact and makes rollout/rollback nondeterministic.
 

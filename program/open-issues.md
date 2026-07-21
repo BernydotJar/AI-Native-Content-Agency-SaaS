@@ -43,7 +43,7 @@ Producer/critic/fixer/verifier passes can be role-separated in-session, but fina
 
 Category: code / permission / data correctness
 
-Local commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` implements explicit migration/runtime schema modes, a packaged operator command, fixed `search_path`, Helm/Terraform `validate` enforcement, distinct ephemeral roles, exact grants and negative ownership/DDL/TEMP/escalation checks. This remains executable work, not an external blocker, because the revised exact-commit behavioral gates have not been run.
+Effective local head `23bfee60f8536d2fcd7e3c5ca20636103f9401c8` (foundation `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`) implements explicit migration/runtime schema modes, a packaged operator command, fixed `search_path`, atomic initialization, Helm/Terraform `validate` enforcement, distinct ephemeral roles, exact grants and negative ownership/DDL/TEMP/escalation plus incompatible-initialize rollback checks. This remains executable work, not an external blocker, because the revised exact-commit behavioral gates have not been run.
 
 Acceptance condition: the exact local commit proves migration authority is explicit and separate; runtime role is non-superuser, owns no schema/table, has no TEMP/schema CREATE, cannot DDL/TRUNCATE/schema-metadata/GRANT/SET ROLE escalation, and passes every application/tenant/recovery/Helm/Terraform/package gate. Persistent role creation and environment observation remain human/infrastructure gates.
 
