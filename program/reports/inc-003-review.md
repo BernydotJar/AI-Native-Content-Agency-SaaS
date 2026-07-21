@@ -143,7 +143,8 @@ Open HIGH architecture/deployment/privacy findings discovered by the slice: reco
 
 ## Evidence limitations
 
-- Results are local working-tree evidence until committed, pushed and exact-commit CI completes.
+- The implementation was committed and pushed at `a9f063fc7db531a86822b58f603473a71247a903`; workflow `29856839172` completed all eight repository jobs successfully at that exact head.
+- Those results do not cover the newer uncommitted `INC-012` PostgreSQL authority changes.
 - No external reverse proxy, TLS/HSTS/CSP, managed identity, non-owner database role, RLS, SIEM, KMS, encrypted backup, staging workload or production environment was observed.
 - The privacy/legal documents identify decisions and uncertainty; they are not legal approval.
 - One execution system performed producer/critic/verifier roles procedurally; accountable final release review remains human and independent.

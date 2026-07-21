@@ -6,10 +6,11 @@
 | `program/constitution.md` | program principles | normative |
 | `program/current-state.md` | operational state | must be updated at every checkpoint |
 | `program/architecture.md` | selected architecture | must match code and tests |
-| `docs/IMPLEMENTATION_AUDIT.md` | historical implementation audit | contains stale baseline rows and must be reconciled |
+| `docs/IMPLEMENTATION_AUDIT.md` | historical implementation audit | reconciled through the INC-012 local implementation; exact behavioral evidence remains in program records |
 | `docs/OPERATIONS.md` | runtime operations | alert section is recommendation, not exercised evidence |
-| `docs/POSTGRESQL_PERSISTENCE.md` | PostgreSQL behavior and limits | repository backup/restore drill is proven; provisioning, scheduling, encryption and failover remain external |
-| `docs/runbooks/runtime-backup-restore.md` | executable recovery procedure | local SQLite/PostgreSQL contract; persistent restore and deployment controls remain human/external gates |
+| `docs/POSTGRESQL_PERSISTENCE.md` | PostgreSQL behavior, schema modes and limits | implementation contract is current; revised non-owner gate is not yet executed; provisioning, scheduling, encryption and failover remain external |
+| `docs/runbooks/postgresql-schema-rollout.md` | migration/runtime role rollout and rollback | executable operator contract; persistent role/schema/Secret/traffic mutations remain human-gated and unobserved |
+| `docs/runbooks/runtime-backup-restore.md` | executable recovery procedure | prior local recovery proof exists; revised runtime-role restore path awaits exact-worktree execution; persistent restore remains human/external |
 | `docs/LOCAL_INFRASTRUCTURE_VALIDATION.md` | local infra gate | proves K3s API/admission, not pod scheduling |
 | `checkpoints/*` | immutable historical checkpoints | may be superseded by current program state |
 | PR #2 documents | donor evidence on another branch | not evidence for PR #3 until ported and reverified |
@@ -25,4 +26,5 @@ Known documentation repairs in `INC-001`:
 | `docs/security/threat-model.md` | selected-runtime security model | records implemented controls and open HIGH production gates; not release approval |
 | `docs/privacy/privacy-model.md` | privacy architecture and uncertainty | jurisdiction/policy remain UNKNOWN and human-gated |
 | `docs/privacy/data-classification-retention.md` | data inventory and retention decision register | no policy or destructive execution is authorized |
-| `program/reports/inc-003-review.md` | bounded security/privacy review | local working-tree evidence until commit/push/exact CI |
+| `program/reports/inc-003-review.md` | bounded security/privacy review | committed/pushed at `a9f063f` with exact-head CI; its residual PostgreSQL HIGH remains assigned to INC-012 |
+| `program/reports/inc-012-progress.md` | PostgreSQL authority implementation checkpoint | local commit and bounded static review; all behavioral/deployment gates remain NOT_RUN |

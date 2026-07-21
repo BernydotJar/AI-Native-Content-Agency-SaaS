@@ -97,9 +97,23 @@
       "observed": "schema, lint, render and safety guards pass with runtime.maxRequestBodyBytes",
       "result": "PASS",
       "scope": "deployment request-size configuration"
+    },
+    {
+      "command": "static implementation review only; no command gate executed",
+      "id": "INC012-POSTGRESQL-RUNTIME-ROLE",
+      "observed": "Local commit implements initialize/validate, fixed search_path, relation/column validation, exact grants and DDL/TEMP/role-escalation denial contract; behavioral PostgreSQL gate intentionally not rerun",
+      "result": "NOT_RUN",
+      "scope": "PostgreSQL migration/runtime authority separation"
+    },
+    {
+      "command": "static manifest/configuration review only; no Helm/Terraform gate executed",
+      "id": "INC012-DEPLOYMENT-CONTRACT",
+      "observed": "Local commit encodes Helm/Terraform runtime schemaMode=validate and application initialize rejection; render/fmt/validate/plan/package gates not rerun",
+      "result": "NOT_RUN",
+      "scope": "Helm/Terraform runtime schema mode"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
-  "updated_at": "2026-07-21T18:18:03Z"
+  "source_commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
+  "updated_at": "2026-07-21T20:28:03Z"
 }

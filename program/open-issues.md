@@ -43,9 +43,9 @@ Producer/critic/fixer/verifier passes can be role-separated in-session, but fina
 
 Category: code / permission / data correctness
 
-The selected adapter initializes schema and existing drills do not prove a non-owner runtime role. This is executable work assigned to `INC-012`, not an external blocker.
+Local commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` implements explicit migration/runtime schema modes, a packaged operator command, fixed `search_path`, Helm/Terraform `validate` enforcement, distinct ephemeral roles, exact grants and negative ownership/DDL/TEMP/escalation checks. This remains executable work, not an external blocker, because the revised exact-commit behavioral gates have not been run.
 
-Acceptance condition: migration authority is explicit and separate; runtime role is non-superuser, owns no schema/table, cannot DDL/TRUNCATE, and passes every application/tenant/recovery test.
+Acceptance condition: the exact local commit proves migration authority is explicit and separate; runtime role is non-superuser, owns no schema/table, has no TEMP/schema CREATE, cannot DDL/TRUNCATE/schema-metadata/GRANT/SET ROLE escalation, and passes every application/tenant/recovery/Helm/Terraform/package gate. Persistent role creation and environment observation remain human/infrastructure gates.
 
 ## OI-008 — Retention, deletion and legal hold
 

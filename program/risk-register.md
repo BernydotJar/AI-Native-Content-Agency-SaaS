@@ -19,6 +19,6 @@ Updated: 2026-07-21
 | R-013 | MEDIUM | Future browser/video automation introduces prompt injection or uncontrolled side effects. | No integration activation; adapter evaluation and human gate required. | Controlled |
 | R-014 | MEDIUM | Audit retention or deletion violates customer/privacy expectations. | No silent deletion; policy and human-gated destructive path required. | Open |
 
-| R-015 | HIGH | PostgreSQL runtime role can initialize/own schema rather than operating with exact non-owner grants. | INC-012 is ready; release remains denied until negative DDL/ownership and full runtime tests pass. | Open |
+| R-015 | HIGH | PostgreSQL runtime role could initialize/own schema rather than operating with exact non-owner grants. | Local `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` implements initialize/validate separation, fixed search path, exact non-owner grants and negative DDL/TEMP/escalation fixtures; no behavioral gate, push/CI or persistent environment observation has run. | Open, remediation in progress |
 | R-016 | HIGH | Retention, deletion, legal hold and data-subject handling are undefined across primary data, telemetry and backups. | Privacy/classification model records UNKNOWN and prohibits silent destructive automation. | Human/legal + implementation gate |
 | R-017 | HIGH | Semantic prompt injection, groundedness, harmful-use and legal-overclaim regressions can escape deterministic tests. | All external effects remain disabled; INC-010 owns the eval harness. | Open |

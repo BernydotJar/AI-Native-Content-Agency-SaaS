@@ -1,159 +1,181 @@
 # Current Operational State
 
-Updated: 2026-07-21
+Updated: 2026-07-21T20:28:03Z
 Program phase: active
-Release recommendation: DENY_RELEASE
-Cloud recommendation: DENY_APPLY
+Release recommendation: `DENY_RELEASE`
+Cloud recommendation: `DENY_APPLY`
 
 ## Repository and delivery truth
 
 - Root: `/workspace`
+- Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
 - Branch: `agent/production-readiness`
-- Current committed HEAD: `e2d3e3c9d5a255fb55289d5b5bfd0786ec609df4`
-- Remote branch HEAD: `e2d3e3c9d5a255fb55289d5b5bfd0786ec609df4`
+- Local implementation commit: `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`
+- Local program checkpoint: the commit containing this document, directly atop `df7fc7f`
+- Remote branch HEAD: `a9f063fc7db531a86822b58f603473a71247a903`
 - Upstream: not configured
 - Draft PR: `#3`, open against `main`
-- Exact-commit CI run: `29854004152`
-- Exact-commit CI result: eight of eight jobs successful
+- Exact committed-head workflow: `29856839172`
+- Exact committed-head result: eight of eight jobs successful
 - Merge: not authorized and not performed
-- Production/external infrastructure: not authorized and not performed
+- Deployment/external infrastructure/spend: not authorized and not performed
 
-The working tree currently contains the uncommitted INC-003 security/privacy slice described below. Local working-tree gates are not remote CI evidence until committed and pushed.
+`INC-012` implementation is preserved in local commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`. The separate program checkpoint commit containing this document sits directly above it. Neither local commit is pushed, remotely verified or represented by current CI.
 
-## Parallel implementation
-
-PR `#2` (`feat/production-foundation-v1`) remains open and unmerged. It contains an alternate SQLAlchemy/Alembic control plane and a static GCP/Cloud Run path. It is a donor branch, not automatically compatible evidence for PR #3.
-
-The selected architecture remains `backend/agency_runtime`. Closing, merging or superseding either PR remains a human architecture decision.
-
-## Completed and remotely verified increments
+## Last remotely verified checkpoint
 
 ### INC-001 — Trustworthy baseline and version contract
 
-- Operational `program/` state, 12-workstream ledger, DAG, risk/finding/evidence registers and executable completion-audit validation.
-- Version `0.7.0` aligned across npm, Python, FastAPI, health/readiness, metrics, OCI and Helm.
-- README and implementation audit reconciled with the selected runtime and actual cloud/deployment evidence boundary.
-- `DENY_APPLY` recorded: no GCP target, reviewed plan/apply, endpoint or runtime observation exists.
+- Operational `program/` state, 12-workstream ledger, DAG, risks, findings, evidence and executable state validation.
+- Version `0.7.0` aligned across npm, Python, FastAPI, metrics, OCI and Helm.
+- README and implementation audit reconciled with the selected `backend/agency_runtime` architecture.
+- GCP remains `DENY_APPLY`: no authorized target, reviewed plan/apply, endpoint or runtime observation exists.
 
 ### INC-002 — SQLite/PostgreSQL backup and restore
 
-- Strict `agency-runtime-backup.v1` manifests, size/SHA-256/integrity validation and private files.
-- SQLite online backup, atomic restore, explicit replace and sidecar guard.
-- Controlled PostgreSQL custom dump, empty-target transactional restore and ambient libpq credential/configuration rejection.
-- Representative runs, audit, sessions, rate-limit state and memories survive both restore paths and remain application-readable.
-
-Commit `e2d3e3c9d5a255fb55289d5b5bfd0786ec609df4` is pushed and exact-commit CI passed all eight jobs:
-
-- `workflow-lint`
-- `verify`
-- `python-locks`
-- `postgresql-shared-state`
-- `container`
-- `helm`
-- `terraform`
-- `supply-chain`
-
-## Active review increment
+- Strict `agency-runtime-backup.v1` manifests, private files, size/SHA-256/integrity checks.
+- SQLite online backup and atomic guarded restore.
+- PostgreSQL custom-format dump, empty-target transactional restore and ambient libpq authority rejection.
+- Prior exact-scope local evidence showed representative runs, audit, sessions, rate-limit state and memories surviving restore and remaining application-readable.
 
 ### INC-003 — Security, privacy and uniform denial evidence
 
-Status: `review`
+Implementation commit: `a9f063fc7db531a86822b58f603473a71247a903`
+Program gate: `review`, because its threat review opened executable `INC-012`.
 
-Implemented in the current working tree:
+Delivered controls include:
 
-- stable `public-error.v1` bodies with safe code/detail/request ID;
-- one non-enumerating 401 contract for missing, invalid, expired, revoked and credential-deactivated authentication states;
-- authorization, missing/foreign resource and state-conflict responses that omit role, permission, resource ID and internal state;
-- validation responses that omit submitted values/context and expose only bounded locations/types;
-- safe internal-error handling that logs request ID and exception type without exception message/content;
-- transactional tenant-scoped `authorization.denied` and `request.verification_denied` events in SQLite/PostgreSQL;
-- bounded `authorization|csrf` denial metrics with no tenant, identity, permission or content labels;
-- no-store/no-cache, no-sniff, frame, referrer, permissions and same-origin resource headers;
-- pre-dispatch request body limit, one MiB default and one KiB–ten MiB allowed range, including streamed/chunked and ambiguous-framing tests;
-- Helm configuration for the same request-body limit;
-- selected-runtime threat model, privacy model and data-classification/retention decision register.
+- stable non-enumerating `public-error.v1` responses;
+- uniform authentication, authorization, missing/foreign and conflict errors;
+- validation and internal-exception redaction;
+- tenant-scoped authenticated denial audit;
+- bounded denial metrics;
+- security/no-store headers;
+- pre-dispatch request-body limits;
+- selected-runtime threat, privacy and data-classification models.
 
-Local working-tree verification already observed after critic repairs:
+PR `#3` at `a9f063f` passed:
 
-- locked wheel/backend: 78 tests pass with eight expected PostgreSQL-only skips;
-- PostgreSQL shared-state/recovery: 78 of 78 pass, including cross-instance denial evidence, migration/replay and both restore drills;
-- frontend: lint passes, 33 of 33 tests pass and production build passes;
-- Helm schema/lint/render/safety guards pass;
-- patch whitespace passes.
+- `workflow-lint`;
+- `verify`;
+- `python-locks`;
+- `postgresql-shared-state`;
+- `container`;
+- `helm`;
+- `terraform`;
+- `supply-chain`.
 
-Detailed review: [`program/reports/inc-003-review.md`](reports/inc-003-review.md).
+Those results apply to remote head `a9f063f`; they do not validate local implementation commit `df7fc7f`.
 
-## Findings repaired by INC-003
+## Active increment
 
-- authentication/session state leaked through 401 detail;
-- role and permission leaked through authorization detail;
-- requested foreign/missing IDs and current conflict state leaked through 404/409 detail;
-- validation could reflect API keys or campaign text;
-- internal exception content could reach a client/diagnostic;
-- authenticated RBAC/CSRF denials lacked durable tenant evidence;
-- denial metrics had no enforced bounded-label contract;
-- declared or streamed bodies lacked a global pre-dispatch byte limit;
-- selected runtime lacked authoritative threat/privacy/data-classification models.
+### INC-012 — PostgreSQL migration/runtime authority separation
 
-No CRITICAL or HIGH implementation finding remains open inside the bounded public-error/denial/body-limit code after repair.
+Status: `in_progress`
+Owner: Security Reviewer / Data Engineer
+External effects: none
+
+#### Implementation present in local commit `df7fc7f`
+
+- `PostgresRuntimeDatabase` has explicit `initialize|validate` schema modes.
+- Long-running runtime defaults to `validate` and no longer executes schema DDL implicitly.
+- `validate` checks required `public` tables, relation types, required columns, audit sequence and exact schema version; readiness reuses that contract.
+- `agency-runtime-schema` provides explicit operator `initialize` and runtime `validate` commands while reading the URL from a named environment variable.
+- The SQLite-to-PostgreSQL migration validates an already initialized target instead of creating schema.
+- The ephemeral PostgreSQL verifier is designed to create distinct bootstrap, migration and runtime identities.
+- The runtime fixture is designed as `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOREPLICATION`, `NOBYPASSRLS`, with zero application-object ownership.
+- Every application connection fixes `search_path=pg_catalog,public`; URL override is rejected and setup failure closes the raw connection.
+- Exact runtime grants are encoded for schema metadata, runs, audit/sequence, sessions, authentication-rate state and memories; database `TEMPORARY` and schema `CREATE` remain denied.
+- Negative verifier cases are encoded for absent, incomplete, wrong-type, missing-column and incompatible schema plus permanent/temporary `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `GRANT`, `SET ROLE` and schema-metadata mutation.
+- Migration and restore paths use migration authority and revalidate restored data with the runtime identity.
+- Helm and Terraform force `schemaMode=validate` for application pods and do not expose a migration credential.
+- Operator rollout, grants, backup/restore linkage, rollback and human gates are documented.
+
+#### Verification boundary
+
+Per the explicit user instruction for this iteration, no test or delivery gate was rerun. Current `INC-012` status is therefore:
+
+```text
+specified: yes
+implemented: LOCAL_COMMIT_df7fc7f
+static_review: PASS_BOUNDED_AST_BASH_CONFIG_HCL_BALANCE_SECRET_MARKERS_WHITESPACE
+focused_tests: NOT_RUN_LOCAL_COMMIT
+postgresql_gate: NOT_RUN_LOCAL_COMMIT
+locked_wheel_gate: NOT_RUN_LOCAL_COMMIT
+helm_gate: NOT_RUN_LOCAL_COMMIT
+terraform_fmt_validate_plan: NOT_RUN_TOOL_MISSING_OR_WITHHELD
+frontend_regression: NOT_RUN_LOCAL_COMMIT
+program_validator: NOT_RUN_LOCAL_COMMIT
+full_secret_scan: NOT_RUN_LOCAL_COMMIT
+committed: yes_local
+pushed: no
+PR_exact_head: no
+CI_exact_head: no
+persistent_environment_observation: no
+```
+
+`F-009` and threat `T-016` remain HIGH/open until exact-commit behavioral gates run. No persistent database role, schema, Secret or traffic was changed. Static evidence and critic repairs are recorded in `program/reports/inc-012-progress.md`.
 
 ## Open global HIGH release findings
 
-1. **Durable command idempotency and Greenlight revocation/fencing** — identical retries cannot yet replay a committed response and a future external effect lacks a post-approval revocation boundary. Owner: `INC-004`.
-2. **Authorized staging/workload evidence** — no selected cloud target, scheduler workload, endpoint, capacity/soak/failover or runtime observation exists. Owner: `INC-006`; cloud portion externally/human blocked.
-3. **Manual accessibility evidence** — keyboard, screen reader, measured contrast, zoom/reflow and reduced-motion review is absent. Owner: `INC-008`.
-4. **Production backup controls** — scheduling, encryption/KMS, immutable/off-host storage, retention and alerting are absent despite passing local restores. Owner: `INC-005`.
-5. **PostgreSQL runtime authority** — schema migration/bootstrap and runtime authority are not separated and a non-owner least-privilege runtime role is not demonstrated. Owner: ready task `INC-012`.
-6. **Retention/deletion/legal hold** — jurisdiction, effective policy, accountable reviewers and tested propagation through primary data, telemetry, backups and providers are unresolved. Owner: `INC-011` plus human privacy/legal reviewers.
-7. **Semantic/adversarial quality** — prompt injection, groundedness, citation fidelity, harmful use and legal-overclaim evals lack a complete release threshold. Owner: `INC-010`.
+1. **F-002 — Durable command idempotency and Greenlight revocation/fencing.** Owner: `INC-004`.
+2. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; external/human blocked for apply.
+3. **F-007 — Manual accessibility evidence.** Owner: `INC-008`.
+4. **F-008 — Production backup scheduling, encryption/KMS, immutability/off-host retention and alerts.** Owner: `INC-005`.
+5. **F-009 — PostgreSQL non-owner runtime authority.** Implementation in progress in `INC-012`; exact verification pending.
+6. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Owner: `INC-011` plus human privacy/legal reviewers.
+7. **F-011 — Semantic/adversarial evaluation harness.** Owner: `INC-010`.
 
 Open CRITICAL findings: zero.
 
 ## Other material gaps
 
-- audit ledger is transactional but not hash-chained, signed or immutably exported;
-- a valid principal can amplify denial-audit storage because no general authenticated request quota exists;
-- managed identity, SSO/MFA, recovery and lifecycle provisioning are absent;
-- TLS/HSTS/CSP and proxy/platform/database telemetry are not staging-verified;
-- application/data rollback against immutable image/schema compatibility is not exercised in an authorized environment;
-- SLOs, alert rules, alert exercise, incident response and tracing decision remain incomplete;
-- complete loading/empty/partial/degraded/conflict/read-only UI states remain incomplete;
-- four accessible political themes and a real entitlement-gated premium theme are absent;
-- external adapters, including any `browser-use/video-use` integration, remain unreviewed for activation and disabled.
+- PostgreSQL RLS is not implemented; tenant isolation still relies primarily on application predicates/composite keys.
+- Audit is transactional but not hash-chained, signed or immutably exported.
+- A valid principal can amplify denial-audit growth; no general authenticated request quota exists.
+- Managed identity, SSO/MFA, recovery and lifecycle provisioning are absent.
+- TLS/HSTS/CSP and proxy/platform/database telemetry are not observed in staging.
+- SLOs, alert rules/exercises, incident response, tracing decision, capacity and failover remain incomplete.
+- Complete operator loading/empty/partial/degraded/conflict/read-only states and manual accessibility evidence remain incomplete.
+- Four accessible political themes plus a real entitlement-gated premium theme remain absent.
+- `browser-use/video-use`, real model/media providers, publishing, ads and spend remain disabled and unreviewed for activation.
 
-## Ready work
+## Ready work after INC-012 verification
 
-Priority order after persisting INC-003:
-
-1. `INC-012` — separate PostgreSQL migration/runtime authority and prove non-owner exact grants.
-2. `INC-004` — durable idempotency-key replay, races and Greenlight revocation/fencing.
-3. `INC-005` — SLOs, alert rules/exercise, authenticated quota/audit growth policy, immutable audit/export decision, rollback and production backup controls.
+1. Complete exact-worktree `INC-012` verification, repair any failures, commit, push, verify remote SHA, update PR `#3` and inspect CI.
+2. `INC-004` — durable idempotency replay and Greenlight revocation/fencing.
+3. `INC-005` — SLO/alert exercise, authenticated quotas, audit integrity/export decision, rollback and production backup controls.
 4. `INC-010` — semantic/adversarial eval harness.
-5. `INC-008` — complete operator states, themes and manual accessibility evidence.
+5. `INC-008` — complete operator states, themes and accessibility gates.
 
-## Exact blockers and resume conditions
+## Exact blockers
 
 ### BLK-GCP-001
 
 - Category: credential / permission / infrastructure / human decision
-- Evidence: no authorized cloud target/open billing/reviewed saved plan/apply; issue #1 and PR #2 remain `DENY_APPLY`.
+- Evidence: no authorized cloud target/open billing/reviewed saved plan/apply.
 - Independent work remaining: yes.
-- Resume condition: explicit authorized target with open billing, granular preflight, reviewed saved plan bound to source commit, independent `ALLOW_DEV_APPLY`, and explicit authorization for external infrastructure/spend.
+- Resume condition: explicit authorized target with open billing, granular preflight, reviewed saved plan bound to source commit, independent `ALLOW_DEV_APPLY`, and explicit infrastructure/spend authorization.
 
-### Privacy/legal policy
+### BLK-PRIVACY-001
 
 - Category: human decision / legal review / data
-- Evidence: jurisdiction and entity/customer role are unknown; no effective retention/deletion/legal-hold source exists.
+- Evidence: jurisdiction/entity/customer role and effective retention/deletion/legal-hold policy are unknown.
 - Independent work remaining: yes.
-- Resume condition: identified entity/customer/jurisdiction, approved source/version/effective date, retention/legal-hold/backup propagation rules, accountable privacy/legal reviewer, security reviewer and business data owner.
+- Resume condition: identified entity/customer/jurisdiction, approved source/version/effective date, retention/legal-hold/backup propagation decisions and accountable privacy/legal, security and business reviewers.
+
+## Exact continuation condition
+
+Resume from local implementation commit `df7fc7f878d8beb34fc956746a6bdfe34794f9f0` plus the local program checkpoint commit that follows it. When test execution is authorized, run focused schema/connection tests, the complete ephemeral PostgreSQL role/grant/search-path/migration/restore gate, locked-wheel and package gates, Helm/Terraform/local-infrastructure checks, frontend/program regression, workflow/secret/supply-chain gates and `git diff --check`. Repair failures before marking `INC-012` reviewed, pushing or updating PR `#3`.
 
 ## Human gates
 
-- merge or close either PR;
-- publish a release, image or package externally;
-- select/create/apply external infrastructure or incur spend;
-- create/rotate production credentials or database roles;
-- execute persistent schema migration or destructive restore/deletion;
-- enable browser/video automation, real model/media generation, publishing, ads or spend;
-- approve retention, privacy or sensitive legal decisions;
-- approve production deployment.
+- merge, close or retarget either open architecture PR;
+- protected-branch mutation or force-push;
+- external package/image publication;
+- persistent database role creation, credential rotation or schema migration;
+- destructive restore, deletion or accepted data loss;
+- external infrastructure/apply, billing or spend;
+- production deployment or traffic/Secret cutover;
+- activation of browser/video/model/media/publishing/ads integrations;
+- retention/privacy/legal approval.

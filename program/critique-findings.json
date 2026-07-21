@@ -66,7 +66,7 @@
     },
     {
       "description": "PostgreSQL migration and runtime authority are not separated; a non-owner least-privilege runtime role is not demonstrated.",
-      "evidence": "The selected PostgreSQL adapter initializes schema and existing tests use a database role with schema/database authority.",
+      "evidence": "Local implementation df7fc7f878d8beb34fc956746a6bdfe34794f9f0 separates operator initialize from runtime validate, fixes search_path, encodes exact non-owner grants and negative schema/DDL/TEMP/role-escalation checks. Behavioral gates, push/CI and persistent environment observation remain NOT_RUN.",
       "id": "F-009",
       "owner": "INC-012",
       "severity": "HIGH",
@@ -106,5 +106,5 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "updated_at": "2026-07-21T18:18:03Z"
+  "updated_at": "2026-07-21T20:28:03Z"
 }

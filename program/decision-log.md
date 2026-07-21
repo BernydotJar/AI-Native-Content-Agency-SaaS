@@ -61,10 +61,21 @@ Consequence: tenant audit is complete for proven-principal denials but is not a 
 ## D-008 — PostgreSQL migration and runtime authority must be separated
 
 Date: 2026-07-21
-Status: ready for implementation in INC-012
+Status: accepted; implementation present, exact-worktree verification pending in INC-012
 
 Decision: production-like PostgreSQL verification must use a migration/bootstrap role for schema authority and a non-owner runtime role with exact grants. The runtime must fail closed when schema is absent/incompatible and must not CREATE, ALTER, DROP or TRUNCATE runtime objects.
 
 Rationale: application SQL predicates are a primary tenant boundary; an overprivileged runtime credential turns an application compromise into schema/database control.
 
 Consequence: no production-ready claim until INC-012 passes negative ownership/DDL tests and full application/recovery regression.
+
+## D-009 — Long-running PostgreSQL pods validate; they never migrate
+
+Date: 2026-07-21
+Status: accepted for INC-012; implemented locally at `df7fc7f878d8beb34fc956746a6bdfe34794f9f0`, behavioral verification pending
+
+Decision: `PostgresRuntimeDatabase` defaults to `validate`. Only the explicit `agency-runtime-schema initialize` operator command may run schema DDL. Application connections fix `search_path=pg_catalog,public`. Helm and Terraform reject `initialize` for application pods and expose only the runtime-role URL to the Deployment.
+
+Rationale: application startup is horizontally concurrent and continuously exposed. Giving every replica schema ownership or implicit migration authority expands compromise impact and makes rollout/rollback nondeterministic.
+
+Consequence: a new or upgraded database must be initialized and granted before application rollout. Missing, incomplete or incompatible schema fails startup/readiness instead of being repaired implicitly. Exact-commit execution evidence is still required before the HIGH finding closes.

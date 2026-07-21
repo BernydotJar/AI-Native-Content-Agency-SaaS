@@ -109,9 +109,9 @@
         "INC-003"
       ],
       "id": "INC-012",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-21T18:18:03Z"
+  "updated_at": "2026-07-21T20:28:03Z"
 }
