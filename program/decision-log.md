@@ -21,7 +21,7 @@
 - Date: 2026-07-21
 - Status: accepted
 - Decision: Do not activate `video-use`, browser automation, publisher APIs, media generation, advertising, or spend during this program slice.
-- Reason: no versioned effect contract, credentials, idempotency/receipt/revocation controls, or external authorization exists.
+- Reason: no versioned effect contract exists; service authentication, idempotency, receipts, revocation, and external authorization are all absent.
 
 ## D-004 — Normalize product version at 0.7.0
 

@@ -140,6 +140,39 @@ expect_runtime_denied() {
   printf 'postgresql_runtime_%s_denied=pass\n' "$operation"
 }
 
+expect_runtime_grant_ineffective() {
+  log_file="$TMP_DIR/runtime-grant-escalation.log"
+  set +e
+  "$POSTGRES_BIN_DIR/psql" "$DATABASE_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
+    --command "GRANT UPDATE ON public.runtime_schema_meta TO PUBLIC" \
+    >"$log_file" 2>&1
+  status=$?
+  set -e
+  if [ "$status" -ne 0 ]; then
+    if ! grep -Eqi 'permission denied|must be owner' "$log_file"; then
+      printf 'runtime PostgreSQL grant escalation failed for an unexpected reason\n' >&2
+      exit 1
+    fi
+  elif ! grep -Eqi 'no privileges were granted' "$log_file"; then
+    printf 'runtime PostgreSQL grant escalation returned success without the expected denial warning\n' >&2
+    exit 1
+  fi
+  public_update_grants=$("$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" \
+    --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --command "
+SELECT COUNT(*)
+FROM information_schema.table_privileges
+WHERE table_schema = 'public'
+  AND table_name = 'runtime_schema_meta'
+  AND grantee = 'PUBLIC'
+  AND privilege_type = 'UPDATE';
+")
+  if [ "$public_update_grants" != "0" ]; then
+    printf 'runtime PostgreSQL role changed PUBLIC privileges unexpectedly\n' >&2
+    exit 1
+  fi
+  printf 'postgresql_runtime_grant_escalation_denied=pass\n'
+}
+
 cleanup() {
   if [ "$PG_STARTED" = true ]; then
     drop_database "$SHARED_DB" >/dev/null 2>&1 || true
@@ -469,13 +502,14 @@ printf 'postgresql_schema_column_guard=pass\n'
 log "proving the application database identity is least-privilege"
 RUNTIME_ROLE_FACTS=$("$POSTGRES_BIN_DIR/psql" "$ADMIN_URL" --no-psqlrc \
   --tuples-only --no-align --set=ON_ERROR_STOP=1 \
-  --set=runtime_role="$RUNTIME_ROLE" --command "
+  --set=runtime_role="$RUNTIME_ROLE" <<'SQL'
 SELECT rolsuper::text || '|' || rolcreatedb::text || '|' ||
        rolcreaterole::text || '|' || rolreplication::text || '|' ||
        rolbypassrls::text
 FROM pg_catalog.pg_roles
 WHERE rolname = :'runtime_role';
-")
+SQL
+)
 if [ "$RUNTIME_ROLE_FACTS" != "false|false|false|false|false" ]; then
   printf 'runtime PostgreSQL role is overprivileged: observed %s\n' \
     "$RUNTIME_ROLE_FACTS" >&2
@@ -485,7 +519,7 @@ printf 'postgresql_runtime_role_attributes=pass\n'
 
 RUNTIME_OWNED_OBJECTS=$("$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" \
   --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 \
-  --set=runtime_role="$RUNTIME_ROLE" --command "
+  --set=runtime_role="$RUNTIME_ROLE" <<'SQL'
 WITH runtime_role AS (
   SELECT oid FROM pg_catalog.pg_roles WHERE rolname = :'runtime_role'
 )
@@ -497,7 +531,8 @@ SELECT
   (SELECT COUNT(*) FROM pg_catalog.pg_class, runtime_role
    WHERE relowner = runtime_role.oid
      AND relkind IN ('r', 'p', 'S', 'v', 'm', 'f'));
-")
+SQL
+)
 if [ "$RUNTIME_OWNED_OBJECTS" != "0" ]; then
   printf 'runtime PostgreSQL role owns database/schema/runtime objects: %s\n' \
     "$RUNTIME_OWNED_OBJECTS" >&2
@@ -517,8 +552,7 @@ expect_runtime_denied truncate_table \
   "TRUNCATE TABLE public.runtime_runs"
 expect_runtime_denied schema_meta_update \
   "UPDATE public.runtime_schema_meta SET value = '999' WHERE key = 'schema_version'"
-expect_runtime_denied grant_escalation \
-  "GRANT UPDATE ON public.runtime_schema_meta TO PUBLIC"
+expect_runtime_grant_ineffective
 expect_runtime_denied set_migration_role \
   "SET ROLE \"$MIGRATION_ROLE\""
 printf 'postgresql_runtime_ddl_denied=pass\n'

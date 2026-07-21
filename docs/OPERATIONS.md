@@ -29,7 +29,7 @@ Production configuration uses `AGENCY_IDENTITY_CREDENTIALS_JSON`, an array of re
     "subject_id": "operator@example.com",
     "role": "operator",
     "key_id": "operator-v2",
-    "api_key": "replace-with-secret-material-at-least-24-characters",
+    "api_key": "${AGENCY_OPERATOR_API_KEY}",
     "active": true
   }
 ]

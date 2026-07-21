@@ -308,6 +308,7 @@ viewer_create_status = sys.argv[15]
 
 assert health == {
     "status": "ok",
+    "version": "0.7.0",
     "runtime_mode": "deterministic_sandbox",
     "external_side_effects_enabled": False,
     "auth_configured": True,
@@ -323,7 +324,12 @@ assert ready["login_rate_limit"] == {
     "window_seconds": 60,
 }
 assert viewer_create_status == "403"
-assert "runs:create" in viewer_denied["detail"]
+assert viewer_denied == {
+    "code": "authorization_denied",
+    "detail": "request not permitted",
+    "request_id": "package-viewer-denied-0001",
+}
+assert "runs:create" not in repr(viewer_denied)
 assert session["tenant_id"] == "local-verification"
 assert session["subject_id"] == "package-admin"
 assert session["role"] == "admin"
@@ -353,20 +359,29 @@ assert approved["status"] == "completed"
 package = next(item for item in approved["artifacts"] if item["kind"] == "campaign_package")
 assert package["payload"]["publication_performed"] is False
 assert [item["action"] for item in audit["events"]] == [
+    "authorization.denied",
     "session.created",
     "run.created",
     "greenlight.approved",
 ]
 assert [item["request_id"] for item in audit["events"]] == [
+    "package-viewer-denied-0001",
     "package-session-0001",
     "package-create-0001",
     "package-approve-0001",
 ]
 assert [item["actor"] for item in audit["events"]] == [
+    "api-key:package-viewer",
     "api-key:package-admin",
     "browser-session:package-admin",
     "browser-session:package-admin",
 ]
+denial = audit["events"][0]
+assert denial["payload"] == {
+    "auth_method": "bearer",
+    "reason": "authorization",
+    "role": "viewer",
+}
 assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
 assert 'agency_browser_sessions_total{action="created"} 1' in metrics

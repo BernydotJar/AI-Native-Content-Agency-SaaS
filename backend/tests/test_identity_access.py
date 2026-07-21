@@ -378,9 +378,10 @@ class IndividualIdentityAndRbacTests(unittest.TestCase):
                     json={"api_key": "distinct-invalid-key-material-2026-{}".format(index)},
                 )
                 self.assertEqual(response.status_code, 401)
+            final_invalid_key = "invalid-" + ("x" * 24)
             limited = client.post(
                 "/api/v1/sessions",
-                json={"api_key": "distinct-invalid-key-material-2026-final"},
+                json={"api_key": final_invalid_key},
             )
             self.assertEqual(limited.status_code, 429)
 
