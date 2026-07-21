@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T22:34:58Z
+Updated: 2026-07-21T23:08:52Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,20 +9,21 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-007-operator-journey`
-- Stacked base: `agent/inc-005-operability@ca9caf80320c3279d631f6b08d8f37f0508035be`
-- Verifier repair commit: `bdd908c9cfcbb81c5620229b9a31b0c3fe1fc33a`
-- INC-007 implementation commit: `4f101221d3ddfb426aded5e7f4caec9c87985b32`
-- Local program checkpoint: the commit containing this document, directly above `4f10122`
-- Active branch remote: `a3cff4305c4f1f98158bdda5d416e5f7544bff47`
-- Draft PR for INC-007: `#6`, base `agent/inc-005-operability`, clean and mergeable
-- Exact-head CI for INC-007: run `29874536962`, eight of eight jobs successful
-- Exact verified stacked-base CI: run `29873483636`, eight of eight jobs successful at `ca9caf8`
+- Active branch: `agent/inc-008-accessible-themes`
+- Stacked base: `agent/inc-007-operator-journey@dad71025bf14281930b8fafa2edae81e2a7c6c84`
+- Identity/entitlement implementation: `f63a58648eec0579d53a007c8ed83ff376b95727`
+- Theme/browser implementation: `8ecf77e7f58789d1e5b47826b595b172bac6fa89`
+- Local program checkpoint: the commit containing this document, directly above `8ecf77e`
+- Active branch remote: absent
+- Draft PR for INC-008: absent
+- Exact-head CI for INC-008: not triggered
+- Exact verified stacked-base CI: run `29874693956`, eight of eight jobs successful at `dad7102`
+- PR `#6`: draft and green on `agent/inc-007-operator-journey`
 - PR `#5`: draft and green on `agent/inc-005-operability`
 - PR `#4`: draft and green, stacked on PR `#3`
 - PR `#3`: ready and green; normal merge remains blocked by `REVIEW_REQUIRED`
 - Merge: user-authorized and previously attempted normally for PR `#3`; no bypass, force or auto-merge was used
-- Deployment, persistent infrastructure, package publication and spend: not authorized and not performed
+- Deployment, persistent infrastructure, package publication, billing and spend: not authorized and not performed
 
 ## Completed checkpoints
 
@@ -38,63 +39,86 @@ Status: `done`
 
 Exact published head and CI prove durable compatible replay, uniform conflicts, authenticated decision identity, Greenlight revocation/fencing and cross-replica package-once behavior. `F-002` is closed.
 
+### INC-007 — Backend-first operator journey and degraded states
+
+Status: `done`
+
+Exact remote head `dad71025bf14281930b8fafa2edae81e2a7c6c84`, draft PR `#6` and GitHub Actions run `29874693956` prove the operator journey, role guidance, bounded failure states, stale-run recovery, idempotent retry and package regression.
+
 ## External-gated checkpoint
 
 ### INC-005 — SLOs, alert exercises, backup freshness and rollback operations
 
 Status: `blocked`
 
-Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29873483636` prove all safe repository-local work, including SLO/alert contracts, backup freshness signals, rollback exercises, package/infrastructure regression and supply-chain evidence.
-
-`INC-005` remains blocked because persistent monitoring, pager delivery, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO evidence require an authorized environment and accountable humans. `F-008` remains HIGH/open.
+Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29873483636` prove all safe repository-local work. Persistent monitoring, paging, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO remain externally gated. `F-008` remains HIGH/open.
 
 ## Active increment
 
-### INC-007 — Backend-first operator journey and degraded states
+### INC-008 — Accessible themes and accessibility evidence
 
-Status: `done`
-Owner: Frontend Engineer / Production UX Reviewer
+Status: `review`
+Owner: Accessibility Reviewer / Frontend Engineer / Identity Engineer
 External effects: none
 
-Implementation commit `4f101221d3ddfb426aded5e7f4caec9c87985b32` delivers:
+#### Implemented locally
 
-- explicit HttpOnly session restoration, signed-out and authenticated states;
-- server-role guidance for viewer, operator, approver and admin while backend authorization remains authoritative;
-- tenant-scoped run lookup for viewers/approvers without create authority;
-- operator create flow without Greenlight decision authority;
-- approver/admin decision and revocation controls;
-- bounded `401`, `403`, `404`, `409`, `422`, `429`, `500` and `503` operator states;
-- request correlation without raw backend detail or permission disclosure;
-- `Retry-After` guidance;
-- stable idempotency keys across ambiguous retries;
-- stale-run reload;
-- fail-closed clearing of protected local state on `401`;
-- loading, empty, success and degraded audit states;
-- persistent visible `publication=false` boundary.
+- Four named politically neutral free themes: blue, red, green and orange.
+- One named premium theme, focusable and explanatory when locked.
+- Semantic background, panel, text, muted, border, accent and on-accent tokens.
+- Executable contrast contracts for all five themes.
+- Selected state uses visible text, live status and `aria-pressed`, never color alone.
+- Premium requires exact server-owned `theme:premium`; frontend state, role labels and URL/storage cannot grant it.
+- Active keys for one subject must share role/entitlements; inactive historical keys do not block rotation.
+- Session creation, restoration and `/me` expose current allowlisted entitlements.
+- Entitlement is absent from SQLite/session rows, audit payloads and browser storage.
+- SPA refreshes identity and falls back to blue when premium is revoked.
+- Billing, checkout, invoicing and DRM are not implemented or claimed.
+- Real Chromium accessibility gate verifies 320 CSS px reflow, minimum targets, skip-link focus, keyboard activation, premium lock, reduced motion and AX states.
+- CI contract uploads browser JSON/screenshot artifacts for human review.
+- Manual review protocol records browser, OS, assistive technology, reviewer, findings and limitations.
 
-Local verification:
+#### Local automated evidence
 
 ```text
-Focused operator/client tests             PASS — 20/20
-Frontend regression                       PASS — 48/48
-Oxlint                                    PASS — 0 warnings, 0 errors
-TypeScript/Vite build                     PASS
-Program validator                        PASS — 79 requirements, 12 tasks
-Buildah non-root package/runtime smoke    PASS
-Helm/operability contract                PASS
-Actionlint                               PASS
-Gitleaks current worktree                PASS
-Whitespace                               PASS
+Frontend tests                              PASS — 66/66
+Oxlint                                      PASS — 0 warnings, 0 errors
+TypeScript/Vite production build            PASS
+Theme contrast contracts                    PASS — five themes
+Chromium 320px reflow                       PASS
+Chromium skip-link focus                    PASS
+Chromium keyboard theme                     PASS
+Chromium premium lock                       PASS
+Chromium reduced motion                     PASS
+Chromium accessibility tree                 PASS
+Locked Python wheel                         PASS — 107 tests
+PostgreSQL shared state                     PASS — 107/107
+SQLite entitlement persistence              PASS — absent
+Buildah non-root production package         PASS
+Helm/operability                            PASS
+Terraform/K3s ephemeral regression          PASS
+Actionlint                                  PASS
+Gitleaks current worktree                   PASS
+Browser process cleanup                     PASS
+Whitespace                                  PASS
 ```
 
-The package gate also exposed and repaired an unset `PYTHON_BIN` in `scripts/verify-production-package.sh` under `set -u`.
+#### Human evidence not executed
 
-`INC-007` is complete as a repository delivery checkpoint: implementation, local gates, clean-source supply chain, exact remote SHA, draft PR and eight-job exact-head CI are proven. Manual assistive-technology and visual accessibility evidence remains explicitly outside this slice and owned by `INC-008`.
+```text
+Human full-page keyboard traversal          NOT_RUN
+Human screen-reader review                  NOT_RUN
+Rendered contrast/visual review             NOT_RUN
+Human 400% zoom and viewport review         NOT_RUN
+Physical-device behavior                    NOT_RUN
+```
+
+`INC-008` is not done. The code and automated-browser scope are locally verified, but the branch is unpublished and `F-007` remains HIGH/open until accountable human evidence exists.
 
 ## Open global HIGH release findings
 
 1. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; externally gated.
-2. **F-007 — Manual accessibility evidence.** Owner: `INC-008`.
+2. **F-007 — Human accessibility evidence.** Automated Chromium scope now passes; human screen-reader, rendered contrast, 400% zoom/reflow and visual review remain.
 3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local controls proven; external controls remain.
 4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Owner: `INC-011` plus accountable human reviewers.
 5. **F-011 — Semantic/adversarial evaluation harness.** Owner: `INC-010`.
@@ -102,6 +126,14 @@ The package gate also exposed and repaired an unset `PYTHON_BIN` in `scripts/ver
 Open CRITICAL findings: zero.
 
 ## Exact blockers
+
+### BLK-A11Y-MANUAL-001
+
+- Category: human decision / review
+- Evidence: real Chromium automation passes at the exact local implementation, but no accountable human screen-reader, rendered contrast, 400% zoom/reflow or visual review exists.
+- Attempted resolution: added repeatable browser automation, retained JSON/screenshot artifacts and authored `docs/accessibility/manual-review-protocol.md`.
+- Independent work remaining: yes in other workstreams; no additional automation can honestly substitute for the required human evidence.
+- Resume condition: an accountable reviewer executes the protocol against the exact production bundle, records artifacts and repairs or accepts every finding under release policy.
 
 ### BLK-PR-REVIEW-001
 
@@ -134,11 +166,13 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Publish this INC-007 closure checkpoint and require its exact-head CI.
-2. Begin `INC-008` manual/accessibility and accessible theme evidence from the verified INC-007 branch head.
-3. Keep all external integrations, publication and spend disabled.
-4. Keep F-007 open until manual evidence is captured and independently reviewed.
+1. Commit and publish the INC-008 local-review checkpoint.
+2. Run clean-source supply-chain evidence.
+3. Verify remote SHA and create a draft PR against `agent/inc-007-operator-journey`.
+4. Require exact-head CI including the accessibility artifact and repair failures.
+5. After exact CI, mark INC-008 `blocked` rather than `done` under `BLK-A11Y-MANUAL-001`.
+6. Continue independent work according to the task DAG without claiming F-007 closed.
 
 ## Exact continuation condition
 
-Publish the closure checkpoint above exact green head `a3cff4305c4f1f98158bdda5d416e5f7544bff47` and require its own documentation-only exact-head CI. Then branch `INC-008` from that verified head and collect manual accessibility/theme evidence. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.
+Start from the clean local checkpoint above `8ecf77e7f58789d1e5b47826b595b172bac6fa89`. Run clean-source supply-chain verification, push `agent/inc-008-accessible-themes`, verify exact remote equality, create a draft PR with base `agent/inc-007-operator-journey`, inspect all exact-head jobs and repair any failure. After CI, preserve `DENY_RELEASE` and the manual accessibility blocker. Do not retarget or merge stacked PRs before PR `#3` receives independent review. Production and GCP remain `DENY_RELEASE` / `DENY_APPLY`.

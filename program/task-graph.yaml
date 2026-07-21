@@ -77,7 +77,7 @@
         "INC-007"
       ],
       "id": "INC-008",
-      "status": "pending"
+      "status": "review"
     },
     {
       "depends_on": [
@@ -113,5 +113,5 @@
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-21T22:42:18Z"
+  "updated_at": "2026-07-21T23:08:52Z"
 }

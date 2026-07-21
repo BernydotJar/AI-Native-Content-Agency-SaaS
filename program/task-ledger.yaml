@@ -404,6 +404,7 @@
       ],
       "human_gates": [
         "merge",
+        "manual screen-reader, rendered contrast, 400 percent zoom/reflow and visual review",
         "production or external effect when applicable"
       ],
       "objective": "Implement accessible themes and complete manual accessibility gates.",
@@ -414,11 +415,22 @@
       ],
       "read_only_paths": [],
       "role": "Accessibility Reviewer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-008",
-      "validation_commands": [],
+      "validation_commands": [
+        "npm test -- --reporter=dot",
+        "npm run lint",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir . --redact"
+      ],
       "workstream_id": "WS-06",
-      "write_lock": "unclaimed"
+      "write_lock": "agent/inc-008-accessible-themes"
     },
     {
       "acceptance_criteria": [
@@ -642,7 +654,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T22:42:18Z",
+  "updated_at": "2026-07-21T23:08:52Z",
   "workstreams": [
     {
       "acceptance_criteria": [

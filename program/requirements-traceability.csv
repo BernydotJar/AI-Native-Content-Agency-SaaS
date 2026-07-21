@@ -34,15 +34,15 @@ SEC-009,security,Zero open CRITICAL/HIGH findings,contradicted,Seven HIGH global
 SEC-010,security,Uniform errors and metadata leakage prevention,proven,public-error.v1 hides auth state role permission foreign IDs conflicts input and internal exception messages,Preserve regression and verify proxy/platform telemetry,WS-07
 SEC-011,security,Rate limiting and abuse controls,proven,Durable credential/source buckets and tests,Add distributed edge strategy,WS-07
 SEC-012,security,Revocation behavior,proven,bc01fa7b54341865f848c0754884cc83f660a0c7; GitHub Actions 29871278876; authenticated Greenlight revocation/fencing tests,Preserve regression; external credential/provider revocation remains integration-specific and disabled,WS-04
-UX-001,ux,Documented design system,incomplete,Existing CSS/component language without complete token document,Create design-system record,WS-06
-UX-002,ux,Four political themes plus paid premium theme,missing,No theme implementation,Implement accessible gated theme slice,WS-06
-UX-003,ux,Responsive behavior,weak_evidence,CSS and component tests only,Manual responsive review,WS-06
-UX-004,ux,Keyboard and focus,weak_evidence,Some semantic controls and skip link,Manual keyboard gate,WS-06
-UX-005,ux,Screen-reader semantics,missing,No manual screen-reader evidence,Execute review,WS-06
-UX-006,ux,Contrast and non-color-only status,missing,No measured contrast report,Audit and repair,WS-06
-UX-007,ux,Zoom and reflow,missing,No executed evidence,Audit at 200 and 400 percent,WS-06
-UX-008,ux,Reduced motion,weak_evidence,CSS media queries and motion controls,Manual verify,WS-06
-UX-009,ux,No keyboard traps,weak_evidence,Automated interaction tests only,Manual verify,WS-06
+UX-001,ux,Documented design system,proven,8ecf77e7f58789d1e5b47826b595b172bac6fa89; docs/design-system/accessibility-themes.md; executable semantic token catalog,Preserve design-system/theme contract,WS-06
+UX-002,ux,Four political themes plus paid premium theme,proven,f63a58648eec0579d53a007c8ed83ff376b95727; 8ecf77e7f58789d1e5b47826b595b172bac6fa89; four free named themes plus exact server-owned theme:premium entitlement,Add billing only through a separate reviewed provider contract,WS-06
+UX-003,ux,Responsive behavior,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; real Chromium 320 CSS px no-overflow evidence and responsive CSS,Human mobile/tablet/desktop visual review,WS-06
+UX-004,ux,Keyboard and focus,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; real Chromium skip-link and keyboard activation PASS,Complete human keyboard traversal,WS-06
+UX-005,ux,Screen-reader semantics,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; Chromium accessibility tree proves names pressed and disabled semantics,Complete human screen-reader review,WS-06
+UX-006,ux,Contrast and non-color-only status,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; executable WCAG contrast ratios and text/aria selected-state contract,Measure rendered controls and review screenshots,WS-06
+UX-007,ux,Zoom and reflow,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; real Chromium 320 CSS px reflow PASS,Human 400 percent zoom and representative viewport review,WS-06
+UX-008,ux,Reduced motion,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; real Chromium reduced-motion media emulation and zero View Transition calls PASS,Human reduced-motion visual review,WS-06
+UX-009,ux,No keyboard traps,weak_evidence,8ecf77e7f58789d1e5b47826b595b172bac6fa89; automated keyboard path and process-bounded browser gate,Complete human full-page trap traversal,WS-06
 OPS-001,operations,Environment strategy development test staging production,incomplete,Helm/Terraform local path and no authorized cloud target,Define target strategy,WS-09
 OPS-002,operations,Structured logs metrics health readiness,proven,observability.py endpoints tests,Observe in staging,WS-09
 OPS-003,operations,Distributed tracing or explicit decision,proven,6a885827b7e89d06111c87c34293250eab196d47; docs/adr/0009-distributed-tracing-decision.md,Revisit before any multi-service/effectful architecture and prove traces in staging,WS-09

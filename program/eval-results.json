@@ -223,9 +223,51 @@
       "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
       "result": "PASS",
       "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "npm test -- --reporter=dot",
+      "id": "INC008-THEME-CONTRACTS",
+      "observed": "66/66 frontend tests; five named themes, measured token contrast, keyboard activation, entitlement lock/unlock/revocation and no browser storage PASS",
+      "result": "PASS",
+      "scope": "accessible themes and premium entitlement"
+    },
+    {
+      "command": "npm run verify:accessibility-browser",
+      "id": "INC008-BROWSER-ACCESSIBILITY",
+      "observed": "Chromium: 320 CSS px without horizontal overflow; >=44px theme targets; skip link first and focus transfer; keyboard selection; premium lock; reduced motion; AX names/pressed/disabled PASS",
+      "result": "PASS",
+      "scope": "real browser automated accessibility evidence"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC008-IDENTITY-ENTITLEMENT",
+      "observed": "107 locked backend tests and 107/107 PostgreSQL tests; exact allowlist, active-key consistency, session response, dynamic revocation, absence from SQLite and shared runtime regression PASS",
+      "result": "PASS",
+      "scope": "server-owned product entitlement"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC008-PACKAGE-INFRA",
+      "observed": "non-root package, session entitlement, SPA, RBAC, Greenlight, audit and publication=false PASS; Terraform/Helm SQLite/PostgreSQL plan/apply/destroy on agentless K3s PASS",
+      "result": "PASS",
+      "scope": "package and deployment regression"
+    },
+    {
+      "command": "actionlint .github/workflows/*.yml && gitleaks dir . --redact && git diff --check",
+      "id": "INC008-HYGIENE",
+      "observed": "workflow lint, zero current-worktree leaks, whitespace and no accessibility browser listeners PASS",
+      "result": "PASS",
+      "scope": "workflow, secrets and cleanup"
+    },
+    {
+      "command": "docs/accessibility/manual-review-protocol.md",
+      "id": "INC008-MANUAL-A11Y",
+      "observed": "human screen-reader, rendered contrast, 400% zoom/reflow and visual screenshot review not executed",
+      "result": "BLOCKED",
+      "scope": "manual accessibility release evidence"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "a3cff4305c4f1f98158bdda5d416e5f7544bff47",
-  "updated_at": "2026-07-21T22:42:18Z"
+  "source_commit": "8ecf77e7f58789d1e5b47826b595b172bac6fa89",
+  "updated_at": "2026-07-21T23:08:52Z"
 }

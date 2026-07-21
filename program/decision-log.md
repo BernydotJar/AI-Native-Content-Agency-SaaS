@@ -106,3 +106,12 @@ Status: accepted locally at `4f101221d3ddfb426aded5e7f4caec9c87985b32`; remote C
 Decision: the production console derives visible create/decision controls from the server-issued session role, but every request remains subject to backend authorization. Viewers and approvers can load a tenant-scoped run by ID without acquiring create authority. Public failure states are selected from bounded HTTP/status contracts and never reflect raw exception detail or permission names.
 
 Consequence: the interface is understandable and avoids predictable forbidden requests, while frontend state cannot elevate authority or replace tenant/RBAC enforcement. Manual accessibility evidence remains owned by `INC-008`.
+
+## D-013 — Theme is visual state; premium is a server-owned product entitlement
+
+Date: 2026-07-21
+Status: accepted locally at `f63a58648eec0579d53a007c8ed83ff376b95727` and `8ecf77e7f58789d1e5b47826b595b172bac6fa89`; remote CI pending
+
+Decision: expose four politically neutral free themes and one premium theme. Theme never changes role, permission, Greenlight, risk or recommendation. Premium activates only from the exact allowlisted `theme:premium` entitlement on the active server-managed identity. The SPA refreshes `/me`, falls back to blue when entitlement disappears, stores no theme/entitlement in browser persistence and treats CSS as inspectable rather than DRM.
+
+Consequence: administrators can grant/revoke supported premium UI without billing infrastructure or database schema changes. Checkout, invoicing and subscription lifecycle remain separate unimplemented systems. Manual accessibility review remains a human release gate.

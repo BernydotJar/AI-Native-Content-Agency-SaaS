@@ -49,8 +49,8 @@
       "status": "CLOSED"
     },
     {
-      "description": "Manual keyboard, screen-reader, contrast, zoom/reflow and reduced-motion release evidence is absent.",
-      "evidence": "Historical audit records browser/manual QA unavailable.",
+      "description": "Automated Chromium proves keyboard activation, skip-link focus, 320 CSS px reflow, reduced motion and AX semantics; human screen-reader, rendered contrast, 400% zoom/reflow and visual review remain absent.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; npm run verify:accessibility-browser; docs/accessibility/manual-review-protocol.md; automated evidence is explicitly not manual certification.",
       "id": "F-007",
       "owner": "INC-008",
       "severity": "HIGH",
@@ -119,9 +119,49 @@
       "owner": "INC-007",
       "severity": "MEDIUM",
       "status": "CLOSED"
+    },
+    {
+      "description": "The prior accent-dot selector had no named semantic themes, entitlement state or non-color selected-state contract.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; typed catalog, named controls, aria-pressed/live status and contrast tests.",
+      "id": "F-016",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A premium theme controlled only by frontend state could be self-granted and survive server revocation.",
+      "evidence": "f63a58648eec0579d53a007c8ed83ff376b95727; 8ecf77e7f58789d1e5b47826b595b172bac6fa89; exact allowlisted server identity entitlement, session/identity refresh, no persistence, fallback on revocation and tests.",
+      "id": "F-017",
+      "owner": "INC-008",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The skip link changed the URL fragment but did not transfer focus because main was not programmatically focusable.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; main tabIndex=-1 and real Chromium focus-transfer gate.",
+      "id": "F-018",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A live SPA could retain premium after the identity configuration removed the entitlement.",
+      "evidence": "f63a58648eec0579d53a007c8ed83ff376b95727; 8ecf77e7f58789d1e5b47826b595b172bac6fa89; /me synchronization on audit/mutations and immediate free-theme fallback.",
+      "id": "F-019",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Initial accessibility browser probes could leave preview/Chromium descendants and fixed ports behind after failure.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; dynamic ports, detached process groups, bounded cleanup and post-gate listener check.",
+      "id": "F-020",
+      "owner": "INC-008",
+      "severity": "LOW",
+      "status": "CLOSED"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "4f101221d3ddfb426aded5e7f4caec9c87985b32",
-  "updated_at": "2026-07-21T22:34:58Z"
+  "source_commit": "8ecf77e7f58789d1e5b47826b595b172bac6fa89",
+  "updated_at": "2026-07-21T23:08:52Z"
 }

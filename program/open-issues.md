@@ -26,9 +26,11 @@ Exact published head `bc01fa7b54341865f848c0754884cc83f660a0c7` passed all eight
 
 ## OI-005 — Accessibility manual gate
 
-Category: environment / review
+Category: human decision / review
 
-Automated tests do not prove keyboard order, screen-reader output, contrast, zoom/reflow, or physical-device behavior. Exact resume condition for full evidence: an available visual browser plus keyboard, contrast tooling, and screen-reader review on the production bundle.
+Real Chromium automation now proves 320 CSS px reflow, minimum theme targets, skip-link focus transfer, keyboard activation, reduced-motion behavior and accessibility-tree names/states. It does not prove human screen-reader output, rendered contrast quality, 400% zoom behavior, visual hierarchy or physical-device behavior.
+
+Exact resume condition: an accountable human reviewer executes `docs/accessibility/manual-review-protocol.md` against the exact production bundle using a screen reader, keyboard, contrast tool, 400% zoom and representative viewports, records artifacts, and closes or repairs every CRITICAL/HIGH finding.
 
 ## OI-006 — Independent reviewer
 
