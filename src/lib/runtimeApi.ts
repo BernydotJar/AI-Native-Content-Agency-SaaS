@@ -81,13 +81,21 @@ export class RuntimeApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly requestId: string;
+  readonly retryAfterSeconds: number;
 
-  constructor(status: number, message: string, requestId = "", code = "request_failed") {
+  constructor(
+    status: number,
+    message: string,
+    requestId = "",
+    code = "request_failed",
+    retryAfterSeconds = 0,
+  ) {
     super(message);
     this.name = "RuntimeApiError";
     this.status = status;
     this.code = code;
     this.requestId = requestId;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -95,6 +103,7 @@ export interface RuntimeApi {
   createSession(apiKey: string): Promise<BrowserRuntimeSession>;
   resumeSession(): Promise<BrowserRuntimeSession | null>;
   createRun(brief: RuntimeBrief, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
+  getRun(runId: string): Promise<RuntimeRun>;
   approveRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   rejectRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
@@ -126,7 +135,17 @@ async function requestJson<T>(
     const code = typeof payload.code === "string" ? payload.code : "request_failed";
     const requestId = response.headers.get("X-Request-ID")
       ?? (typeof payload.request_id === "string" ? payload.request_id : "");
-    throw new RuntimeApiError(response.status, detail, requestId, code);
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
+      ? Number.parseInt(retryAfterHeader, 10)
+      : 0;
+    throw new RuntimeApiError(
+      response.status,
+      detail,
+      requestId,
+      code,
+      retryAfterSeconds > 0 ? retryAfterSeconds : 0,
+    );
   }
   return payload as T;
 }
@@ -156,6 +175,12 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         },
         body: JSON.stringify(brief),
       });
+    },
+    getRun(runId) {
+      return requestJson<RuntimeRun>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}`,
+      );
     },
     approveRun(runId, csrfToken, idempotencyKey) {
       return requestJson<RuntimeRun>(

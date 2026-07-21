@@ -125,6 +125,50 @@ describe("runtime API client", () => {
     );
   });
 
+  it("loads one tenant-scoped run and preserves retry metadata", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        run_id: "run-123",
+        tenant_id: "tenant-alpha",
+        status: "awaiting_greenlight",
+        agent_states: {},
+        artifacts: [],
+        greenlight: null,
+        sandbox: true,
+        external_side_effects_enabled: false,
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        code: "authentication_rate_limited",
+        detail: "authentication temporarily rate limited",
+        request_id: "request-rate-0001",
+      }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Request-ID": "request-rate-0001",
+          "Retry-After": "30",
+        },
+      }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.getRun("run-123")).resolves.toEqual(
+      expect.objectContaining({ run_id: "run-123" }),
+    );
+    await expect(api.createSession("invalid-key")).rejects.toEqual(
+      expect.objectContaining<Partial<RuntimeApiError>>({
+        status: 429,
+        code: "authentication_rate_limited",
+        requestId: "request-rate-0001",
+        retryAfterSeconds: 30,
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/runs/run-123",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("preserves the safe public error code and request correlation", async () => {
     const api = createRuntimeApi(vi.fn().mockResolvedValue(
       jsonResponse({
