@@ -139,8 +139,10 @@ case "$CONTAINER_BUILDER" in
     ;;
 esac
 
-tar -tf "$IMAGE_ARCHIVE" | grep -qx 'oci-layout'
-tar -tf "$IMAGE_ARCHIVE" | grep -qx 'index.json'
+ARCHIVE_ENTRIES_FILE="$TMP_DIR/oci-archive-entries.txt"
+tar -tf "$IMAGE_ARCHIVE" > "$ARCHIVE_ENTRIES_FILE"
+grep -Fxq 'oci-layout' "$ARCHIVE_ENTRIES_FILE"
+grep -Fxq 'index.json' "$ARCHIVE_ENTRIES_FILE"
 
 log "generating CycloneDX SBOM with Syft"
 syft scan "$SCAN_SOURCE" -o "cyclonedx-json=$SBOM_FILE"
