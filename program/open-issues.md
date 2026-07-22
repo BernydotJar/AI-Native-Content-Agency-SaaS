@@ -47,9 +47,9 @@ Exact published head `1002d077564618623fe00f27ffae23c2b410aca8` passed all eight
 
 Category: human decision / legal review / data
 
-No jurisdiction, effective policy or accountable reviewer is selected. No destructive automation is authorized.
+Implementation `1843aa93c7675c6f5f10254ee3b7cffc020f9fd5` adds a fail-closed privacy decision register and release gate. Operating entity, jurisdiction and controller/processor role remain `UNKNOWN`; seven policy scopes remain unapproved with null retention and no deletion/legal-hold automation. Zero providers are active and `DENY_RELEASE` is machine-enforced.
 
-Exact resume condition for policy implementation: identified operating entity/customer/jurisdiction, approved source/version/effective date, retention/legal-hold/backup propagation decisions, privacy/legal reviewer, security reviewer and business data owner.
+Exact resume condition for policy implementation: privacy/legal, security and business/data-owner reviewers identify operating entity/customer scope/jurisdiction, approve controller/processor role and exact source/version/effective date, retention start/duration/exceptions, deletion/correction/legal-hold/backup propagation and provider terms. Then implement and independently verify the approved policy; destructive execution remains separately human-gated.
 
 ## OI-009 — Production backup and alert delivery
 

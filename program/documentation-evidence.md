@@ -38,4 +38,11 @@ Known documentation repairs in `INC-001`:
 | `program/reports/inc-005-progress.md` | INC-005 bounded review | local evidence at `6a88582`; external backup/monitoring gates remain open |
 | `docs/integrations/video-use-review.md` | exact external browser/video candidate review | commit `92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66`, 33 hashes and activation blockers; implementation remains disabled |
 | `backend/agency_runtime/integration_reviews/video_use.json` | machine-readable integration review evidence | immutable package data only; no upstream code, credential or execution authority |
-| `program/reports/inc-009-review.md` | bounded INC-009 producer/critic/verifier record | local implementation `61da89c`; remote exact-head CI pending |
+| `program/reports/inc-009-review.md` | bounded INC-009 producer/critic/verifier record | exact closure head `83cde2a` and final eight-job run `29878917100`; integration remains reviewed-disabled |
+| `compliance/third-party-inventory.json` | exact direct/build/candidate inventory | 33 components, exact licenses/versions/digests/SHAs and zero active providers |
+| `compliance/privacy-decision-register.json` | machine privacy/legal decision state | UNKNOWN entity/jurisdiction/role/provider terms; seven unapproved policies; no destructive authority |
+| `compliance/public-claims-policy.json` | static public-copy contract | ten surfaces, prohibited claims and required sandbox/legal disclosures |
+| `compliance/release-decision.json` | fail-closed release authority | `DENY_RELEASE`, `DENY_APPLY`, no effects/destructive action/approval |
+| `scripts/verify-release-compliance.py` | executable compliance reconciliation | exact live repository cross-check plus nine negative mutation tests |
+| `docs/compliance/release-compliance-review.md` | engineering compliance dossier | explicit evidence/unknowns/reviewers; not legal advice or certification |
+| `program/reports/inc-011-review.md` | bounded INC-011 producer/critic/verifier record | local implementation `1843aa9`; all safe work passes; human privacy/legal gate remains |

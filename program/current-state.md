@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T23:59:53Z
+Updated: 2026-07-22T00:20:23Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,83 +9,100 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-009-browser-video-contracts`
-- Stacked base: `agent/inc-008-accessible-themes@6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792`
-- INC-009 implementation: `61da89cd5bcc36fc5d99b97dd429d73fbb331959`
-- Local program checkpoint: the commit containing this document, directly above exact green head `f59fcbe`
-- Active branch remote: `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7`
-- Draft PR for INC-009: `#8`, base `agent/inc-008-accessible-themes`, clean and mergeable
-- Exact-head CI for INC-009: run `29878783817`, eight of eight jobs successful
-- Exact verified stacked-base CI: GitHub Actions run `29877012638`, eight of eight jobs successful at `6d90479`
+- Active branch: `agent/inc-011-release-compliance`
+- Stacked base: `agent/inc-009-browser-video-contracts@83cde2a2d8c11e063f938ad5fc3dc68863462646`
+- INC-011 implementation: `1843aa93c7675c6f5f10254ee3b7cffc020f9fd5`
+- Local program checkpoint: the commit containing this document, directly above `1843aa9`
+- Active branch remote: not pushed
+- Draft PR for INC-011: not created
+- Exact-head CI for INC-011: pending
+- Exact verified stacked-base CI: run `29878917100`, eight of eight jobs successful at `83cde2a`
+- PR `#8`: draft and green on `agent/inc-009-browser-video-contracts`
 - PR `#7`: draft and green on `agent/inc-008-accessible-themes`
 - PR `#6`: draft and green on `agent/inc-007-operator-journey`
 - PR `#5`: draft and green on `agent/inc-005-operability`
 - PR `#4`: draft and green, stacked on PR `#3`
 - PR `#3`: ready and green; normal merge remains blocked by `REVIEW_REQUIRED`
-- Merge: user-authorized and previously attempted normally for PR `#3`; no bypass, force or auto-merge was used
-- Deployment, persistent infrastructure, package publication, provider activation, billing and spend: not authorized and not performed
+- Deployment, persistent infrastructure, package publication, provider activation, destructive data action, billing and spend: not authorized and not performed
 
 ## Active increment
+
+### INC-011 — Release compliance, privacy and third-party review
+
+Status: `blocked`
+Owner: Privacy Reviewer / Compliance Engineer
+External effects: none
+
+#### Repository-local controls complete
+
+- Exact machine-readable third-party inventory:
+  - 19 direct npm packages with locked versions/licenses;
+  - three direct Python runtime packages with locked versions/licenses;
+  - two digest-pinned OCI base images;
+  - eight full-SHA-pinned GitHub Actions;
+  - exact MIT `video-use` candidate, `reviewed_disabled`;
+  - zero active external providers.
+- Privacy decision register preserves operating entity, jurisdiction and controller/processor role as `UNKNOWN`.
+- Seven data-policy scopes remain `unapproved`, with no invented retention duration and no deletion/legal-hold implementation.
+- ElevenLabs Scribe remains a disabled candidate; contract, region, training use, retention and deletion are `UNKNOWN`.
+- Public claims policy scans ten product surfaces and rejects unsupported production, legal/compliance certification, guaranteed security, live research, automatic publication and unqualified autonomy language.
+- Public UI copy now says sandbox/local simulation instead of autonomous/live operation.
+- Machine release decision requires:
+  - `DENY_RELEASE`;
+  - `DENY_APPLY`;
+  - `allow_external_effects=false`;
+  - `allow_destructive_data_action=false`;
+  - `legal_privacy_approval=false`;
+  - `independent_human_approval=false`.
+- `npm run validate:compliance` is integrated into CI, package and supply-chain verification.
+
+#### Local verification
+
+```text
+Compliance decision                        PASS — DENY_RELEASE
+Direct/build/candidate components          PASS — 33
+Active external providers                  PASS — 0
+Open human decision records                PASS — 8
+Public claim surfaces                      PASS — 10
+Negative compliance mutations              PASS — 9
+Locked Python wheel                        PASS — 127 tests, 11 PostgreSQL skips
+PostgreSQL shared state                    PASS — 127/127
+Frontend tests                             PASS — 66/66
+Oxlint / TypeScript / Vite                  PASS
+Real Chromium accessibility regression     PASS
+Python lock regeneration                   PASS — byte-identical
+Operability                                PASS — 4 SLOs, 7 alerts, 8 exercises
+Buildah non-root production package        PASS — compliance gate included
+K3s/Helm/Terraform plan/apply/destroy       PASS — agentless control plane
+Actionlint                                 PASS
+Gitleaks full Git history                  PASS — zero leaks
+Whitespace                                 PASS
+Provider/destructive/release action         NOT_RUN BY DESIGN
+```
+
+#### Human/privacy/legal blocker
+
+The repository cannot determine or approve:
+
+- operating entity, customer scope or jurisdiction;
+- controller/processor role and effective policy source/version/date;
+- retention start event/duration/exceptions;
+- deletion, correction, legal-hold and backup-propagation rules;
+- provider contract/DPA, region, subprocessors, training use, retention and deletion;
+- accountable privacy/legal, security and business/data-owner approval.
+
+`INC-011` completed every safe repository-local control and is blocked only on
+those accountable human decisions. A passing compliance validator proves a
+consistent denial and inventory, not legal advice, regulatory certification or
+release authorization.
+
+## Completed checkpoints
 
 ### INC-009 — Browser/video integration review and disabled contracts
 
 Status: `done`
-Owner: Security Reviewer / Integration Engineer
-External effects: none
 
-#### Exact reviewed source
-
-- Candidate: `browser-use/video-use`
-- Commit: `92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66`
-- License: MIT
-- Source integrity: 33/33 SHA-256 hashes match the exact reviewed tree
-- Installation, helper execution, ffmpeg, ElevenLabs, credentials and media processing: not performed
-
-#### Implemented
-
-- Immutable `agency-integration-review.v1` manifest with exact source hashes, findings and activation requirements.
-- Dependency-free strict manifest loader that rejects drift, malformed structure and every enabled effect flag.
-- Review-only invocation contract with tenant/campaign/workspace, idempotency, Greenlight, fencing, canonical paths, secret references, exact egress, hostile-input classification, resource bounds and zero cost.
-- Future receipt schema is explicit but cannot be constructed while disabled.
-- Authenticated tenant-derived read-only endpoints:
-  - `GET /api/v1/integrations`
-  - `GET /api/v1/integrations/{integration_id}`
-- No execute, render, transcribe, upload, download, provider credential or mutation route.
-- `activation_allowed=false`, `execution_available=false`, `execution_permitted=false` and `external_effects_enabled=false` are fail-closed invariants.
-
-#### Local evidence
-
-```text
-Exact upstream tree/hash comparison         PASS — 33/33 files
-Locked Python wheel                         PASS — 118 tests, 11 PostgreSQL skips
-PostgreSQL shared state                     PASS — 118/118
-Frontend tests                              PASS — 66/66
-Oxlint / TypeScript / Vite                   PASS
-Real Chromium accessibility regression      PASS
-Python lock regeneration                    PASS — byte-identical
-Operability                                 PASS — 4 SLOs, 7 alerts, 8 exercises
-Buildah non-root production package         PASS
-Packaged integration manifest               PASS
-Integration OpenAPI GET-only                PASS
-Integration execution disabled              PASS
-K3s/Helm/Terraform plan/apply/destroy        PASS — agentless control plane
-Actionlint                                  PASS
-Gitleaks full history                       PASS — zero leaks
-Whitespace                                  PASS
-External calls/media/rendering               NOT_RUN BY DESIGN
-```
-
-#### Delivery evidence
-
-- exact remote head `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7` equals local head;
-- draft PR `#8` is stacked on `agent/inc-008-accessible-themes`, clean and mergeable;
-- GitHub Actions run `29878783817` passed all eight production-readiness jobs;
-- supply-chain and accessibility artifacts are retained through 2026-08-20.
-
-`INC-009` is complete as an **evaluation and disabled contract**. This does not
-authorize or implement an external adapter.
-
-## Completed checkpoints
+Exact head `83cde2a2d8c11e063f938ad5fc3dc68863462646`, PR `#8` and GitHub Actions run `29878917100` prove the exact source review, strict disabled contracts and no execution surface. `video-use` remains `reviewed_disabled`.
 
 ### INC-012 — PostgreSQL migration/runtime authority separation
 
@@ -103,88 +120,81 @@ Exact published head and CI prove durable compatible replay, uniform conflicts, 
 
 Status: `done`
 
-Exact remote head `dad71025bf14281930b8fafa2edae81e2a7c6c84`, draft PR `#6` and GitHub Actions run `29874693956` prove the operator journey, role guidance, bounded failure states, stale-run recovery, idempotent retry and package regression.
+Exact remote head `dad71025bf14281930b8fafa2edae81e2a7c6c84`, PR `#6` and GitHub Actions run `29874693956` prove the operator journey and package regression.
 
-## External or human-gated checkpoints
+## Other external or human-gated checkpoints
 
-### INC-005 — SLOs, alert exercises, backup freshness and rollback operations
+### INC-005 — Operability and production backup controls
 
 Status: `blocked`
 
-Exact head `ca9caf80320c3279d631f6b08d8f37f0508035be` and GitHub Actions run `29873483636` prove all safe repository-local work. Persistent monitoring, paging, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO remain externally gated. `F-008` remains HIGH/open.
+Local/CI SLO, alert, backup freshness, restore and rollback controls pass. Persistent paging, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO remain external. `F-008` remains HIGH/open.
 
 ### INC-008 — Accessible themes and accessibility evidence
 
 Status: `blocked`
 
-Exact head `6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792` and GitHub Actions run `29877012638` prove all safe automated work. Human full-page keyboard, screen-reader, rendered contrast, 400% zoom/reflow and visual review remain `NOT_RUN`; `F-007` remains HIGH/open.
+Exact head `6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792` and run `29877012638` prove automated work. Human screen-reader, rendered contrast, 400% zoom/reflow and visual review remain `NOT_RUN`; `F-007` remains HIGH/open.
 
 ## Open global HIGH release findings
 
-1. **F-004 — Authorized staging/cloud runtime observation.** Owner: `INC-006`; externally gated.
-2. **F-007 — Human accessibility evidence.** Automated Chromium scope passes; accountable human review remains.
-3. **F-008 — Production backup scheduling, encryption/KMS, immutable off-host retention and alerts.** Local controls proven; external controls remain.
-4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Owner: `INC-011` plus accountable human reviewers.
-5. **F-011 — Semantic/adversarial evaluation harness.** Owner: `INC-010`.
+1. **F-004 — Authorized staging/cloud runtime observation.** Externally gated.
+2. **F-007 — Human accessibility evidence.** Accountable human review absent.
+3. **F-008 — Production backup scheduling/encryption/off-host retention/alerts.** External controls absent.
+4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Machine register proves policy remains unapproved; accountable human decisions absent.
+5. **F-011 — Semantic/adversarial evaluation harness.** Static copy scan passes; semantic prompt-injection, groundedness, citation, harmful-use and legal-overclaim thresholds remain absent.
 
 Open CRITICAL findings: zero.
 
 ## Exact blockers
 
+### BLK-PRIVACY-001
+
+- Category: human decision / legal review / data
+- Evidence: `1843aa9`; `compliance/privacy-decision-register.json`; `docs/compliance/release-compliance-review.md`; `npm run validate:compliance` reports `DENY_RELEASE`, eight open human decisions and zero active providers.
+- Attempted resolution: exact inventory, provider/data register, claims policy, release-denial contract and nine negative mutation tests; no policy values were invented and no destructive workflow was enabled.
+- Independent work remaining: no additional repository automation can choose the accountable policy facts; semantic eval work remains separately blocked by `INC-008`/`INC-010` dependency.
+- Resume condition: privacy/legal, security and business/data-owner reviewers record exact entity/customer scope, jurisdiction, controller/processor role, policy source/version/effective date, retention/deletion/correction/legal-hold/backup rules and provider terms. Then implement and independently verify the approved policy on the exact tree.
+
 ### BLK-A11Y-MANUAL-001
 
 - Category: human decision / review
-- Evidence: real Chromium automation passes at exact head `6d90479`, but no accountable human screen-reader, rendered contrast, 400% zoom/reflow or visual review exists.
-- Attempted resolution: added repeatable browser automation, retained JSON/screenshot artifacts and authored `docs/accessibility/manual-review-protocol.md`.
-- Independent work remaining: yes in other workstreams; no additional automation can honestly substitute for the required human evidence.
-- Resume condition: an accountable reviewer executes the protocol against the exact production bundle, records artifacts and repairs or accepts every finding under release policy.
+- Evidence: real Chromium automation passes, but no accountable human assistive-technology/visual review exists.
+- Resume condition: execute `docs/accessibility/manual-review-protocol.md` against the exact production bundle and resolve every finding.
 
 ### BLK-PR-REVIEW-001
 
 - Category: human decision / repository policy
-- Evidence: PR `#3` is mergeable and green, but GitHub reports `REVIEW_REQUIRED`.
-- Attempted resolution: normal merge after explicit authorization; GitHub rejected it.
-- Independent work remaining: yes.
-- Resume condition: an eligible independent reviewer approves PR `#3`, then stacked PRs can advance normally.
+- Evidence: PR `#3` is green/mergeable but reports `REVIEW_REQUIRED`.
+- Resume condition: eligible independent reviewer approval, followed by normal stacked merges.
 
 ### BLK-GCP-001
 
 - Category: credential / permission / infrastructure / human decision
-- Evidence: no authorized cloud target, billing, reviewed saved plan/apply, persistent monitoring or runtime endpoint.
-- Attempted resolution: repository-local Terraform, Helm and agentless K3s validation only; no external resource was created.
-- Independent work remaining: yes.
-- Resume condition: explicit authorized target, billing, preflight, reviewed plan and spend/apply authorization.
+- Evidence: no authorized cloud target, billing, saved plan/apply, persistent monitoring or runtime endpoint.
+- Resume condition: explicit target/billing authorization, preflight, reviewed plan and spend/apply authorization.
 
 ### BLK-BACKUP-PROD-001
 
 - Category: infrastructure / permission / credential / human decision
-- Evidence: local freshness, alert and restore gates pass; no authorized scheduler, KMS, encrypted immutable off-host destination, retention lock or real alert delivery exists.
-- Attempted resolution: implemented deterministic freshness/rule/restore exercises without creating external storage or schedules.
-- Independent work remaining: yes.
-- Resume condition: authorized target/storage/KMS, approved retention, reviewed scheduler, alert delivery and staging restore/incident exercise.
-
-### BLK-PRIVACY-001
-
-- Category: human decision / legal review / data
-- Evidence: jurisdiction, entity/customer role and effective retention/deletion/legal-hold policy remain unknown.
-- Attempted resolution: created data inventory, privacy model and explicit fail-closed decision record; no destructive workflow was authorized.
-- Independent work remaining: yes.
-- Resume condition: identified jurisdiction/entity/customer, approved source/effective date and accountable reviewers.
+- Evidence: repository-local freshness/alert/restore gates pass; no authorized scheduler, KMS, encrypted immutable off-host destination, retention lock or real alert delivery exists.
+- Resume condition: authorized target/storage/KMS, approved retention, scheduler, alert delivery and staging restore/incident exercise.
 
 ### BLK-VIDEO-USE-ACTIVATION-001
 
 - Category: integration / security / privacy / supply chain / human decision
-- Evidence: exact source review finds HIGH path containment, external audio disclosure and missing product authority/receipt controls; the current runtime remains GET-only and disabled.
-- Attempted resolution: pin and hash the source, define fail-closed product contracts, package review evidence and verify no execution route or external effect.
-- Independent work remaining: yes; legal/privacy inventory work may continue, but activation requires a separate bounded implementation.
-- Resume condition: satisfy the exact activation checklist in `docs/integrations/video-use-review.md`, close every HIGH finding and obtain explicit provider/effect authorization.
+- Evidence: exact source review retains HIGH path containment, external audio disclosure and missing outbound authority/receipt controls; zero providers active.
+- Resume condition: satisfy `docs/integrations/video-use-review.md`, close every HIGH and obtain explicit provider/effect authorization.
 
 ## Ready work
 
-1. Publish this `INC-009=done` closure checkpoint and require its own exact-head CI.
-2. Continue the next DAG-ready workstream without enabling provider effects.
-3. Keep provider activation, publication, billing, cloud apply and spend disabled.
+1. Commit this `INC-011=blocked` checkpoint.
+2. Run clean-source supply-chain verification.
+3. Push normally, verify exact SHA equality, create a draft PR stacked on `agent/inc-009-browser-video-contracts` and require eight of eight CI jobs.
+4. Publish a final evidence checkpoint whose own CI remains green.
+5. Do not start `INC-010`: its dependency `INC-008` remains blocked on accountable human accessibility review.
+6. Keep release, merge, provider activation, destructive data actions, cloud apply, publication and spend disabled.
 
 ## Exact continuation condition
 
-Publish this closure checkpoint above exact green head `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7` without force and verify its own eight-job CI. Then select the next DAG-ready node. Do not claim that completing `INC-009` enables `video-use`; its only approved state is `reviewed_disabled`. Preserve `DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and the stacked PR chain.
+After exact-head CI, no additional DAG node is safely executable without a human/external gate. Resume only when an accountable reviewer supplies one of the documented unblock conditions. Preserve the compliance machine decision `DENY_RELEASE`, `DENY_APPLY`, zero active providers, zero destructive authority and the stacked PR chain.

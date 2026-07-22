@@ -1,6 +1,6 @@
 # Risk Register
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 | ID | Severity | Risk | Current control | Status |
 |---|---|---|---|---|
@@ -25,3 +25,5 @@ Updated: 2026-07-21
 | R-018 | MEDIUM | Frontend role gating is mistaken for an authorization boundary or hides server-side denial evidence. | `4f10122` keeps backend authorization authoritative, exposes bounded request correlation, supports tenant-scoped run lookup and tests server-denial recovery. | Controlled in code; manual UX/accessibility review pending INC-008 |
 | R-019 | HIGH | A paid visual theme is mistaken for RBAC, billing proof or DRM, or remains active after entitlement revocation. | Exact allowlisted server identity entitlement, active-session `/me` refresh, immediate free-theme fallback, no storage/persistence, and explicit billing/DRM limitations. | Controlled in code; billing remains absent |
 | R-020 | MEDIUM | Automated browser and AX-tree evidence is mistaken for human screen-reader or visual accessibility approval. | Evidence artifacts and protocol label human screen-reader, rendered contrast, 400% zoom and visual review `NOT_RUN`; F-007 remains open. | Human review required |
+| R-021 | HIGH | Green technical/SBOM/license gates are mistaken for legal, privacy or regulatory approval. | Exact machine decision `DENY_RELEASE`; all authority flags false; README/dossier disclaim legal certification; nine negative compliance tests. | Controlled in repository; accountable approval absent |
+| R-022 | HIGH | Public copy overstates autonomous/live/production behavior or automatic publication. | Ten-surface claims scan, required sandbox disclosures and corrected local-simulation copy; semantic generated-content review remains under R-017/F-011. | Static copy controlled; semantic review open |

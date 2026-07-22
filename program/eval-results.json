@@ -328,9 +328,58 @@
       "observed": "Eight of eight jobs SUCCESS: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain; PR #8 clean and mergeable.",
       "result": "PASS",
       "scope": "remote exact-head delivery verification"
+    },
+    {
+      "command": "npm run validate:compliance",
+      "id": "INC011-COMPLIANCE-CONTRACT",
+      "observed": "DENY_RELEASE; 33 direct/build/candidate components; 0 active providers; 8 human decision records; 10 claim surfaces PASS",
+      "result": "PASS",
+      "scope": "third-party, privacy, claims and release decision consistency"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_release_compliance -v",
+      "id": "INC011-NEGATIVE-MUTATIONS",
+      "observed": "9 tests PASS: stale hashes, unlocked dependency, provider activation, invented retention/approval, prohibited claim/missing disclosure, release allow, nested schema/resolved blocker and video-use drift all fail closed",
+      "result": "PASS",
+      "scope": "compliance adversarial contract"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC011-RUNTIME-REGRESSION",
+      "observed": "127 locked-wheel tests with 11 PostgreSQL skips and 127/127 PostgreSQL tests PASS",
+      "result": "PASS",
+      "scope": "backend, persistence and compliance regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC011-PACKAGE-INFRA",
+      "observed": "Compliance gate executes before non-root image build; package smoke and agentless K3s/Helm/Terraform SQLite/PostgreSQL plan-apply-destroy PASS; no provider/deployment persists",
+      "result": "PASS",
+      "scope": "package and ephemeral infrastructure regression"
+    },
+    {
+      "command": "frontend/Chromium/locks/operability/actionlint/Gitleaks/whitespace gates",
+      "id": "INC011-FRONTEND-HYGIENE",
+      "observed": "66 frontend tests, lint/build, real Chromium, byte-identical locks, 4 SLO/7 alert/8 exercises, actionlint, zero leaks and whitespace PASS; prohibited claim scan empty",
+      "result": "PASS",
+      "scope": "public claims and cross-workstream hygiene"
+    },
+    {
+      "command": "compliance/privacy-decision-register.json and docs/compliance/release-compliance-review.md",
+      "id": "INC011-HUMAN-PRIVACY-LEGAL",
+      "observed": "Entity, jurisdiction, controller/processor role, retention/deletion/legal hold and provider terms remain UNKNOWN/unapproved; required reviewers have not approved",
+      "result": "BLOCKED",
+      "scope": "accountable privacy/legal/business decision"
+    },
+    {
+      "command": "GitHub Actions production-readiness",
+      "id": "INC011-EXACT-HEAD-CI",
+      "observed": "Remote branch, draft PR and exact-head CI not yet created for the local implementation checkpoint",
+      "result": "PENDING",
+      "scope": "remote exact-head delivery verification"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "f59fcbe792c5f4e28d904fc1e1a17442b9340ec7",
-  "updated_at": "2026-07-21T23:59:53Z"
+  "source_commit": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5",
+  "updated_at": "2026-07-22T00:20:23Z"
 }

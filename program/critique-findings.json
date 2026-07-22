@@ -74,7 +74,7 @@
     },
     {
       "description": "No approved retention, deletion, legal-hold or data-subject workflow exists for runs, memories, audit, telemetry and backups.",
-      "evidence": "Privacy model and classification register explicitly record UNKNOWN jurisdiction and no effective policy or deletion engine.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; compliance/privacy-decision-register.json; npm run validate:compliance; seven policy scopes remain unapproved with null retention and no deletion/legal-hold implementation; entity/jurisdiction/role/provider terms UNKNOWN.",
       "id": "F-010",
       "owner": "INC-011",
       "severity": "HIGH",
@@ -191,9 +191,41 @@
       "owner": "INC-009",
       "severity": "MEDIUM",
       "status": "CLOSED"
+    },
+    {
+      "description": "Green CI, SBOM or license automation could be mistaken for legal/privacy approval or release authority.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; machine release decision DENY_RELEASE; all authority booleans false; README/dossier explicitly deny legal/regulatory approval.",
+      "id": "F-025",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "An external provider, retention duration or destructive privacy workflow could be silently enabled without accountable approval.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; UNKNOWN/unapproved/null/false privacy invariants, exact provider schema and negative mutation tests.",
+      "id": "F-026",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Public copy used unqualified autonomous/live language unsupported by the deterministic sandbox.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; copy changed to sandbox/local simulation and ten-surface claims policy rejects unsupported autonomy/live/production/legal/compliance claims.",
+      "id": "F-027",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Third-party inventory could drift from manifests, locks, images, workflow Actions or reviewed integration commit.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; exact hashes, direct version/license reconciliation, image digests, Action SHAs, video-use manifest match and stale-drift tests.",
+      "id": "F-028",
+      "owner": "INC-011",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "61da89cd5bcc36fc5d99b97dd429d73fbb331959",
-  "updated_at": "2026-07-21T23:52:36Z"
+  "source_commit": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5",
+  "updated_at": "2026-07-22T00:20:23Z"
 }

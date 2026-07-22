@@ -102,7 +102,7 @@
         "INC-009"
       ],
       "id": "INC-011",
-      "status": "pending"
+      "status": "blocked"
     },
     {
       "depends_on": [
@@ -113,5 +113,5 @@
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-21T23:59:53Z"
+  "updated_at": "2026-07-22T00:20:23Z"
 }

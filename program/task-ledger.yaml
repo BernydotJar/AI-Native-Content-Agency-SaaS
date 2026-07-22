@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-009-browser-video-contracts",
+  "branch": "agent/inc-011-release-compliance",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -551,7 +551,7 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Global production-readiness requirement.",
+      "context": "Implementation 1843aa93c7675c6f5f10254ee3b7cffc020f9fd5 adds strict third-party/license, privacy decision, public-claims and release-denial controls. Local wheel/PostgreSQL/package/frontend/Chromium/infrastructure/workflow/secret gates pass. INC-011 is blocked only because operating entity, jurisdiction, controller/processor role, effective retention/deletion/legal-hold policy, provider terms and accountable privacy/legal/business approvals remain UNKNOWN/unapproved.",
       "dependencies": [
         "INC-003",
         "INC-009"
@@ -573,11 +573,27 @@
       ],
       "read_only_paths": [],
       "role": "Privacy Reviewer",
-      "status": "pending",
+      "status": "blocked",
       "task_id": "INC-011",
-      "validation_commands": [],
+      "validation_commands": [
+        "npm run validate:compliance",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "npm test -- --run",
+        "npm run lint",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/check-python-locks.sh",
+        "npm run validate:program",
+        "npm run validate:operability",
+        "actionlint .github/workflows/production-readiness.yml",
+        "gitleaks git --no-banner --redact --log-opts='--all' .",
+        "git diff --check"
+      ],
       "workstream_id": "WS-11",
-      "write_lock": "unclaimed"
+      "write_lock": "released; all safe repository-local work complete, accountable privacy/legal decisions required"
     },
     {
       "acceptance_criteria": [
@@ -668,7 +684,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T23:59:53Z",
+  "updated_at": "2026-07-22T00:20:23Z",
   "workstreams": [
     {
       "acceptance_criteria": [
