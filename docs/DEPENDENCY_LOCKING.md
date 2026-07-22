@@ -12,19 +12,23 @@ Human-maintained constraints live in:
 
 - `backend/requirements.in`: runtime dependencies;
 - `backend/requirements-test.in`: runtime graph plus test-only dependencies;
-- `backend/requirements-build.in`: wheel and lock-generation toolchain.
+- `backend/requirements-build.in`: production/CI wheel and lock-generation toolchain;
+- `backend/requirements-local-build.in`: conservative local wheel toolchain for package mirrors that lag the primary index.
 
 Generated, reviewed, and committed lockfiles live in:
 
 - `backend/requirements.lock`;
 - `backend/requirements-test.lock`;
-- `backend/requirements-build.lock`.
+- `backend/requirements-build.lock`;
+- `backend/requirements-local-build.lock`.
 
 Every resolved artifact is pinned and includes hashes accepted by `pip --require-hashes`.
 
 ## Locked toolchain
 
 The lock generator is itself locked. `requirements-build.lock` contains `pip-tools==7.6.0` together with exact versions and hashes for `pip`, `setuptools`, `wheel`, `build`, and their transitive dependencies.
+
+`requirements-local-build.lock` is intentionally smaller. It contains only the packages required to build the application wheel and pins `build==1.2.2.post1` plus compatible `setuptools`, `wheel`, `packaging`, `pyproject-hooks`, and `tomli`. `start:local` retries this lock only when the primary build lock cannot be installed from the operator's configured package index. Production images and CI continue to use the primary lock.
 
 The first generation attempt used `pip-tools 7.5.2` with `pip 26.1` and failed with:
 
@@ -48,7 +52,7 @@ PYTHON_BIN=python3.11 ./scripts/update-python-locks.sh
 
 1. creates a temporary virtual environment;
 2. installs the committed build toolchain with `--require-hashes`;
-3. regenerates runtime, test, and build locks;
+3. regenerates runtime, test, primary-build, and local-compatibility locks;
 4. leaves reviewable lockfile changes in the working tree.
 
 `check-python-locks.sh` regenerates all locks, compares them byte for byte with the committed files, and restores the originals before exiting. CI uses this as a drift gate.
@@ -58,7 +62,8 @@ PYTHON_BIN=python3.11 ./scripts/update-python-locks.sh
 `verify-python-locks.sh` creates two independent temporary environments:
 
 1. a build environment installs `requirements-build.lock` and builds the backend wheel with `python -m build --no-isolation`;
-2. a test environment installs `requirements-test.lock`, installs the wheel with `--no-deps`, runs `pip check`, and executes all backend tests.
+2. an independent compatibility build environment installs `requirements-local-build.lock` and builds the same backend wheel;
+3. a test environment installs `requirements-test.lock`, installs the primary wheel with `--no-deps`, runs `pip check`, and executes all backend tests.
 
 The script prints the installed versions of the application and load-bearing framework packages so the observed graph is explicit.
 

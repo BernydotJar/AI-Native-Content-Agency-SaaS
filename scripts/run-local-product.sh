@@ -16,6 +16,8 @@ DATABASE_PATH="${AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3}"
 BUILD_VENV="${AGENCY_LOCAL_BUILD_VENV:-/tmp/ai-native-content-agency-build}"
 RUNTIME_VENV="${AGENCY_LOCAL_RUNTIME_VENV:-/tmp/ai-native-content-agency-runtime}"
 WHEEL_DIR="${AGENCY_LOCAL_WHEEL_DIR:-/tmp/ai-native-content-agency-wheels}"
+PRIMARY_BUILD_LOCK="${AGENCY_LOCAL_PRIMARY_BUILD_LOCK:-$ROOT_DIR/backend/requirements-build.lock}"
+COMPATIBILITY_BUILD_LOCK="${AGENCY_LOCAL_COMPATIBILITY_BUILD_LOCK:-$ROOT_DIR/backend/requirements-local-build.lock}"
 
 if [[ "$HOST" != "127.0.0.1" && "$HOST" != "localhost" ]]; then
   printf 'local product runner refuses non-loopback host: %s\n' "$HOST" >&2
@@ -68,6 +70,7 @@ if [[ "$MODE" == "check" ]]; then
   printf 'static_dir=%s\n' "$AGENCY_STATIC_DIR"
   printf 'database_backend=sqlite\n'
   printf 'identity_source=%s\n' "$([[ -n "$GENERATED_LOCAL_KEY" ]] && printf ephemeral || printf environment)"
+  printf 'build_lock_strategy=primary_then_hash_locked_compatibility\n'
   printf 'external_provider_calls=not_started\n'
   exit 0
 fi
@@ -77,10 +80,24 @@ printf '[local-product] building production web bundle\n'
 npm run build
 
 printf '[local-product] building hash-locked Python wheel\n'
-rm -rf "$BUILD_VENV" "$RUNTIME_VENV" "$WHEEL_DIR"
-python3 -m venv "$BUILD_VENV"
-"$BUILD_VENV/bin/python" -m pip install --disable-pip-version-check \
-  --require-hashes -r backend/requirements-build.lock
+rm -rf "$RUNTIME_VENV" "$WHEEL_DIR"
+
+install_build_toolchain() {
+  local lock_path="$1"
+  rm -rf "$BUILD_VENV"
+  python3 -m venv "$BUILD_VENV"
+  "$BUILD_VENV/bin/python" -m pip install --disable-pip-version-check \
+    --require-hashes -r "$lock_path"
+}
+
+ACTIVE_BUILD_LOCK="$PRIMARY_BUILD_LOCK"
+if ! install_build_toolchain "$PRIMARY_BUILD_LOCK"; then
+  printf '[local-product] primary build lock is unavailable from this package index; retrying the hash-locked compatibility toolchain\n' >&2
+  ACTIVE_BUILD_LOCK="$COMPATIBILITY_BUILD_LOCK"
+  install_build_toolchain "$COMPATIBILITY_BUILD_LOCK"
+fi
+
+printf '[local-product] build toolchain lock: %s\n' "$(basename "$ACTIVE_BUILD_LOCK")"
 mkdir -p "$WHEEL_DIR"
 "$BUILD_VENV/bin/python" -m build --no-isolation --wheel \
   --outdir "$WHEEL_DIR" backend

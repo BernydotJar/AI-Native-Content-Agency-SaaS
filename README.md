@@ -79,6 +79,8 @@ npm run start:local
 
 El comando escucha únicamente en `127.0.0.1:4175`, usa SQLite en `/tmp/ai-native-content-agency-local.sqlite3` y, cuando no se proporciona `AGENCY_IDENTITY_CREDENTIALS_JSON`, imprime una credencial local efímera una sola vez. Usa esa credencial desde **Conectar espacio**. No se escribe en el repositorio ni en storage del navegador.
 
+El runner intenta primero `requirements-build.lock`. Si el índice Python configurado todavía no contiene una versión reciente del frontend `build`, recrea el entorno y usa `requirements-local-build.lock`, un toolchain mínimo, conservador y también fijado por hashes. El runtime y el wheel de la aplicación no cambian.
+
 `npm run preview` sirve sólo `dist/` mediante Vite. Es útil para revisión visual, pero no expone sesiones, runs, proveedores ni persistencia FastAPI y no debe usarse como evidencia del producto full-stack.
 
 Comandos web:

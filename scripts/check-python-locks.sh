@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPOSITORY_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TMP_DIR=$(mktemp -d)
-LOCKS=(requirements.lock requirements-test.lock requirements-build.lock)
+LOCKS=(requirements.lock requirements-test.lock requirements-build.lock requirements-local-build.lock)
 
 restore() {
   for lock in "${LOCKS[@]}"; do

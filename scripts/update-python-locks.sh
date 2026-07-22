@@ -22,3 +22,6 @@ cd "$REPOSITORY_ROOT/backend"
 "$TMP_DIR/venv/bin/pip-compile" --resolver=backtracking --generate-hashes \
   --strip-extras --allow-unsafe --output-file=requirements-build.lock \
   requirements-build.in
+"$TMP_DIR/venv/bin/pip-compile" --resolver=backtracking --generate-hashes \
+  --strip-extras --allow-unsafe --output-file=requirements-local-build.lock \
+  requirements-local-build.in
