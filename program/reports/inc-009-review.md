@@ -4,7 +4,7 @@ Date: 2026-07-21
 Branch: `agent/inc-009-browser-video-contracts`
 Stacked base: `agent/inc-008-accessible-themes@6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792`
 Implementation commit: `61da89cd5bcc36fc5d99b97dd429d73fbb331959`
-Status: `LOCAL_VERIFICATION_PASS — REMOTE_EXACT_HEAD_PENDING`
+Status: `PASS — REVIEWED_DISABLED`
 External effects: none
 
 ## Review contract
@@ -125,9 +125,9 @@ postgresql_verified_local: yes
 package_verified_local: yes
 infrastructure_verified_local: yes, agentless control plane only
 committed: yes
-pushed: no
-pull_request: no
-remote_exact_head_ci: pending
+pushed: f59fcbe792c5f4e28d904fc1e1a17442b9340ec7
+pull_request: draft #8, clean and mergeable
+remote_exact_head_ci: GitHub Actions 29878783817, 8/8 PASS
 integration_activated: no
 external_effects: none
 ```

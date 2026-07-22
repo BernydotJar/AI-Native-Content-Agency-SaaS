@@ -448,7 +448,7 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66 reviewed without installation/execution. Implementation 61da89cd5bcc36fc5d99b97dd429d73fbb331959 packages immutable hashes and exposes authenticated GET-only review data; all execution/effect flags remain false. Local locked-wheel, PostgreSQL, package, infrastructure, frontend/browser, workflow, secret and whitespace gates pass; remote exact-head CI pending.",
+      "context": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66 reviewed without installation/execution. Published exact head f59fcbe792c5f4e28d904fc1e1a17442b9340ec7, draft PR #8 and GitHub Actions run 29878783817 passed all eight jobs. The integration review is complete; activation/execution/external effects remain disabled and require a separate authorized increment.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -470,7 +470,7 @@
       ],
       "read_only_paths": [],
       "role": "Security Reviewer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-009",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -488,7 +488,7 @@
         "git diff --check"
       ],
       "workstream_id": "WS-08",
-      "write_lock": "held; local verification complete, remote exact-head CI pending"
+      "write_lock": "released; review complete, integration activation remains prohibited"
     },
     {
       "acceptance_criteria": [
@@ -668,7 +668,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-21T23:52:36Z",
+  "updated_at": "2026-07-21T23:59:53Z",
   "workstreams": [
     {
       "acceptance_criteria": [

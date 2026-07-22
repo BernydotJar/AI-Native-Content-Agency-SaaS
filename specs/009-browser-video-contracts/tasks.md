@@ -9,4 +9,4 @@
 - [x] Document security, privacy, data and activation boundaries.
 - [x] Focused and full regression.
 - [x] Critic/red-team and independent verification.
-- [ ] Program state, commit, push, draft PR and exact-head CI.
+- [x] Program state, commit, push, draft PR and exact-head CI.

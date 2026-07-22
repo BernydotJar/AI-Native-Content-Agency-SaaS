@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-21T23:52:36Z
+Updated: 2026-07-21T23:59:53Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -12,10 +12,10 @@ Cloud recommendation: `DENY_APPLY`
 - Active branch: `agent/inc-009-browser-video-contracts`
 - Stacked base: `agent/inc-008-accessible-themes@6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792`
 - INC-009 implementation: `61da89cd5bcc36fc5d99b97dd429d73fbb331959`
-- Local program checkpoint: the commit containing this document, directly above `61da89c`
-- Active branch remote: not pushed
-- Draft PR for INC-009: not created
-- Exact-head CI for INC-009: pending
+- Local program checkpoint: the commit containing this document, directly above exact green head `f59fcbe`
+- Active branch remote: `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7`
+- Draft PR for INC-009: `#8`, base `agent/inc-008-accessible-themes`, clean and mergeable
+- Exact-head CI for INC-009: run `29878783817`, eight of eight jobs successful
 - Exact verified stacked-base CI: GitHub Actions run `29877012638`, eight of eight jobs successful at `6d90479`
 - PR `#7`: draft and green on `agent/inc-008-accessible-themes`
 - PR `#6`: draft and green on `agent/inc-007-operator-journey`
@@ -29,7 +29,7 @@ Cloud recommendation: `DENY_APPLY`
 
 ### INC-009 — Browser/video integration review and disabled contracts
 
-Status: `review`
+Status: `done`
 Owner: Security Reviewer / Integration Engineer
 External effects: none
 
@@ -75,16 +75,15 @@ Whitespace                                  PASS
 External calls/media/rendering               NOT_RUN BY DESIGN
 ```
 
-#### Delivery still pending
+#### Delivery evidence
 
-- normal push of the exact checkpoint;
-- SHA equality against the remote branch;
-- draft stacked PR against `agent/inc-008-accessible-themes`;
-- eight-job exact-head GitHub Actions verification.
+- exact remote head `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7` equals local head;
+- draft PR `#8` is stacked on `agent/inc-008-accessible-themes`, clean and mergeable;
+- GitHub Actions run `29878783817` passed all eight production-readiness jobs;
+- supply-chain and accessibility artifacts are retained through 2026-08-20.
 
-`INC-009` can become `done` after those delivery gates pass. That completion
-means the candidate was evaluated and safely disabled; it does not authorize or
-implement an external adapter.
+`INC-009` is complete as an **evaluation and disabled contract**. This does not
+authorize or implement an external adapter.
 
 ## Completed checkpoints
 
@@ -182,12 +181,10 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit this `INC-009=review` checkpoint.
-2. Run clean-source supply-chain verification.
-3. Push normally, verify SHA equality, create a stacked draft PR and require eight of eight exact-head CI jobs.
-4. If green, close `INC-009` as evaluated-and-disabled and continue the next DAG-ready workstream.
-5. Keep provider activation, publication, billing, cloud apply and spend disabled.
+1. Publish this `INC-009=done` closure checkpoint and require its own exact-head CI.
+2. Continue the next DAG-ready workstream without enabling provider effects.
+3. Keep provider activation, publication, billing, cloud apply and spend disabled.
 
 ## Exact continuation condition
 
-Publish the clean checkpoint above implementation `61da89cd5bcc36fc5d99b97dd429d73fbb331959` without force. Require exact remote SHA equality and eight green production-readiness jobs. Do not claim that completing `INC-009` enables `video-use`; its only approved state is `reviewed_disabled`. Preserve `DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and the stacked PR chain.
+Publish this closure checkpoint above exact green head `f59fcbe792c5f4e28d904fc1e1a17442b9340ec7` without force and verify its own eight-job CI. Then select the next DAG-ready node. Do not claim that completing `INC-009` enables `video-use`; its only approved state is `reviewed_disabled`. Preserve `DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and the stacked PR chain.
