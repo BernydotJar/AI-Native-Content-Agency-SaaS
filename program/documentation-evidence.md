@@ -46,3 +46,7 @@ Known documentation repairs in `INC-001`:
 | `scripts/verify-release-compliance.py` | executable compliance reconciliation | exact live repository cross-check plus nine negative mutation tests |
 | `docs/compliance/release-compliance-review.md` | engineering compliance dossier | explicit evidence/unknowns/reviewers; not legal advice or certification |
 | `program/reports/inc-011-review.md` | bounded INC-011 producer/critic/verifier record | local implementation `1843aa9`; all safe work passes; human privacy/legal gate remains |
+
+| `specs/013-product-workspace/` | INC-013 product workspace contract | mission-first UX, provider configuration and local runner; provider inference remains excluded |
+| `docs/runbooks/model-provider-configuration.md` | provider configuration operations | secrets remain server-side; readiness is not execution evidence |
+| `program/reports/inc-013-review.md` | INC-013 producer/critic/verifier record | local implementation `a89907f`; remote delivery pending |

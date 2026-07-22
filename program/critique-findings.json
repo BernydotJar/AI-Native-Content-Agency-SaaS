@@ -223,9 +223,57 @@
       "owner": "INC-011",
       "severity": "MEDIUM",
       "status": "CLOSED"
+    },
+    {
+      "description": "Appearance and one-time tenant authentication occupied the primary mission hierarchy and displaced the user outcome.",
+      "evidence": "a89907f; theme moved to WorkspaceSettingsDialog; tenant credential exists only in WorkspaceRuntime connection modal; App/Chromium progressive-disclosure tests pass.",
+      "id": "F-029",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Memory and Tool Fabric taught implementation internals or displayed attractive mock capabilities instead of applied context and operational state.",
+      "evidence": "a89907f; RunContextPanel exposes evidence/Scholar/strategy/risk; OperationalFabricPanel derives provider, integration and station state from authenticated APIs/run data.",
+      "id": "F-030",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A parallel simulation runtime and six unreachable legacy product panels could diverge from backend authority or be revived accidentally.",
+      "evidence": "a89907f removes simulationRuntime, ControlPanel, InteractiveSidebar, MemorySkillsPanel, MetaAdsDashboard, ProductionRuntimePanel and ToolFabricPanel plus exclusive tests/assets; one App path remains.",
+      "id": "F-031",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Settings and connection dialogs initially leaked keyboard focus or failed to restore it after Escape.",
+      "evidence": "a89907f; shared useModalDialog focus trap, bidirectional Tab tests, Escape close, trigger restoration and real Chromium checks.",
+      "id": "F-032",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Provider readiness could be mistaken for executed inference, spend authority or a browser-safe place to enter provider secrets.",
+      "evidence": "a89907f; exact GET-only server registry, secret-free payload/package tests, no HTTP client, no browser credential fields, runbook disclosure and DENY_RELEASE/zero active providers.",
+      "id": "F-033",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Real model inference remains absent even when provider configuration reports ready.",
+      "evidence": "a89907f; ProviderRegistry contains no network client; RuntimeService still uses deterministic local toolset; program/reports/inc-013-review.md records the exact next gate.",
+      "id": "F-034",
+      "owner": "INC-014",
+      "severity": "HIGH",
+      "status": "OPEN"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5",
-  "updated_at": "2026-07-22T00:20:23Z"
+  "source_commit": "a89907f",
+  "updated_at": "2026-07-22T17:30:22Z"
 }

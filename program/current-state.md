@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-22T00:26:50Z
+Updated: 2026-07-22T17:29:18Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,99 +9,83 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-011-release-compliance`
-- Stacked base: `agent/inc-009-browser-video-contracts@83cde2a2d8c11e063f938ad5fc3dc68863462646`
-- INC-011 implementation: `1843aa93c7675c6f5f10254ee3b7cffc020f9fd5`
-- Local program checkpoint: the commit containing this document, directly above exact green head `8820b1d`
-- Active branch remote: `8820b1d50085363a160634a4d81b02d69a6424b4`
-- Draft PR for INC-011: `#9`, base `agent/inc-009-browser-video-contracts`, clean and mergeable
-- Exact-head CI for INC-011: run `29880157199`, eight of eight jobs successful
-- Exact verified stacked-base CI: run `29878917100`, eight of eight jobs successful at `83cde2a`
-- PR `#8`: draft and green on `agent/inc-009-browser-video-contracts`
-- PR `#7`: draft and green on `agent/inc-008-accessible-themes`
-- PR `#6`: draft and green on `agent/inc-007-operator-journey`
-- PR `#5`: draft and green on `agent/inc-005-operability`
-- PR `#4`: draft and green, stacked on PR `#3`
-- PR `#3`: ready and green; normal merge remains blocked by `REVIEW_REQUIRED`
-- Deployment, persistent infrastructure, package publication, provider activation, destructive data action, billing and spend: not authorized and not performed
+- Active branch: `agent/inc-013-product-workspace`
+- Stacked base: `agent/inc-011-release-compliance@c55c473c60f5469e8d7f78519fa7455395ac58a8`
+- INC-013 implementation: `a89907f`
+- Local program checkpoint: the commit containing this document, directly above implementation `a89907f`
+- Active branch remote: not published
+- Draft PR for INC-013: not created
+- Exact-head CI for INC-013: pending
+- Exact verified stacked-base CI: run `29880287343`, eight of eight jobs successful at `c55c473`
+- PR `#9`: draft and green on `agent/inc-011-release-compliance`
+- PRs `#3`–`#8`: stacked history remains open/green as previously recorded
+- Deployment, persistent infrastructure, package publication, provider inference, destructive data action, billing and spend: not authorized and not performed
 
 ## Active increment
 
-### INC-011 — Release compliance, privacy and third-party review
+### INC-013 — Product workspace and provider control plane
 
-Status: `blocked`
-Owner: Privacy Reviewer / Compliance Engineer
+Status: `review`
+Owner: Product Engineer / Critic
 External effects: none
 
-#### Repository-local controls complete
+#### Implemented
 
-- Exact machine-readable third-party inventory:
-  - 19 direct npm packages with locked versions/licenses;
-  - three direct Python runtime packages with locked versions/licenses;
-  - two digest-pinned OCI base images;
-  - eight full-SHA-pinned GitHub Actions;
-  - exact MIT `video-use` candidate, `reviewed_disabled`;
-  - zero active external providers.
-- Privacy decision register preserves operating entity, jurisdiction and controller/processor role as `UNKNOWN`.
-- Seven data-policy scopes remain `unapproved`, with no invented retention duration and no deletion/legal-hold implementation.
-- ElevenLabs Scribe remains a disabled candidate; contract, region, training use, retention and deletion are `UNKNOWN`.
-- Public claims policy scans ten product surfaces and rejects unsupported production, legal/compliance certification, guaranteed security, live research, automatic publication and unqualified autonomy language.
-- Public UI copy now says sandbox/local simulation instead of autonomous/live operation.
-- Machine release decision requires:
-  - `DENY_RELEASE`;
-  - `DENY_APPLY`;
-  - `allow_external_effects=false`;
-  - `allow_destructive_data_action=false`;
-  - `legal_privacy_approval=false`;
-  - `independent_human_approval=false`.
-- `npm run validate:compliance` is integrated into CI, package and supply-chain verification.
+- Replaced the demo-first frontend with one tenant-scoped mission workspace.
+- Removed the parallel simulation runtime and unreachable mock dashboards/components.
+- Preserved the eight-station topology and now derives station state from the durable run.
+- Moved appearance to Settings and tenant credential exchange to a one-time modal.
+- Added focus trapping, Escape close and focus restoration for both dialogs.
+- Replaced memory internals with applied evidence, Scholar decisions, strategy, risk and output counts.
+- Replaced static Tool Fabric cards with server provider readiness, reviewed integrations and run station outputs.
+- Added exact server-side configuration contracts for OpenAI, Anthropic, DeepSeek, Moonshot/Kimi and Llama.
+- Added authenticated GET-only `/api/v1/providers`; raw credentials and credential environment names never leave the server.
+- Added `npm run start:local` for loopback SPA + FastAPI + SQLite using hash-locked Python environments.
+- Updated public claims: local deterministic runtime, no publication and no external spend.
 
 #### Local verification
 
 ```text
-Compliance decision                        PASS — DENY_RELEASE
-Direct/build/candidate components          PASS — 33
-Active external providers                  PASS — 0
-Open human decision records                PASS — 8
-Public claim surfaces                      PASS — 10
-Negative compliance mutations              PASS — 9
-Locked Python wheel                        PASS — 127 tests, 11 PostgreSQL skips
-PostgreSQL shared state                    PASS — 127/127
-Frontend tests                             PASS — 66/66
-Oxlint / TypeScript / Vite                  PASS
-Real Chromium accessibility regression     PASS
-Python lock regeneration                   PASS — byte-identical
-Operability                                PASS — 4 SLOs, 7 alerts, 8 exercises
-Buildah non-root production package        PASS — compliance gate included
-K3s/Helm/Terraform plan/apply/destroy       PASS — agentless control plane
+Program validator                         PASS — 79 requirements, 13 tasks
+Compliance validator                      PASS — DENY_RELEASE, 0 active external providers
+Locked Python wheel                       PASS — 136 tests, 11 PostgreSQL skips
+PostgreSQL shared state                   PASS — 136/136
+Frontend                                  PASS — 26/26 active tests
+Oxlint / TypeScript / Vite                 PASS
+Real Chromium progressive disclosure       PASS
+Integrated local product smoke             PASS — SPA/session/providers/run
+Buildah non-root production package        PASS — provider registry included
+K3s/Helm/Terraform plan/apply/destroy      PASS — agentless control plane
 Actionlint                                 PASS
-Gitleaks full Git history                  PASS — zero leaks
-Whitespace                                 PASS
-Provider/destructive/release action         NOT_RUN BY DESIGN
+Gitleaks history/worktree                  PASS — zero leaks
+Whitespace                                PASS
+Clean-source supply chain                  PENDING
+Push / PR / exact-head CI                  PENDING
+Real provider inference                    NOT_IMPLEMENTED / NOT_RUN
+Final cross-product E2E                    DEFERRED TO FINAL PROGRAM GATE
 ```
 
-#### Human/privacy/legal blocker
+#### Critic result
 
-The repository cannot determine or approve:
+The user-reported hierarchy defects were confirmed and repaired. The critic also found
+and closed modal-focus leakage, false restoration errors in static preview, stale public
+claims and the residual parallel frontend. Exact details are in
+`program/reports/inc-013-review.md`.
 
-- operating entity, customer scope or jurisdiction;
-- controller/processor role and effective policy source/version/date;
-- retention start event/duration/exceptions;
-- deletion, correction, legal-hold and backup-propagation rules;
-- provider contract/DPA, region, subprocessors, training use, retention and deletion;
-- accountable privacy/legal, security and business/data-owner approval.
+#### Boundary that remains
 
-`INC-011` completed every safe repository-local control and is blocked only on
-those accountable human decisions. A passing compliance validator proves a
-consistent denial and inventory, not legal advice, regulatory certification or
-release authorization.
+Provider `ready` state proves server configuration only. The current orchestrator still
+uses deterministic local tools and does not call model providers. A separate bounded
+increment must add protocol-specific clients, cost/egress authorization, timeouts,
+limits, outbound idempotency/receipts, redacted telemetry and privacy review before any
+real inference is enabled.
 
-#### Delivery evidence
+#### Inherited blockers
 
-- local and remote head equality at `8820b1d50085363a160634a4d81b02d69a6424b4`;
-- draft PR `#9`, stacked on `agent/inc-009-browser-video-contracts`, clean and mergeable;
-- GitHub Actions run `29880157199`, eight of eight jobs successful;
-- supply-chain and accessibility artifacts retained through 2026-08-21.
+- `INC-011` remains blocked on accountable privacy/legal/data-policy decisions despite exact green CI at `c55c473`.
+- `INC-008` remains blocked on human assistive-technology and visual accessibility review.
+- `INC-005/006` remain blocked on production backup, monitoring and authorized cloud/staging evidence.
+- PR stack merge remains blocked by repository review policy.
 
 ## Completed checkpoints
 
@@ -195,11 +179,15 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Publish this final `INC-011=blocked` evidence checkpoint and require its own eight-job CI.
-2. Do not start `INC-010`: its dependency `INC-008` remains blocked on accountable human accessibility review.
-3. Keep release, merge, provider activation, destructive data actions, cloud apply, publication and spend disabled.
-4. Resume only when an accountable reviewer supplies a documented unblock condition.
+1. Record this local `INC-013=review` checkpoint and run clean-source supply chain.
+2. Push normally, verify remote SHA equality, create a draft PR stacked on `agent/inc-011-release-compliance` and require eight-job exact-head CI.
+3. After exact CI, start a separate provider-gateway increment using mock transports only; do not issue paid inference calls without explicit spend/egress authorization.
+4. Keep the broad cross-product E2E suite deferred to the final program gate while preserving focused tests and package smokes per increment.
 
 ## Exact continuation condition
 
-After exact-head CI, no additional DAG node is safely executable without a human/external gate. Resume only when an accountable reviewer supplies one of the documented unblock conditions. Preserve the compliance machine decision `DENY_RELEASE`, `DENY_APPLY`, zero active providers, zero destructive authority and the stacked PR chain.
+Start from the clean checkpoint above implementation `a89907f`. Run supply chain with
+`registry_publication=false`, publish the branch without force, verify exact remote head,
+create the stacked draft PR and observe its own eight-job CI. Do not claim real provider
+inference from `INC-013`; configuration readiness is not execution evidence. Preserve
+`DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and zero provider spend.

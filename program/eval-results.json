@@ -377,9 +377,51 @@
       "observed": "Eight of eight jobs SUCCESS: workflow-lint, verify including validate:compliance/Chromium/127 tests, python-locks, PostgreSQL, container, Helm, Terraform and supply-chain; PR #9 clean and mergeable.",
       "result": "PASS",
       "scope": "remote exact-head delivery verification"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC013-RUNTIME-PROVIDER-CONTRACTS",
+      "observed": "136 locked-wheel tests with 11 PostgreSQL skips and 136/136 PostgreSQL tests PASS; exact five-provider registry, GET-only auth, secret absence, endpoint validation and local runner contracts pass.",
+      "result": "PASS",
+      "scope": "backend provider configuration, runtime and persistence regression"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build && npm run verify:accessibility-browser",
+      "id": "INC013-PRODUCT-WORKSPACE",
+      "observed": "26/26 active frontend tests, zero lint warnings, 258.29 kB JS/69.75 kB CSS bundle and Chromium reflow/progressive disclosure/keyboard/premium/reduced-motion/AX PASS after removing 5,778 legacy lines.",
+      "result": "PASS",
+      "scope": "single product shell, UX and accessibility automation"
+    },
+    {
+      "command": "npm run start:local focused loopback smoke",
+      "id": "INC013-LOCAL-PRODUCT",
+      "observed": "Integrated SPA + FastAPI + SQLite starts on loopback; HttpOnly session, five-provider catalog and governed run creation PASS; external_effects=false; credential absent from logs.",
+      "result": "PASS",
+      "scope": "operator local full-stack path"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC013-PACKAGE-INFRA",
+      "observed": "Non-root package proves provider registry/secrets absent/SPA/session/run/Greenlight; K3s/Helm/Terraform SQLite and PostgreSQL plan-apply-destroy PASS; cleanup PASS.",
+      "result": "PASS",
+      "scope": "package and ephemeral infrastructure regression"
+    },
+    {
+      "command": "actionlint, Gitleaks history/worktree, compliance/program and whitespace gates",
+      "id": "INC013-HYGIENE",
+      "observed": "Actionlint PASS; zero Gitleaks findings; 79 requirements/13 tasks PASS; DENY_RELEASE with zero active providers and eight claim surfaces PASS; whitespace clean.",
+      "result": "PASS",
+      "scope": "workflow, secrets, governance and claims hygiene"
+    },
+    {
+      "command": "future authorized provider-gateway increment",
+      "id": "INC013-REAL-INFERENCE",
+      "observed": "No provider HTTP client, inference request, provider receipt, spend or egress executed; final broad E2E remains deferred by user strategy.",
+      "result": "NOT_RUN",
+      "scope": "real model execution and final cross-product E2E"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "8820b1d50085363a160634a4d81b02d69a6424b4",
-  "updated_at": "2026-07-22T00:26:50Z"
+  "source_commit": "a89907f",
+  "updated_at": "2026-07-22T17:30:22Z"
 }

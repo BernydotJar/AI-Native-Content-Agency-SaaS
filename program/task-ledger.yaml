@@ -710,7 +710,7 @@
         "official provider security and API documentation",
         "program/current-state.md"
       ],
-      "context": "The prior primary UI exposed theme, credential, memory internals and mock tooling as dominant product surfaces. This increment makes the durable runtime journey primary while keeping external inference/effects disabled until a separate authorized gateway exists.",
+      "context": "Implementation commit a89907f replaces the parallel demo frontend with one durable workspace, adds a secret-free five-provider control plane and an integrated loopback local runner. Local wheel, PostgreSQL, frontend, Chromium, package, infrastructure and hygiene gates pass. Provider inference/effects and final E2E remain separate gated work.",
       "dependencies": [
         "INC-007",
         "INC-009"
@@ -739,7 +739,7 @@
         "checkpoints/**"
       ],
       "role": "Product Engineer / Critic",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-013",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -752,7 +752,9 @@
         "git diff --check"
       ],
       "workstream_id": "WS-05",
-      "write_lock": "single writer: orchestrator"
+      "write_lock": "single writer: orchestrator",
+      "implementation_commit": "a89907f",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
     }
   ],
   "updated_at": "2026-07-22T00:26:50Z",
