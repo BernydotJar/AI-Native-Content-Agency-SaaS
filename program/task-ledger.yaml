@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-013-product-workspace",
+  "branch": "agent/inc-014-model-gateway",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -755,6 +755,148 @@
       "write_lock": "single writer: orchestrator",
       "implementation_commit": "a89907f",
       "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
+    },
+    {
+      "acceptance_criteria": [
+        "five provider protocols implemented with exact bounded contracts",
+        "gateway disabled by default and no public inference route",
+        "credentials prompts and provider bodies absent from public errors and receipts",
+        "host proxy redirect timeout input token and response limits fail closed",
+        "wheel PostgreSQL frontend Chromium and non-root package gates pass",
+        "zero real provider calls or spend during verification"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "backend/requirements*",
+        "backend/setup.cfg",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "compliance/**",
+        "program/**",
+        "specs/014-model-gateway/**"
+      ],
+      "authoritative_inputs": [
+        "official OpenAI Responses documentation",
+        "official Anthropic Messages documentation",
+        "official DeepSeek chat-completions documentation",
+        "official Moonshot Kimi K3 documentation",
+        "existing provider registry and idempotency architecture"
+      ],
+      "context": "Implementation ed4f06a adds bounded protocol clients with mock-transport verification. The gateway remains disabled and disconnected from runs because no durable outbound intent/receipt exists.",
+      "dependencies": [
+        "INC-004",
+        "INC-013"
+      ],
+      "expected_outputs": [
+        "bounded model gateway",
+        "private provider execution configuration",
+        "safe gateway status",
+        "protocol contract tests",
+        "package boundary evidence",
+        "operator runbook and critic review"
+      ],
+      "human_gates": [
+        "real provider credentials",
+        "egress",
+        "spend",
+        "merge"
+      ],
+      "objective": "Implement real provider protocols without activating inference or weakening durable idempotency.",
+      "prohibited_paths": [
+        "real provider requests during verification",
+        "public completion endpoint",
+        "automatic run integration",
+        "cloud resources or spend",
+        "protected branches"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Integration Engineer / Security Critic",
+      "status": "review",
+      "task_id": "INC-014",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "actionlint and Gitleaks history/worktree",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "single writer: orchestrator",
+      "implementation_commit": "ed4f06a4cb46e479bf3c46658306599102ae0051",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_BY_CONNECTOR"
+    },
+    {
+      "acceptance_criteria": [
+        "outbound intent persists before provider call",
+        "tenant run command provider model payload and budget binding is exact",
+        "single fenced owner may execute an intent",
+        "successful receipt persists before run completion",
+        "compatible replay reuses receipt without another provider call",
+        "pending or unknown state blocks automatic retry",
+        "reconciliation circuit breaker and revocation are observable",
+        "all verification uses mock transports until explicit egress and spend authorization"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/015-model-effect-authority/**"
+      ],
+      "authoritative_inputs": [
+        "INC-004 durable command idempotency",
+        "INC-014 model gateway",
+        "SQLite and PostgreSQL transaction contracts",
+        "Greenlight fencing architecture"
+      ],
+      "context": "Protocol clients exist, but connecting them before a durable outbound intent/receipt would permit duplicate spend after a provider success followed by local persistence failure.",
+      "dependencies": [
+        "INC-004",
+        "INC-014"
+      ],
+      "expected_outputs": [
+        "SQLite and PostgreSQL outbound intent and receipt model",
+        "fenced execution replay and reconciliation service",
+        "mock-transport run integration",
+        "failure-injection and cross-replica tests"
+      ],
+      "human_gates": [
+        "real provider credentials",
+        "privacy/legal approval",
+        "egress",
+        "spend",
+        "production activation",
+        "merge"
+      ],
+      "objective": "Add durable economic idempotency before attaching model inference to governed runs.",
+      "prohibited_paths": [
+        "real provider requests during verification",
+        "unbounded automatic retry",
+        "provider response content in logs or audit",
+        "cloud resources or spend"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Distributed Systems Engineer / Security Reviewer",
+      "status": "pending",
+      "task_id": "INC-015",
+      "validation_commands": [
+        "focused SQLite and PostgreSQL race and failure-injection tests",
+        "locked wheel and production package",
+        "zero-egress mock transport verification"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "unclaimed"
     }
   ],
   "updated_at": "2026-07-22T00:26:50Z",
@@ -946,12 +1088,12 @@
       "evals": [],
       "id": "WS-08",
       "name": "Integrations, Contracts and Sandbox Boundaries",
-      "next_ready_task": "INC-009",
-      "objective": "Evaluate integrations without activating side effects.",
+      "next_ready_task": "INC-015",
+      "objective": "Implement bounded integration protocols and durable external-effect authority without uncontrolled side effects.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "pending",
+      "status": "in_progress",
       "validation": [],
       "write_locks": []
     },

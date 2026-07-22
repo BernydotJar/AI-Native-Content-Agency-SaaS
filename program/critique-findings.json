@@ -265,15 +265,23 @@
       "status": "CLOSED"
     },
     {
-      "description": "Real model inference remains absent even when provider configuration reports ready.",
-      "evidence": "a89907f; ProviderRegistry contains no network client; RuntimeService still uses deterministic local toolset; program/reports/inc-013-review.md records the exact next gate.",
+      "description": "Real model inference is not attached to governed runs because durable outbound intent/receipt and economic replay protection are absent.",
+      "evidence": "ed4f06a4cb46e479bf3c46658306599102ae0051; bounded provider protocols pass, but API status reports durable_outbound_receipt=false and automatic_run_integration=false; docs/runbooks/model-gateway.md defines the next gate.",
       "id": "F-034",
-      "owner": "INC-014",
+      "owner": "INC-015",
       "severity": "HIGH",
       "status": "OPEN"
+    },
+    {
+      "id": "F-035",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-014",
+      "description": "Provider protocol clients could leak credentials prompts or upstream bodies, or retry and duplicate spend.",
+      "evidence": "ed4f06a4cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "a89907f",
-  "updated_at": "2026-07-22T17:30:22Z"
+  "source_commit": "ed4f06a4cb46e479bf3c46658306599102ae0051",
+  "updated_at": "2026-07-22T18:05:11Z"
 }

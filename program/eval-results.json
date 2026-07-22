@@ -419,9 +419,44 @@
       "observed": "No provider HTTP client, inference request, provider receipt, spend or egress executed; final broad E2E remains deferred by user strategy.",
       "result": "NOT_RUN",
       "scope": "real model execution and final cross-product E2E"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC014-PROTOCOL-CONTRACTS",
+      "observed": "145 locked-wheel tests with 11 PostgreSQL skips and 145/145 PostgreSQL tests PASS; OpenAI Responses, Anthropic Messages, DeepSeek/Kimi K3/Llama chat, host policy, limits, sanitized errors and one-attempt behavior pass with MockTransport.",
+      "result": "PASS",
+      "scope": "bounded provider protocols and shared-runtime regression"
+    },
+    {
+      "command": "frontend lint/test/build and Chromium accessibility gate",
+      "id": "INC014-OPERATOR-STATUS",
+      "observed": "26/26 frontend tests, lint/build and Chromium PASS; UI separates provider configured, gateway protocol-ready, durable receipt false and automatic integration false.",
+      "result": "PASS",
+      "scope": "truthful gateway status and frontend regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC014-PACKAGE-BOUNDARY",
+      "observed": "Non-root image includes hash-locked httpx; provider registry, gateway disabled, inference route absent, secrets absent, SPA/session/run/Greenlight and external_effects=false PASS.",
+      "result": "PASS",
+      "scope": "production package disabled gateway boundary"
+    },
+    {
+      "command": "K3s/Helm/Terraform, actionlint, Gitleaks, program/compliance and whitespace",
+      "id": "INC014-CROSS-WORKSTREAM",
+      "observed": "Agentless SQLite/PostgreSQL plan-apply-destroy, cleanup, workflow lint, zero leaks, 79 requirements/15 tasks and DENY_RELEASE with zero active providers PASS.",
+      "result": "PASS",
+      "scope": "infrastructure and governance regression"
+    },
+    {
+      "command": "real provider execution",
+      "id": "INC014-REAL-EGRESS",
+      "observed": "No DNS/network provider call, real credential, prompt transfer or spend was used; ModelGateway.complete is test-only and no API/orchestrator invocation exists.",
+      "result": "NOT_RUN",
+      "scope": "real provider inference and spend"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "a89907f",
-  "updated_at": "2026-07-22T17:30:22Z"
+  "source_commit": "ed4f06a4cb46e479bf3c46658306599102ae0051",
+  "updated_at": "2026-07-22T18:05:11Z"
 }

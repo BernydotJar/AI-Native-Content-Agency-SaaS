@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-22T17:29:18Z
+Updated: 2026-07-22T18:04:42Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,83 +9,82 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-013-product-workspace`
-- Stacked base: `agent/inc-011-release-compliance@c55c473c60f5469e8d7f78519fa7455395ac58a8`
-- INC-013 implementation: `a89907f`
-- Local program checkpoint: the commit containing this document, directly above implementation `a89907f`
+- Active branch: `agent/inc-014-model-gateway`
+- Stacked local base: `agent/inc-013-product-workspace@c78231cc0ae0d670e1267821bfc7d12d5f18e554`
+- INC-014 implementation: `ed4f06a4cb46e479bf3c46658306599102ae0051`
+- Local program checkpoint: the commit containing this document, directly above `ed4f06a`
 - Active branch remote: not published
-- Draft PR for INC-013: not created
-- Exact-head CI for INC-013: pending
-- Exact verified stacked-base CI: run `29880287343`, eight of eight jobs successful at `c55c473`
-- PR `#9`: draft and green on `agent/inc-011-release-compliance`
-- PRs `#3`–`#8`: stacked history remains open/green as previously recorded
-- Deployment, persistent infrastructure, package publication, provider inference, destructive data action, billing and spend: not authorized and not performed
+- Draft PR for INC-014: not created
+- Exact-head CI for INC-014: pending
+- Latest published stack head remains `agent/inc-011-release-compliance@c55c473c60f5469e8d7f78519fa7455395ac58a8`, run `29880287343`, eight of eight jobs successful
+- INC-013 and INC-014 are local-only because the official sandbox push connector fails before invoking Git
+- Deployment, persistent infrastructure, package publication, real provider calls, destructive data action, billing and spend: not authorized and not performed
 
 ## Active increment
 
-### INC-013 — Product workspace and provider control plane
+### INC-014 — Bounded multi-provider model gateway
 
 Status: `review`
-Owner: Product Engineer / Critic
+Owner: Integration Engineer / Security Critic
 External effects: none
 
 #### Implemented
 
-- Replaced the demo-first frontend with one tenant-scoped mission workspace.
-- Removed the parallel simulation runtime and unreachable mock dashboards/components.
-- Preserved the eight-station topology and now derives station state from the durable run.
-- Moved appearance to Settings and tenant credential exchange to a one-time modal.
-- Added focus trapping, Escape close and focus restoration for both dialogs.
-- Replaced memory internals with applied evidence, Scholar decisions, strategy, risk and output counts.
-- Replaced static Tool Fabric cards with server provider readiness, reviewed integrations and run station outputs.
-- Added exact server-side configuration contracts for OpenAI, Anthropic, DeepSeek, Moonshot/Kimi and Llama.
-- Added authenticated GET-only `/api/v1/providers`; raw credentials and credential environment names never leave the server.
-- Added `npm run start:local` for loopback SPA + FastAPI + SQLite using hash-locked Python environments.
-- Updated public claims: local deterministic runtime, no publication and no external spend.
+- OpenAI Responses, Anthropic Messages and OpenAI-compatible DeepSeek, Moonshot/Kimi K3 and Llama clients.
+- Private credential-bearing execution configuration separated from public provider contracts.
+- Exact provider selection and egress-host allowlist.
+- HTTPS-only endpoints; IP literals, localhost, `.local`, embedded credentials, query and fragment fail closed.
+- Environment proxies and redirects disabled; one attempt only with no automatic retry.
+- Bounded input characters, output tokens, response bytes and timeout.
+- Strict response parsing, sanitized errors and secret-free in-memory receipts.
+- Authenticated GET-only gateway status with `durable_outbound_receipt=false` and `automatic_run_integration=false`.
+- `httpx==0.28.1` installed in the hash-locked runtime and reconciled in license/compliance evidence.
+- No public completion route and no orchestrator/run invocation of `ModelGateway.complete()`.
 
-#### Local verification
+#### Local evidence
 
 ```text
-Program validator                         PASS — 79 requirements, 13 tasks
-Compliance validator                      PASS — DENY_RELEASE, 0 active external providers
-Locked Python wheel                       PASS — 136 tests, 11 PostgreSQL skips
-PostgreSQL shared state                   PASS — 136/136
-Frontend                                  PASS — 26/26 active tests
+Program validator                         PASS — 79 requirements, 15 tasks
+Compliance validator                      PASS — DENY_RELEASE, 0 active providers, 34 components
+Locked Python wheel                       PASS — 145 tests, 11 PostgreSQL skips
+PostgreSQL shared state                   PASS — 145/145
+Frontend                                  PASS — 26/26
 Oxlint / TypeScript / Vite                 PASS
-Real Chromium progressive disclosure       PASS
-Integrated local product smoke             PASS — SPA/session/providers/run
-Buildah non-root production package        PASS — provider registry included
+Real Chromium regression                  PASS
+Buildah non-root package                  PASS
+Packaged gateway disabled                 PASS
+Packaged inference route absent           PASS
 K3s/Helm/Terraform plan/apply/destroy      PASS — agentless control plane
-Actionlint                                 PASS
-Gitleaks history/worktree                  PASS — zero leaks
+Actionlint                                PASS
+Gitleaks history/worktree                 PASS — zero leaks
 Whitespace                                PASS
-Clean-source supply chain                  PENDING
-Push / PR / exact-head CI                  PENDING
-Real provider inference                    NOT_IMPLEMENTED / NOT_RUN
-Final cross-product E2E                    DEFERRED TO FINAL PROGRAM GATE
+Real provider calls/credentials/spend      NOT_RUN / NOT_USED
+Final cross-product E2E                   DEFERRED TO FINAL PROGRAM GATE
+Clean-source supply chain                 PENDING FOR THIS CHECKPOINT
+Push / PR / exact-head CI                 BLOCKED BY SANDBOX CONNECTOR
 ```
 
-#### Critic result
+#### Critic decision
 
-The user-reported hierarchy defects were confirmed and repaired. The critic also found
-and closed modal-focus leakage, false restoration errors in static preview, stale public
-claims and the residual parallel frontend. Exact details are in
-`program/reports/inc-013-review.md`.
+Protocol execution is bounded and verifiable, but connecting it directly to current
+`run.create` could duplicate spend if the provider succeeds and local persistence fails.
+The gateway therefore remains disconnected. Exact findings and repairs are in
+`program/reports/inc-014-review.md`.
 
-#### Boundary that remains
+#### Next increment
 
-Provider `ready` state proves server configuration only. The current orchestrator still
-uses deterministic local tools and does not call model providers. A separate bounded
-increment must add protocol-specific clients, cost/egress authorization, timeouts,
-limits, outbound idempotency/receipts, redacted telemetry and privacy review before any
-real inference is enabled.
+`INC-015` must persist an outbound intent before the provider call, fence a single
+executor, persist a successful receipt before run completion, reuse compatible receipts
+and block uncertain states without another call. Tests will continue using mock
+transports until privacy/legal and explicit egress/spend authorization exist.
 
-#### Inherited blockers
+#### Delivery blocker — BLK-SANDBOX-PUSH-001
 
-- `INC-011` remains blocked on accountable privacy/legal/data-policy decisions despite exact green CI at `c55c473`.
-- `INC-008` remains blocked on human assistive-technology and visual accessibility review.
-- `INC-005/006` remain blocked on production backup, monitoring and authorized cloud/staging evidence.
-- PR stack merge remains blocked by repository review policy.
+- Category: tooling / infrastructure / permission.
+- Evidence: `Cloud_Sandbox_MCP.git_push` fails before invoking Git because its ownership setup attempts to start Docker and cannot create the Docker NAT chain (`iptables: Permission denied`).
+- Attempted resolution: normalized `/workspace` ownership to `node:node`, verified `git fsck`, retried the official connector; identical pre-Git failure remained.
+- Repository status: clean commits exist locally; no force push, GitHub ref API or alternate bypass was used.
+- Resume condition: repair the official push connector or provide an explicitly authorized supported export/push mechanism.
 
 ## Completed checkpoints
 
@@ -179,15 +178,15 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Record this local `INC-013=review` checkpoint and run clean-source supply chain.
-2. Push normally, verify remote SHA equality, create a draft PR stacked on `agent/inc-011-release-compliance` and require eight-job exact-head CI.
-3. After exact CI, start a separate provider-gateway increment using mock transports only; do not issue paid inference calls without explicit spend/egress authorization.
-4. Keep the broad cross-product E2E suite deferred to the final program gate while preserving focused tests and package smokes per increment.
+1. Commit this `INC-014=review` checkpoint and run clean-source supply chain with `registry_publication=false`.
+2. Continue `INC-015` locally with SQLite/PostgreSQL intent/receipt/fencing tests and mock transports only.
+3. Publish INC-013/014/015 normally when `BLK-SANDBOX-PUSH-001` is resolved; then require exact remote SHA, stacked draft PRs and eight-job CI for each head.
+4. Keep real provider credentials, egress, spend, publication and final broad E2E disabled until their explicit gates.
 
 ## Exact continuation condition
 
-Start from the clean checkpoint above implementation `a89907f`. Run supply chain with
-`registry_publication=false`, publish the branch without force, verify exact remote head,
-create the stacked draft PR and observe its own eight-job CI. Do not claim real provider
-inference from `INC-013`; configuration readiness is not execution evidence. Preserve
-`DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and zero provider spend.
+Start from the clean checkpoint above `ed4f06a4cb46e479bf3c46658306599102ae0051`. Run supply chain without registry
+publication. Then implement `INC-015` economic idempotency without issuing any real
+provider request. Do not expose a completion route or attach the gateway to runs until
+intent/fence/receipt/reconciliation tests pass in SQLite and PostgreSQL. Preserve
+`DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and `BLK-SANDBOX-PUSH-001`.

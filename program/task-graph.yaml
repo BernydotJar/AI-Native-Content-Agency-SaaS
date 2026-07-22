@@ -118,8 +118,24 @@
       ],
       "id": "INC-013",
       "status": "review"
+    },
+    {
+      "id": "INC-014",
+      "depends_on": [
+        "INC-004",
+        "INC-013"
+      ],
+      "status": "review"
+    },
+    {
+      "id": "INC-015",
+      "depends_on": [
+        "INC-004",
+        "INC-014"
+      ],
+      "status": "pending"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-22T17:29:18Z"
+  "updated_at": "2026-07-22T18:04:42Z"
 }

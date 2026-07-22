@@ -74,3 +74,29 @@ exact egress, short-lived secret references, tenant/artifact-bound Greenlight,
 outbound idempotency/outbox/fence/receipt/revocation, resource/cost limits,
 semantic adversarial tests, provider privacy/legal approval, incident/rollback
 and deletion evidence; then obtain explicit external-effect authorization.
+
+
+## OI-011 — Sandbox push connector failure
+
+Category: tooling / infrastructure / permission
+
+The official `Cloud_Sandbox_MCP.git_push` action fails before Git because its ownership
+setup attempts to start Docker and cannot create the Docker NAT chain in this sandbox.
+Workspace ownership was normalized, `git fsck` passed and the official action was
+retried with the same result. No force push or alternate GitHub ref API was used.
+
+Exact resume condition: repair the official connector or provide an explicitly
+authorized supported export/push mechanism, then publish the exact local heads and
+require their own PR/CI evidence.
+
+## OI-012 — Durable model effect authority
+
+Category: distributed systems / financial safety / integration
+
+Five provider protocols now pass bounded local contracts, but no outbound intent or
+receipt is durable. Connecting the gateway to runs before that boundary could duplicate
+spend after provider success followed by local persistence failure.
+
+Exact resume condition: complete INC-015 with SQLite/PostgreSQL intent, fencing,
+receipt-before-completion, replay reuse, pending/unknown blocking, reconciliation and
+failure-injection evidence. Real credentials/egress still require separate approval.
