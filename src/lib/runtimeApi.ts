@@ -91,6 +91,20 @@ export interface RuntimeProvider {
   recommended_models: string[];
 }
 
+export interface RuntimeProviderGatewayStatus {
+  execution_enabled: boolean;
+  selected_provider: string;
+  execution_available: boolean;
+  durable_outbound_receipt: boolean;
+  automatic_run_integration: boolean;
+}
+
+export interface RuntimeProviderCatalog {
+  tenant_id: string;
+  providers: RuntimeProvider[];
+  gateway: RuntimeProviderGatewayStatus;
+}
+
 export interface RuntimeIntegrationSummary {
   integration_id: string;
   display_name: string;
@@ -151,7 +165,7 @@ export interface RuntimeApi {
   rejectRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   auditEvents(): Promise<RuntimeAuditEvent[]>;
-  providers(): Promise<RuntimeProvider[]>;
+  providerCatalog(): Promise<RuntimeProviderCatalog>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
   revokeSession(csrfToken: string): Promise<void>;
 }
@@ -285,9 +299,8 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
       const page = await requestJson<AuditPage>(fetchImpl, "/api/v1/audit-events?limit=100");
       return page.events;
     },
-    async providers() {
-      const payload = await requestJson<{ providers: RuntimeProvider[] }>(fetchImpl, "/api/v1/providers");
-      return payload.providers;
+    providerCatalog() {
+      return requestJson<RuntimeProviderCatalog>(fetchImpl, "/api/v1/providers");
     },
     async integrations() {
       const payload = await requestJson<{ integrations: RuntimeIntegrationSummary[] }>(fetchImpl, "/api/v1/integrations");

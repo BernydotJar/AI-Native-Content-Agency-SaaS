@@ -1,8 +1,9 @@
 import { Cable, CheckCircle2, CircleOff, Cpu, ShieldAlert } from "lucide-react";
-import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeRun } from "../lib/runtimeApi";
+import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus, RuntimeRun } from "../lib/runtimeApi";
 
 interface OperationalFabricPanelProps {
   providers: readonly RuntimeProvider[];
+  gateway: RuntimeProviderGatewayStatus;
   integrations: readonly RuntimeIntegrationSummary[];
   sessionActive: boolean;
   loading: boolean;
@@ -11,6 +12,7 @@ interface OperationalFabricPanelProps {
 
 export function OperationalFabricPanel({
   providers,
+  gateway,
   integrations,
   sessionActive,
   loading,
@@ -31,9 +33,18 @@ export function OperationalFabricPanel({
             <h2 id="operational-fabric-title" className="mt-1 text-base font-bold text-zinc-100">Capacidades del runtime y entregables por estación</h2>
           </div>
         </div>
-        <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-500">
-          {readyProviders.length}/{providers.length || 5} proveedores listos
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-500">
+            {readyProviders.length}/{providers.length || 5} proveedores listos
+          </span>
+          <span className={`rounded-full border px-3 py-1.5 font-mono text-[9px] uppercase ${
+            gateway.execution_enabled
+              ? "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"
+              : "border-white/[0.08] text-zinc-600"
+          }`}>
+            {gateway.execution_enabled ? "gateway protocol-ready" : "gateway off"}
+          </span>
+        </div>
       </div>
 
       {!sessionActive ? (

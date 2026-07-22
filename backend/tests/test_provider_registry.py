@@ -49,7 +49,7 @@ class ProviderRegistryTests(unittest.TestCase):
             {
                 "ANTHROPIC_API_KEY": "anthropic-provider-key-value-2026",
                 "MOONSHOT_API_KEY": "moonshot-provider-key-value-2026",
-                "AGENCY_MOONSHOT_MODEL": "kimi-k2.5",
+                "AGENCY_MOONSHOT_MODEL": "kimi-k3",
             }
         )
 
@@ -58,7 +58,30 @@ class ProviderRegistryTests(unittest.TestCase):
 
         self.assertEqual(anthropic["configuration_state"], "missing_model")
         self.assertEqual(moonshot["configuration_state"], "ready")
-        self.assertEqual(moonshot["model"], "kimi-k2.5")
+        self.assertEqual(moonshot["model"], "kimi-k3")
+
+    def test_private_execution_config_redacts_credentials_and_aliases_must_agree(self):
+        secret = "moonshot-secret-value-that-must-not-leak"
+        registry = ProviderRegistry.from_environment(
+            {
+                "MOONSHOT_API_KEY": secret,
+                "KIMI_API_KEY": secret,
+                "AGENCY_MOONSHOT_MODEL": "kimi-k3",
+            }
+        )
+        execution = registry.execution_config("moonshot")
+        self.assertEqual(execution.credential, secret)
+        self.assertNotIn(secret, repr(execution))
+        self.assertNotIn(secret, repr(registry.public_list()))
+
+        with self.assertRaises(ProviderConfigurationError):
+            ProviderRegistry.from_environment(
+                {
+                    "MOONSHOT_API_KEY": "moonshot-secret-one-that-must-not-leak",
+                    "KIMI_API_KEY": "moonshot-secret-two-that-must-not-leak",
+                    "AGENCY_MOONSHOT_MODEL": "kimi-k3",
+                }
+            )
 
     def test_custom_endpoint_must_be_https_and_must_not_contain_credentials(self):
         with self.assertRaises(ProviderConfigurationError):

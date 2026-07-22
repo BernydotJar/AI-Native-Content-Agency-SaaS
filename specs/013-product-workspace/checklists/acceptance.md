@@ -16,4 +16,5 @@
 - [x] 320 CSS px reflow, keyboard, reduced motion and AX-tree automation pass.
 - [x] Compliance remains `DENY_RELEASE` with zero active external providers.
 - [ ] Exact clean-source delivery and CI pass.
-- [ ] Real provider inference remains disabled until a separate authorized gateway passes.
+- [x] Real provider inference remains disabled; INC-014 adds protocol clients without run integration.
+- [ ] Durable outbound intent/receipt and explicit provider activation remain required.

@@ -39,6 +39,7 @@ The repository declares `MIT` in `LICENSE` with SHA-256 `b5915031a7d4c6d50a2e853
 | Package | Version | License review |
 |---|---:|---|
 | `fastapi` | `0.139.2` | `MIT` |
+| `httpx` | `0.28.1` | `BSD-3-Clause` |
 | `pg8000` | `1.31.5` | `BSD-3-Clause` |
 | `uvicorn` | `0.51.0` | `BSD-3-Clause` |
 

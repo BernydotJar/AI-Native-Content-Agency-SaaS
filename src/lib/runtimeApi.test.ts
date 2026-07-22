@@ -210,6 +210,13 @@ describe("runtime API client", () => {
           credential_location: "server_environment",
           recommended_models: ["gpt-5.2"],
         }],
+        gateway: {
+          execution_enabled: true,
+          selected_provider: "openai",
+          execution_available: true,
+          durable_outbound_receipt: false,
+          automatic_run_integration: false,
+        },
       }))
       .mockResolvedValueOnce(jsonResponse({
         tenant_id: "tenant-alpha",
@@ -224,13 +231,23 @@ describe("runtime API client", () => {
       }));
     const api = createRuntimeApi(fetchMock as typeof fetch);
 
-    await expect(api.providers()).resolves.toEqual([
-      expect.objectContaining({
-        provider_id: "openai",
-        configured: true,
-        credential_location: "server_environment",
-      }),
-    ]);
+    await expect(api.providerCatalog()).resolves.toEqual({
+      tenant_id: "tenant-alpha",
+      providers: [
+        expect.objectContaining({
+          provider_id: "openai",
+          configured: true,
+          credential_location: "server_environment",
+        }),
+      ],
+      gateway: {
+        execution_enabled: true,
+        selected_provider: "openai",
+        execution_available: true,
+        durable_outbound_receipt: false,
+        automatic_run_integration: false,
+      },
+    });
     await expect(api.integrations()).resolves.toEqual([
       expect.objectContaining({
         integration_id: "video-use",

@@ -30,7 +30,7 @@ human_gates:
 
 - `compliance/third-party-inventory.json` cross-checks:
   - 19 direct npm packages with exact lock versions and licenses;
-  - three direct Python runtime packages with exact hash-lock versions/licenses;
+  - four direct Python runtime packages with exact hash-lock versions/licenses;
   - two digest-pinned OCI bases;
   - eight SHA-pinned GitHub Actions;
   - exact MIT `video-use` candidate, `reviewed_disabled`;

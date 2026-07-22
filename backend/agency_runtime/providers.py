@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Mapping, Optional, Tuple
 from urllib.parse import urlsplit
 
@@ -35,7 +35,6 @@ class ProviderContract:
     configuration_state: str
     model: str
     endpoint_host: str
-    credential_environment: str
     model_environment: str
     base_url_environment: str
     recommended_models: Tuple[str, ...]
@@ -54,6 +53,18 @@ class ProviderContract:
             "credential_location": "server_environment",
             "recommended_models": list(self.recommended_models),
         }
+
+
+@dataclass(frozen=True)
+class ProviderExecutionConfig:
+    """Private provider material used only by the server-side gateway."""
+
+    provider_id: str
+    protocol: str
+    model: str
+    base_url: str
+    endpoint_host: str
+    credential: str = field(repr=False)
 
 
 _DEFINITIONS: Tuple[_ProviderDefinition, ...] = (
@@ -95,7 +106,7 @@ _DEFINITIONS: Tuple[_ProviderDefinition, ...] = (
         model_env="AGENCY_MOONSHOT_MODEL",
         base_url_env="AGENCY_MOONSHOT_BASE_URL",
         default_base_url="https://api.moonshot.ai/v1",
-        recommended_models=("kimi-k2.5",),
+        recommended_models=("kimi-k3",),
     ),
     _ProviderDefinition(
         provider_id="llama",
@@ -111,37 +122,59 @@ _DEFINITIONS: Tuple[_ProviderDefinition, ...] = (
 
 
 class ProviderRegistry:
-    """Read-only server configuration registry.
+    """Read-only public registry plus private server execution configuration.
 
-    Raw provider credentials remain in process environment and are never retained by
-    these public contracts. This registry does not create clients or make network calls.
+    Raw credentials never enter public contracts. The registry itself performs no
+    network requests and creates no provider clients.
     """
 
-    def __init__(self, providers: Tuple[ProviderContract, ...]) -> None:
+    def __init__(
+        self,
+        providers: Tuple[ProviderContract, ...],
+        execution_configs: Tuple[ProviderExecutionConfig, ...],
+    ) -> None:
+        expected_ids = tuple(item.provider_id for item in _DEFINITIONS)
         ids = tuple(item.provider_id for item in providers)
-        if ids != tuple(item.provider_id for item in _DEFINITIONS):
+        config_ids = tuple(item.provider_id for item in execution_configs)
+        if ids != expected_ids or config_ids != expected_ids:
             raise ProviderConfigurationError("provider registry must use the exact allowlist")
         self._providers = providers
         self._by_id = {item.provider_id: item for item in providers}
+        self._execution_by_id = {
+            item.provider_id: item for item in execution_configs
+        }
 
     @classmethod
-    def from_environment(cls, environment: Optional[Mapping[str, str]] = None) -> "ProviderRegistry":
+    def from_environment(
+        cls, environment: Optional[Mapping[str, str]] = None
+    ) -> "ProviderRegistry":
         source = environment if environment is not None else {}
-        providers = tuple(cls._contract(definition, source) for definition in _DEFINITIONS)
-        return cls(providers)
+        pairs = tuple(cls._configured(definition, source) for definition in _DEFINITIONS)
+        return cls(
+            tuple(pair[0] for pair in pairs),
+            tuple(pair[1] for pair in pairs),
+        )
 
     @staticmethod
-    def _contract(
+    def _configured(
         definition: _ProviderDefinition,
         environment: Mapping[str, str],
-    ) -> ProviderContract:
+    ) -> Tuple[ProviderContract, ProviderExecutionConfig]:
         if not _PROVIDER_ID_PATTERN.fullmatch(definition.provider_id):
             raise ProviderConfigurationError("invalid provider id")
 
-        credential_present = any(
-            bool(str(environment.get(name, "")).strip())
+        credential_values = tuple(
+            str(environment.get(name, "")).strip()
             for name in definition.credential_envs
+            if str(environment.get(name, "")).strip()
         )
+        distinct_credentials = tuple(dict.fromkeys(credential_values))
+        if len(distinct_credentials) > 1:
+            raise ProviderConfigurationError(
+                "{} credential aliases disagree".format(definition.provider_id)
+            )
+        credential = distinct_credentials[0] if distinct_credentials else ""
+
         model = str(environment.get(definition.model_env, "")).strip()
         if model and not _MODEL_PATTERN.fullmatch(model):
             raise ProviderConfigurationError(
@@ -157,7 +190,7 @@ class ProviderRegistry:
                 definition.base_url_env, raw_base_url
             )
 
-        if not credential_present:
+        if not credential:
             state = "missing_credential"
         elif not model:
             state = "missing_model"
@@ -166,7 +199,7 @@ class ProviderRegistry:
         else:
             state = "ready"
 
-        return ProviderContract(
+        contract = ProviderContract(
             provider_id=definition.provider_id,
             display_name=definition.display_name,
             protocol=definition.protocol,
@@ -174,21 +207,35 @@ class ProviderRegistry:
             configuration_state=state,
             model=model,
             endpoint_host=endpoint_host,
-            credential_environment=" or ".join(definition.credential_envs),
             model_environment=definition.model_env,
             base_url_environment=definition.base_url_env,
             recommended_models=definition.recommended_models,
         )
+        execution = ProviderExecutionConfig(
+            provider_id=definition.provider_id,
+            protocol=definition.protocol,
+            model=model,
+            base_url=raw_base_url,
+            endpoint_host=endpoint_host,
+            credential=credential,
+        )
+        return contract, execution
 
     @staticmethod
     def _endpoint_host(name: str, value: str) -> str:
         parsed = urlsplit(value)
         if parsed.scheme != "https" or not parsed.hostname:
-            raise ProviderConfigurationError("{} must be an absolute HTTPS URL".format(name))
+            raise ProviderConfigurationError(
+                "{} must be an absolute HTTPS URL".format(name)
+            )
         if parsed.username is not None or parsed.password is not None:
-            raise ProviderConfigurationError("{} must not contain credentials".format(name))
+            raise ProviderConfigurationError(
+                "{} must not contain credentials".format(name)
+            )
         if parsed.query or parsed.fragment:
-            raise ProviderConfigurationError("{} must not contain query or fragment data".format(name))
+            raise ProviderConfigurationError(
+                "{} must not contain query or fragment data".format(name)
+            )
         return parsed.hostname.lower()
 
     def list(self) -> Tuple[ProviderContract, ...]:
@@ -202,3 +249,9 @@ class ProviderRegistry:
         if normalized not in self._by_id:
             raise KeyError("provider not found")
         return self._by_id[normalized]
+
+    def execution_config(self, provider_id: str) -> ProviderExecutionConfig:
+        normalized = provider_id.strip().lower()
+        if normalized not in self._execution_by_id:
+            raise KeyError("provider not found")
+        return self._execution_by_id[normalized]

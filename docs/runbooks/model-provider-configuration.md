@@ -1,8 +1,8 @@
 # Configuración de proveedores de modelos
 
-Este runbook describe el catálogo server-side introducido por `INC-013`. El catálogo
-permite inspeccionar configuración; no activa inferencia, publicación, media, ads ni
-otro efecto externo.
+Este runbook describe el catálogo server-side introducido por `INC-013` y el
+gateway protocolar acotado de `INC-014`. El catálogo permite inspeccionar configuración;
+el gateway permanece deshabilitado por defecto y no está conectado a los runs.
 
 ## Invariantes
 
@@ -50,19 +50,21 @@ estado derivado del servidor. El valor de las credenciales nunca aparece.
 - `missing_model`: existe credencial, pero no se eligió modelo.
 - `missing_endpoint`: se requiere un endpoint explícito y no está configurado.
 
-## Activación futura
+## Estado del gateway
 
-Antes de permitir inferencia real se debe implementar y verificar, en un incremento
-separado:
+`INC-014` completa clientes HTTP por protocolo, límites, allowlist, errores sanitizados
+y pruebas con transportes simulados. No añade rutas de inferencia ni conecta el gateway
+a `run.create`. Consulta `docs/runbooks/model-gateway.md`.
 
-1. gateway HTTP por protocolo con timeouts y límites de payload/tokens;
-2. selección explícita de proveedor activo por tenant o deployment;
-3. autorización de costo/egress y presupuesto máximo;
-4. idempotencia/outbox/recibo de proveedor sin secretos;
-5. redacción de logs y auditoría de request/response metadata;
-6. pruebas contractuales con transportes simulados, sin llamadas reales en CI;
-7. manejo de rate limit, timeout, respuesta inválida y revocación;
-8. revisión de privacidad, términos y transferencia de datos por proveedor.
+Antes de permitir inferencia real todavía se debe implementar y verificar:
+
+1. selección explícita de proveedor activo por tenant o deployment;
+2. autorización de costo/egress y presupuesto máximo;
+3. intent/outbox/receipt durable sin secretos y replay económico seguro;
+4. auditoría y métricas de request/response metadata sin contenido sensible;
+5. circuit breaker, reconciliación de estados inciertos y revocación;
+6. revisión de privacidad, términos y transferencia de datos por proveedor;
+7. autorización explícita antes de usar credenciales reales o generar gasto.
 
 Hasta que esas condiciones pasen, el runtime determinista local permanece claramente
 identificado y `DENY_RELEASE` sigue vigente.

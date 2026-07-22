@@ -1,0 +1,23 @@
+# Acceptance checklist
+
+- [x] Gateway execution defaults to disabled.
+- [x] Exact provider selection is required when enabled.
+- [x] Exact egress host allowlist is required when enabled.
+- [x] IP literals, localhost, `.local`, redirects and environment proxies are rejected/disabled.
+- [x] OpenAI Responses request/response contract passes.
+- [x] Anthropic Messages request/response contract passes.
+- [x] DeepSeek chat-completions contract passes.
+- [x] Moonshot/Kimi K3 chat-completions contract passes.
+- [x] Llama custom HTTPS endpoint contract passes.
+- [x] Input, output-token, response-byte and timeout limits pass.
+- [x] Provider status/body/prompt/credential errors remain sanitized.
+- [x] Receipts omit prompt, output text, credentials and authorization headers.
+- [x] Provider API remains authenticated and GET-only.
+- [x] No completion/execution route exists in OpenAPI.
+- [x] Automatic run integration remains false.
+- [x] Durable outbound receipt remains false and explicitly visible.
+- [x] Runtime image includes hash-locked `httpx`.
+- [x] Production package proves gateway disabled and no execution route.
+- [x] Zero real provider calls, credentials or spend occur in verification.
+- [ ] Durable intent/outbox/receipt boundary implemented in next increment.
+- [ ] Real provider activation explicitly authorized.

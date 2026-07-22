@@ -12,6 +12,7 @@ import type {
   BrowserRuntimeSession,
   RuntimeIntegrationSummary,
   RuntimeProvider,
+  RuntimeProviderGatewayStatus,
   RuntimeRun,
 } from "./lib/runtimeApi";
 import {
@@ -21,6 +22,14 @@ import {
   isThemeAvailable,
 } from "./lib/themeCatalog";
 import type { ThemeId } from "./lib/themeCatalog";
+
+const DEFAULT_GATEWAY_STATUS: RuntimeProviderGatewayStatus = {
+  execution_enabled: false,
+  selected_provider: "",
+  execution_available: false,
+  durable_outbound_receipt: false,
+  automatic_run_integration: false,
+};
 
 const EMPTY_NODE_STATE: NodeState = {
   status: "idle",
@@ -79,6 +88,7 @@ export default function App() {
   const [session, setSession] = useState<BrowserRuntimeSession | null>(null);
   const [run, setRun] = useState<RuntimeRun | null>(null);
   const [providers, setProviders] = useState<RuntimeProvider[]>([]);
+  const [providerGateway, setProviderGateway] = useState<RuntimeProviderGatewayStatus>(DEFAULT_GATEWAY_STATUS);
   const [integrations, setIntegrations] = useState<RuntimeIntegrationSummary[]>([]);
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
@@ -109,6 +119,7 @@ export default function App() {
   const refreshFabric = useCallback(async () => {
     if (!session) {
       setProviders([]);
+      setProviderGateway(DEFAULT_GATEWAY_STATUS);
       setIntegrations([]);
       setFabricError("");
       return;
@@ -116,11 +127,12 @@ export default function App() {
     setFabricLoading(true);
     setFabricError("");
     try {
-      const [nextProviders, nextIntegrations] = await Promise.all([
-        runtimeApi.providers(),
+      const [providerCatalog, nextIntegrations] = await Promise.all([
+        runtimeApi.providerCatalog(),
         runtimeApi.integrations(),
       ]);
-      setProviders(nextProviders);
+      setProviders(providerCatalog.providers);
+      setProviderGateway(providerCatalog.gateway);
       setIntegrations(nextIntegrations);
     } catch {
       setFabricError("Provider and integration status is temporarily unavailable.");
@@ -222,6 +234,7 @@ export default function App() {
           <RunContextPanel run={run} />
           <OperationalFabricPanel
             providers={providers}
+            gateway={providerGateway}
             integrations={integrations}
             sessionActive={Boolean(session)}
             loading={fabricLoading}
@@ -247,6 +260,7 @@ export default function App() {
         premiumThemeEntitled={premiumThemeEntitled}
         onThemeChange={changeTheme}
         providers={providers}
+        gateway={providerGateway}
         providerLoading={fabricLoading}
         providerError={fabricError}
         sessionActive={Boolean(session)}

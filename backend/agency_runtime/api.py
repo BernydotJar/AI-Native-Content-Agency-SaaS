@@ -25,6 +25,7 @@ from .auth import (
     TenantPrincipal,
 )
 from .memory import MemoryStore, SQLiteMemory
+from .model_gateway import ModelGateway
 from .integrations import IntegrationContractError, IntegrationRegistry
 from .models import ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
@@ -912,9 +913,9 @@ def create_app(
         postgres_connect_timeout_seconds=connect_timeout_seconds,
         postgres_schema_mode=schema_mode,
     )
-    provider_registry = ProviderRegistry.from_environment(
-        os.environ if provider_environment is None else provider_environment
-    )
+    provider_source = os.environ if provider_environment is None else provider_environment
+    provider_registry = ProviderRegistry.from_environment(provider_source)
+    model_gateway = ModelGateway.from_environment(provider_source)
     metrics = RuntimeMetrics()
 
     @asynccontextmanager
@@ -922,6 +923,7 @@ def create_app(
         try:
             yield
         finally:
+            model_gateway.close()
             service.close()
 
     app = FastAPI(
@@ -941,6 +943,7 @@ def create_app(
     app.state.metrics = metrics
     app.state.integration_registry = IntegrationRegistry.default()
     app.state.provider_registry = provider_registry
+    app.state.model_gateway = model_gateway
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
@@ -1420,6 +1423,7 @@ def create_app(
         return {
             "tenant_id": principal.tenant_id,
             "providers": app.state.provider_registry.public_list(),
+            "gateway": app.state.model_gateway.public_status(),
         }
 
     @app.get("/api/v1/integrations", tags=["integrations"])

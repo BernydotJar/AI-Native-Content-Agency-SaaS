@@ -52,8 +52,54 @@ class ProviderApiTests(unittest.TestCase):
             self.assertEqual(openai["provider_id"], "openai")
             self.assertTrue(openai["configured"])
             self.assertEqual(openai["model"], "gpt-5.2")
+            self.assertEqual(
+                payload["gateway"],
+                {
+                    "execution_enabled": False,
+                    "selected_provider": "",
+                    "execution_available": False,
+                    "durable_outbound_receipt": False,
+                    "automatic_run_integration": False,
+                },
+            )
             self.assertNotIn(raw_key, response.text)
             self.assertNotIn("api_key", response.text.lower())
+
+    def test_gateway_status_can_report_protocol_ready_without_execution_route(self):
+        raw_key = "moonshot-provider-key-that-must-never-leave-the-server"
+        with self.client(
+            {
+                "AGENCY_MODEL_EXECUTION_ENABLED": "true",
+                "AGENCY_MODEL_PROVIDER": "moonshot",
+                "AGENCY_MODEL_EGRESS_ALLOWED_HOSTS": "api.moonshot.ai",
+                "MOONSHOT_API_KEY": raw_key,
+                "AGENCY_MOONSHOT_MODEL": "kimi-k3",
+            }
+        ) as client:
+            response = client.get(
+                "/api/v1/providers",
+                headers={"Authorization": "Bearer {}".format(API_KEY)},
+            )
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(
+                payload["gateway"],
+                {
+                    "execution_enabled": True,
+                    "selected_provider": "moonshot",
+                    "execution_available": True,
+                    "durable_outbound_receipt": False,
+                    "automatic_run_integration": False,
+                },
+            )
+            moonshot = next(
+                item for item in payload["providers"] if item["provider_id"] == "moonshot"
+            )
+            self.assertEqual(moonshot["model"], "kimi-k3")
+            self.assertNotIn(raw_key, response.text)
+            schema = client.get("/openapi.json").json()
+            self.assertNotIn("/api/v1/model-completions", schema["paths"])
+            self.assertNotIn("/api/v1/providers/execute", schema["paths"])
 
     def test_provider_catalog_is_read_only_in_openapi(self):
         with self.client() as client:

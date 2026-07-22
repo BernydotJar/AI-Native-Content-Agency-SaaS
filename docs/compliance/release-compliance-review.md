@@ -53,7 +53,7 @@ The machine inventory covers the direct surfaces that this repository controls:
 
 - 19 direct npm runtime/development packages with exact lock versions and
   declared licenses;
-- three direct Python runtime packages with exact hash-lock versions and
+- four direct Python runtime packages with exact hash-lock versions and
   reviewed licenses;
 - two OCI base images pinned by SHA-256 digest;
 - eight GitHub Actions pinned by full 40-character commit;

@@ -36,11 +36,11 @@
     },
     {
       "path": "backend/requirements.lock",
-      "sha256": "67872732c52f8e04bfb03e22e08cd5d34581786d6ccaa885fb4f2988872f5317"
+      "sha256": "a236b682acd25d6e157c3ee9ac489945a380770910d9d7eeae0c31254e1e1bf1"
     },
     {
       "path": "backend/setup.cfg",
-      "sha256": "5cad8420dbf02224e272387143fab094c4f469513a37b65566e48e1c583867b9"
+      "sha256": "e85f94aeb79730a3a37df6132d620411d85ea1d718d9add46714b409dc0fa490"
     },
     {
       "path": "package-lock.json",
@@ -226,6 +226,12 @@
       "name": "fastapi",
       "scope": "runtime",
       "version": "0.139.2"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "name": "httpx",
+      "scope": "runtime",
+      "version": "0.28.1"
     },
     {
       "license": "BSD-3-Clause",

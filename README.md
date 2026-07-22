@@ -39,7 +39,7 @@ FastAPI + agency_runtime
 └── auditoría, métricas, backup/restore e idempotencia durable
 ```
 
-La shell principal ya no contiene la state machine cinematográfica ni tarjetas de memoria/tooling mock. La ejecución actual sigue usando herramientas deterministas internas para research, ads, browser y media; el catálogo de proveedores sólo demuestra configuración server-side y todavía no autoriza inferencia, gasto ni egress. Ese límite es deliberado y fail-closed hasta completar el gateway de modelos y sus recibos de efecto.
+La shell principal ya no contiene la state machine cinematográfica ni tarjetas de memoria/tooling mock. La ejecución actual sigue usando herramientas deterministas internas para research, ads, browser y media. `INC-014` implementa clientes protocolares acotados para cinco proveedores, pero el gateway permanece deshabilitado y sin ruta pública: todavía falta un intent/receipt outbound durable que impida gasto duplicado antes de conectarlo a los runs. Configuración o protocol-readiness no autorizan inferencia, gasto ni egress.
 
 Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables. El orquestador todavía no los carga automáticamente como autoridad dinámica.
 

@@ -69,7 +69,17 @@ function api(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
     rejectRun: vi.fn().mockResolvedValue({ ...RUN, status: "rejected" }),
     revokeRun: vi.fn().mockResolvedValue({ ...RUN, status: "revoked" }),
     auditEvents: vi.fn().mockResolvedValue([]),
-    providers: vi.fn().mockResolvedValue([]),
+    providerCatalog: vi.fn().mockResolvedValue({
+      tenant_id: "tenant-alpha",
+      providers: [],
+      gateway: {
+        execution_enabled: false,
+        selected_provider: "",
+        execution_available: false,
+        durable_outbound_receipt: false,
+        automatic_run_integration: false,
+      },
+    }),
     integrations: vi.fn().mockResolvedValue([]),
     revokeSession: vi.fn().mockResolvedValue(undefined),
     ...overrides,

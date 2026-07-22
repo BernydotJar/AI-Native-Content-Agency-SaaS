@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Check, LockKeyhole, Palette, RefreshCw, ServerCog, X } from "lucide-react";
-import type { RuntimeProvider } from "../lib/runtimeApi";
+import type { RuntimeProvider, RuntimeProviderGatewayStatus } from "../lib/runtimeApi";
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
 import type { ThemeId } from "../lib/themeCatalog";
 import { useModalDialog } from "../lib/useModalDialog";
@@ -12,6 +12,7 @@ interface WorkspaceSettingsDialogProps {
   premiumThemeEntitled: boolean;
   onThemeChange: (themeId: ThemeId) => void;
   providers: readonly RuntimeProvider[];
+  gateway: RuntimeProviderGatewayStatus;
   providerLoading: boolean;
   providerError: string;
   sessionActive: boolean;
@@ -32,6 +33,7 @@ export function WorkspaceSettingsDialog({
   premiumThemeEntitled,
   onThemeChange,
   providers,
+  gateway,
   providerLoading,
   providerError,
   sessionActive,
@@ -148,6 +150,30 @@ export function WorkspaceSettingsDialog({
                 </button>
               </div>
             </div>
+
+            {sessionActive && (
+              <div className={`mt-4 rounded-xl border p-4 text-[11px] leading-5 ${
+                gateway.execution_enabled
+                  ? "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"
+                  : "border-white/[0.08] bg-white/[0.02] text-zinc-400"
+              }`}>
+                <p className="font-bold text-zinc-200">
+                  {gateway.execution_enabled
+                    ? `Gateway protocol-ready: ${gateway.selected_provider}`
+                    : "Gateway de inferencia deshabilitado"}
+                </p>
+                <p className="mt-1">
+                  {gateway.execution_enabled
+                    ? gateway.execution_available
+                      ? "El protocolo HTTP está disponible, pero todavía no está conectado a los runs: falta un receipt outbound durable que evite gasto duplicado."
+                      : "El gateway fue habilitado, pero la configuración seleccionada no está disponible."
+                    : "El catálogo puede inspeccionarse, pero no se realizan llamadas a modelos ni gasto externo."}
+                </p>
+                <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.08em] opacity-70">
+                  receipt durable: {gateway.durable_outbound_receipt ? "sí" : "no"} · integración automática: {gateway.automatic_run_integration ? "sí" : "no"}
+                </p>
+              </div>
+            )}
 
             {!sessionActive ? (
               <div className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-5 text-xs leading-6 text-zinc-500">

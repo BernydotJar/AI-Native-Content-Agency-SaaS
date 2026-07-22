@@ -295,6 +295,13 @@ with open(sys.argv[5], encoding="utf-8") as handle:
     denied = json.load(handle)
 
 assert providers_payload["tenant_id"] == "local-verification"
+assert providers_payload["gateway"] == {
+    "execution_enabled": False,
+    "selected_provider": "",
+    "execution_available": False,
+    "durable_outbound_receipt": False,
+    "automatic_run_integration": False,
+}
 providers = providers_payload["providers"]
 assert [item["provider_id"] for item in providers] == [
     "openai", "anthropic", "deepseek", "moonshot", "llama"
@@ -310,6 +317,8 @@ provider_paths = {
 }
 assert provider_paths == {"/api/v1/providers": openapi["paths"]["/api/v1/providers"]}
 assert set(provider_paths["/api/v1/providers"]) == {"get"}
+assert "/api/v1/model-completions" not in openapi["paths"]
+assert "/api/v1/providers/execute" not in openapi["paths"]
 
 assert listing["tenant_id"] == "local-verification"
 assert len(listing["integrations"]) == 1
@@ -336,6 +345,8 @@ assert all(set(methods) == {"get"} for methods in paths.values())
 assert denied["code"] in {"resource_not_found", "method_not_allowed"}
 assert denied["detail"] in {"resource not found", "method not allowed"}
 print("provider_registry=pass")
+print("model_gateway_disabled=pass")
+print("model_gateway_execution_route_absent=pass")
 print("provider_secrets_absent=pass")
 print("integration_review_manifest=pass")
 print("integration_read_only_api=pass")

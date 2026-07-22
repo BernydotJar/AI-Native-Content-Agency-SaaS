@@ -18,7 +18,7 @@ const PROVIDERS: RuntimeProvider[] = [
   ["openai", "OpenAI", true, "ready", "gpt-5.2"],
   ["anthropic", "Anthropic", false, "missing_credential", ""],
   ["deepseek", "DeepSeek", true, "ready", "deepseek-v4-flash"],
-  ["moonshot", "Moonshot / Kimi", true, "ready", "kimi-k2.5"],
+  ["moonshot", "Moonshot / Kimi", true, "ready", "kimi-k3"],
   ["llama", "Llama", false, "missing_endpoint", "llama-4-maverick"],
 ].map(([provider_id, display_name, configured, configuration_state, model]) => ({
   provider_id: provider_id as RuntimeProvider["provider_id"],
@@ -46,7 +46,17 @@ beforeEach(() => {
     entitlements: [],
     auth_method: "session",
   });
-  vi.spyOn(runtimeApi, "providers").mockResolvedValue(PROVIDERS);
+  vi.spyOn(runtimeApi, "providerCatalog").mockResolvedValue({
+    tenant_id: "tenant-alpha",
+    providers: PROVIDERS,
+    gateway: {
+      execution_enabled: false,
+      selected_provider: "",
+      execution_available: false,
+      durable_outbound_receipt: false,
+      automatic_run_integration: false,
+    },
+  });
   vi.spyOn(runtimeApi, "integrations").mockResolvedValue([]);
 });
 
@@ -93,7 +103,7 @@ describe("product workspace shell", () => {
     render(<App />);
 
     await screen.findByText(/tenant-alpha conectado/i);
-    await waitFor(() => expect(runtimeApi.providers).toHaveBeenCalled());
+    await waitFor(() => expect(runtimeApi.providerCatalog).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
 
     expect(screen.getAllByText("OpenAI")).toHaveLength(2);
@@ -103,6 +113,7 @@ describe("product workspace shell", () => {
     expect(screen.getAllByText("Llama")).toHaveLength(2);
     expect(screen.queryByLabelText(/OpenAI API key/i)).not.toBeInTheDocument();
     expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gateway de inferencia deshabilitado/i)).toBeInTheDocument();
   });
 
   it("keeps premium appearance server-entitled and outside the command flow", async () => {
