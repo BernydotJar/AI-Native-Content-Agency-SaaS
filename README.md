@@ -58,7 +58,7 @@ Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la ma
 
 ### Runtime local
 
-- Python 3.10 o superior
+- Python 3.11 a 3.13
 - Biblioteca estándar para orquestación, modelos y SQLite
 - FastAPI, Pydantic y Uvicorn para el servicio HTTP
 - wheel reproducible con `build`, `setuptools`, `wheel` y `pip-tools` fijados por hash
@@ -68,7 +68,7 @@ Durante la implementación se consultó Context7 mediante su CLI para contrastar
 
 ## Inicio local del producto
 
-Requiere Node.js compatible con Vite 8 y Python 3.10 o superior.
+Requiere Node.js compatible con Vite 8 y Python 3.11 a 3.13. El launcher selecciona automáticamente un intérprete soportado entre `python3`, `python3.13`, `python3.12` y `python3.11`; también puede fijarse con `AGENCY_PYTHON_BIN`.
 
 La ruta recomendada construye el bundle, crea entornos Python efímeros con locks/hash, instala el wheel y sirve SPA + FastAPI en el mismo origen:
 

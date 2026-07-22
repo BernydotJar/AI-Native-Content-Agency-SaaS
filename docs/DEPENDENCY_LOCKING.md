@@ -28,7 +28,9 @@ Every resolved artifact is pinned and includes hashes accepted by `pip --require
 
 The lock generator is itself locked. `requirements-build.lock` contains `pip-tools==7.6.0` together with exact versions and hashes for `pip`, `setuptools`, `wheel`, `build`, and their transitive dependencies.
 
-`requirements-local-build.lock` is intentionally smaller. It contains only the packages required to build the application wheel and pins `build==1.2.2.post1` plus compatible `setuptools`, `wheel`, `packaging`, `pyproject-hooks`, and `tomli`. `start:local` retries this lock only when the primary build lock cannot be installed from the operator's configured package index. Production images and CI continue to use the primary lock.
+`requirements-local-build.lock` is intentionally smaller. It contains only a conservative, hash-pinned `pip`, `setuptools`, and `wheel` toolchain. When the primary build lock is unavailable from the operator's package index, `start:local` builds the same application wheel with `pip wheel --no-build-isolation` instead of importing the `build` package. This avoids Python-version-specific `importlib-metadata` markers while preserving a locked wheel build. Production images and CI continue to use the primary lock and `python -m build`.
+
+The integrated local product launcher selects Python 3.11 through 3.13 and supports an explicit `AGENCY_PYTHON_BIN`. The runtime lock is generated on Python 3.11 and verified on Python 3.13; Python 3.10 is rejected before dependency installation because marker-only dependencies such as `exceptiongroup` are not part of the verified lock for that interpreter.
 
 The first generation attempt used `pip-tools 7.5.2` with `pip 26.1` and failed with:
 

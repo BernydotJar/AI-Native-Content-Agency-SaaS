@@ -20,8 +20,9 @@ BUILD_PYTHON="$TMP_DIR/build-venv/bin/python"
 COMPAT_BUILD_PYTHON="$TMP_DIR/compat-build-venv/bin/python"
 "$COMPAT_BUILD_PYTHON" -m pip install --disable-pip-version-check --require-hashes \
   -r "$REPOSITORY_ROOT/backend/requirements-local-build.lock"
-"$COMPAT_BUILD_PYTHON" -m build --no-isolation --wheel \
-  --outdir "$TMP_DIR/compat-wheels" "$REPOSITORY_ROOT/backend"
+"$COMPAT_BUILD_PYTHON" -m pip wheel --disable-pip-version-check \
+  --no-deps --no-build-isolation --wheel-dir "$TMP_DIR/compat-wheels" \
+  "$REPOSITORY_ROOT/backend"
 
 "$PYTHON_BIN" -m venv "$TMP_DIR/test-venv"
 TEST_PYTHON="$TMP_DIR/test-venv/bin/python"
