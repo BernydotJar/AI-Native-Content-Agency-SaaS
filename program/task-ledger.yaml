@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-011-release-compliance",
+  "branch": "agent/inc-013-product-workspace",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -682,6 +682,77 @@
       ],
       "workstream_id": "WS-07",
       "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "mission-first product workspace replaces primary demo flow",
+        "tenant credential and appearance use progressive disclosure",
+        "five-provider configuration is server-derived and secret-free",
+        "applied context and operational fabric reflect durable runtime state",
+        "integrated local product runner is loopback-only and reproducible",
+        "focused backend/frontend/browser/package gates pass"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "package.json",
+        "compliance/**",
+        "program/**",
+        "specs/013-product-workspace/**"
+      ],
+      "authoritative_inputs": [
+        "user product critique and screenshots",
+        "existing runtime/API contracts",
+        "official provider security and API documentation",
+        "program/current-state.md"
+      ],
+      "context": "The prior primary UI exposed theme, credential, memory internals and mock tooling as dominant product surfaces. This increment makes the durable runtime journey primary while keeping external inference/effects disabled until a separate authorized gateway exists.",
+      "dependencies": [
+        "INC-007",
+        "INC-009"
+      ],
+      "expected_outputs": [
+        "mission-first workspace shell",
+        "server-side five-provider registry and GET-only API",
+        "progressive Settings and tenant connection dialogs",
+        "applied context and operational fabric panels",
+        "loopback-only integrated local runner",
+        "critic and verifier evidence"
+      ],
+      "human_gates": [
+        "real provider egress or spend",
+        "final E2E release gate",
+        "merge"
+      ],
+      "objective": "Productize the primary workspace and add truthful provider configuration without enabling paid inference or external effects.",
+      "prohibited_paths": [
+        "provider calls using real credentials during verification",
+        "cloud resources or spend",
+        "protected branches",
+        "external publication or media generation"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Product Engineer / Critic",
+      "status": "in_progress",
+      "task_id": "INC-013",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "single writer: orchestrator"
     }
   ],
   "updated_at": "2026-07-22T00:26:50Z",
@@ -792,12 +863,12 @@
       "evals": [],
       "id": "WS-05",
       "name": "Frontend and Production Console",
-      "next_ready_task": "INC-007",
+      "next_ready_task": "INC-013",
       "objective": "Unify critical journeys and backend authority.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "pending",
+      "status": "in_progress",
       "validation": [],
       "write_locks": []
     },

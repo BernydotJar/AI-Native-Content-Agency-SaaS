@@ -110,8 +110,16 @@
       ],
       "id": "INC-012",
       "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-007",
+        "INC-009"
+      ],
+      "id": "INC-013",
+      "status": "in_progress"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-22T00:20:23Z"
+  "updated_at": "2026-07-22T17:18:34Z"
 }

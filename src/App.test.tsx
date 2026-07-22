@@ -1,168 +1,133 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { runtimeApi } from "./lib/runtimeApi";
+import type { BrowserRuntimeSession, RuntimeProvider } from "./lib/runtimeApi";
+
+const SESSION: BrowserRuntimeSession = {
+  tenant_id: "tenant-alpha",
+  subject_id: "operator@example.com",
+  role: "operator",
+  key_id: "operator-v1",
+  entitlements: [],
+  csrf_token: "csrf-session-value",
+  expires_at: "2026-07-22T20:00:00+00:00",
+};
+
+const PROVIDERS: RuntimeProvider[] = [
+  ["openai", "OpenAI", true, "ready", "gpt-5.2"],
+  ["anthropic", "Anthropic", false, "missing_credential", ""],
+  ["deepseek", "DeepSeek", true, "ready", "deepseek-v4-flash"],
+  ["moonshot", "Moonshot / Kimi", true, "ready", "kimi-k2.5"],
+  ["llama", "Llama", false, "missing_endpoint", "llama-4-maverick"],
+].map(([provider_id, display_name, configured, configuration_state, model]) => ({
+  provider_id: provider_id as RuntimeProvider["provider_id"],
+  display_name: String(display_name),
+  protocol: provider_id === "anthropic" ? "anthropic_messages" : provider_id === "openai" ? "openai_responses" : "openai_compatible",
+  configured: Boolean(configured),
+  configuration_state: configuration_state as RuntimeProvider["configuration_state"],
+  model: String(model),
+  endpoint_host: configured ? `${provider_id}.example.test` : "",
+  model_environment: `AGENCY_${String(provider_id).toUpperCase()}_MODEL`,
+  base_url_environment: `AGENCY_${String(provider_id).toUpperCase()}_BASE_URL`,
+  credential_location: "server_environment",
+  recommended_models: [String(model || `${provider_id}-recommended`)],
+}));
+
+beforeEach(() => {
+  vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue(null);
+  vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
+  vi.spyOn(runtimeApi, "currentIdentity").mockResolvedValue({
+    tenant_id: SESSION.tenant_id,
+    subject_id: SESSION.subject_id,
+    role: SESSION.role,
+    key_id: SESSION.key_id,
+    permissions: ["identity:read", "runs:read", "runs:create", "audit:read"],
+    entitlements: [],
+    auth_method: "session",
+  });
+  vi.spyOn(runtimeApi, "providers").mockResolvedValue(PROVIDERS);
+  vi.spyOn(runtimeApi, "integrations").mockResolvedValue([]);
+});
 
 afterEach(() => {
-  vi.useRealTimers();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-theme-tier");
   document.documentElement.removeAttribute("style");
   vi.restoreAllMocks();
 });
 
-describe("campaign approval gate", () => {
-  it("holds Publisher until approval and cancels pending work when approval is revoked", () => {
-    vi.useFakeTimers();
+describe("product workspace shell", () => {
+  it("prioritizes governed command and hides infrequent configuration", async () => {
     render(<App />);
 
-    const lockedGate = screen.getByRole("button", { name: "Awaiting QA" });
-    expect(lockedGate).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /Crea, inspecciona y aprueba una campaña gobernada/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Lanza una campaña gobernada/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Mapa de orquestación de ocho estaciones/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tema azul/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Memory & Skills Console/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Mock$/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
-    act(() => vi.advanceTimersByTime(18 * 1200 + 10));
-
-    expect(screen.getByRole("button", { name: /Publisher.*Standby, 0%/i })).toBeInTheDocument();
-    const pendingGate = screen.getByRole("button", { name: "Pending" });
-    expect(pendingGate).toBeEnabled();
-
-    fireEvent.click(pendingGate);
-    act(() => vi.advanceTimersByTime(0.25 * 1200 + 10));
-
-    expect(screen.getByRole("button", { name: /Publisher.*Processing, 30%/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Approved" }));
-
-    expect(screen.getByRole("button", { name: /Publisher.*Attention, 30%/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
+    expect(screen.getByRole("dialog", { name: /Apariencia y proveedores del runtime/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tema azul/i })).toBeInTheDocument();
   });
 
-  it("builds the writer pack from the operator thesis instead of a fixed template", () => {
-    vi.useFakeTimers();
+  it("mounts the one-time tenant credential only inside the connection dialog", async () => {
     render(<App />);
 
-    fireEvent.change(screen.getByRole("textbox", { name: /campaign thesis/i }), {
-      target: { value: "Why reversible AI experiments beat platform bets" },
-    });
-    fireEvent.change(screen.getByRole("textbox", { name: /audience/i }), {
-      target: { value: "AI product leaders" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
-    act(() => vi.advanceTimersByTime(12 * 1200 + 10));
+    const connect = await screen.findByRole("button", { name: /Conectar espacio/i });
+    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Writer.*Complete/i }));
-    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
+    fireEvent.click(connect);
+    expect(screen.getByRole("dialog", { name: /Conectar este navegador/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Credencial del tenant/i)).toBeInTheDocument();
 
-    expect(screen.getByText(/1\/3 AI product leaders/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Why reversible AI experiments beat platform bets/i).length).toBeGreaterThan(1);
-    expect(screen.getByText(/Newsletter \/ Scholar Edition/i)).toBeInTheDocument();
-    expect(screen.queryByText(/1\/5/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Cerrar diálogo de conexión/i }));
+    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
   });
 
-  it("recalls operator memory and enabled skills during the next campaign", () => {
-    vi.useFakeTimers();
+  it("shows five server-derived providers after a secure session is restored", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue(SESSION);
     render(<App />);
 
-    fireEvent.click(screen.getByRole("switch", { name: /Activar Churn Prevention/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /Add session memory flag/i }), {
-      target: { value: "Use cautious claims and reversible experiments" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Store flag/i }));
-    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
-    act(() => vi.advanceTimersByTime(7 * 1200 + 10));
+    await screen.findByText(/tenant-alpha conectado/i);
+    await waitFor(() => expect(runtimeApi.providers).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
 
-    expect(screen.getByText(/Skills:.*churn-prevention/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
-    expect(screen.getByText(/Memoria recuperada: Use cautious claims and reversible experiments/i)).toBeInTheDocument();
+    expect(screen.getAllByText("OpenAI")).toHaveLength(2);
+    expect(screen.getAllByText("Anthropic")).toHaveLength(2);
+    expect(screen.getAllByText("DeepSeek")).toHaveLength(2);
+    expect(screen.getAllByText("Moonshot / Kimi")).toHaveLength(2);
+    expect(screen.getAllByText("Llama")).toHaveLength(2);
+    expect(screen.queryByLabelText(/OpenAI API key/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
   });
 
-  it("stores CEO feedback before a completed run can be replaced", () => {
-    vi.useFakeTimers();
-    render(<App />);
-
-    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
-    act(() => vi.advanceTimersByTime(18 * 1200 + 10));
-    fireEvent.click(screen.getByRole("button", { name: "Pending" }));
-    act(() => vi.advanceTimersByTime(3 * 1200 + 10));
-
-    expect(screen.getByText(/Synthetic Meta metrics → CEO feedback/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
-    act(() => vi.advanceTimersByTime(6 * 1200 + 10));
-    fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
-
-    expect(screen.getByText(/Memoria recuperada: Priorizar el hook/i)).toBeInTheDocument();
-  });
-});
-
-describe("accessible theme application", () => {
-  it("unlocks premium only from the server-issued session entitlement", async () => {
-    vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue({
-      tenant_id: "tenant-premium",
-      subject_id: "premium@example.com",
-      role: "viewer",
-      key_id: "premium-v1",
+  it("keeps premium appearance server-entitled and outside the command flow", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue({
+      ...SESSION,
       entitlements: ["theme:premium"],
-      csrf_token: "csrf-premium",
-      expires_at: "2026-07-22T00:00:00+00:00",
     });
-    vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
-    vi.spyOn(runtimeApi, "currentIdentity").mockResolvedValue({
-      tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
-      key_id: "premium-v1", permissions: ["identity:read", "runs:read", "audit:read"],
-      entitlements: ["theme:premium"], auth_method: "session",
+    vi.mocked(runtimeApi.currentIdentity).mockResolvedValue({
+      tenant_id: SESSION.tenant_id,
+      subject_id: SESSION.subject_id,
+      role: SESSION.role,
+      key_id: SESSION.key_id,
+      permissions: [],
+      entitlements: ["theme:premium"],
+      auth_method: "session",
     });
     render(<App />);
 
-    await screen.findByText("premium@example.com");
+    await screen.findByText(/tenant-alpha conectado/i);
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
     const premium = screen.getByRole("button", { name: /Tema premium/i });
     expect(premium).toHaveAttribute("aria-disabled", "false");
     fireEvent.click(premium);
 
     expect(document.documentElement).toHaveAttribute("data-theme", "premium");
     expect(document.documentElement).toHaveAttribute("data-theme-tier", "premium");
-  });
-
-  it("falls back to the free default when the server revokes premium", async () => {
-    vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue({
-      tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
-      key_id: "premium-v1", entitlements: ["theme:premium"], csrf_token: "csrf-premium",
-      expires_at: "2026-07-22T00:00:00+00:00",
-    });
-    vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
-    vi.spyOn(runtimeApi, "currentIdentity")
-      .mockResolvedValueOnce({
-        tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
-        key_id: "premium-v1", permissions: [], entitlements: ["theme:premium"], auth_method: "session",
-      })
-      .mockResolvedValueOnce({
-        tenant_id: "tenant-premium", subject_id: "premium@example.com", role: "viewer",
-        key_id: "premium-v1", permissions: [], entitlements: [], auth_method: "session",
-      });
-    render(<App />);
-
-    await screen.findByText("premium@example.com");
-    fireEvent.click(screen.getByRole("button", { name: /Tema premium/i }));
-    expect(document.documentElement).toHaveAttribute("data-theme", "premium");
-    fireEvent.click(screen.getByRole("button", { name: /Refresh durable audit/i }));
-    await waitFor(() => expect(document.documentElement).toHaveAttribute("data-theme", "blue"));
-  });
-
-  it("keeps premium fail-closed without a server entitlement and stores nothing", () => {
-    const storageSpy = vi.spyOn(Storage.prototype, "setItem");
-    render(<App />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Tema premium/i }));
-
-    expect(document.documentElement).toHaveAttribute("data-theme", "blue");
-    expect(screen.getByText(/requiere un entitlement de pago/i)).toBeInTheDocument();
-    expect(storageSpy).not.toHaveBeenCalled();
-  });
-
-  it("applies a named free theme to semantic document tokens", () => {
-    render(<App />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Tema naranja/i }));
-
-    expect(document.documentElement).toHaveAttribute("data-theme", "orange");
-    expect(document.documentElement).toHaveAttribute("data-theme-tier", "free");
-    expect(document.documentElement.style.getPropertyValue("--primary-color")).toBe("#fdba74");
   });
 });

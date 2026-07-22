@@ -6,48 +6,44 @@ Aplicación full-stack y sandbox gobernado para operar una agencia de contenido 
 
 ## Qué funciona hoy
 
-- War Room responsive con estética obsidian/slate, partículas, glow cards, motion y transición circular de acento.
+- Espacio de trabajo React orientado a una misión gobernada: crear o abrir una ejecución, inspeccionar evidencia y artefactos, y decidir Greenlight según RBAC.
 - Topología Fabric-style con sensor de entrada y ocho estaciones: CEO, Research, Strategist, Growth, Writer, Media, Risk y Publisher.
-- Tres misiones de UI: video a paquete de entrega, imagen a manifiesto de motion y tesis a campaña orgánica + paid sandbox.
-- Runtime TypeScript puro y determinista para mezclar señales mock de X, Facebook, TikTok e Instagram, aplicar skills y empaquetar artefactos de campaña sandbox.
-- Inspector accesible por agente, outputs, progreso y Greenlight manual.
+- Tema visual movido a `Configuración`; no compite con el brief ni cambia permisos, recomendaciones o autoridad política.
+- Credencial de tenant solicitada una sola vez dentro de un diálogo seguro; después el navegador opera con cookie HttpOnly + CSRF y elimina el campo de la experiencia principal.
+- Contexto de ejecución compacto que muestra evidencia aplicada, decisiones Scholar, estrategia, riesgo y entregables, sin presentar el algoritmo interno de memoria como una tarea del usuario.
+- Fabric operacional que deriva del servidor el estado de OpenAI, Anthropic, DeepSeek, Moonshot/Kimi y Llama, además de integraciones revisadas y outputs por estación.
 - Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
 - FastAPI con identidad individual, RBAC (`viewer`, `operator`, `approver`, `admin`), bearer auth para máquinas, sesiones HttpOnly + CSRF para navegador, rate limiting durable y aislamiento cross-tenant.
-- Consola React de producción para ejecutar briefs, inspeccionar Scholar/artefactos, decidir Greenlight y consultar auditoría durable.
 - Registro autenticado y sólo lectura de candidatos de integración revisados; `video-use` está pinneado como `reviewed_disabled` y no tiene ruta de ejecución.
-- `DynamicSkillCreator` para crear borradores Markdown locales dentro de una raíz explícita, con validación de slug, protección contra traversal/symlinks y overwrite opt-in.
-- Biblioteca local con instrucciones por agente, base de conocimiento y skills editoriales/de plataforma.
-- Pruebas de interacción frontend y pruebas unitarias del runtime, memoria, fachada y creador de skills.
+- Catálogo de proveedores server-side sin exponer credenciales, con estados fail-closed `ready`, `missing_credential`, `missing_model` y `missing_endpoint`.
+- Pruebas de interacción, contratos de modal/foco, Chromium real a 320 CSS px, wheel hash-locked, SQLite/PostgreSQL, imagen OCI y supply chain.
 
 ## Arquitectura real
 
 ```text
 React 19 + TypeScript + Vite
-├── experiencia cinematográfica sandbox en App.tsx
-├── contratos/fixtures puros en src/lib/simulationRuntime.ts
-└── ProductionRuntimePanel + src/lib/runtimeApi.ts → FastAPI same-origin
+├── App.tsx: shell de producto y estado compartido del workspace
+├── WorkspaceRuntime: sesión, brief, run, artefactos y Greenlight
+├── PipelineGraph: topología de ocho estaciones derivada del run
+├── RunContextPanel: contexto y evidencia aplicados
+├── OperationalFabricPanel: providers, integraciones y outputs reales
+└── WorkspaceSettingsDialog: apariencia y configuración infrecuente
 
-agency.py + FastAPI
-└── backend/agency_runtime
-    ├── orquestador secuencial de ocho agentes
-    ├── Greenlight ligado a IDs y hashes de artefactos
-    ├── identidad individual + RBAC y rotación superpuesta de credenciales
-    ├── rate limiting durable por credencial y por origen confiable
-    ├── SQLite para local/single-replica y PostgreSQL para estado compartido
-    ├── adaptadores deterministas sandbox
-    ├── registro de revisión de integraciones GET-only (sin ejecución)
-    └── creador seguro de borradores de skill
-
-Contenido operativo local
-├── agents/*/instructions.md
-├── knowledge/*.md
-└── skills/*.md
+FastAPI + agency_runtime
+├── identidad individual, RBAC, sesión HttpOnly y CSRF
+├── SQLite para local/single-replica y PostgreSQL para estado compartido
+├── orquestador secuencial de ocho agentes
+├── Greenlight ligado a IDs/hashes de artefactos y fencing token
+├── registro server-side de cinco proveedores de modelos
+├── registro GET-only de integraciones revisadas
+└── auditoría, métricas, backup/restore e idempotencia durable
 ```
 
-La nueva consola de producción consume estado y artefactos de FastAPI. La state machine cinematográfica original sigue ejecutándose de forma independiente hasta demostrar paridad completa antes de retirarla. Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables; el orquestador Python todavía no los carga automáticamente. Los roles y fixtures del backend están codificados y versionados en `backend/agency_runtime/`.
+La shell principal ya no contiene la state machine cinematográfica ni tarjetas de memoria/tooling mock. La ejecución actual sigue usando herramientas deterministas internas para research, ads, browser y media; el catálogo de proveedores sólo demuestra configuración server-side y todavía no autoriza inferencia, gasto ni egress. Ese límite es deliberado y fail-closed hasta completar el gateway de modelos y sus recibos de efecto.
 
-Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la matriz requisito → evidencia → estado y las desviaciones deliberadas respecto de la propuesta inicial.
-La evaluación exacta de `browser-use/video-use`, sus hallazgos y la lista de activación están en [docs/integrations/video-use-review.md](docs/integrations/video-use-review.md).
+Los archivos de `agents/`, `knowledge/` y `skills/` son fuentes locales auditables. El orquestador todavía no los carga automáticamente como autoridad dinámica.
+
+Consulta [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) para la matriz requisito → evidencia → estado y las desviaciones deliberadas respecto de la propuesta inicial. La evaluación exacta de `browser-use/video-use`, sus hallazgos y la lista de activación están en [docs/integrations/video-use-review.md](docs/integrations/video-use-review.md).
 
 ## Stack
 
@@ -70,26 +66,34 @@ La evaluación exacta de `browser-use/video-use`, sus hallazgos y la lista de ac
 
 Durante la implementación se consultó Context7 mediante su CLI para contrastar la integración oficial de Tailwind CSS 4 con Vite y la configuración vigente de Vitest 4. Esa consulta fue tooling de desarrollo; `Context7DocsTool` dentro del producto sigue siendo un adapter mock y no hace solicitudes remotas.
 
-## Inicio local de la webapp
+## Inicio local del producto
 
-Requiere una versión moderna de Node.js compatible con Vite 8.
+Requiere Node.js compatible con Vite 8 y Python 3.10 o superior.
+
+La ruta recomendada construye el bundle, crea entornos Python efímeros con locks/hash, instala el wheel y sirve SPA + FastAPI en el mismo origen:
 
 ```bash
-npm install
-npm run dev
+npm ci
+npm run start:local
 ```
 
-Vite mostrará la URL disponible, normalmente `http://localhost:5173`.
+El comando escucha únicamente en `127.0.0.1:4175`, usa SQLite en `/tmp/ai-native-content-agency-local.sqlite3` y, cuando no se proporciona `AGENCY_IDENTITY_CREDENTIALS_JSON`, imprime una credencial local efímera una sola vez. Usa esa credencial desde **Conectar espacio**. No se escribe en el repositorio ni en storage del navegador.
+
+`npm run preview` sirve sólo `dist/` mediante Vite. Es útil para revisión visual, pero no expone sesiones, runs, proveedores ni persistencia FastAPI y no debe usarse como evidencia del producto full-stack.
 
 Comandos web:
 
 ```bash
-npm run dev       # servidor de desarrollo
-npm run build     # TypeScript + bundle de producción
-npm run lint      # análisis estático con Oxlint
-npm test          # pruebas de interacción y runtime TS
-npm run preview   # previsualizar dist/
+npm run dev                  # frontend aislado para desarrollo
+npm run build                # TypeScript + bundle de producción
+npm run lint                 # análisis estático con Oxlint
+npm test                     # pruebas de interacción y contratos TS
+npm run preview              # inspección visual estática de dist/
+npm run start:local          # producto local integrado SPA + FastAPI + SQLite
+npm run verify:accessibility-browser
 ```
+
+Para una identidad local estable, define `AGENCY_IDENTITY_CREDENTIALS_JSON` antes de ejecutar `npm run start:local`. El runner rechaza hosts no loopback y no activa proveedores externos.
 
 ## Ejecutar el sandbox Python
 
@@ -218,6 +222,9 @@ Endpoints iniciales:
 - `GET /api/v1/sessions/current`
 - `DELETE /api/v1/sessions/current`
 - `GET /api/v1/me`
+- `GET /api/v1/providers`
+- `GET /api/v1/integrations`
+- `GET /api/v1/integrations/{integration_id}`
 - `GET /api/v1/audit-events`
 - `POST /api/v1/runs`
 - `GET /api/v1/runs/{run_id}`
@@ -231,13 +238,13 @@ El dossier de Research incluye Scholar con `Reencuadre Cognitivo`, `Tensión del
 
 El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones y contadores de abuso en SQLite o PostgreSQL, siempre bajo claves tenant-scoped. Las credenciales, cookies y CSRF nunca se persisten en claro. La rotación admite claves superpuestas por sujeto y revoca bearer/sesiones derivados cuando una clave deja de estar activa. SQLite queda limitado a local/single-replica. PostgreSQL soporta estado compartido; el schema se inicializa con un comando operador separado y los pods sólo validan con un rol runtime no propietario. El repositorio ya incluye drills efímeros de backup/restore, pero todavía faltan backup productivo programado/cifrado/inmutable, failover, capacidad medida, un IdP administrado, SSO/MFA y almacenamiento de objetos antes de un piloto público.
 
-## Consola de producción
+## Espacio de trabajo de producto
 
-`ProductionRuntimePanel` usa `src/lib/runtimeApi.ts` contra el mismo origen. La API key no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; se limpia del formulario después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
+`WorkspaceRuntime` usa `src/lib/runtimeApi.ts` contra el mismo origen. La credencial de tenant no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; sólo existe dentro del diálogo de conexión y se limpia después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
 
-La consola permite ejecutar el flujo real, mostrar Scholar, revisar IDs de artefactos, aprobar/rechazar/revocar y consultar el ledger. Conserva una clave idempotente en memoria durante retries ambiguos y la invalida cuando cambia el comando. Sigue siendo sandbox respecto de research, media, ads y publicación externa. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
+La experiencia permite crear o abrir una ejecución, mostrar Scholar y artefactos versionados, aprobar/rechazar/revocar Greenlight y consultar auditoría. Conserva una clave idempotente en memoria durante retries ambiguos y la invalida cuando cambia el comando. Research, media, ads y publicación externa siguen sin egress hasta que exista un adapter autorizado y verificable. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
 
-La interfaz incluye temas accesibles azul, rojo, verde y naranja. El tema premium sólo se activa cuando la identidad activa entrega el entitlement exacto `theme:premium`; el selector falla cerrado, se revoca al refrescar la identidad y no usa `localStorage`. Esto no implementa checkout, facturación ni DRM: CSS y frontend siguen siendo inspeccionables, y el billing externo permanece fuera de alcance. Consulta [Accessible campaign themes](docs/design-system/accessibility-themes.md).
+Los temas accesibles azul, rojo, verde y naranja viven en **Configuración**. El tema premium sólo se activa cuando la identidad activa entrega el entitlement exacto `theme:premium`; falla cerrado, se revoca al refrescar identidad y no usa storage persistente. Esto no implementa checkout, facturación ni DRM. Consulta [Accessible campaign themes](docs/design-system/accessibility-themes.md).
 
 ## Observabilidad y auditoría
 

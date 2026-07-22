@@ -33,15 +33,15 @@
   "required_disclosures": [
     {
       "path": "README.md",
-      "text": "No existe evidencia de deployment GCP/staging/producci\u00f3n"
+      "text": "No existe evidencia de deployment GCP/staging/producción"
     },
     {
       "path": "README.md",
-      "text": "ning\u00fan adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto"
+      "text": "ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto"
     },
     {
       "path": "src/App.tsx",
-      "text": "datos simulados para demostrar la interacci\u00f3n end-to-end sin ejecutar publicaciones ni gasto real"
+      "text": "Runtime determinista local; no publica contenido ni ejecuta gasto externo."
     },
     {
       "path": "backend/agency_runtime/api.py",
@@ -49,7 +49,7 @@
     },
     {
       "path": "README.md",
-      "text": "No representa aprobaci\u00f3n legal, de privacidad ni regulatoria"
+      "text": "No representa aprobación legal, de privacidad ni regulatoria"
     }
   ],
   "schema_version": "agency-public-claims-policy.v1",
@@ -58,11 +58,9 @@
     "package.json",
     "backend/agency_runtime/api.py",
     "src/App.tsx",
-    "src/components/ControlPanel.tsx",
-    "src/components/InteractiveSidebar.tsx",
-    "src/components/MemorySkillsPanel.tsx",
-    "src/components/MetaAdsDashboard.tsx",
-    "src/components/ProductionRuntimePanel.tsx",
-    "src/components/ToolFabricPanel.tsx"
+    "src/components/WorkspaceRuntime.tsx",
+    "src/components/WorkspaceSettingsDialog.tsx",
+    "src/components/RunContextPanel.tsx",
+    "src/components/OperationalFabricPanel.tsx"
   ]
 }

@@ -193,6 +193,65 @@ describe("runtime API client", () => {
     );
   });
 
+  it("loads read-only provider and integration control-plane state", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        tenant_id: "tenant-alpha",
+        providers: [{
+          provider_id: "openai",
+          display_name: "OpenAI",
+          protocol: "openai_responses",
+          configured: true,
+          configuration_state: "ready",
+          model: "gpt-5.2",
+          endpoint_host: "api.openai.com",
+          model_environment: "AGENCY_OPENAI_MODEL",
+          base_url_environment: "AGENCY_OPENAI_BASE_URL",
+          credential_location: "server_environment",
+          recommended_models: ["gpt-5.2"],
+        }],
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        tenant_id: "tenant-alpha",
+        integrations: [{
+          integration_id: "video-use",
+          display_name: "Video Use",
+          review_status: "reviewed_disabled",
+          activation_allowed: false,
+          execution_available: false,
+          external_effects_enabled: false,
+        }],
+      }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.providers()).resolves.toEqual([
+      expect.objectContaining({
+        provider_id: "openai",
+        configured: true,
+        credential_location: "server_environment",
+      }),
+    ]);
+    await expect(api.integrations()).resolves.toEqual([
+      expect.objectContaining({
+        integration_id: "video-use",
+        review_status: "reviewed_disabled",
+        execution_available: false,
+      }),
+    ]);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/providers",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/integrations",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("API_KEY");
+  });
+
   it("preserves the safe public error code and request correlation", async () => {
     const api = createRuntimeApi(vi.fn().mockResolvedValue(
       jsonResponse({

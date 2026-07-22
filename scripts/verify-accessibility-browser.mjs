@@ -329,28 +329,22 @@ async function run() {
   await loaded;
   await sleep(500);
 
-  const reflow = await client.evaluate(`(() => {
+  const initialReflow = await client.evaluate(`(() => {
     const root = document.documentElement;
-    const themeButtons = [...document.querySelectorAll('button[aria-label^="Tema "]')];
     return {
       innerWidth: window.innerWidth,
       clientWidth: root.clientWidth,
       scrollWidth: root.scrollWidth,
       horizontalOverflow: root.scrollWidth > root.clientWidth,
-      themeButtons: themeButtons.map((button) => {
-        const rect = button.getBoundingClientRect();
-        return { name: button.getAttribute('aria-label'), width: rect.width, height: rect.height };
-      }),
+      themeButtonCount: document.querySelectorAll('button[aria-label^="Tema "]').length,
+      credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
     };
   })()`);
-  requireCondition(reflow.innerWidth === 320, `Expected a 320 CSS px viewport, observed ${reflow.innerWidth}`);
-  requireCondition(reflow.clientWidth >= 300 && reflow.clientWidth <= reflow.innerWidth, `Unexpected usable viewport width: ${JSON.stringify(reflow)}`);
-  requireCondition(!reflow.horizontalOverflow, `Horizontal overflow detected: ${JSON.stringify(reflow)}`);
-  requireCondition(reflow.themeButtons.length === 5, "Expected five discoverable theme controls");
-  requireCondition(
-    reflow.themeButtons.every((button) => button.height >= 44 && button.width >= 44),
-    `Theme target smaller than 44 CSS px: ${JSON.stringify(reflow.themeButtons)}`,
-  );
+  requireCondition(initialReflow.innerWidth === 320, `Expected a 320 CSS px viewport, observed ${initialReflow.innerWidth}`);
+  requireCondition(initialReflow.clientWidth >= 300 && initialReflow.clientWidth <= initialReflow.innerWidth, `Unexpected usable viewport width: ${JSON.stringify(initialReflow)}`);
+  requireCondition(!initialReflow.horizontalOverflow, `Horizontal overflow detected: ${JSON.stringify(initialReflow)}`);
+  requireCondition(initialReflow.themeButtonCount === 0, "Theme controls leaked into the primary mission flow");
+  requireCondition(initialReflow.credentialFieldCount === 0, "Tenant credential field leaked into the primary workspace");
 
   await client.evaluate("document.body.focus()");
   await press(client, "Tab", "Tab");
@@ -368,6 +362,41 @@ async function run() {
   requireCondition(skipResult.hash === "#main-content", `Skip link did not navigate: ${JSON.stringify(skipResult)}`);
   requireCondition(skipResult.activeId === "main-content", `Skip link did not move focus: ${JSON.stringify(skipResult)}`);
 
+  const settingsFound = await client.evaluate(`(() => {
+    const button = [...document.querySelectorAll('button')].find((candidate) => candidate.textContent?.trim() === 'Configuración');
+    if (!button) return false;
+    button.focus();
+    return true;
+  })()`);
+  requireCondition(settingsFound, "El disparador de Configuración no estaba disponible");
+  await press(client, "Enter", "Enter");
+  await sleep(100);
+
+  const settingsState = await client.evaluate(`(() => {
+    const root = document.documentElement;
+    const dialog = document.querySelector('[role="dialog"][aria-labelledby="workspace-settings-title"]');
+    const themeButtons = [...document.querySelectorAll('button[aria-label^="Tema "]')];
+    return {
+      dialogPresent: Boolean(dialog),
+      activeLabel: document.activeElement?.getAttribute('aria-label') ?? '',
+      horizontalOverflow: root.scrollWidth > root.clientWidth,
+      credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
+      themeButtons: themeButtons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return { name: button.getAttribute('aria-label'), width: rect.width, height: rect.height };
+      }),
+    };
+  })()`);
+  requireCondition(settingsState.dialogPresent, "El diálogo de Configuración no abrió");
+  requireCondition(settingsState.activeLabel === "Cerrar configuración del espacio", `El foco de Configuración no entró al diálogo: ${JSON.stringify(settingsState)}`);
+  requireCondition(!settingsState.horizontalOverflow, `Configuración introdujo overflow horizontal: ${JSON.stringify(settingsState)}`);
+  requireCondition(settingsState.credentialFieldCount === 0, "Provider credential field appeared in browser settings");
+  requireCondition(settingsState.themeButtons.length === 5, "Se esperaban cinco controles de tema dentro de Configuración");
+  requireCondition(
+    settingsState.themeButtons.every((button) => button.height >= 44 && button.width >= 44),
+    `Theme target smaller than 44 CSS px: ${JSON.stringify(settingsState.themeButtons)}`,
+  );
+
   await client.evaluate(`document.querySelector('button[aria-label="Tema rojo"]').focus()`);
   await press(client, "Enter", "Enter");
   const redSelection = await client.evaluate(`({
@@ -381,11 +410,11 @@ async function run() {
   const premiumResult = await client.evaluate(`({
     theme: document.documentElement.dataset.theme,
     disabled: document.querySelector('button[aria-label="Tema premium"]').getAttribute('aria-disabled'),
-    status: [...document.querySelectorAll('[role="status"]')].map((node) => node.textContent).find((text) => text?.includes('entitlement')) ?? '',
+    explanation: document.querySelector('button[aria-label="Tema premium"]').textContent?.trim() ?? '',
   })`);
   requireCondition(premiumResult.theme === "red", `Locked premium changed the theme: ${JSON.stringify(premiumResult)}`);
   requireCondition(premiumResult.disabled === "true", "Premium did not expose aria-disabled=true");
-  requireCondition(premiumResult.status.includes("entitlement de pago"), "Premium lock was not announced");
+  requireCondition(premiumResult.explanation.includes("Requiere entitlement premium"), "Premium lock explanation was not discoverable");
 
   await client.send("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-reduced-motion", value: "reduce" }],
@@ -418,11 +447,51 @@ async function run() {
   const themeAxNodes = axTree.nodes.filter(
     (node) => node.role?.value === "button" && axNodeName(node).startsWith("Tema "),
   );
+  const settingsDialogAx = axTree.nodes.find(
+    (node) => node.role?.value === "dialog" && axNodeName(node) === "Apariencia y proveedores del runtime",
+  );
+  requireCondition(Boolean(settingsDialogAx), "El diálogo de Configuración no apareció en el árbol de accesibilidad");
   requireCondition(themeAxNodes.length === 5, `Expected five theme buttons in AX tree, got ${themeAxNodes.length}`);
   const greenAx = themeAxNodes.find((node) => axNodeName(node) === "Tema verde");
   const premiumAx = themeAxNodes.find((node) => axNodeName(node) === "Tema premium");
   requireCondition(axProperty(greenAx, "pressed") === "true", "Selected theme was not pressed in the AX tree");
   requireCondition(axProperty(premiumAx, "disabled") === true, "Premium lock was not disabled in the AX tree");
+
+  await press(client, "Escape", "Escape");
+  await sleep(50);
+  const settingsClosed = await client.evaluate(`({
+    dialogPresent: Boolean(document.querySelector('[role="dialog"][aria-labelledby="workspace-settings-title"]')),
+    activeText: document.activeElement?.textContent?.trim() ?? '',
+  })`);
+  requireCondition(!settingsClosed.dialogPresent, "El diálogo de Configuración no cerró con Escape");
+  requireCondition(settingsClosed.activeText === "Configuración", `El foco no volvió a Configuración: ${JSON.stringify(settingsClosed)}`);
+
+  const connectFound = await client.evaluate(`(() => {
+    const button = [...document.querySelectorAll('button')].find((candidate) => candidate.textContent?.trim() === 'Conectar espacio');
+    if (!button) return false;
+    button.focus();
+    return true;
+  })()`);
+  requireCondition(connectFound, "El disparador Conectar espacio no estaba disponible");
+  await press(client, "Enter", "Enter");
+  await sleep(50);
+  const credentialDisclosure = await client.evaluate(`({
+    dialogPresent: Boolean(document.querySelector('[role="dialog"][aria-labelledby="connect-workspace-title"]')),
+    credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
+    activeType: document.activeElement?.getAttribute('type') ?? '',
+  })`);
+  requireCondition(credentialDisclosure.dialogPresent, "El diálogo de conexión no abrió");
+  requireCondition(credentialDisclosure.credentialFieldCount === 1, `Expected one disclosed credential field: ${JSON.stringify(credentialDisclosure)}`);
+  requireCondition(credentialDisclosure.activeType === "password", `Credential field did not receive focus: ${JSON.stringify(credentialDisclosure)}`);
+  await press(client, "Escape", "Escape");
+  await sleep(50);
+  const credentialClosed = await client.evaluate(`({
+    dialogPresent: Boolean(document.querySelector('[role="dialog"][aria-labelledby="connect-workspace-title"]')),
+    credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
+    activeText: document.activeElement?.textContent?.trim() ?? '',
+  })`);
+  requireCondition(!credentialClosed.dialogPresent && credentialClosed.credentialFieldCount === 0, "Credential disclosure did not close cleanly");
+  requireCondition(credentialClosed.activeText === "Conectar espacio", `El foco no volvió a Conectar espacio: ${JSON.stringify(credentialClosed)}`);
 
   const screenshot = await client.send("Page.captureScreenshot", {
     format: "png",
@@ -430,14 +499,16 @@ async function run() {
     captureBeyondViewport: false,
   });
   await writeFile(
-    resolve(outputDirectory, "inc-008-320px-green-reduced-motion.png"),
+    resolve(outputDirectory, "inc-013-product-workspace-320px.png"),
     Buffer.from(screenshot.data, "base64"),
   );
 
   const evidence = {
     chromium: await client.evaluate("navigator.userAgent"),
     previewUrl,
-    viewport: reflow,
+    viewport: initialReflow,
+    settingsDisclosure: settingsState,
+    credentialDisclosure: { opened: credentialDisclosure, closed: credentialClosed },
     skipLink: { firstFocus, result: skipResult },
     keyboardThemeSelection: redSelection,
     premiumLocked: premiumResult,
@@ -456,11 +527,12 @@ async function run() {
     ],
   };
   await writeFile(
-    resolve(outputDirectory, "inc-008-browser-evidence.json"),
+    resolve(outputDirectory, "inc-013-browser-evidence.json"),
     `${JSON.stringify(evidence, null, 2)}\n`,
   );
   console.log("accessibility_browser_reflow_320=pass");
   console.log("accessibility_browser_skip_link=pass");
+  console.log("accessibility_browser_progressive_disclosure=pass");
   console.log("accessibility_browser_keyboard_theme=pass");
   console.log("accessibility_browser_premium_lock=pass");
   console.log("accessibility_browser_reduced_motion=pass");

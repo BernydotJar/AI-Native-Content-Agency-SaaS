@@ -71,6 +71,36 @@ export interface RuntimeIdentity {
   auth_method: "bearer" | "session";
 }
 
+export type ProviderConfigurationState =
+  | "ready"
+  | "missing_credential"
+  | "missing_model"
+  | "missing_endpoint";
+
+export interface RuntimeProvider {
+  provider_id: "openai" | "anthropic" | "deepseek" | "moonshot" | "llama";
+  display_name: string;
+  protocol: "openai_responses" | "anthropic_messages" | "openai_compatible";
+  configured: boolean;
+  configuration_state: ProviderConfigurationState;
+  model: string;
+  endpoint_host: string;
+  model_environment: string;
+  base_url_environment: string;
+  credential_location: "server_environment";
+  recommended_models: string[];
+}
+
+export interface RuntimeIntegrationSummary {
+  integration_id: string;
+  display_name: string;
+  review_status: string;
+  activation_allowed: boolean;
+  execution_available: boolean;
+  external_effects_enabled: boolean;
+  [key: string]: unknown;
+}
+
 export interface RuntimeAuditEvent {
   sequence: number;
   event_id: string;
@@ -121,6 +151,8 @@ export interface RuntimeApi {
   rejectRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   auditEvents(): Promise<RuntimeAuditEvent[]>;
+  providers(): Promise<RuntimeProvider[]>;
+  integrations(): Promise<RuntimeIntegrationSummary[]>;
   revokeSession(csrfToken: string): Promise<void>;
 }
 
@@ -252,6 +284,14 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
     async auditEvents() {
       const page = await requestJson<AuditPage>(fetchImpl, "/api/v1/audit-events?limit=100");
       return page.events;
+    },
+    async providers() {
+      const payload = await requestJson<{ providers: RuntimeProvider[] }>(fetchImpl, "/api/v1/providers");
+      return payload.providers;
+    },
+    async integrations() {
+      const payload = await requestJson<{ integrations: RuntimeIntegrationSummary[] }>(fetchImpl, "/api/v1/integrations");
+      return payload.integrations;
     },
     async revokeSession(csrfToken) {
       await requestJson<{ status: string }>(fetchImpl, "/api/v1/sessions/current", {

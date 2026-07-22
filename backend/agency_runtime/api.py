@@ -35,6 +35,7 @@ from .postgres import (
     PostgresRuntimeDatabase,
     normalize_postgres_schema_mode,
 )
+from .providers import ProviderRegistry
 from .persistence import (
     AuditEvent,
     AuditEventConflictError,
@@ -811,6 +812,7 @@ def create_app(
     postgres_connect_timeout_seconds: Optional[float] = None,
     postgres_schema_mode: Optional[str] = None,
     max_request_body_bytes: Optional[int] = None,
+    provider_environment: Optional[Mapping[str, str]] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     db_url = (
@@ -910,6 +912,9 @@ def create_app(
         postgres_connect_timeout_seconds=connect_timeout_seconds,
         postgres_schema_mode=schema_mode,
     )
+    provider_registry = ProviderRegistry.from_environment(
+        os.environ if provider_environment is None else provider_environment
+    )
     metrics = RuntimeMetrics()
 
     @asynccontextmanager
@@ -935,6 +940,7 @@ def create_app(
     app.state.authenticator = authenticator
     app.state.metrics = metrics
     app.state.integration_registry = IntegrationRegistry.default()
+    app.state.provider_registry = provider_registry
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
@@ -1405,6 +1411,15 @@ def create_app(
             "permissions": list(principal.permissions),
             "entitlements": list(principal.entitlements),
             "auth_method": principal.auth_method,
+        }
+
+    @app.get("/api/v1/providers", tags=["providers"])
+    def list_providers(
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        return {
+            "tenant_id": principal.tenant_id,
+            "providers": app.state.provider_registry.public_list(),
         }
 
     @app.get("/api/v1/integrations", tags=["integrations"])
