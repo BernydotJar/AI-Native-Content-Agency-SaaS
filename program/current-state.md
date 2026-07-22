@@ -11,8 +11,8 @@ Cloud recommendation: `DENY_APPLY`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
 - Active branch: `agent/inc-014-model-gateway`
 - Stacked local base: `agent/inc-013-product-workspace@c78231cc0ae0d670e1267821bfc7d12d5f18e554`
-- INC-014 implementation: `ed4f06a4cb46e479bf3c46658306599102ae0051`
-- Local program checkpoint: the commit containing this document, directly above `ed4f06a`
+- INC-014 implementation: `56f9ee84cb46e479bf3c46658306599102ae0051`
+- Local program checkpoint: the commit containing this document, directly above `56f9ee8`
 - Active branch remote: not published
 - Draft PR for INC-014: not created
 - Exact-head CI for INC-014: pending
@@ -60,7 +60,7 @@ Gitleaks history/worktree                 PASS — zero leaks
 Whitespace                                PASS
 Real provider calls/credentials/spend      NOT_RUN / NOT_USED
 Final cross-product E2E                   DEFERRED TO FINAL PROGRAM GATE
-Clean-source supply chain                 PENDING FOR THIS CHECKPOINT
+Clean-source supply chain                 PENDING FOR THE REAL CLEAN CHECKPOINT
 Push / PR / exact-head CI                 BLOCKED BY SANDBOX CONNECTOR
 ```
 
@@ -178,14 +178,14 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit this `INC-014=review` checkpoint and run clean-source supply chain with `registry_publication=false`.
+1. Commit this corrected `INC-014=review` checkpoint and run clean-source supply chain with `registry_publication=false`.
 2. Continue `INC-015` locally with SQLite/PostgreSQL intent/receipt/fencing tests and mock transports only.
 3. Publish INC-013/014/015 normally when `BLK-SANDBOX-PUSH-001` is resolved; then require exact remote SHA, stacked draft PRs and eight-job CI for each head.
 4. Keep real provider credentials, egress, spend, publication and final broad E2E disabled until their explicit gates.
 
 ## Exact continuation condition
 
-Start from the clean checkpoint above `ed4f06a4cb46e479bf3c46658306599102ae0051`. Run supply chain without registry
+Start from the clean checkpoint above `56f9ee84cb46e479bf3c46658306599102ae0051`. Run supply chain without registry
 publication. Then implement `INC-015` economic idempotency without issuing any real
 provider request. Do not expose a completion route or attach the gateway to runs until
 intent/fence/receipt/reconciliation tests pass in SQLite and PostgreSQL. Preserve

@@ -1,7 +1,7 @@
 # INC-014 Bounded Model Gateway Review
 
 Updated: 2026-07-22
-Implementation commit: `ed4f06a`
+Implementation commit: `56f9ee8`
 Branch: `agent/inc-014-model-gateway`
 Status: `review`
 

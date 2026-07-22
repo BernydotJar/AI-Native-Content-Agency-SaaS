@@ -785,7 +785,7 @@
         "official Moonshot Kimi K3 documentation",
         "existing provider registry and idempotency architecture"
       ],
-      "context": "Implementation ed4f06a adds bounded protocol clients with mock-transport verification. The gateway remains disabled and disconnected from runs because no durable outbound intent/receipt exists.",
+      "context": "Implementation 56f9ee8 adds bounded protocol clients with mock-transport verification. The gateway remains disabled and disconnected from runs because no durable outbound intent/receipt exists.",
       "dependencies": [
         "INC-004",
         "INC-013"
@@ -830,7 +830,7 @@
       ],
       "workstream_id": "WS-08",
       "write_lock": "single writer: orchestrator",
-      "implementation_commit": "ed4f06a4cb46e479bf3c46658306599102ae0051",
+      "implementation_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
       "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_BY_CONNECTOR"
     },
     {

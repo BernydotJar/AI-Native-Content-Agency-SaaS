@@ -52,5 +52,5 @@ Known documentation repairs in `INC-001`:
 | `program/reports/inc-013-review.md` | INC-013 producer/critic/verifier record | local implementation `a89907f`; remote delivery pending |
 
 | `docs/runbooks/model-gateway.md` | bounded provider protocol and activation boundary | protocol clients pass; durable outbound authority and real egress remain disabled |
-| `specs/014-model-gateway/` | INC-014 bounded model gateway contract | local implementation `ed4f06a`; remote delivery blocked by sandbox connector |
+| `specs/014-model-gateway/` | INC-014 bounded model gateway contract | local implementation `56f9ee8`; remote delivery blocked by sandbox connector |
 | `program/reports/inc-014-review.md` | INC-014 producer/critic/verifier record | gateway local gates pass; no provider calls/spend |

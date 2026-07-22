@@ -266,7 +266,7 @@
     },
     {
       "description": "Real model inference is not attached to governed runs because durable outbound intent/receipt and economic replay protection are absent.",
-      "evidence": "ed4f06a4cb46e479bf3c46658306599102ae0051; bounded provider protocols pass, but API status reports durable_outbound_receipt=false and automatic_run_integration=false; docs/runbooks/model-gateway.md defines the next gate.",
+      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; bounded provider protocols pass, but API status reports durable_outbound_receipt=false and automatic_run_integration=false; docs/runbooks/model-gateway.md defines the next gate.",
       "id": "F-034",
       "owner": "INC-015",
       "severity": "HIGH",
@@ -278,10 +278,10 @@
       "status": "CLOSED",
       "owner": "INC-014",
       "description": "Provider protocol clients could leak credentials prompts or upstream bodies, or retry and duplicate spend.",
-      "evidence": "ed4f06a4cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
+      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "ed4f06a4cb46e479bf3c46658306599102ae0051",
+  "source_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
   "updated_at": "2026-07-22T18:05:11Z"
 }
