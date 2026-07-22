@@ -18,6 +18,8 @@ Version `0.7.0` may become a reviewable sandbox release only after all determini
 - container runtime smoke as non-root;
 - Helm/Terraform validation with scope limitations stated;
 - supply-chain SBOM, vulnerability, license, provenance, and signature gates;
+- exact third-party inventory, provider/privacy decision register and public-claims scan via `npm run validate:compliance`;
+- explicit machine decision `DENY_RELEASE` while jurisdiction, retention/deletion/legal hold, semantic evaluation or independent approval remain unresolved;
 - program traceability and completion audit validation;
 - zero open CRITICAL/HIGH code findings for the release scope;
 - independent review of exact commit and evidence.
@@ -37,4 +39,14 @@ Version `0.7.0` may become a reviewable sandbox release only after all determini
 - apply infrastructure outside the local ephemeral sandbox;
 - execute destructive restore or migration against persistent data;
 - enable real publishing, media generation, browser automation, ads, or spend;
-- approve legal/privacy decisions requiring accountable human review.
+- approve legal/privacy decisions requiring accountable human review;
+- change `compliance/release-decision.json` from denial only through a separately reviewed schema/evidence update.
+
+## Executable compliance gate
+
+`npm run validate:compliance` reconciles direct package versions/licenses,
+repository license, base-image digests, SHA-pinned Actions, disabled external
+candidates, privacy UNKNOWNs, public copy and unresolved HIGH findings. Its
+current successful output is `DENY_RELEASE`; PASS means the denial/evidence is
+internally consistent, not that release is authorized. See
+[`docs/compliance/release-compliance-review.md`](../docs/compliance/release-compliance-review.md).

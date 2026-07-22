@@ -1317,7 +1317,7 @@ export default function App() {
                 <p className="text-sm font-extrabold tracking-[-0.02em] text-white">NATIVE / WAR ROOM</p>
                 <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2 py-0.5 font-mono text-[9px] text-zinc-400">ALPHA 02</span>
               </div>
-              <p className="mt-0.5 truncate text-[11px] text-zinc-500">Autonomous content operations · simulation workspace</p>
+              <p className="mt-0.5 truncate text-[11px] text-zinc-500">Sandbox content operations · local simulation workspace</p>
             </div>
           </div>
 

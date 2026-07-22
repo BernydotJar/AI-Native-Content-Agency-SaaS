@@ -2,7 +2,7 @@
 
 Aplicación full-stack y sandbox gobernado para operar una agencia de contenido AI-native de ocho agentes. El repositorio combina una experiencia React/TypeScript, una consola conectada a FastAPI, persistencia SQLite/PostgreSQL y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: candidato sandbox full-stack `0.7.0`, verificable localmente y empaquetado como imagen OCI/Helm. La consola consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece separado. No existe evidencia de deployment GCP/staging/producción y ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto. El estado operacional vigente está en [`program/current-state.md`](program/current-state.md).
+> Estado actual: candidato sandbox full-stack `0.7.0`, verificable localmente y empaquetado como imagen OCI/Helm. La consola consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece separado. No existe evidencia de deployment GCP/staging/producción y ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto. No representa aprobación legal, de privacidad ni regulatoria. El estado operacional vigente está en [`program/current-state.md`](program/current-state.md).
 
 ## Qué funciona hoy
 
@@ -163,12 +163,21 @@ Gate ejecutado el 17 de julio de 2026 en el entorno local del repositorio:
 
 ```bash
 python3 scripts/validate-program-state.py
+npm run validate:compliance
+npm run validate:operability
 npm run lint
 npm test
 npm run build
 ./scripts/verify-python-locks.sh
 python3 agency.py demo --approve --json
 ```
+
+`validate:compliance` cruza locks, licencias directas, digests, Actions, el
+candidato `video-use`, decisiones de privacidad, claims públicos y blockers. El
+resultado esperado sigue siendo `DENY_RELEASE`; un PASS demuestra consistencia
+del gate, no aprobación legal o autorización de release. Consulta
+[`docs/compliance/release-compliance-review.md`](docs/compliance/release-compliance-review.md)
+y el [inventario de terceros](docs/compliance/third-party-notices.md).
 
 La demo JSON reporta de forma explícita cero llamadas de red, navegaciones, cambios en GitHub, renders, publicaciones y gasto publicitario. El browser integrado no expuso una instancia durante este cierre, por lo que la QA visual interactiva quedó pendiente.
 

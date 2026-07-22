@@ -1,0 +1,34 @@
+{
+  "allow_cloud_apply": false,
+  "allow_destructive_data_action": false,
+  "allow_external_effects": false,
+  "allow_release": false,
+  "blocked_findings": [
+    "F-004",
+    "F-007",
+    "F-008",
+    "F-010",
+    "F-011"
+  ],
+  "decision": "DENY_RELEASE",
+  "independent_human_approval": false,
+  "legal_privacy_approval": false,
+  "reason_codes": [
+    "staging_not_observed",
+    "manual_accessibility_not_complete",
+    "production_backup_controls_not_authorized",
+    "retention_deletion_legal_hold_unapproved",
+    "semantic_adversarial_evals_incomplete",
+    "independent_final_review_missing"
+  ],
+  "schema_version": "agency-release-decision.v1",
+  "source_documents": [
+    "program/current-state.md",
+    "program/release-plan.md",
+    "compliance/privacy-decision-register.json",
+    "compliance/third-party-inventory.json",
+    "compliance/public-claims-policy.json",
+    "docs/compliance/release-compliance-review.md",
+    "docs/compliance/third-party-notices.md"
+  ]
+}

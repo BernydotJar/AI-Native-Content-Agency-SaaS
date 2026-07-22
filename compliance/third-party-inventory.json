@@ -1,0 +1,255 @@
+{
+  "active_external_providers": [],
+  "approved_component_licenses": [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "OFL-1.1"
+  ],
+  "base_images": [
+    {
+      "digest": "sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3",
+      "image": "node:22-bookworm-slim"
+    },
+    {
+      "digest": "sha256:9fdbf2e3e82628351513560b121e2ee6ce31cac212be9e070c5a5e2769fb5e76",
+      "image": "python:3.13-alpine3.23"
+    }
+  ],
+  "evidence_files": [
+    {
+      "path": ".github/workflows/production-readiness.yml",
+      "sha256": "70d2a573ff9b1d957f26560866cdc9fa1a211e6378530f41698c3ac267fa1fff"
+    },
+    {
+      "path": "artifacts/supply-chain/base-images.json",
+      "sha256": "84a00e5b30fb2e821b5dca0dd449223dc79ca128b6b45ae7ecd2b94cad2e0979"
+    },
+    {
+      "path": "artifacts/supply-chain/license-policy.json",
+      "sha256": "c718b9b3d4e8755ef0300de941d736725e2c904629ecca281b56e717987cd002"
+    },
+    {
+      "path": "backend/agency_runtime/integration_reviews/video_use.json",
+      "sha256": "8659cc73cbd9bd23a45d9a0af4c98ea4d67a5e866fea20fc7385014173168025"
+    },
+    {
+      "path": "backend/requirements.lock",
+      "sha256": "67872732c52f8e04bfb03e22e08cd5d34581786d6ccaa885fb4f2988872f5317"
+    },
+    {
+      "path": "backend/setup.cfg",
+      "sha256": "5cad8420dbf02224e272387143fab094c4f469513a37b65566e48e1c583867b9"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "fd0208294521f7fb450b014e065092f7bade9fabbe8f9662819e2c6367ceaf2d"
+    },
+    {
+      "path": "package.json",
+      "sha256": "a2833698eaab79ef9f4e2e205ced488fbe113adb12923ba145d53ed4e64694e6"
+    }
+  ],
+  "external_candidates": [
+    {
+      "commit": "92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66",
+      "enabled": false,
+      "id": "video-use",
+      "license": "MIT",
+      "manifest_path": "backend/agency_runtime/integration_reviews/video_use.json",
+      "repository": "https://github.com/browser-use/video-use",
+      "status": "reviewed_disabled"
+    }
+  ],
+  "github_actions": [
+    {
+      "action": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "actions/setup-node",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "actions/setup-python",
+      "commit": "a26af69be951a213d495a4c3e4e4022e16d87065",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "actions/upload-artifact",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "azure/setup-helm",
+      "commit": "bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "docker/build-push-action",
+      "commit": "10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "docker/setup-buildx-action",
+      "commit": "8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+      "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "hashicorp/setup-terraform",
+      "commit": "b9cd54a3c349d3f38e8881555d616ced269862dd",
+      "workflow": ".github/workflows/production-readiness.yml"
+    }
+  ],
+  "npm_direct_dependencies": [
+    {
+      "license": "OFL-1.1",
+      "name": "@fontsource-variable/jetbrains-mono",
+      "scope": "runtime",
+      "version": "5.2.8"
+    },
+    {
+      "license": "OFL-1.1",
+      "name": "@fontsource-variable/manrope",
+      "scope": "runtime",
+      "version": "5.2.8"
+    },
+    {
+      "license": "ISC",
+      "name": "lucide-react",
+      "scope": "runtime",
+      "version": "1.25.0"
+    },
+    {
+      "license": "MIT",
+      "name": "react",
+      "scope": "runtime",
+      "version": "19.2.7"
+    },
+    {
+      "license": "MIT",
+      "name": "react-dom",
+      "scope": "runtime",
+      "version": "19.2.7"
+    },
+    {
+      "license": "MIT",
+      "name": "@tailwindcss/vite",
+      "scope": "development",
+      "version": "4.3.3"
+    },
+    {
+      "license": "MIT",
+      "name": "@testing-library/jest-dom",
+      "scope": "development",
+      "version": "6.9.1"
+    },
+    {
+      "license": "MIT",
+      "name": "@testing-library/react",
+      "scope": "development",
+      "version": "16.3.2"
+    },
+    {
+      "license": "MIT",
+      "name": "@testing-library/user-event",
+      "scope": "development",
+      "version": "14.6.1"
+    },
+    {
+      "license": "MIT",
+      "name": "@types/node",
+      "scope": "development",
+      "version": "24.13.3"
+    },
+    {
+      "license": "MIT",
+      "name": "@types/react",
+      "scope": "development",
+      "version": "19.2.17"
+    },
+    {
+      "license": "MIT",
+      "name": "@types/react-dom",
+      "scope": "development",
+      "version": "19.2.3"
+    },
+    {
+      "license": "MIT",
+      "name": "@vitejs/plugin-react",
+      "scope": "development",
+      "version": "6.0.3"
+    },
+    {
+      "license": "MIT",
+      "name": "jsdom",
+      "scope": "development",
+      "version": "29.1.1"
+    },
+    {
+      "license": "MIT",
+      "name": "oxlint",
+      "scope": "development",
+      "version": "1.74.0"
+    },
+    {
+      "license": "MIT",
+      "name": "tailwindcss",
+      "scope": "development",
+      "version": "4.3.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "typescript",
+      "scope": "development",
+      "version": "6.0.3"
+    },
+    {
+      "license": "MIT",
+      "name": "vite",
+      "scope": "development",
+      "version": "8.1.5"
+    },
+    {
+      "license": "MIT",
+      "name": "vitest",
+      "scope": "development",
+      "version": "4.1.6"
+    }
+  ],
+  "python_direct_dependencies": [
+    {
+      "license": "MIT",
+      "name": "fastapi",
+      "scope": "runtime",
+      "version": "0.139.2"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "name": "pg8000",
+      "scope": "runtime",
+      "version": "1.31.5"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "name": "uvicorn",
+      "scope": "runtime",
+      "version": "0.51.0"
+    }
+  ],
+  "repository_license": {
+    "path": "LICENSE",
+    "sha256": "b5915031a7d4c6d50a2e8530e2cf66f371c667793aebb7d3804d1410fdb08b2a",
+    "spdx": "MIT"
+  },
+  "reviewed_at": "2026-07-22T00:05:00Z",
+  "schema_version": "agency-third-party-inventory.v1",
+  "transitive_inventory_evidence": {
+    "npm": "package-lock.json and CI/SBOM",
+    "operating_system": "OCI SBOM generated by scripts/verify-supply-chain.sh",
+    "python": "backend/requirements.lock and supply-chain CycloneDX SBOM"
+  }
+}

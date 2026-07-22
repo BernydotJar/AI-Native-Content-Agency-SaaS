@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+python3 scripts/verify-release-compliance.py
+
 REPOSITORY_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 CHART_PATH="$REPOSITORY_ROOT/infra/helm/ai-native-content-agency"
 IMAGE_TAG=${IMAGE_TAG:-ai-native-content-agency:production-readiness-local}

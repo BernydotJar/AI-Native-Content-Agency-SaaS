@@ -1,0 +1,42 @@
+{
+  "controller_processor_role": "UNKNOWN",
+  "destructive_automation_enabled": false,
+  "external_provider_decisions": [
+    {
+      "contract_status": "UNKNOWN",
+      "data_categories": ["media_audio"],
+      "deletion_status": "UNKNOWN",
+      "enabled": false,
+      "id": "elevenlabs-scribe-candidate",
+      "integration_id": "video-use",
+      "region_status": "UNKNOWN",
+      "retention_status": "UNKNOWN",
+      "status": "reviewed_disabled",
+      "training_use_status": "UNKNOWN"
+    }
+  ],
+  "jurisdiction": "UNKNOWN",
+  "legal_advice": false,
+  "operating_entity": "UNKNOWN",
+  "policy_decisions": [
+    {"data_class":"CONFIDENTIAL_CLIENT","deletion_implemented":false,"id":"campaign-runs","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"CONFIDENTIAL_IDENTITY","deletion_implemented":false,"id":"sessions-authentication","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"OPERATIONAL_SENSITIVE","deletion_implemented":false,"id":"audit-events","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"CONFIDENTIAL_CLIENT","deletion_implemented":false,"id":"memories","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"OPERATIONAL_SENSITIVE","deletion_implemented":false,"id":"telemetry","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"HIGHEST_SOURCE_CLASS","deletion_implemented":false,"id":"backups","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"},
+    {"data_class":"CONFIDENTIAL_CLIENT","deletion_implemented":false,"id":"future-provider-media","legal_hold_implemented":false,"retention_days":null,"status":"unapproved"}
+  ],
+  "release_recommendation": "DENY_RELEASE",
+  "required_human_reviewers": ["privacy_legal_reviewer","security_reviewer","business_data_owner"],
+  "resume_conditions": [
+    "identify operating entity, customer scope and jurisdiction",
+    "approve controller/processor role and policy source/effective date",
+    "approve retention, deletion, correction, legal-hold and backup propagation rules",
+    "approve provider contracts, regions, subprocessors, training use, retention and deletion",
+    "record accountable privacy/legal, security and business approvals"
+  ],
+  "risk_classification": "YELLOW_UNKNOWN",
+  "schema_version": "agency-privacy-decision-register.v1",
+  "source_document": "docs/privacy/data-classification-retention.md"
+}

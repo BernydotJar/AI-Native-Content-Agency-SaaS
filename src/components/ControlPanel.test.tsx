@@ -40,7 +40,7 @@ describe("ControlPanel", () => {
     expect(fileInput).not.toBeNull();
     await user.upload(fileInput!, new File(["demo"], "founder-story.mp4", { type: "video/mp4" }));
     await user.selectOptions(screen.getByRole("combobox", { name: /target surface/i }), "Instagram");
-    await user.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    await user.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
 
     expect(onRunSimulation).toHaveBeenCalledWith(1, {
       videoName: "founder-story.mp4",
@@ -156,7 +156,7 @@ describe("ControlPanel", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    await user.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
 
     expect(onRunSimulation).toHaveBeenCalledWith(3, expect.objectContaining({
       channels: ["X", "LinkedIn", "Facebook", "Instagram", "TikTok"],
@@ -180,7 +180,7 @@ describe("ControlPanel", () => {
     await user.click(screen.getByRole("button", { name: "Facebook" }));
     await user.click(screen.getByRole("button", { name: "Instagram" }));
 
-    expect(screen.getByRole("button", { name: /launch autonomous cycle/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /launch sandbox cycle/i })).toBeDisabled();
     expect(screen.getByText(/required for paid media/i)).toBeInTheDocument();
   });
 
@@ -198,7 +198,7 @@ describe("ControlPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "X" }));
 
-    expect(screen.getByRole("button", { name: /launch autonomous cycle/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /launch sandbox cycle/i })).toBeDisabled();
     expect(screen.getByText(/X is required for the 3-part thread/i)).toBeInTheDocument();
   });
 });

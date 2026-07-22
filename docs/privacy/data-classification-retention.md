@@ -6,6 +6,8 @@ Jurisdiction: `UNKNOWN`
 Risk classification: `YELLOW / UNKNOWN`
 Destructive execution: human-gated
 
+Machine-readable status: [`compliance/privacy-decision-register.json`](../../compliance/privacy-decision-register.json). The validator requires UNKNOWN/unapproved values, null retention durations and disabled destructive automation until accountable approvals exist.
+
 ## 1. Classification levels
 
 | Level | Definition | Handling baseline |

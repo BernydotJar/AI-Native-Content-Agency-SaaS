@@ -166,3 +166,11 @@ The repository still requires a controlled promotion workflow before an external
 - deployment policy that verifies signature, issuer, identity and provenance;
 - approved Python/npm package mirrors or an organization repository policy;
 - scheduled vulnerability re-scan and baseline expiry enforcement.
+
+## Release-compliance inventory
+
+The supply-chain gate is reconciled with the direct dependency, base-image,
+GitHub Action and disabled external-candidate inventory in
+[`docs/compliance/third-party-notices.md`](compliance/third-party-notices.md).
+`npm run validate:compliance` detects manifest/lock/hash/license drift and keeps
+release denied while human privacy/legal decisions remain unresolved.

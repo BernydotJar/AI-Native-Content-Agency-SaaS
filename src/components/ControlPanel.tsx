@@ -445,8 +445,8 @@ export const ControlPanel = ({
           {isRunning ? <Sparkles size={15} className="animate-pulse" aria-hidden="true" /> : <Play size={14} fill="currentColor" aria-hidden="true" />}
         </span>
         <span className="flex-1 text-left">
-          <span className="block text-sm font-bold">{isRunning ? "War Room is orchestrating" : "Launch autonomous cycle"}</span>
-          <span className="mt-0.5 block text-[10px] font-medium opacity-65">{isRunning ? "Follow the live signal in the pipeline" : "Run in local simulation sandbox"}</span>
+          <span className="block text-sm font-bold">{isRunning ? "War Room is simulating locally" : "Launch sandbox cycle"}</span>
+          <span className="mt-0.5 block text-[10px] font-medium opacity-65">{isRunning ? "Follow the sandbox signal in the local pipeline" : "Run in local simulation sandbox"}</span>
         </span>
         <ArrowUpRight size={17} aria-hidden="true" />
       </button>

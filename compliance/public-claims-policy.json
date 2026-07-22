@@ -1,0 +1,68 @@
+{
+  "allowed_release_label": "sandbox_candidate",
+  "prohibited_patterns": [
+    {
+      "id": "production-ready",
+      "pattern": "\\bproduction[- ]ready\\b"
+    },
+    {
+      "id": "regulatory-compliance",
+      "pattern": "\\b(?:gdpr|hipaa|soc ?2|pci(?:[- ]dss)?)\\s+(?:compliant|certified)\\b"
+    },
+    {
+      "id": "legal-approval",
+      "pattern": "\\b(?:legally|legal)\\s+(?:approved|compliant|certified)\\b"
+    },
+    {
+      "id": "guaranteed-security",
+      "pattern": "\\b(?:guaranteed|completely|fully)\\s+secure\\b"
+    },
+    {
+      "id": "live-research",
+      "pattern": "\\b(?:live|real[- ]time)\\s+research\\b"
+    },
+    {
+      "id": "unqualified-autonomy",
+      "pattern": "\\b(?:launch autonomous cycle|autonomous content operations|follow the live signal)\\b"
+    },
+    {
+      "id": "automatic-publication",
+      "pattern": "\\b(?:automatically publishes|publishes automatically|automatic publication)\\b"
+    }
+  ],
+  "required_disclosures": [
+    {
+      "path": "README.md",
+      "text": "No existe evidencia de deployment GCP/staging/producci\u00f3n"
+    },
+    {
+      "path": "README.md",
+      "text": "ning\u00fan adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto"
+    },
+    {
+      "path": "src/App.tsx",
+      "text": "datos simulados para demostrar la interacci\u00f3n end-to-end sin ejecutar publicaciones ni gasto real"
+    },
+    {
+      "path": "backend/agency_runtime/api.py",
+      "text": "No endpoint"
+    },
+    {
+      "path": "README.md",
+      "text": "No representa aprobaci\u00f3n legal, de privacidad ni regulatoria"
+    }
+  ],
+  "schema_version": "agency-public-claims-policy.v1",
+  "surfaces": [
+    "README.md",
+    "package.json",
+    "backend/agency_runtime/api.py",
+    "src/App.tsx",
+    "src/components/ControlPanel.tsx",
+    "src/components/InteractiveSidebar.tsx",
+    "src/components/MemorySkillsPanel.tsx",
+    "src/components/MetaAdsDashboard.tsx",
+    "src/components/ProductionRuntimePanel.tsx",
+    "src/components/ToolFabricPanel.tsx"
+  ]
+}

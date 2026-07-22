@@ -19,7 +19,7 @@ describe("campaign approval gate", () => {
     const lockedGate = screen.getByRole("button", { name: "Awaiting QA" });
     expect(lockedGate).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
     act(() => vi.advanceTimersByTime(18 * 1200 + 10));
 
     expect(screen.getByRole("button", { name: /Publisher.*Standby, 0%/i })).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe("campaign approval gate", () => {
     fireEvent.change(screen.getByRole("textbox", { name: /audience/i }), {
       target: { value: "AI product leaders" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
     act(() => vi.advanceTimersByTime(12 * 1200 + 10));
 
     fireEvent.click(screen.getByRole("button", { name: /Writer.*Complete/i }));
@@ -66,7 +66,7 @@ describe("campaign approval gate", () => {
       target: { value: "Use cautious claims and reversible experiments" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Store flag/i }));
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
     act(() => vi.advanceTimersByTime(7 * 1200 + 10));
 
     expect(screen.getByText(/Skills:.*churn-prevention/i)).toBeInTheDocument();
@@ -78,13 +78,13 @@ describe("campaign approval gate", () => {
     vi.useFakeTimers();
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
     act(() => vi.advanceTimersByTime(18 * 1200 + 10));
     fireEvent.click(screen.getByRole("button", { name: "Pending" }));
     act(() => vi.advanceTimersByTime(3 * 1200 + 10));
 
     expect(screen.getByText(/Synthetic Meta metrics → CEO feedback/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /launch sandbox cycle/i }));
     act(() => vi.advanceTimersByTime(6 * 1200 + 10));
     fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
 

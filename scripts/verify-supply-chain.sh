@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+python3 scripts/verify-release-compliance.py
+
 REPOSITORY_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 OUTPUT_DIR=${OUTPUT_DIR:-$REPOSITORY_ROOT/artifacts/supply-chain/generated}
 IMAGE_TAG=${IMAGE_TAG:-ai-native-content-agency:supply-chain-local}
