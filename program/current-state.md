@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-22T00:20:23Z
+Updated: 2026-07-22T00:26:50Z
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -12,10 +12,10 @@ Cloud recommendation: `DENY_APPLY`
 - Active branch: `agent/inc-011-release-compliance`
 - Stacked base: `agent/inc-009-browser-video-contracts@83cde2a2d8c11e063f938ad5fc3dc68863462646`
 - INC-011 implementation: `1843aa93c7675c6f5f10254ee3b7cffc020f9fd5`
-- Local program checkpoint: the commit containing this document, directly above `1843aa9`
-- Active branch remote: not pushed
-- Draft PR for INC-011: not created
-- Exact-head CI for INC-011: pending
+- Local program checkpoint: the commit containing this document, directly above exact green head `8820b1d`
+- Active branch remote: `8820b1d50085363a160634a4d81b02d69a6424b4`
+- Draft PR for INC-011: `#9`, base `agent/inc-009-browser-video-contracts`, clean and mergeable
+- Exact-head CI for INC-011: run `29880157199`, eight of eight jobs successful
 - Exact verified stacked-base CI: run `29878917100`, eight of eight jobs successful at `83cde2a`
 - PR `#8`: draft and green on `agent/inc-009-browser-video-contracts`
 - PR `#7`: draft and green on `agent/inc-008-accessible-themes`
@@ -95,6 +95,13 @@ The repository cannot determine or approve:
 those accountable human decisions. A passing compliance validator proves a
 consistent denial and inventory, not legal advice, regulatory certification or
 release authorization.
+
+#### Delivery evidence
+
+- local and remote head equality at `8820b1d50085363a160634a4d81b02d69a6424b4`;
+- draft PR `#9`, stacked on `agent/inc-009-browser-video-contracts`, clean and mergeable;
+- GitHub Actions run `29880157199`, eight of eight jobs successful;
+- supply-chain and accessibility artifacts retained through 2026-08-21.
 
 ## Completed checkpoints
 
@@ -188,12 +195,10 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit this `INC-011=blocked` checkpoint.
-2. Run clean-source supply-chain verification.
-3. Push normally, verify exact SHA equality, create a draft PR stacked on `agent/inc-009-browser-video-contracts` and require eight of eight CI jobs.
-4. Publish a final evidence checkpoint whose own CI remains green.
-5. Do not start `INC-010`: its dependency `INC-008` remains blocked on accountable human accessibility review.
-6. Keep release, merge, provider activation, destructive data actions, cloud apply, publication and spend disabled.
+1. Publish this final `INC-011=blocked` evidence checkpoint and require its own eight-job CI.
+2. Do not start `INC-010`: its dependency `INC-008` remains blocked on accountable human accessibility review.
+3. Keep release, merge, provider activation, destructive data actions, cloud apply, publication and spend disabled.
+4. Resume only when an accountable reviewer supplies a documented unblock condition.
 
 ## Exact continuation condition
 

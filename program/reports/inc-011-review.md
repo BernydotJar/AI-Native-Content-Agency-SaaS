@@ -4,7 +4,7 @@ Date: 2026-07-22
 Branch: `agent/inc-011-release-compliance`
 Stacked base: `agent/inc-009-browser-video-contracts@83cde2a2d8c11e063f938ad5fc3dc68863462646`
 Implementation commit: `1843aa93c7675c6f5f10254ee3b7cffc020f9fd5`
-Status: `LOCAL_CONTROLS_PASS — HUMAN_PRIVACY_LEGAL_BLOCKED`
+Status: `EXACT_REMOTE_CI_PASS — HUMAN_PRIVACY_LEGAL_BLOCKED`
 External effects: none
 
 ## Review contract
@@ -121,9 +121,9 @@ postgresql_verified_local: yes
 package_verified_local: yes
 infrastructure_verified_local: yes, agentless control plane only
 committed: yes
-pushed: no
-pull_request: no
-remote_exact_head_ci: pending
+pushed: 8820b1d50085363a160634a4d81b02d69a6424b4
+pull_request: draft #9, clean and mergeable
+remote_exact_head_ci: GitHub Actions 29880157199, 8/8 PASS
 privacy_legal_approval: false
 release_allowed: false
 external_effects: none

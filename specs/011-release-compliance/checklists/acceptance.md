@@ -14,4 +14,4 @@
 - [x] Release, apply and external effects remain denied.
 - [x] Reviewers and resume conditions are recorded.
 - [x] Negative mutation tests fail closed.
-- [ ] Full regression and exact-head CI pass.
+- [x] Full regression and exact-head CI pass.

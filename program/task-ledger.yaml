@@ -551,7 +551,7 @@
         "program/architecture.md",
         "applicable specs and runtime evidence"
       ],
-      "context": "Implementation 1843aa93c7675c6f5f10254ee3b7cffc020f9fd5 adds strict third-party/license, privacy decision, public-claims and release-denial controls. Local wheel/PostgreSQL/package/frontend/Chromium/infrastructure/workflow/secret gates pass. INC-011 is blocked only because operating entity, jurisdiction, controller/processor role, effective retention/deletion/legal-hold policy, provider terms and accountable privacy/legal/business approvals remain UNKNOWN/unapproved.",
+      "context": "All safe repository-local work is published at exact head 8820b1d50085363a160634a4d81b02d69a6424b4; draft PR #9 and GitHub Actions run 29880157199 passed all eight jobs. The machine release decision remains DENY_RELEASE. INC-011 is blocked only on accountable entity/jurisdiction/controller-role, retention/deletion/legal-hold/provider decisions and privacy/legal/security/business approvals.",
       "dependencies": [
         "INC-003",
         "INC-009"
@@ -593,7 +593,7 @@
         "git diff --check"
       ],
       "workstream_id": "WS-11",
-      "write_lock": "released; all safe repository-local work complete, accountable privacy/legal decisions required"
+      "write_lock": "released; exact remote CI green, accountable privacy/legal human gate remains"
     },
     {
       "acceptance_criteria": [
@@ -684,7 +684,7 @@
       "write_lock": "single writer: orchestrator"
     }
   ],
-  "updated_at": "2026-07-22T00:20:23Z",
+  "updated_at": "2026-07-22T00:26:50Z",
   "workstreams": [
     {
       "acceptance_criteria": [

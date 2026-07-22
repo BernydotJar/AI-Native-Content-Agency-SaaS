@@ -11,4 +11,4 @@
 - [x] Document release/privacy/third-party decision boundaries.
 - [x] Run focused and cross-workstream regression.
 - [x] Critic/red-team and independent verification.
-- [ ] Program state, commit, push, draft PR and exact-head CI.
+- [x] Program state, commit, push, draft PR and exact-head CI.
