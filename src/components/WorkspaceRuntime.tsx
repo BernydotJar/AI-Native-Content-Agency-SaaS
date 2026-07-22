@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   AlertTriangle,
@@ -155,20 +155,6 @@ function noticeFromError(error: unknown, canReload = false): OperatorNotice {
   }
 }
 
-function scholarFromRun(run: RuntimeRun | null) {
-  const research = run?.artifacts.find((artifact) => artifact.kind === "research_dossier");
-  const raw = research?.payload.scholar;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const values = raw as Record<string, unknown>;
-  const reframe = values.reencuadre_cognitivo;
-  const tradeoff = values.tension_del_trade_off;
-  const resolution = values.resolucion_operativa;
-  if (typeof reframe !== "string" || typeof tradeoff !== "string" || typeof resolution !== "string") {
-    return null;
-  }
-  return { reframe, tradeoff, resolution };
-}
-
 export function WorkspaceRuntime({
   api = runtimeApi,
   onSessionChange = ignoreSession,
@@ -193,7 +179,6 @@ export function WorkspaceRuntime({
   const capabilities = session ? ROLE_CAPABILITIES[session.role] : null;
   const canCreate = Boolean(capabilities?.canCreate);
   const canDecide = Boolean(capabilities?.canDecide);
-  const scholar = useMemo(() => scholarFromRun(run), [run]);
 
   useEffect(() => onSessionChange(session), [onSessionChange, session]);
   useEffect(() => onRunChange(run), [onRunChange, run]);
@@ -601,29 +586,9 @@ export function WorkspaceRuntime({
                   </span>
                 </div>
 
-                {scholar && (
-                  <div className="grid gap-2 lg:grid-cols-3">
-                    {[
-                      ["Reencuadre", scholar.reframe],
-                      ["Tensión", scholar.tradeoff],
-                      ["Resolución", scholar.resolution],
-                    ].map(([title, content]) => (
-                      <article key={title} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--primary-color)]">{title}</h3>
-                        <p className="mt-2 line-clamp-5 text-[11px] leading-5 text-zinc-400">{content}</p>
-                      </article>
-                    ))}
-                  </div>
-                )}
-
-                <ul className="grid gap-2 sm:grid-cols-2" aria-label="Entregables de la ejecución">
-                  {run.artifacts.map((artifact) => (
-                    <li key={artifact.artifact_id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
-                      <p className="text-xs font-semibold text-zinc-200">{artifact.title}</p>
-                      <p className="mt-1 truncate font-mono text-[9px] text-zinc-600">{artifact.kind}</p>
-                    </li>
-                  ))}
-                </ul>
+                <a href="#campaign-output" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--primary-color)]/30 px-4 text-xs font-bold text-[var(--primary-color)]">
+                  Ver posts y estado de publicación
+                </a>
 
                 {run.status === "awaiting_greenlight" && canDecide && (
                   <div className="grid gap-2 sm:grid-cols-2">

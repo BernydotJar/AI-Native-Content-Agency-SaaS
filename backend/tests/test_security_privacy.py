@@ -209,15 +209,15 @@ class SecurityPrivacyApiTests(unittest.TestCase):
             self.assertEqual(created.status_code, 201)
             duplicate = client.post(
                 "/api/v1/runs",
-                json=BRIEF,
-                headers=auth(ADMIN_KEY, "security-conflict-hidden-0001", "security-alpha-duplicate-0001"),
+                json=dict(BRIEF, title="Changed hidden campaign"),
+                headers=auth(ADMIN_KEY, "security-conflict-hidden-0001", alpha_command),
             )
             self.assertEqual(duplicate.status_code, 409)
             self.assertEqual(
                 duplicate.json(),
                 expected_error(
-                    "resource_state_conflict",
-                    "resource state conflict",
+                    "idempotency_conflict",
+                    "idempotency key conflicts with a prior request",
                     "security-conflict-hidden-0001",
                 ),
             )

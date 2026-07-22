@@ -511,38 +511,71 @@ class RuntimeService:
             replay = self._command_replay(tenant_id, event_id, operation, fingerprint)
             if replay is not None:
                 return CommandResult(replay, True)
-            if self.run_store.exists(tenant_id, run_id):
-                raise ValueError("run already exists for tenant: {}".format(run_id))
-            run = self._runtime_for(tenant_id).orchestrator.start(brief)
-            audit_payload = {
-                "status": run.status.value,
-                "artifact_ids": [item.artifact_id for item in run.artifacts],
-                "platforms": [item.value for item in run.brief.platforms],
-                "budget_cents": run.brief.budget_cents,
-                "idempotency": self._command_payload(operation, fingerprint, run),
-            }
-            try:
-                stored = self.run_store.create(
-                    tenant_id,
-                    run,
-                    audit=AuditWrite(
-                        request_id=request_id,
-                        action="run.created",
-                        resource_type="execution_run",
-                        resource_id=run.run_id,
-                        actor=actor,
-                        payload=audit_payload,
-                        event_id=event_id,
-                    ),
-                )
-            except AuditEventConflictError:
-                replay = self._command_replay(
-                    tenant_id, event_id, operation, fingerprint
-                )
-                if replay is None:
-                    raise
-                return CommandResult(replay, True)
-            return CommandResult(stored, False)
+            resource_lock_id = "run-resource:{}:{}".format(tenant_id, run_id)
+            with self.run_store.command_lock(resource_lock_id):
+                if self.run_store.exists(tenant_id, run_id):
+                    existing = self.run_store.get(tenant_id, run_id)
+                    audit_payload = {
+                        "status": existing.status.value,
+                        "artifact_ids": [item.artifact_id for item in existing.artifacts],
+                        "platforms": [item.value for item in existing.brief.platforms],
+                        "budget_cents": existing.brief.budget_cents,
+                        "reused_existing": True,
+                        "idempotency": self._command_payload(
+                            operation, fingerprint, existing
+                        ),
+                    }
+                    try:
+                        self.run_store.append_audit(
+                            tenant_id,
+                            AuditWrite(
+                                request_id=request_id,
+                                action="run.reused",
+                                resource_type="execution_run",
+                                resource_id=existing.run_id,
+                                actor=actor,
+                                payload=audit_payload,
+                                event_id=event_id,
+                            ),
+                        )
+                    except AuditEventConflictError:
+                        replay = self._command_replay(
+                            tenant_id, event_id, operation, fingerprint
+                        )
+                        if replay is None:
+                            raise
+                        return CommandResult(replay, True)
+                    return CommandResult(existing, True)
+                run = self._runtime_for(tenant_id).orchestrator.start(brief)
+                audit_payload = {
+                    "status": run.status.value,
+                    "artifact_ids": [item.artifact_id for item in run.artifacts],
+                    "platforms": [item.value for item in run.brief.platforms],
+                    "budget_cents": run.brief.budget_cents,
+                    "idempotency": self._command_payload(operation, fingerprint, run),
+                }
+                try:
+                    stored = self.run_store.create(
+                        tenant_id,
+                        run,
+                        audit=AuditWrite(
+                            request_id=request_id,
+                            action="run.created",
+                            resource_type="execution_run",
+                            resource_id=run.run_id,
+                            actor=actor,
+                            payload=audit_payload,
+                            event_id=event_id,
+                        ),
+                    )
+                except AuditEventConflictError:
+                    replay = self._command_replay(
+                        tenant_id, event_id, operation, fingerprint
+                    )
+                    if replay is None:
+                        raise
+                    return CommandResult(replay, True)
+                return CommandResult(stored, False)
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
         with self._lock:
@@ -1471,6 +1504,7 @@ def create_app(
     )
     def create_run(
         request: Request,
+        response: Response,
         brief_request: BriefRequest,
         idempotency_key: str = Header(
             alias="Idempotency-Key",
@@ -1491,6 +1525,9 @@ def create_app(
             )
             if not result.replayed:
                 metrics.run_started()
+            else:
+                response.status_code = status.HTTP_200_OK
+                response.headers["X-Command-Replayed"] = "true"
             return _run_document(result.run, principal.tenant_id)
         except IdempotencyConflictError as error:
             raise PublicApiError(

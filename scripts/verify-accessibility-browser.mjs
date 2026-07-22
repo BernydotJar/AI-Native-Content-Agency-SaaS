@@ -448,7 +448,7 @@ async function run() {
     (node) => node.role?.value === "button" && axNodeName(node).startsWith("Tema "),
   );
   const settingsDialogAx = axTree.nodes.find(
-    (node) => node.role?.value === "dialog" && axNodeName(node) === "Apariencia y proveedores del runtime",
+    (node) => node.role?.value === "dialog" && axNodeName(node) === "Administración del espacio",
   );
   requireCondition(Boolean(settingsDialogAx), "El diálogo de Configuración no apareció en el árbol de accesibilidad");
   requireCondition(themeAxNodes.length === 5, `Expected five theme buttons in AX tree, got ${themeAxNodes.length}`);

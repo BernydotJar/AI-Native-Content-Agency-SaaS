@@ -41,7 +41,7 @@ release_decision=DENY_RELEASE
 third_party_components=33
 active_external_providers=0
 open_human_decisions=8
-claim_surfaces=10
+claim_surfaces=8
 ```
 
 A passing validator proves consistency of the denial and inventory. It does not
@@ -114,7 +114,7 @@ The exact continuation template is in
 
 ## Public claims boundary
 
-The claims policy scans ten public product surfaces. It rejects:
+The claims policy scans eight public product surfaces. It rejects:
 
 - `production-ready`;
 - unsupported GDPR/HIPAA/SOC 2/PCI compliance or certification;

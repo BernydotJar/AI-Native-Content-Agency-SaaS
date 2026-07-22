@@ -98,7 +98,8 @@ class DurableIdempotencyTests(unittest.TestCase):
                 "/api/v1/runs", json=BRIEF, headers=headers(ALPHA_KEY, key)
             )
             self.assertEqual(first.status_code, 201)
-            self.assertEqual(second.status_code, 201)
+            self.assertEqual(second.status_code, 200)
+            self.assertEqual(second.headers["X-Command-Replayed"], "true")
             self.assertEqual(second.json(), first.json())
 
             events = client.get(
@@ -133,7 +134,8 @@ class DurableIdempotencyTests(unittest.TestCase):
             beta = restarted.post(
                 "/api/v1/runs", json=BRIEF, headers=headers(BETA_KEY, key)
             )
-            self.assertEqual(replay.status_code, 201)
+            self.assertEqual(replay.status_code, 200)
+            self.assertEqual(replay.headers["X-Command-Replayed"], "true")
             self.assertEqual(replay.json(), first.json())
             self.assertEqual(beta.status_code, 201)
             self.assertEqual(beta.json()["run_id"], first.json()["run_id"])
@@ -162,21 +164,28 @@ class DurableIdempotencyTests(unittest.TestCase):
             self.assertEqual(service.run_store.count("tenant-alpha"), 1)
             self.assertEqual(service.run_store.audit_count("tenant-alpha"), 1)
 
-    def test_different_key_for_same_deterministic_run_is_resource_conflict(self):
+    def test_different_key_for_same_deterministic_run_reuses_resource_and_records_receipt(self):
         with self.client() as client:
             first = client.post(
                 "/api/v1/runs",
                 json=BRIEF,
                 headers=headers(ALPHA_KEY, "run-create-first-0001"),
             )
-            conflict = client.post(
+            replay = client.post(
                 "/api/v1/runs",
                 json=BRIEF,
                 headers=headers(ALPHA_KEY, "run-create-second-0001"),
             )
             self.assertEqual(first.status_code, 201)
-            self.assertEqual(conflict.status_code, 409)
-            self.assertEqual(conflict.json()["code"], "resource_state_conflict")
+            self.assertEqual(replay.status_code, 200)
+            self.assertEqual(replay.headers["X-Command-Replayed"], "true")
+            self.assertEqual(replay.json(), first.json())
+
+            service = client.app.state.runtime_service
+            self.assertEqual(service.run_store.count("tenant-alpha"), 1)
+            self.assertEqual(service.run_store.audit_count("tenant-alpha"), 2)
+            actions = [event.action for event in service.audit_events("tenant-alpha", 0, 100)]
+            self.assertEqual(actions, ["run.created", "run.reused"])
 
     def test_greenlight_replay_executes_packager_once_and_changed_payload_conflicts(self):
         with self.client() as client:

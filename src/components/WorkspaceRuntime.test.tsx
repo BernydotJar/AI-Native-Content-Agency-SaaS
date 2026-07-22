@@ -112,8 +112,9 @@ describe("WorkspaceRuntime", () => {
     await screen.findByText(/operator@example.com/i);
     await user.click(screen.getByRole("button", { name: /Ejecutar campaña/i }));
 
-    expect(await screen.findByText("Research dossier")).toBeInTheDocument();
-    expect(screen.getByText(/Speed and certainty remain in tension/i)).toBeInTheDocument();
+    expect(await screen.findByText(/run-product-workspace-001/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Ver posts y estado de publicación/i })).toHaveAttribute("href", "#campaign-output");
+    expect(screen.queryByText(/Speed and certainty remain in tension/i)).not.toBeInTheDocument();
     await waitFor(() => expect(onRunChange).toHaveBeenLastCalledWith(RUN));
   });
 });

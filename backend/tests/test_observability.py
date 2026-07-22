@@ -152,7 +152,8 @@ class ObservabilityTests(unittest.TestCase):
                     "X-Request-ID": "audit-duplicate-0001",
                 },
             )
-            self.assertEqual(duplicate.status_code, 409)
+            self.assertEqual(duplicate.status_code, 200)
+            self.assertEqual(duplicate.headers["X-Command-Replayed"], "true")
 
             approved = client.post(
                 "/api/v1/runs/{}/greenlight/approve".format(run_id),
@@ -182,18 +183,18 @@ class ObservabilityTests(unittest.TestCase):
             events = payload["events"]
             self.assertEqual(
                 [item["action"] for item in events],
-                ["run.created", "greenlight.approved"],
+                ["run.created", "run.reused", "greenlight.approved"],
             )
             self.assertEqual(
                 [item["request_id"] for item in events],
-                ["audit-create-0001", "audit-approve-0001"],
+                ["audit-create-0001", "audit-duplicate-0001", "audit-approve-0001"],
             )
             self.assertEqual({item["tenant_id"] for item in events}, {"tenant-alpha"})
             self.assertTrue(
                 all(item["actor"] == "api-key:tenant:tenant-alpha" for item in events)
             )
             self.assertNotIn(ALPHA_KEY, audit.text)
-            self.assertNotIn("audit-duplicate-0001", audit.text)
+            self.assertIn("audit-duplicate-0001", audit.text)
 
             beta_audit = client.get(
                 "/api/v1/audit-events", headers=auth(BETA_KEY)
@@ -215,10 +216,10 @@ class ObservabilityTests(unittest.TestCase):
             self.assertEqual(durable.status_code, 200)
             self.assertEqual(
                 [item["action"] for item in durable.json()["events"]],
-                ["run.created", "greenlight.approved"],
+                ["run.created", "run.reused", "greenlight.approved"],
             )
             self.assertEqual(
-                durable.json()["events"][1]["payload"]["note"],
+                durable.json()["events"][2]["payload"]["note"],
                 "Approved with durable audit evidence",
             )
 

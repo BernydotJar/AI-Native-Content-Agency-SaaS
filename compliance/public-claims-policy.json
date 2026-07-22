@@ -60,7 +60,7 @@
     "src/App.tsx",
     "src/components/WorkspaceRuntime.tsx",
     "src/components/WorkspaceSettingsDialog.tsx",
-    "src/components/RunContextPanel.tsx",
-    "src/components/OperationalFabricPanel.tsx"
+    "src/components/CampaignOutputPanel.tsx",
+    "src/components/StationInspector.tsx"
   ]
 }

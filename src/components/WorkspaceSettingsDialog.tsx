@@ -1,6 +1,6 @@
 import { useRef } from "react";
-import { Check, LockKeyhole, Palette, RefreshCw, ServerCog, X } from "lucide-react";
-import type { RuntimeProvider, RuntimeProviderGatewayStatus } from "../lib/runtimeApi";
+import { Cable, Check, LockKeyhole, Palette, RefreshCw, ServerCog, X } from "lucide-react";
+import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus } from "../lib/runtimeApi";
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
 import type { ThemeId } from "../lib/themeCatalog";
 import { useModalDialog } from "../lib/useModalDialog";
@@ -13,6 +13,7 @@ interface WorkspaceSettingsDialogProps {
   onThemeChange: (themeId: ThemeId) => void;
   providers: readonly RuntimeProvider[];
   gateway: RuntimeProviderGatewayStatus;
+  integrations: readonly RuntimeIntegrationSummary[];
   providerLoading: boolean;
   providerError: string;
   sessionActive: boolean;
@@ -34,6 +35,7 @@ export function WorkspaceSettingsDialog({
   onThemeChange,
   providers,
   gateway,
+  integrations,
   providerLoading,
   providerError,
   sessionActive,
@@ -64,7 +66,7 @@ export function WorkspaceSettingsDialog({
           <div>
             <p className="section-kicker">Configuración del espacio</p>
             <h2 id="workspace-settings-title" className="mt-1 text-xl font-bold text-zinc-100">
-              Apariencia y proveedores del runtime
+              Administración del espacio
             </h2>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
               La configuración infrecuente vive aquí para mantener la misión enfocada en resultados.
@@ -216,6 +218,42 @@ export function WorkspaceSettingsDialog({
             <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-4 text-[11px] leading-5 text-sky-100/80">
               El estado mostrado es evidencia real de configuración. Esta pantalla no ejecuta inferencia, gasto ni entregas externas.
             </div>
+          </section>
+
+          <section aria-labelledby="integration-settings-title" className="border-t border-white/[0.07] pt-7">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[var(--primary-color)]">
+                <Cable size={16} aria-hidden="true" />
+              </span>
+              <div>
+                <h3 id="integration-settings-title" className="text-sm font-bold text-zinc-100">Integraciones y publicación</h3>
+                <p className="mt-0.5 text-[11px] text-zinc-500">Conexiones tenant-scoped, permisos y disponibilidad operativa.</p>
+              </div>
+            </div>
+            {!sessionActive ? (
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar integraciones.</p>
+            ) : integrations.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">No hay integraciones registradas para este tenant.</p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {integrations.map((integration) => (
+                  <article key={integration.integration_id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-100">{integration.display_name}</h4>
+                        <p className="mt-1 font-mono text-[9px] text-zinc-600">{integration.integration_id}</p>
+                      </div>
+                      <span className="rounded-full border border-amber-300/20 bg-amber-300/[0.05] px-3 py-1 font-mono text-[9px] uppercase text-amber-100">
+                        {integration.review_status.replaceAll("_", " ")}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-[10px] text-zinc-500">
+                      Ejecución: {integration.execution_available ? "disponible" : "no disponible"} · efectos externos: {integration.external_effects_enabled ? "habilitados" : "deshabilitados"}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </section>

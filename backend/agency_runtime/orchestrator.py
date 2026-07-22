@@ -417,7 +417,7 @@ class AgencyOrchestrator:
                     run.brief.title, run.brief.audience
                 ),
                 "body": run.brief.objective,
-                "cta": "Explore the sandbox concept",
+                "cta": "Conoce la propuesta y participa.",
             }
             for platform in run.brief.platforms
         }

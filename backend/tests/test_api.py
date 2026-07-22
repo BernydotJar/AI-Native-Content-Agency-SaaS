@@ -167,12 +167,14 @@ class ApiVerticalSliceTests(unittest.TestCase):
             self.assertEqual(
                 same_brief_beta.json()["run_id"], alpha.json()["run_id"]
             )
-            self.assertEqual(
-                client.post(
-                    "/api/v1/runs", json=BRIEF, headers=auth(ALPHA_KEY, "api-create-alpha-duplicate-0001")
-                ).status_code,
-                409,
+            alpha_replay = client.post(
+                "/api/v1/runs",
+                json=BRIEF,
+                headers=auth(ALPHA_KEY, "api-create-alpha-duplicate-0001"),
             )
+            self.assertEqual(alpha_replay.status_code, 200)
+            self.assertEqual(alpha_replay.headers["X-Command-Replayed"], "true")
+            self.assertEqual(alpha_replay.json(), alpha.json())
 
     def test_run_and_greenlight_survive_service_restart(self):
         with self.client() as first_client:

@@ -57,7 +57,14 @@ beforeEach(() => {
       automatic_run_integration: false,
     },
   });
-  vi.spyOn(runtimeApi, "integrations").mockResolvedValue([]);
+  vi.spyOn(runtimeApi, "integrations").mockResolvedValue([{
+    integration_id: "video-use",
+    display_name: "Video Use",
+    review_status: "reviewed_disabled",
+    activation_allowed: false,
+    execution_available: false,
+    external_effects_enabled: false,
+  }]);
 });
 
 afterEach(() => {
@@ -76,13 +83,16 @@ describe("product workspace shell", () => {
     expect(screen.getByRole("heading", { name: /Lanza una campaña gobernada/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Mapa de orquestación de ocho estaciones/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Campaign command/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Posts listos para revisión/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tema azul/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Memory & Skills Console/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Mock$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Video Use")).not.toBeInTheDocument();
+    expect(screen.queryByText("DeepSeek")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
-    expect(screen.getByRole("dialog", { name: /Apariencia y proveedores del runtime/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Administración del espacio/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tema azul/i })).toBeInTheDocument();
   });
 
@@ -108,14 +118,15 @@ describe("product workspace shell", () => {
     await waitFor(() => expect(runtimeApi.providerCatalog).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
 
-    expect(screen.getAllByText("OpenAI")).toHaveLength(2);
-    expect(screen.getAllByText("Anthropic")).toHaveLength(2);
-    expect(screen.getAllByText("DeepSeek")).toHaveLength(2);
-    expect(screen.getAllByText("Moonshot / Kimi")).toHaveLength(2);
-    expect(screen.getAllByText("Llama")).toHaveLength(2);
+    expect(screen.getByText("OpenAI")).toBeInTheDocument();
+    expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("DeepSeek")).toBeInTheDocument();
+    expect(screen.getByText("Moonshot / Kimi")).toBeInTheDocument();
+    expect(screen.getByText("Llama")).toBeInTheDocument();
     expect(screen.queryByLabelText(/OpenAI API key/i)).not.toBeInTheDocument();
     expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
     expect(screen.getByText(/Gateway de inferencia deshabilitado/i)).toBeInTheDocument();
+    expect(screen.getByText("Video Use")).toBeInTheDocument();
   });
 
   it("keeps premium appearance server-entitled and outside the command flow", async () => {

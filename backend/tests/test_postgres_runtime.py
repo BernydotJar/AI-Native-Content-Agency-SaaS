@@ -238,7 +238,9 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                         executor.submit(create, second),
                     )
                 ]
-            self.assertEqual([response.status_code for response in responses], [201, 201])
+            self.assertEqual(sorted(response.status_code for response in responses), [200, 201])
+            replay = next(response for response in responses if response.status_code == 200)
+            self.assertEqual(replay.headers["X-Command-Replayed"], "true")
             self.assertEqual(responses[0].json(), responses[1].json())
             run_id = responses[0].json()["run_id"]
             events = first.get(
@@ -260,6 +262,41 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             )
             serialized = repr(rows.fetchall())
         self.assertNotIn(key, serialized)
+
+    def test_same_resource_with_distinct_keys_creates_once_and_reuses_across_replicas(self):
+        first = TestClient(self.app())
+        second = TestClient(self.app())
+        brief = dict(BRIEF, title="Resource replay {}".format(self.tenant))
+        with first, second:
+            def create(client, key):
+                return client.post(
+                    "/api/v1/runs",
+                    json=brief,
+                    headers=auth(self.operator_key, key),
+                )
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                responses = [
+                    future.result()
+                    for future in (
+                        executor.submit(create, first, "postgres-resource-a-{}".format(self.tenant)),
+                        executor.submit(create, second, "postgres-resource-b-{}".format(self.tenant)),
+                    )
+                ]
+            self.assertEqual(sorted(response.status_code for response in responses), [200, 201])
+            self.assertEqual(responses[0].json(), responses[1].json())
+            replay = next(response for response in responses if response.status_code == 200)
+            self.assertEqual(replay.headers["X-Command-Replayed"], "true")
+            run_id = responses[0].json()["run_id"]
+            events = first.get(
+                "/api/v1/audit-events", headers=auth(self.viewer_key)
+            ).json()["events"]
+            actions = [
+                event["action"]
+                for event in events
+                if event["resource_id"] == run_id
+            ]
+            self.assertEqual(sorted(actions), ["run.created", "run.reused"])
 
     def test_incompatible_create_reuse_yields_one_uniform_conflict(self):
         first = TestClient(self.app())

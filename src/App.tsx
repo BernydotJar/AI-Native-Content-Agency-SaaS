@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Activity, Cpu, Network, Settings, ShieldCheck } from "lucide-react";
 import { CanvasBackground } from "./components/CanvasBackground";
+import { CampaignOutputPanel } from "./components/CampaignOutputPanel";
 import { CinematicHero } from "./components/CinematicHero";
-import { OperationalFabricPanel } from "./components/OperationalFabricPanel";
 import { PipelineGraph } from "./components/PipelineGraph";
 import type { NodeState } from "./components/PipelineGraph";
-import { RunContextPanel } from "./components/RunContextPanel";
 import { StationInspector } from "./components/StationInspector";
 import { WorkspaceRuntime } from "./components/WorkspaceRuntime";
 import { WorkspaceSettingsDialog } from "./components/WorkspaceSettingsDialog";
@@ -239,24 +238,16 @@ export default function App() {
           </div>
         </section>
 
-        <section aria-labelledby="operations-title" className="mt-10 lg:mt-14">
+        <section aria-labelledby="campaign-output-heading" className="mt-10 lg:mt-14">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">03 / OBSERVE & APPROVE</p>
-              <h2 id="operations-title">Contexto, capacidades y outputs del run.</h2>
+              <p className="section-kicker">03 / REVIEW & PUBLISH</p>
+              <h2 id="campaign-output-heading">Revisa el post. Aprueba. Publica.</h2>
             </div>
-            <p>Inspecciona lo que la ejecución utilizó, produjo y dejó pendiente antes de aprobar.</p>
+            <p>El output editorial ocupa el centro; evidencia y configuración permanecen disponibles sin competir con el trabajo.</p>
           </div>
-          <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(340px,0.72fr)_minmax(0,1.28fr)]">
-            <RunContextPanel run={run} />
-            <OperationalFabricPanel
-              providers={providers}
-              gateway={providerGateway}
-              integrations={integrations}
-              sessionActive={Boolean(session)}
-              loading={fabricLoading}
-              run={run}
-            />
+          <div className="mt-5">
+            <CampaignOutputPanel run={run} />
           </div>
         </section>
       </main>
@@ -282,6 +273,7 @@ export default function App() {
         onThemeChange={changeTheme}
         providers={providers}
         gateway={providerGateway}
+        integrations={integrations}
         providerLoading={fabricLoading}
         providerError={fabricError}
         sessionActive={Boolean(session)}
