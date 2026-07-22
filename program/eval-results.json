@@ -454,9 +454,16 @@
       "observed": "No DNS/network provider call, real credential, prompt transfer or spend was used; ModelGateway.complete is test-only and no API/orchestrator invocation exists.",
       "result": "NOT_RUN",
       "scope": "real provider inference and spend"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "id": "INC014-SUPPLY-CHAIN",
+      "observed": "Clean source 723dcd0; SBOM, vulnerability/license policy, provenance and Cosign offline verification PASS; registry_publication=false.",
+      "result": "PASS",
+      "scope": "clean-source supply-chain evidence"
     }
   ],
   "schema_version": "program-eval-results.v1",
   "source_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
-  "updated_at": "2026-07-22T18:08:39Z"
+  "updated_at": "2026-07-22T18:13:26Z"
 }

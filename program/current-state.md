@@ -60,7 +60,7 @@ Gitleaks history/worktree                 PASS — zero leaks
 Whitespace                                PASS
 Real provider calls/credentials/spend      NOT_RUN / NOT_USED
 Final cross-product E2E                   DEFERRED TO FINAL PROGRAM GATE
-Clean-source supply chain                 PENDING FOR THE REAL CLEAN CHECKPOINT
+Clean-source supply chain                 PASS — source 723dcd0, registry_publication=false
 Push / PR / exact-head CI                 BLOCKED BY SANDBOX CONNECTOR
 ```
 
@@ -178,7 +178,7 @@ Open CRITICAL findings: zero.
 
 ## Ready work
 
-1. Commit this corrected `INC-014=review` checkpoint and run clean-source supply chain with `registry_publication=false`.
+1. Preserve clean-source supply-chain evidence for `723dcd0` and the local checkpoint above it.
 2. Continue `INC-015` locally with SQLite/PostgreSQL intent/receipt/fencing tests and mock transports only.
 3. Publish INC-013/014/015 normally when `BLK-SANDBOX-PUSH-001` is resolved; then require exact remote SHA, stacked draft PRs and eight-job CI for each head.
 4. Keep real provider credentials, egress, spend, publication and final broad E2E disabled until their explicit gates.

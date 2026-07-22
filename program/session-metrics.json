@@ -8,7 +8,7 @@
   "baseline_ci_jobs_failed": 0,
   "baseline_ci_jobs_passed": 8,
   "baseline_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
-  "checkpoint_parent": "56f9ee8f71b5999da76c24366885a2b8fc84261a",
+  "checkpoint_parent": "723dcd091b44a24f2cfd208dbd16022922838bfa",
   "commits_created": 27,
   "critical_findings_open": 0,
   "current_increment": "INC-014",
@@ -28,7 +28,7 @@
   "inc009_behavioral_gates": "EXACT_REMOTE_CI_PASS_REVIEWED_DISABLED",
   "inc011_behavioral_gates": "EXACT_REMOTE_CI_PASS_HUMAN_PRIVACY_LEGAL_BLOCKED",
   "inc012_behavioral_gates": "EXACT_REMOTE_CI_PASS",
-  "last_exact_commit": "56f9ee8f71b5999da76c24366885a2b8fc84261a",
+  "last_exact_commit": "723dcd091b44a24f2cfd208dbd16022922838bfa",
   "local_commits_ahead_of_remote": 2,
   "program_state_tests_passed": 6,
   "pushes_verified": 11,
@@ -37,5 +37,5 @@
   "tool_calls_recorded": 0,
   "inc013_behavioral_gates": "LOCAL_PASS_REMOTE_PENDING_PROVIDER_EXECUTION_DISABLED",
   "inc014_behavioral_gates": "LOCAL_PASS_GATEWAY_DISABLED_REMOTE_BLOCKED",
-  "inc014_supply_chain": "PENDING_REAL_CLEAN_CHECKPOINT"
+  "inc014_supply_chain": "PASS_NO_PUBLICATION"
 }

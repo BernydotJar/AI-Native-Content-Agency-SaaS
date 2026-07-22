@@ -10,8 +10,8 @@
 - [x] Publish safe gateway status without adding an inference route.
 - [x] Move `httpx` into hash-locked runtime dependencies and inventory its license.
 - [x] Pass wheel, PostgreSQL, frontend, build, Chromium and package gates.
-- [ ] Pass clean-source supply-chain gate on the committed program checkpoint.
-- [ ] Record the corrected program checkpoint.
+- [x] Pass clean-source supply-chain gate on `723dcd0`.
+- [x] Record the corrected program checkpoint.
 - [ ] Publish branch when the official sandbox push connector is available.
 - [ ] Implement durable outbound intent/receipt before any run integration.
 - [ ] Obtain explicit egress/spend authorization before any real provider call.
