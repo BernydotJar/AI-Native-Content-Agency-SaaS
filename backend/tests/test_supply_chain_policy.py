@@ -134,6 +134,46 @@ class SupplyChainPolicyTests(unittest.TestCase):
         self.assertTrue(any("missing license metadata" in item for item in errors))
         self.assertTrue(any("stale missing-license exception" in item for item in errors))
 
+    def test_exact_reviewed_license_acceptance_passes_and_stale_entry_fails(self):
+        policy = {
+            "package_types": ["python"],
+            "allowed_licenses": ["MIT"],
+            "denied_tokens": ["GPL"],
+            "reviewed_license_acceptances": [
+                {
+                    "package": "reviewed-package",
+                    "version": "2.0.0",
+                    "reported_license": "MPL-2.0",
+                    "reason": "Exact package and license were reviewed.",
+                }
+            ],
+            "missing_license_exceptions": [],
+        }
+        summary, errors = POLICY.evaluate_licenses(
+            {
+                "components": [
+                    component(
+                        name="reviewed-package",
+                        version="2.0.0",
+                        license_name="MPL-2.0",
+                    )
+                ]
+            },
+            policy,
+        )
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            summary["reviewed_license_acceptances_used"],
+            ["reviewed-package@2.0.0: MPL-2.0"],
+        )
+
+        _, stale_errors = POLICY.evaluate_licenses(
+            {"components": [component()]}, policy
+        )
+        self.assertTrue(
+            any("stale reviewed license acceptance" in item for item in stale_errors)
+        )
+
     def test_exact_reviewed_license_mapping_passes(self):
         summary, errors = POLICY.evaluate_licenses(
             {

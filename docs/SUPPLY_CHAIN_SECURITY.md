@@ -96,7 +96,7 @@ A baseline is not a statement that a vulnerability is harmless. It is a temporar
 
 ## License policy
 
-`artifacts/supply-chain/license-policy.json` evaluates application dependencies cataloged as Python packages. It rejects missing metadata unless an exact package/version exception exists, rejects denied copyleft/source-available tokens, and rejects any license not explicitly allowed. Ambiguous or non-SPDX metadata is accepted only through an exact package/version/reported-license mapping with reviewed normalized licenses and a recorded reason; unused mappings fail as stale evidence.
+`artifacts/supply-chain/license-policy.json` evaluates application dependencies cataloged as Python packages. It rejects missing metadata unless an exact package/version exception exists, rejects denied copyleft/source-available tokens, and rejects any license not explicitly allowed. A license outside the global allowlist is accepted only through an exact package/version/reported-license review with a recorded reason. Ambiguous or non-SPDX metadata additionally requires a mapping to reviewed normalized licenses. Unused acceptances and mappings fail as stale evidence.
 
 The current gate evaluates 21 Python packages:
 
@@ -104,7 +104,8 @@ The current gate evaluates 21 Python packages:
 - BSD-3-Clause: 6;
 - PSF-2.0: 1;
 - MIT application package: 1;
-- one exact metadata exception for `annotated-types@0.7.0`.
+- one exact metadata exception for `annotated-types@0.7.0`;
+- one exact reviewed license acceptance for `certifi@2026.7.22` under `MPL-2.0`, without globally allowing MPL-2.0.
 
 Operating-system package licenses are retained in the SBOM for legal review but are not treated as application dependency licensing decisions by this automated gate.
 

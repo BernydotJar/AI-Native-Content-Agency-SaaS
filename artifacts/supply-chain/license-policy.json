@@ -25,6 +25,14 @@
       "reason": "The installed package metadata is not surfaced as a license by Syft; this exact transitive version was reviewed separately."
     }
   ],
+  "reviewed_license_acceptances": [
+    {
+      "package": "certifi",
+      "version": "2026.7.22",
+      "reported_license": "MPL-2.0",
+      "reason": "The exact certifi 2026.7.22 runtime dependency declares MPL-2.0; it is reviewed as the pinned CA certificate bundle required by the HTTP client stack without globally allowing MPL-2.0 packages."
+    }
+  ],
   "reviewed_license_mappings": [
     {
       "package": "pg8000",
