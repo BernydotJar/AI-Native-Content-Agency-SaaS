@@ -28,7 +28,7 @@ export function RunContextPanel({ run }: RunContextPanelProps) {
           </span>
           <div>
             <p className="section-kicker">02 / CONTEXTO APLICADO</p>
-            <h2 id="run-context-title" className="mt-1 text-base font-bold text-zinc-100">Qué utilizó y produjo la ejecución</h2>
+            <h2 id="run-context-title" className="mt-1 text-base font-bold text-zinc-100">Contexto y decisiones del run</h2>
           </div>
         </div>
         {run && <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-500">{run.status.replaceAll("_", " ")}</span>}
@@ -36,7 +36,7 @@ export function RunContextPanel({ run }: RunContextPanelProps) {
 
       {!run ? (
         <div className="mt-5 rounded-xl border border-dashed border-white/[0.08] p-5 text-xs leading-6 text-zinc-500">
-          El contexto aparece después de una ejecución gobernada. El operador ve evidencia aplicada, decisiones y entregables; no el algoritmo interno de almacenamiento.
+          Ejecuta o abre un run para inspeccionar señales aplicadas, decisiones y entregables.
         </div>
       ) : (
         <div className="mt-5 space-y-4">

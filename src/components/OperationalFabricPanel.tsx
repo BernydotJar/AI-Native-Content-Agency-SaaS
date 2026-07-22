@@ -30,7 +30,7 @@ export function OperationalFabricPanel({
           </span>
           <div>
             <p className="section-kicker">03 / FABRIC OPERACIONAL</p>
-            <h2 id="operational-fabric-title" className="mt-1 text-base font-bold text-zinc-100">Capacidades del runtime y entregables por estación</h2>
+            <h2 id="operational-fabric-title" className="mt-1 text-base font-bold text-zinc-100">Runtimes, integraciones y entregables</h2>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -49,7 +49,7 @@ export function OperationalFabricPanel({
 
       {!sessionActive ? (
         <div className="mt-5 rounded-xl border border-dashed border-white/[0.08] p-5 text-xs leading-6 text-zinc-500">
-          Conecta el espacio para inspeccionar proveedores administrados por el servidor, integraciones revisadas y entregables del tenant.
+          Conecta el espacio para cargar el estado operacional del tenant.
         </div>
       ) : loading && providers.length === 0 ? (
         <div role="status" className="mt-5 rounded-xl border border-white/[0.08] p-5 text-xs text-zinc-500">Cargando fabric operacional…</div>
@@ -81,10 +81,10 @@ export function OperationalFabricPanel({
 
           <div className="border-t border-white/[0.06] pt-5">
             <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
-              <ShieldAlert size={14} className="text-[var(--primary-color)]" aria-hidden="true" /> Capacidades externas revisadas
+              <ShieldAlert size={14} className="text-[var(--primary-color)]" aria-hidden="true" /> Integraciones disponibles
             </div>
             {integrations.length === 0 ? (
-              <p className="mt-3 rounded-lg border border-dashed border-white/[0.07] p-3 text-[11px] text-zinc-600">No hay una integración externa revisada registrada.</p>
+              <p className="mt-3 rounded-lg border border-dashed border-white/[0.07] p-3 text-[11px] text-zinc-600">No hay integraciones disponibles para este tenant.</p>
             ) : (
               <div className="mt-3 space-y-2">
                 {integrations.map((integration) => (
@@ -108,7 +108,7 @@ export function OperationalFabricPanel({
               <span className="font-mono text-[9px] text-zinc-600">{stations.length} estaciones observadas</span>
             </div>
             {stations.length === 0 ? (
-              <p className="mt-3 text-[11px] leading-5 text-zinc-600">Ejecuta una misión para poblar el estado real de las estaciones y sus artefactos.</p>
+              <p className="mt-3 text-[11px] leading-5 text-zinc-600">Ejecuta o abre un run para cargar estados y artefactos.</p>
             ) : (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {stations.map(([station, state]) => (

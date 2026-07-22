@@ -71,9 +71,11 @@ describe("product workspace shell", () => {
   it("prioritizes governed command and hides infrequent configuration", async () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: /Crea, inspecciona y aprueba una campaña gobernada/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Convierte una señal en una campaña completa/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Define la misión. Ejecuta el sistema/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Lanza una campaña gobernada/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Mapa de orquestación de ocho estaciones/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Campaign command/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Tema azul/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Memory & Skills Console/i)).not.toBeInTheDocument();

@@ -68,3 +68,19 @@ Antes de permitir inferencia real todavía se debe implementar y verificar:
 
 Hasta que esas condiciones pasen, el runtime determinista local permanece claramente
 identificado y `DENY_RELEASE` sigue vigente.
+
+## Verificación local con DeepSeek
+
+No pegues la clave en el navegador, en un archivo versionado ni en este chat. Cárgala
+como variable de entorno del proceso local:
+
+```bash
+export DEEPSEEK_API_KEY='tu-clave-desde-un-secret-manager'
+export AGENCY_DEEPSEEK_MODEL='deepseek-v4-flash'
+npm run start:local
+```
+
+Después de conectar el tenant, Configuración y Fabric deben mostrar DeepSeek como
+`ready`. En `INC-016` esa señal confirma configuración server-side; no significa que el
+proveedor ya esté conectado al run. La integración automática requiere completar y
+promover `INC-015` con intent/receipt durable y autorización explícita de egress/gasto.

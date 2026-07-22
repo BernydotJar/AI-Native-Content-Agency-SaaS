@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Activity, Cpu, Network, Settings, ShieldCheck } from "lucide-react";
 import { CanvasBackground } from "./components/CanvasBackground";
+import { CinematicHero } from "./components/CinematicHero";
 import { OperationalFabricPanel } from "./components/OperationalFabricPanel";
 import { PipelineGraph } from "./components/PipelineGraph";
 import type { NodeState } from "./components/PipelineGraph";
 import { RunContextPanel } from "./components/RunContextPanel";
+import { StationInspector } from "./components/StationInspector";
 import { WorkspaceRuntime } from "./components/WorkspaceRuntime";
 import { WorkspaceSettingsDialog } from "./components/WorkspaceSettingsDialog";
 import { runtimeApi } from "./lib/runtimeApi";
@@ -96,9 +98,11 @@ export default function App() {
 
   const premiumThemeEntitled = runtimeEntitlements.includes("theme:premium");
   const nodeStates = useMemo(() => pipelineState(run), [run]);
-  const completedStations = Object.values(nodeStates).filter((state) => state.status === "success").length;
+  const completedStations = Object.values(run?.agent_states ?? {}).filter((state) => state.progress === 100).length;
   const readyProviders = providers.filter((provider) => provider.configured).length;
   const selectedState = selectedNodeId ? nodeStates[selectedNodeId] : null;
+  const activeStep = Object.entries(nodeStates).find(([, state]) => state.status === "running")?.[0] ?? "";
+  const selectedProvider = providerGateway.selected_provider || providers.find((provider) => provider.configured)?.provider_id || "";
 
   useEffect(() => {
     applyTheme(themeId);
@@ -161,7 +165,7 @@ export default function App() {
                 <p className="text-sm font-extrabold tracking-[-0.02em] text-white">NATIVE / CAMPAIGN OPS</p>
                 <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2 py-0.5 font-mono text-[9px] text-zinc-400">0.7.0</span>
               </div>
-              <p className="mt-0.5 truncate text-[11px] text-zinc-500">Ejecución gobernada de campañas y evidencia</p>
+              <p className="mt-0.5 truncate text-[11px] text-zinc-500">Cinematic interface · governed runtime</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -170,7 +174,7 @@ export default function App() {
               {session ? `${session.tenant_id} conectado` : "Espacio desconectado"}
             </span>
             <span className="status-pill status-pill--amber">
-              <ShieldCheck size={12} aria-hidden="true" /> Entrega gobernada
+              <ShieldCheck size={12} aria-hidden="true" /> Greenlight visible
             </span>
             <button
               type="button"
@@ -183,73 +187,90 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pb-16">
-        <section aria-labelledby="workspace-title" className="grid gap-5 border-b border-white/[0.06] pb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div>
-            <p className="section-kicker">Centro de control de campañas</p>
-            <h1 id="workspace-title" className="mt-2 max-w-4xl text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">
-              Crea, inspecciona y aprueba una campaña gobernada.
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-400">
-              El brief, el estado de las estaciones, la evidencia y Greenlight comparten un único registro de ejecución por tenant.
-            </p>
+      <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16">
+        <CinematicHero
+          sessionActive={Boolean(session)}
+          tenantId={session?.tenant_id}
+          completedStations={completedStations}
+          totalStations={8}
+          readyProviders={readyProviders}
+          totalProviders={providers.length || 5}
+          deliverables={run?.artifacts.length ?? 0}
+          runStatus={run?.status}
+          selectedProvider={selectedProvider}
+        />
+
+        <section aria-labelledby="command-title" className="mt-10 lg:mt-14">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">01 / COMMAND</p>
+              <h2 id="command-title">Define la misión. Ejecuta el sistema.</h2>
+            </div>
+            <p>El comando produce un run durable, artefactos versionados y una decisión Greenlight verificable.</p>
           </div>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-4 lg:min-w-[560px]">
-            <div className="hero-stat"><strong>{session ? "ON" : "OFF"}</strong><span>sesión</span></div>
-            <div className="hero-stat"><strong>{String(completedStations).padStart(2, "0")}</strong><span>estaciones</span></div>
-            <div className="hero-stat"><strong>{readyProviders}/{providers.length || 5}</strong><span>proveedores</span></div>
-            <div className="hero-stat"><strong>{run ? run.artifacts.length : 0}</strong><span>entregables</span></div>
+          <div className="mt-5">
+            <WorkspaceRuntime
+              onSessionChange={setSession}
+              onRunChange={setRun}
+              onEntitlementsChange={setRuntimeEntitlements}
+            />
           </div>
         </section>
 
-        <div className="mt-7">
-          <WorkspaceRuntime
-            onSessionChange={setSession}
-            onRunChange={setRun}
-            onEntitlementsChange={setRuntimeEntitlements}
-          />
-        </div>
-
-        <section aria-labelledby="execution-map-title" className="mt-7">
-          <div className="mb-4 flex flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
+        <section aria-labelledby="execution-map-title" className="mt-10 lg:mt-14">
+          <div className="section-heading">
             <div>
-              <p className="section-kicker">LIVE TOPOLOGY / FABRIC FLOW</p>
-              <h2 id="execution-map-title" className="mt-1 text-lg font-bold text-zinc-100">Mapa de orquestación de ocho estaciones</h2>
-              <p className="mt-1 text-xs text-zinc-500">Selecciona una estación para inspeccionar su estado actual.</p>
+              <p className="section-kicker">02 / LIVE TOPOLOGY / FABRIC FLOW</p>
+              <h2 id="execution-map-title">Mapa de orquestación de ocho estaciones</h2>
             </div>
             <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/20 px-3 py-2 font-mono text-[10px] text-zinc-400" aria-live="polite">
               <Activity size={12} className="text-[var(--primary-color)]" aria-hidden="true" />
-              {selectedNodeId ? `${selectedNodeId} · ${selectedState?.status ?? "idle"} · ${selectedState?.progress ?? 0}%` : "Ninguna estación seleccionada"}
+              {selectedNodeId ? `${selectedNodeId} · ${selectedState?.status ?? "idle"} · ${selectedState?.progress ?? 0}%` : "Selecciona una estación"}
             </div>
           </div>
-          <PipelineGraph
-            activeStep={Object.entries(nodeStates).find(([, state]) => state.status === "running")?.[0] ?? ""}
-            nodeStates={nodeStates}
-            selectedNodeId={selectedNodeId}
-            onNodeSelect={setSelectedNodeId}
-          />
+          <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.72fr)]">
+            <PipelineGraph
+              activeStep={activeStep}
+              nodeStates={nodeStates}
+              selectedNodeId={selectedNodeId}
+              onNodeSelect={setSelectedNodeId}
+            />
+            <StationInspector run={run} stationId={selectedNodeId} />
+          </div>
         </section>
 
-        <div className="mt-7 grid items-start gap-5 xl:grid-cols-[minmax(340px,0.72fr)_minmax(0,1.28fr)]">
-          <RunContextPanel run={run} />
-          <OperationalFabricPanel
-            providers={providers}
-            gateway={providerGateway}
-            integrations={integrations}
-            sessionActive={Boolean(session)}
-            loading={fabricLoading}
-            run={run}
-          />
-        </div>
+        <section aria-labelledby="operations-title" className="mt-10 lg:mt-14">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">03 / OBSERVE & APPROVE</p>
+              <h2 id="operations-title">Contexto, capacidades y outputs del run.</h2>
+            </div>
+            <p>Inspecciona lo que la ejecución utilizó, produjo y dejó pendiente antes de aprobar.</p>
+          </div>
+          <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(340px,0.72fr)_minmax(0,1.28fr)]">
+            <RunContextPanel run={run} />
+            <OperationalFabricPanel
+              providers={providers}
+              gateway={providerGateway}
+              integrations={integrations}
+              sessionActive={Boolean(session)}
+              loading={fabricLoading}
+              run={run}
+            />
+          </div>
+        </section>
       </main>
 
       <footer className="relative z-10 border-t border-white/[0.06] bg-black/20">
         <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-4 text-[11px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Network size={13} className="text-[var(--primary-color)]" aria-hidden="true" />
-            <span>Las credenciales de proveedores permanecen en el servidor; el navegador sólo conserva la cookie de sesión del tenant.</span>
+            <span>Sesión, estados, artefactos y Greenlight provienen del backend gobernado.</span>
           </div>
-          <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">Runtime determinista local; no publica contenido ni ejecuta gasto externo.</span>
+          <div className="text-right font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">
+            <span className="block">Runtime determinista local; no publica contenido ni ejecuta gasto externo.</span>
+            <span className="mt-1 block">Las credenciales de proveedores permanecen server-side.</span>
+          </div>
         </div>
       </footer>
 
@@ -268,4 +289,5 @@ export default function App() {
       />
     </div>
   );
+
 }
