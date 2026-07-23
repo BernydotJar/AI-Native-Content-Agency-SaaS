@@ -9,99 +9,91 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-019-social-oauth-publication`
+- Active branch: `agent/inc-018-durable-run-execution`
+- Active implementation: `3cc304d10b64b8cb32bffeee52f36e583c46f844`
 - Published product base: `agent/inc-016-cinematic-runtime-ux@9c9c548e188c0c4a22154531a41b655d943e14b7`
 - Published base evidence: draft PR `#10`, GitHub Actions run `29956435978`, eight of eight jobs successful
-- Campaign output/resource replay implementation: `9b0b65927fe9609e1f55835728332bb3e2aa09ca`
-- X/Instagram readiness implementation: `93c5f55852dc60409d231eca948c20d74a871aa0`
-- OAuth/encrypted account implementation: `e3bca9c95a3080e1e7677454996d9ad56469b4f4`
-- Cross-site OAuth callback repair: `6d5e59b`
-- Active branch remote: pending publication
-- Active draft PR and exact-head CI: pending
-- Operator-observed Instagram authorization reached the callback; the previous Strict-cookie failure was repaired. Automated provider verification remains MockTransport-only; publication was not performed.
-- Real model calls, cloud deployment, registry publication, billing and spend: not performed
+- Campaign output/resource replay: `9b0b65927fe9609e1f55835728332bb3e2aa09ca`
+- X/Instagram OAuth plus callback repair: `6d5e59b` with program checkpoint `908bbd2`
+- Durable asynchronous station execution: `3cc304d10b64b8cb32bffeee52f36e583c46f844`
+- Active branch remote, draft PR and exact-head CI: pending; Cloud Sandbox `git_push` fails before Git while starting Docker/iptables
+- Real model calls, social publication, cloud deployment, registry publication, billing and spend: not performed
 
 ## Active increment
 
-### INC-019 — Tenant-owned X and Instagram account connection
+### INC-018 — Durable asynchronous run execution
 
 Status: `review`
-Owner: Integration Engineer / Security Reviewer
-External effects during verification: none; all provider HTTP used `httpx.MockTransport`
+Owner: Distributed Systems Engineer / Runtime Critic
+External effects during verification: none
 
 #### Implemented
 
-- X OAuth 1.0a request-token, authorization and access-token contracts.
-- Instagram Authorization Code contract with Professional-account validation.
-- AES-GCM token encryption with versioned key IDs, tenant/channel AAD and key rotation.
-- Single-use ten-minute OAuth state bound to tenant, browser session and channel.
-- SQLite/PostgreSQL schema v2 stores and atomic PostgreSQL callback consumption.
-- Admin-only OAuth start/disconnect using HttpOnly session and CSRF.
-- Connected-account metadata without access-token disclosure.
-- Server-side bootstrap for existing X/Instagram tokens; partial groups fail startup.
-- `.env.local` loading, tracked-file refusal and 32-byte key generator.
-- Helm/Terraform references to a pre-existing Secret; no values enter Terraform state.
-- Settings UI with Connect/Disconnect, exact callback URL and callback-return status.
-- Secure SameSite=Lax session policy for provider returns and phase-safe sanitized diagnostics.
-- Real Chromium cross-site callback regression for X and Instagram with mock provider transport.
-- No publication route; `publishing_available=false` remains authoritative.
+- SPA requests `Prefer: respond-async`; new runs return durable `queued` state with `202 Accepted` and `Location`.
+- Worker loop uses the shared run store as queue authority and persists a lease before work.
+- Every claim increments a monotonic fencing token and attempt counter.
+- CEO, Research, Strategist, Growth, Writer, Media and Risk each expose real `processing` and `ready` checkpoints.
+- Publisher becomes `waiting_greenlight` only after Risk is durable and ready.
+- Active leases block replacement workers; expired leases recover after restart with a higher fence.
+- PostgreSQL serializes two replicas without duplicate station artifacts.
+- UI polls only while the durable run is queued/running; no client timer invents progress.
+- Existing synchronous API and CLI contracts remain compatible.
 
 #### Local evidence
 
 ```text
 Program validator                         PASS — 79 requirements, 20 tasks
 Compliance validator                      PASS — DENY_RELEASE, 0 active providers, 35 components
-Locked Python wheel                       PASS — 192 tests, 14 PostgreSQL skips
-PostgreSQL shared state                   PASS — 192/192
-PostgreSQL schema/grants                  PASS — v2, non-owner runtime, migration and restores
-Frontend                                  PASS — 35/35
+Locked Python wheel                       PASS — 196 tests, 15 PostgreSQL skips
+PostgreSQL shared state                   PASS — 196/196
+SQLite crash/lease recovery               PASS
+PostgreSQL two-worker fencing             PASS
+Frontend                                  PASS — 36/36
 Oxlint / TypeScript / Vite                PASS
 Chromium accessibility                    PASS
-Chromium X/Instagram output               PASS
-Chromium X/Instagram cross-site callback  PASS
-Buildah non-root package                  PASS
-OAuth routes governed                     PASS
-Social publication routes absent          PASS
+Chromium social output/OAuth regression   PASS
+Chromium asynchronous topology            PASS — 7 stations, 14 checkpoint values
+Final browser fencing token               PASS — 14
+Buildah image async smoke                 PASS — 202, fences 1..14, Greenlight
 K3s/Helm/Terraform plan/apply/destroy     PASS
-Actionlint                                PASS
-Gitleaks history/worktree                 PASS — zero leaks
+Actionlint / Gitleaks                     PASS
 Operability                               PASS — 4 SLOs, 7 alerts, 8 exercises
-Real provider OAuth/publication           NOT_RUN
-Real credentials/tokens                   NOT_USED
-Clean-source supply chain                 PASS — source 6d5e59b, registry_publication=false
-Push / PR / exact-head CI                 PENDING FOR 6d5e59b
+Clean-source supply chain                 PASS — source 3cc304d, registry_publication=false
+Push / PR / exact-head CI                 BLOCKED by Cloud Sandbox wrapper before Git
 ```
 
 #### Critic decision
 
-Account connection is ready for operator testing after branch publication and provider
-callback registration. It must not be described as publication readiness. The exact
-producer/critic/verifier record is `program/reports/inc-019-review.md`.
+`F-037` is closed locally. The map now visualizes persisted execution checkpoints rather
+than a terminal response or simulated browser progress. This does not provide authority
+for model inference, media rendering, budget spend or social publication. Exact evidence
+is recorded in `program/reports/inc-018-review.md`.
 
-## Explicit product boundaries
+## Other active product boundaries
+
+### INC-019 — Tenant-owned X and Instagram account connection
+
+Status: `review`, remote pending
+
+OAuth state, encrypted token storage, account metadata, disconnect and cross-site callback
+behavior are implemented. Exact callback URLs are visible in Settings. Real provider
+authorization remains operator-controlled and publication remains disabled.
 
 ### INC-015 — Durable model effect authority
 
 Status: `pending`
 
-DeepSeek is configured and the bounded gateway exists, but model inference is not attached
-to campaign runs. Durable model intent/fence/receipt and replay protection remain required.
-
-### INC-018 — Durable asynchronous run execution
-
-Status: `pending`
-
-The topology currently receives terminal station state because orchestration is
-synchronous. Fake progress is prohibited; queued workers, leases and durable checkpoints
-remain required.
+The bounded model gateway exists, but inference is not attached to runs. Provider spend
+requires a durable intent, request binding, fence, result/receipt persistence and
+unknown-outcome reconciliation before activation.
 
 ### INC-020 — Exact-once social publication authority
 
 Status: `pending`
 
-Accounts can be connected and tokens are encrypted, but X `POST /2/tweets` and Instagram
-`/media` → `/media_publish` are deliberately absent. Publication requires durable intent,
-fence, exact artifact/media/Greenlight binding, receipt and unknown-outcome reconciliation.
+Accounts can be connected, but X `POST /2/tweets` and Instagram `/media` then
+`/media_publish` are deliberately absent. Publication requires an exact artifact/media/
+account/Greenlight binding, durable intent, provider receipt and reconciliation.
 
 ## Open global HIGH release findings
 
@@ -111,29 +103,28 @@ fence, exact artifact/media/Greenlight binding, receipt and unknown-outcome reco
 - `F-010` approved retention/deletion/legal hold/data-subject workflow — human/legal.
 - `F-011` semantic/adversarial model evaluations — pending.
 - `F-034` model inference durable authority — INC-015.
-- `F-037` truthful asynchronous station progress — INC-018.
 - `F-039` exact-once social publication — INC-020.
 
 Open CRITICAL findings: `0`.
 
 ## Human/external gates
 
-- Register exact X and Meta callback URLs.
-- Authenticate authorized X and Instagram Professional sandbox accounts.
-- Approve one sandbox publication per channel only after INC-020 passes.
+- Push current branches, create/update stacked draft PRs and obtain exact-head eight-job CI.
+- Register exact X and Meta callback URLs and authenticate authorized sandbox accounts.
+- Approve one sandbox publication per channel only after INC-020 passes and explicit authorization is given.
 - Approve privacy/retention/token-handling policy and current provider terms/pricing.
-- Authorize provider egress/spend, production deployment and merge.
+- Authorize provider egress/spend, production worker deployment, cloud apply and merge.
 - Complete independent accessibility and PR review.
 
 ## Ready work
 
-1. Preserve clean-source supply-chain evidence for `fa54d84`.
-2. Push `agent/inc-019-social-oauth-publication`, verify exact remote SHA, create a stacked draft PR and require eight-job CI.
-4. After exact CI passes, provide the user pull, `.env.local`, callback-registration and authentication steps.
-5. Resume INC-020 with mock transports; do not publish a real post until durable authority and explicit authorization exist.
+1. Publish `agent/inc-018-durable-run-execution` when the Cloud Sandbox push wrapper is repaired or the user pushes from an authenticated local checkout.
+2. Implement INC-020 exact-once social publication with mock transports and no real post.
+3. Implement INC-015 durable model-effect authority before attaching any provider to campaign runs.
+4. Reserve broad product E2E and any authorized sandbox external effects for the final dependency-closed release candidate.
 
 ## Exact continuation condition
 
-Start from `6d5e59b` plus the program checkpoint. Preserve
-`DENY_RELEASE`, `DENY_APPLY`, `active_external_providers=0`, publication disabled and zero
-real provider calls. Publish and verify INC-019 before requesting user authentication.
+Continue from `3cc304d10b64b8cb32bffeee52f36e583c46f844` plus the program checkpoint. Preserve
+`DENY_RELEASE`, `DENY_APPLY`, `active_external_providers=0`, publication disabled, provider
+execution disabled and zero spend.

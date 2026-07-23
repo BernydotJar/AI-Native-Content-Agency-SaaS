@@ -132,3 +132,23 @@ Consequence: operators can inspect a reproducible architecture/license/security
 review without gaining provider authority. Path traversal, media disclosure,
 supply-chain reproducibility, isolated worker, outbound idempotency/receipt,
 privacy and semantic-eval requirements remain mandatory before any activation.
+
+## D-015 — The durable run document is the only topology authority
+
+Date: 2026-07-23
+Status: accepted locally at `3cc304d10b64b8cb32bffeee52f36e583c46f844`; remote publication blocked
+
+Decision: the product SPA requests `Prefer: respond-async`, receives a persisted queued run
+and polls the tenant-scoped run resource only while status is queued/running. A worker
+persists an expiring lease and new fencing token before each checkpoint. The browser may
+animate transitions, but it may not synthesize a station state, percentage or completion.
+
+Rationale: terminal synchronous responses made the topology static, while client timers
+would create false operational evidence. Durable checkpoints provide restart recovery,
+cross-replica serialization and auditable progress without granting external-effect
+authority.
+
+Consequence: deterministic sandbox stations may be recomputed only when a claim crashed
+before checkpoint persistence. Model inference and social publication remain governed by
+separate pending intent/receipt authorities; this decision does not authorize spend or
+publication.

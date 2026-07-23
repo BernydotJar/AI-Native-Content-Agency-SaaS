@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-019-social-oauth-publication",
+  "branch": "agent/inc-018-durable-run-execution",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1029,10 +1029,10 @@
       ],
       "task_id": "INC-018",
       "workstream_id": "WS-04",
-      "status": "pending",
+      "status": "review",
       "role": "Distributed Systems Engineer / Runtime Critic",
       "objective": "Execute stations through a durable asynchronous worker for truthful progress.",
-      "context": "POST /runs currently returns terminal state; fake timers remain prohibited.",
+      "context": "Implementation 3cc304d10b64b8cb32bffeee52f36e583c46f844 persists queued runs, advances fourteen fenced station checkpoints and exposes backend-derived progress without browser simulation.",
       "dependencies": [
         "INC-004",
         "INC-017"
@@ -1056,7 +1056,7 @@
         "unfenced worker",
         "cloud resources"
       ],
-      "write_lock": "unclaimed",
+      "write_lock": "released",
       "expected_outputs": [
         "queued run",
         "worker lease/fence",
@@ -1071,15 +1071,21 @@
         "idempotent station completion"
       ],
       "validation_commands": [
-        "SQLite/PostgreSQL races",
-        "failure injection",
-        "frontend progress",
-        "package/restore"
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "npm run verify:async-run-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
       ],
       "human_gates": [
         "production worker deployment",
         "merge"
-      ]
+      ],
+      "implementation_commit": "3cc304d10b64b8cb32bffeee52f36e583c46f844",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED"
     },
     {
       "read_only_paths": [
@@ -1222,7 +1228,7 @@
       ]
     }
   ],
-  "updated_at": "2026-07-23T19:09:24Z",
+  "updated_at": "2026-07-23T20:25:00Z",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -1307,12 +1313,12 @@
       "evals": [],
       "id": "WS-04",
       "name": "Backend, APIs and Agent Runtime",
-      "next_ready_task": "INC-018",
+      "next_ready_task": "INC-015",
       "objective": "Close idempotency, structured errors, revocation and runtime gaps.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "in_progress",
+      "status": "review",
       "validation": [],
       "write_locks": []
     },

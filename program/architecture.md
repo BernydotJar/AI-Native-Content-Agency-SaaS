@@ -55,7 +55,7 @@ Agentless K3s does not prove pod scheduling. OCI smoke does not prove Kubernetes
 
 ## Known architectural gaps
 
-- no asynchronous lease/outbox/worker model or provider receipt for future effectful tools;
+- durable asynchronous station leases/checkpoints exist; provider/model/social effects still require separate intent/outbox/receipt authorities;
 - no enabled browser/video provider adapter; the exact `video-use` review remains disabled on HIGH findings;
 - no object store for media or large artifacts;
 - no managed IdP, SSO, MFA, recovery, or lifecycle provisioning;
@@ -63,4 +63,4 @@ Agentless K3s does not prove pod scheduling. OCI smoke does not prove Kubernetes
 - no executed backup/restore or deployment rollback evidence at baseline;
 - no live alert routing, traces, soak/load evidence, or staging runtime observation;
 - no selected and authorized cloud target;
-- two frontend experiences remain in parallel: deterministic cinematic simulation and backend-backed production console.
+- one backend-backed cinematic workspace remains; browser state is presentation, never execution authority.

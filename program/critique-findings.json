@@ -291,10 +291,10 @@
     {
       "id": "F-037",
       "severity": "HIGH",
-      "status": "OPEN",
+      "status": "CLOSED",
       "owner": "INC-018",
       "description": "Synchronous orchestration prevents truthful intermediate topology progress and station-level crash recovery.",
-      "evidence": "specs/018-async-run-execution records queued worker/lease/checkpoint work; no fake timers are used."
+      "evidence": "3cc304d10b64b8cb32bffeee52f36e583c46f844; Prefer respond-async returns 202, SQLite restart/lease recovery and PostgreSQL two-worker fencing pass, production image records fences 1..14, and Chromium observes seven processing stations plus fourteen durable checkpoint values. No browser timer invents station state."
     },
     {
       "id": "F-038",
@@ -330,6 +330,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "6d5e59b",
-  "updated_at": "2026-07-23T19:09:24Z"
+  "source_commit": "3cc304d10b64b8cb32bffeee52f36e583c46f844",
+  "updated_at": "2026-07-23T20:25:00Z"
 }

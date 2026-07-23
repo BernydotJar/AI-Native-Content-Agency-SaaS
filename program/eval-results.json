@@ -517,6 +517,34 @@
       "command": "locked backend and frontend contracts",
       "result": "PASS",
       "observed": "API/UI expose callback URLs without secrets; X request-token, X access-token, Instagram code exchange and profile phases produce bounded actionable codes without provider bodies or credentials."
+    },
+    {
+      "id": "INC018-DURABLE-RUNTIME",
+      "scope": "SQLite/API lease, fence and crash recovery",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "196 tests with 15 PostgreSQL-only skips; queued 202, fourteen checkpoints, active-lease blocking, expired-lease recovery and synchronous compatibility PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-POSTGRESQL-WORKERS",
+      "scope": "PostgreSQL cross-replica station execution",
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "observed": "196/196; two workers serialize fences 1 and 2 and create the CEO artifact exactly once; backup/restore and cleanup PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-BROWSER-PROGRESS",
+      "scope": "truthful live topology",
+      "command": "npm run verify:async-run-browser",
+      "observed": "Chromium observed all seven processing stations, fourteen checkpoint values and final fencing token 14 before Greenlight; state source is authenticated backend polling",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-PACKAGE-SUPPLY",
+      "scope": "production image and software supply chain",
+      "command": "verify-production-package, verify-local-infrastructure, verify-supply-chain",
+      "observed": "Buildah image returns async 202, persists fences 1..14 and reaches Greenlight; K3s/Helm/Terraform, SBOM, policy, provenance and offline Cosign PASS; registry publication false",
+      "result": "PASS"
     }
   ],
   "schema_version": "program-eval-results.v1",
