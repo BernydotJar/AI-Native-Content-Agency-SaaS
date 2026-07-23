@@ -49,15 +49,27 @@ export interface RuntimeGreenlight {
   revocation_reason: string;
 }
 
+export interface RuntimeRunExecution {
+  state: "inline" | "queued" | "leased" | "running" | "awaiting_greenlight" | "completed" | "failed";
+  next_station: string;
+  lease_owner: string;
+  lease_expires_at: string | null;
+  fencing_token: number;
+  attempts: number;
+  checkpointed_at: string | null;
+  failure_detail: string;
+}
+
 export interface RuntimeRun {
   run_id: string;
   tenant_id: string;
-  status: "running" | "awaiting_greenlight" | "completed" | "rejected" | "revoked" | "failed";
+  status: "queued" | "running" | "awaiting_greenlight" | "completed" | "rejected" | "revoked" | "failed";
   agent_states: Record<string, RuntimeAgentState>;
   artifacts: RuntimeArtifact[];
   greenlight: RuntimeGreenlight | null;
   sandbox: boolean;
   external_side_effects_enabled: boolean;
+  execution: RuntimeRunExecution;
 }
 
 
@@ -288,6 +300,7 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         headers: {
           "X-CSRF-Token": csrfToken,
           "Idempotency-Key": idempotencyKey,
+          Prefer: "respond-async",
         },
         body: JSON.stringify(brief),
       });

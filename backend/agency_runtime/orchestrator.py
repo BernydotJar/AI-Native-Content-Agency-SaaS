@@ -15,6 +15,7 @@ from .models import (
     GreenlightDecision,
     MissionBrief,
     Provenance,
+    RunExecution,
     RunStatus,
     ToolEvidence,
     TraceEvent,
@@ -54,27 +55,92 @@ class AgencyOrchestrator:
         self._clock = clock
         self._runs: Dict[str, ExecutionRun] = {}
 
-    def start(self, brief: MissionBrief) -> ExecutionRun:
+    def create(self, brief: MissionBrief, *, asynchronous: bool = False) -> ExecutionRun:
         run_id = stable_id("run", brief)
         if run_id in self._runs:
             raise ValueError("run already exists in this orchestrator: {}".format(run_id))
+        now = self._clock()
         run = ExecutionRun(
             run_id=run_id,
             brief=brief,
-            status=RunStatus.RUNNING,
-            started_at=self._clock(),
+            status=RunStatus.QUEUED if asynchronous else RunStatus.RUNNING,
+            started_at=now,
             agent_states={role: AgentState(role=role) for role in AGENT_SEQUENCE},
+            execution=RunExecution(
+                state="queued" if asynchronous else "inline",
+                next_station=AgentRole.CEO.value,
+                checkpointed_at=now,
+            ),
         )
         self._runs[run_id] = run
+        return run
 
-        self._run_ceo(run)
-        self._run_research(run)
-        self._run_strategist(run)
-        self._run_growth(run)
-        self._run_writer(run)
-        self._run_media(run)
-        self._run_risk(run)
+    def start(self, brief: MissionBrief) -> ExecutionRun:
+        run = self.create(brief)
+        while run.status in {RunStatus.QUEUED, RunStatus.RUNNING}:
+            self.advance(run.run_id)
+        return run
 
+    def advance(self, run_id: str) -> ExecutionRun:
+        run = self.get_run(run_id)
+        if run.status is RunStatus.QUEUED:
+            run.status = RunStatus.RUNNING
+            run.execution.state = "running"
+
+        if run.status is not RunStatus.RUNNING:
+            return run
+
+        executable = AGENT_SEQUENCE[:-1]
+        for index, role in enumerate(executable):
+            state = run.state_for(role)
+            if state.status is AgentStatus.READY:
+                continue
+            run.execution.next_station = role.value
+            if state.status is AgentStatus.STANDBY:
+                self._begin(run, role, self._start_detail(role))
+                return run
+            if state.status is AgentStatus.PROCESSING:
+                self._execute_role(run, role)
+                next_index = index + 1
+                run.execution.next_station = (
+                    executable[next_index].value
+                    if next_index < len(executable)
+                    else AgentRole.PUBLISHER.value
+                )
+                if role is AgentRole.RISK:
+                    self._await_greenlight(run)
+                return run
+            raise RuntimeError("run contains an invalid station state")
+        self._await_greenlight(run)
+        return run
+
+    @staticmethod
+    def _start_detail(role: AgentRole) -> str:
+        return {
+            AgentRole.CEO: "Interpreting mission constraints",
+            AgentRole.RESEARCH: "Collecting synthetic market evidence",
+            AgentRole.STRATEGIST: "Designing channel strategy",
+            AgentRole.GROWTH: "Forecasting sandbox acquisition envelope",
+            AgentRole.WRITER: "Writing platform variants",
+            AgentRole.MEDIA: "Planning video and motion assets",
+            AgentRole.RISK: "Auditing release constraints",
+        }[role]
+
+    def _execute_role(self, run: ExecutionRun, role: AgentRole) -> None:
+        handlers = {
+            AgentRole.CEO: self._run_ceo,
+            AgentRole.RESEARCH: self._run_research,
+            AgentRole.STRATEGIST: self._run_strategist,
+            AgentRole.GROWTH: self._run_growth,
+            AgentRole.WRITER: self._run_writer,
+            AgentRole.MEDIA: self._run_media,
+            AgentRole.RISK: self._run_risk,
+        }
+        handlers[role](run)
+
+    def _await_greenlight(self, run: ExecutionRun) -> None:
+        if run.status is RunStatus.AWAITING_GREENLIGHT:
+            return
         publisher = run.state_for(AgentRole.PUBLISHER)
         publisher.update(
             AgentStatus.WAITING_GREENLIGHT,
@@ -82,6 +148,8 @@ class AgencyOrchestrator:
             "Risk passed; manual Greenlight is required before packaging.",
         )
         run.status = RunStatus.AWAITING_GREENLIGHT
+        run.execution.state = "awaiting_greenlight"
+        run.execution.next_station = AgentRole.PUBLISHER.value
         self._event(
             run,
             AgentRole.PUBLISHER,
@@ -89,7 +157,6 @@ class AgencyOrchestrator:
             AgentStatus.WAITING_GREENLIGHT.value,
             "No packaging or publication has occurred.",
         )
-        return run
 
     def approve(self, run_id: str, reviewer: str, note: str = "") -> ExecutionRun:
         return self._decide(
@@ -131,6 +198,7 @@ class AgencyOrchestrator:
             revocation_reason=normalized_reason,
         )
         run.status = RunStatus.REVOKED
+        run.execution.state = "completed"
         run.state_for(AgentRole.PUBLISHER).update(
             AgentStatus.BLOCKED,
             100,
@@ -202,6 +270,7 @@ class AgencyOrchestrator:
 
         if decision is GreenlightDecision.REJECTED:
             run.status = RunStatus.REJECTED
+            run.execution.state = "completed"
             run.completed_at = decided_at
             run.state_for(AgentRole.PUBLISHER).update(
                 AgentStatus.BLOCKED,
@@ -248,6 +317,8 @@ class AgencyOrchestrator:
             detail="Manifest packaged locally; external publication was not performed.",
         )
         run.status = RunStatus.COMPLETED
+        run.execution.state = "completed"
+        run.execution.next_station = AgentRole.PUBLISHER.value
         run.completed_at = self._clock()
         self._remember(
             run,
@@ -263,7 +334,6 @@ class AgencyOrchestrator:
         return run
 
     def _run_ceo(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.CEO, "Interpreting mission constraints")
         brief = run.brief
         self._complete_agent(
             run,
@@ -286,7 +356,6 @@ class AgencyOrchestrator:
         )
 
     def _run_research(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.RESEARCH, "Collecting synthetic market evidence")
         trends = self.tools.trends.collect(
             TrendsRequest(
                 query=run.brief.objective,
@@ -340,7 +409,6 @@ class AgencyOrchestrator:
         )
 
     def _run_strategist(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.STRATEGIST, "Designing channel strategy")
         docs = self.tools.context7.lookup(
             Context7Request(
                 library="sandbox-adapter-contracts",
@@ -378,7 +446,6 @@ class AgencyOrchestrator:
         )
 
     def _run_growth(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.GROWTH, "Forecasting sandbox acquisition envelope")
         forecast = self.tools.meta_ads.forecast(
             MetaAdsRequest(
                 objective=run.brief.campaign_goal,
@@ -410,7 +477,6 @@ class AgencyOrchestrator:
         )
 
     def _run_writer(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.WRITER, "Writing platform variants")
         variants = {
             platform.value: {
                 "hook": "{} — made clear for {}.".format(
@@ -444,7 +510,6 @@ class AgencyOrchestrator:
         )
 
     def _run_media(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.MEDIA, "Planning video and motion assets")
         primary_platform = run.brief.platforms[0]
         video = self.tools.video_optimizer.plan(
             VideoOptimizationRequest(
@@ -487,7 +552,6 @@ class AgencyOrchestrator:
         )
 
     def _run_risk(self, run: ExecutionRun) -> None:
-        self._begin(run, AgentRole.RISK, "Auditing release constraints")
         inspection = self.tools.github.inspect(
             GitHubRequest(
                 repository="sandbox://local/agency-runtime",

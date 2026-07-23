@@ -48,6 +48,16 @@ const RUN: RuntimeRun = {
   greenlight: null,
   sandbox: true,
   external_side_effects_enabled: false,
+  execution: {
+    state: "awaiting_greenlight",
+    next_station: "publisher",
+    lease_owner: "",
+    lease_expires_at: null,
+    fencing_token: 14,
+    attempts: 14,
+    checkpointed_at: "2026-07-23T00:00:00+00:00",
+    failure_detail: "",
+  },
 };
 
 function api(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
@@ -119,5 +129,51 @@ describe("WorkspaceRuntime", () => {
     expect(screen.getByRole("link", { name: /Ver posts y estado de publicación/i })).toHaveAttribute("href", "#campaign-output");
     expect(screen.queryByText(/Speed and certainty remain in tension/i)).not.toBeInTheDocument();
     await waitFor(() => expect(onRunChange).toHaveBeenLastCalledWith(RUN));
+  });
+
+  it("polls a queued run until durable station execution reaches Greenlight", async () => {
+    const user = userEvent.setup();
+    const queued: RuntimeRun = {
+      ...RUN,
+      status: "queued",
+      agent_states: {
+        ceo: { status: "standby", progress: 0, detail: "Awaiting mission", artifact_ids: [] },
+      },
+      artifacts: [],
+      execution: {
+        state: "queued",
+        next_station: "ceo",
+        lease_owner: "",
+        lease_expires_at: null,
+        fencing_token: 0,
+        attempts: 0,
+        checkpointed_at: "2026-07-23T00:00:00+00:00",
+        failure_detail: "",
+      },
+    };
+    const processing: RuntimeRun = {
+      ...queued,
+      status: "running",
+      agent_states: {
+        ceo: { status: "processing", progress: 10, detail: "Interpreting mission constraints", artifact_ids: [] },
+      },
+      execution: { ...queued.execution, state: "running", fencing_token: 1, attempts: 1 },
+    };
+    const getRun = vi.fn()
+      .mockResolvedValueOnce(processing)
+      .mockResolvedValue(RUN);
+    const runtime = api({
+      resumeSession: vi.fn().mockResolvedValue(SESSION),
+      createRun: vi.fn().mockResolvedValue(queued),
+      getRun,
+    });
+    render(<WorkspaceRuntime api={runtime} />);
+
+    await screen.findByText(/operator@example.com/i);
+    await user.click(screen.getByRole("button", { name: /Ejecutar campaña/i }));
+    expect(await screen.findByText(/checkpoint 0 · próxima estación ceo/i)).toBeInTheDocument();
+    await waitFor(() => expect(getRun).toHaveBeenCalled(), { timeout: 1500 });
+    await waitFor(() => expect(screen.getByText(/awaiting greenlight/i)).toBeInTheDocument(), { timeout: 2500 });
+    expect(getRun.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -34,6 +34,16 @@ const RUN: RuntimeRun = {
   greenlight: null,
   sandbox: true,
   external_side_effects_enabled: false,
+  execution: {
+    state: "awaiting_greenlight",
+    next_station: "publisher",
+    lease_owner: "",
+    lease_expires_at: null,
+    fencing_token: 14,
+    attempts: 14,
+    checkpointed_at: "2026-07-23T00:00:00+00:00",
+    failure_detail: "",
+  },
 };
 
 const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [

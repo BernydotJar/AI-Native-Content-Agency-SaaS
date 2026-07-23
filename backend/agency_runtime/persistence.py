@@ -396,6 +396,21 @@ class SQLiteRunStore:
             ).fetchone()
         return int(row["total"])
 
+    def executable_runs(self, limit: int = 100) -> Tuple[Tuple[str, str], ...]:
+        if limit < 1 or limit > 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        with self._lock:
+            rows = self._connection.execute(
+                """
+                SELECT tenant_id, run_id FROM runtime_runs
+                WHERE status IN ('queued', 'running')
+                ORDER BY updated_at ASC, tenant_id ASC, run_id ASC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return tuple((str(row["tenant_id"]), str(row["run_id"])) for row in rows)
+
     def audit_events(
         self,
         tenant_id: str,

@@ -12,6 +12,7 @@ from .models import (
     GreenlightDecision,
     MissionBrief,
     Platform,
+    RunExecution,
     RunStatus,
     ToolEvidence,
     TraceEvent,
@@ -114,6 +115,30 @@ def execution_run_from_document(document: Mapping[str, object]) -> ExecutionRun:
             revocation_reason=str(item.get("revocation_reason", "")),
         )
 
+    raw_execution = document.get("execution")
+    if raw_execution is None:
+        execution = RunExecution()
+    else:
+        execution_data = _mapping(raw_execution)
+        execution = RunExecution(
+            state=str(execution_data.get("state", "inline")),
+            next_station=str(execution_data.get("next_station", "ceo")),
+            lease_owner=str(execution_data.get("lease_owner", "")),
+            lease_expires_at=(
+                str(execution_data["lease_expires_at"])
+                if execution_data.get("lease_expires_at") is not None
+                else None
+            ),
+            fencing_token=int(execution_data.get("fencing_token", 0)),
+            attempts=int(execution_data.get("attempts", 0)),
+            checkpointed_at=(
+                str(execution_data["checkpointed_at"])
+                if execution_data.get("checkpointed_at") is not None
+                else None
+            ),
+            failure_detail=str(execution_data.get("failure_detail", "")),
+        )
+
     return ExecutionRun(
         run_id=str(document["run_id"]),
         brief=brief,
@@ -124,6 +149,7 @@ def execution_run_from_document(document: Mapping[str, object]) -> ExecutionRun:
         evidence=evidence,
         trace=trace,
         greenlight=greenlight,
+        execution=execution,
         completed_at=(
             str(document["completed_at"])
             if document.get("completed_at") is not None

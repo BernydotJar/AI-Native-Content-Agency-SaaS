@@ -97,7 +97,10 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             ),
         ]
 
-    def app(self, identities=None, *, max_failures=5, source_max_failures=50):
+    def app(
+        self, identities=None, *, max_failures=5, source_max_failures=50,
+        worker_poll_interval=0.35,
+    ):
         return create_app(
             database_path=":memory:",
             database_url=DATABASE_URL,
@@ -111,6 +114,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             postgres_pool_min_size=1,
             postgres_pool_max_size=3,
             postgres_connect_timeout_seconds=10,
+            run_worker_poll_interval_seconds=worker_poll_interval,
         )
 
     def test_connection_settings_and_schema_version_fail_closed(self):
@@ -460,6 +464,68 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 event for event in events if event["action"].startswith("greenlight.")
             ]
             self.assertEqual(len(decisions), 1)
+
+    def test_two_workers_checkpoint_one_async_run_without_duplicate_artifacts(self):
+        first_app = self.app(worker_poll_interval=60)
+        second_app = self.app(worker_poll_interval=60)
+        first = TestClient(first_app)
+        second = TestClient(second_app)
+        with first, second:
+            created = first.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Async workers {}".format(self.tenant)),
+                headers={
+                    **auth(
+                        self.operator_key,
+                        "postgres-async-workers-{}".format(self.tenant),
+                    ),
+                    "Prefer": "respond-async",
+                },
+            )
+            self.assertEqual(created.status_code, 202)
+            run_id = created.json()["run_id"]
+
+            def checkpoint(service, worker):
+                return service.execute_one_queued_run(worker)
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                progressed = [
+                    future.result()
+                    for future in (
+                        executor.submit(
+                            checkpoint, first_app.state.runtime_service, "pg-worker-a"
+                        ),
+                        executor.submit(
+                            checkpoint, second_app.state.runtime_service, "pg-worker-b"
+                        ),
+                    )
+                ]
+            self.assertEqual(progressed, [True, True])
+            current = first.get(
+                "/api/v1/runs/{}".format(run_id), headers=auth(self.viewer_key)
+            ).json()
+            self.assertEqual(current["status"], "running")
+            self.assertEqual(current["execution"]["fencing_token"], 2)
+            self.assertEqual(current["agent_states"]["ceo"]["status"], "ready")
+            self.assertEqual(
+                [item["kind"] for item in current["artifacts"]],
+                ["mission_charter"],
+            )
+            self.assertEqual(current["execution"]["lease_owner"], "")
+
+            events = first.get(
+                "/api/v1/audit-events", headers=auth(self.viewer_key)
+            ).json()["events"]
+            checkpoints = [
+                event
+                for event in events
+                if event["resource_id"] == run_id
+                and event["action"] == "run.checkpointed"
+            ]
+            self.assertEqual(
+                sorted(item["payload"]["fencing_token"] for item in checkpoints),
+                [1, 2],
+            )
 
     def test_session_and_rate_limit_are_shared_between_instances(self):
         with TestClient(self.app(max_failures=2)) as first, TestClient(

@@ -6,6 +6,7 @@ import os
 import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
@@ -26,7 +27,7 @@ from .auth import (
     TenantAuthenticator,
     TenantPrincipal,
 )
-from .memory import MemoryStore, SQLiteMemory
+from .memory import MemoryStore, SQLiteMemory, utc_now
 from .model_gateway import ModelGateway
 from .integrations import IntegrationContractError, IntegrationRegistry
 from .models import ExecutionRun, MissionBrief, Platform, RunStatus
@@ -39,6 +40,7 @@ from .postgres import (
     normalize_postgres_schema_mode,
 )
 from .providers import ProviderRegistry
+from .run_worker import DurableRunWorker
 from .persistence import (
     AuditEvent,
     AuditEventConflictError,
@@ -306,7 +308,11 @@ class RuntimeService:
         postgres_pool_max_size: int = 10,
         postgres_connect_timeout_seconds: float = 15.0,
         postgres_schema_mode: str = "validate",
+        run_lease_seconds: int = 30,
     ) -> None:
+        if run_lease_seconds < 5 or run_lease_seconds > 300:
+            raise ValueError("run lease must be between 5 and 300 seconds")
+        self.run_lease_seconds = run_lease_seconds
         self.database_path = database_path
         self.database_url = database_url.strip() if database_url else ""
         self._postgres_database: Optional[PostgresRuntimeDatabase] = None
@@ -336,20 +342,21 @@ class RuntimeService:
         self._lock = RLock()
 
     def _runtime_for(self, tenant_id: str) -> TenantRuntime:
-        runtime = self._tenant_runtimes.get(tenant_id)
-        if runtime is None:
-            if self._postgres_database is not None:
-                memory: MemoryStore = PostgresMemory(
-                    self._postgres_database, namespace=tenant_id
+        with self._lock:
+            runtime = self._tenant_runtimes.get(tenant_id)
+            if runtime is None:
+                if self._postgres_database is not None:
+                    memory: MemoryStore = PostgresMemory(
+                        self._postgres_database, namespace=tenant_id
+                    )
+                else:
+                    memory = SQLiteMemory(self.database_path, namespace=tenant_id)
+                runtime = TenantRuntime(
+                    memory=memory,
+                    orchestrator=AgencyOrchestrator(build_sandbox_toolset(), memory),
                 )
-            else:
-                memory = SQLiteMemory(self.database_path, namespace=tenant_id)
-            runtime = TenantRuntime(
-                memory=memory,
-                orchestrator=AgencyOrchestrator(build_sandbox_toolset(), memory),
-            )
-            self._tenant_runtimes[tenant_id] = runtime
-        return runtime
+                self._tenant_runtimes[tenant_id] = runtime
+            return runtime
 
     def check(self) -> None:
         self.run_store.check()
@@ -515,6 +522,7 @@ class RuntimeService:
         actor: str,
         subject_id: str,
         idempotency_key: str,
+        asynchronous: bool = False,
     ) -> CommandResult:
         brief = self._brief(request)
         run_id = stable_id("run", brief)
@@ -562,7 +570,12 @@ class RuntimeService:
                             raise
                         return CommandResult(replay, True)
                     return CommandResult(existing, True)
-                run = self._runtime_for(tenant_id).orchestrator.start(brief)
+                orchestrator = self._runtime_for(tenant_id).orchestrator
+                run = (
+                    orchestrator.create(brief, asynchronous=True)
+                    if asynchronous
+                    else orchestrator.start(brief)
+                )
                 audit_payload = {
                     "status": run.status.value,
                     "artifact_ids": [item.artifact_id for item in run.artifacts],
@@ -592,6 +605,103 @@ class RuntimeService:
                         raise
                     return CommandResult(replay, True)
                 return CommandResult(stored, False)
+
+    @staticmethod
+    def _as_utc(value: str) -> datetime:
+        parsed = datetime.fromisoformat(value)
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+    def execute_one_queued_run(self, worker_id: str) -> bool:
+        for tenant_id, run_id in self.run_store.executable_runs(limit=100):
+            lock_id = "run-execution:{}:{}".format(tenant_id, run_id)
+            with self.run_store.command_lock(lock_id):
+                run = self.run_store.get(tenant_id, run_id)
+                if run.status not in {RunStatus.QUEUED, RunStatus.RUNNING}:
+                    continue
+                now = self._as_utc(utc_now())
+                lease_expires = (
+                    self._as_utc(run.execution.lease_expires_at)
+                    if run.execution.lease_expires_at is not None
+                    else None
+                )
+                if (
+                    run.execution.lease_owner
+                    and run.execution.lease_owner != worker_id
+                    and lease_expires is not None
+                    and lease_expires > now
+                ):
+                    continue
+
+                expected_status = run.status.value
+                run.execution.lease_owner = worker_id
+                run.execution.lease_expires_at = (
+                    now + timedelta(seconds=self.run_lease_seconds)
+                ).isoformat()
+                run.execution.fencing_token += 1
+                run.execution.attempts += 1
+                run.execution.state = "leased"
+                fence = run.execution.fencing_token
+                self.run_store.save(
+                    tenant_id, run, expected_status=expected_status
+                )
+
+                runtime = self._runtime_for(tenant_id)
+                runtime.orchestrator.restore_run(run)
+                try:
+                    run = runtime.orchestrator.advance(run_id)
+                    run.execution.lease_owner = ""
+                    run.execution.lease_expires_at = None
+                    run.execution.checkpointed_at = utc_now()
+                    if run.status in {RunStatus.QUEUED, RunStatus.RUNNING}:
+                        run.execution.state = "running"
+                    event_action = "run.checkpointed"
+                    payload = {
+                        "status": run.status.value,
+                        "station": run.execution.next_station,
+                        "fencing_token": fence,
+                        "attempt": run.execution.attempts,
+                        "artifact_ids": [item.artifact_id for item in run.artifacts],
+                    }
+                except Exception as error:
+                    run.status = RunStatus.FAILED
+                    run.execution.state = "failed"
+                    run.execution.failure_detail = type(error).__name__
+                    run.execution.lease_owner = ""
+                    run.execution.lease_expires_at = None
+                    run.execution.checkpointed_at = utc_now()
+                    event_action = "run.failed"
+                    payload = {
+                        "status": run.status.value,
+                        "station": run.execution.next_station,
+                        "fencing_token": fence,
+                        "attempt": run.execution.attempts,
+                        "failure_type": type(error).__name__,
+                    }
+                    API_LOGGER.exception(
+                        "durable_run_checkpoint_failed tenant_id=%s run_id=%s station=%s fence=%s",
+                        tenant_id, run_id, run.execution.next_station, fence,
+                    )
+
+                self.run_store.save(
+                    tenant_id,
+                    run,
+                    expected_status=expected_status,
+                    audit=AuditWrite(
+                        request_id=stable_id(
+                            "request", "run-worker", tenant_id, run_id, fence, length=32
+                        ),
+                        action=event_action,
+                        resource_type="execution_run",
+                        resource_id=run_id,
+                        actor="system:{}".format(worker_id),
+                        payload=payload,
+                        event_id=stable_id(
+                            "run-checkpoint", tenant_id, run_id, fence, length=48
+                        ),
+                    ),
+                )
+                return True
+        return False
 
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
         with self._lock:
@@ -889,6 +999,8 @@ def create_app(
     provider_environment: Optional[Mapping[str, str]] = None,
     social_environment: Optional[Mapping[str, str]] = None,
     social_oauth_transport: Optional[httpx.BaseTransport] = None,
+    run_worker_poll_interval_seconds: Optional[float] = None,
+    run_lease_seconds: Optional[int] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     db_url = (
@@ -987,6 +1099,16 @@ def create_app(
             os.environ.get("AGENCY_IDENTITY_CREDENTIALS_JSON"),
         )
 
+    worker_poll_interval = (
+        float(os.environ.get("AGENCY_RUN_WORKER_POLL_INTERVAL_SECONDS", "0.35"))
+        if run_worker_poll_interval_seconds is None
+        else run_worker_poll_interval_seconds
+    )
+    lease_seconds = (
+        int(os.environ.get("AGENCY_RUN_LEASE_SECONDS", "30"))
+        if run_lease_seconds is None
+        else run_lease_seconds
+    )
     service = RuntimeService(
         db_path,
         database_url=db_url or None,
@@ -994,6 +1116,7 @@ def create_app(
         postgres_pool_max_size=pool_max_size,
         postgres_connect_timeout_seconds=connect_timeout_seconds,
         postgres_schema_mode=schema_mode,
+        run_lease_seconds=lease_seconds,
     )
     provider_source = os.environ if provider_environment is None else provider_environment
     provider_registry = ProviderRegistry.from_environment(provider_source)
@@ -1063,12 +1186,18 @@ def create_app(
             )
         social_oauth_service = None
     metrics = RuntimeMetrics()
+    run_worker = DurableRunWorker(
+        service.execute_one_queued_run,
+        poll_interval_seconds=worker_poll_interval,
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        run_worker.start()
         try:
             yield
         finally:
+            run_worker.stop()
             if social_oauth_service is not None:
                 social_oauth_service.close()
             model_gateway.close()
@@ -1087,6 +1216,7 @@ def create_app(
         lifespan=lifespan,
     )
     app.state.runtime_service = service
+    app.state.run_worker = run_worker
     app.state.authenticator = authenticator
     app.state.metrics = metrics
     app.state.integration_registry = IntegrationRegistry.default()
@@ -1535,6 +1665,7 @@ def create_app(
             "storage_backend": service.storage_backend,
             "shared_state": service.shared_state,
             "durable_run_store": service.shared_state or db_path != ":memory:",
+            "durable_run_worker": run_worker.running,
             "individual_identity_configured": authenticator.individual_identity_configured,
             "login_rate_limit": {
                 "credential_max_failures": max_failures,
@@ -1918,9 +2049,16 @@ def create_app(
             max_length=200,
             pattern=_IDEMPOTENCY_KEY_PATTERN,
         ),
+        prefer: Optional[str] = Header(default=None, alias="Prefer", max_length=200),
         principal: TenantPrincipal = Depends(require_run_creator),
     ) -> Dict[str, object]:
         try:
+            preferences = {
+                item.strip().lower()
+                for item in (prefer or "").split(",")
+                if item.strip()
+            }
+            respond_async = "respond-async" in preferences
             result = service.start(
                 principal.tenant_id,
                 brief_request,
@@ -1928,9 +2066,14 @@ def create_app(
                 _actor(principal),
                 principal.subject_id,
                 idempotency_key,
+                asynchronous=respond_async,
             )
             if not result.replayed:
                 metrics.run_started()
+                if respond_async:
+                    response.status_code = status.HTTP_202_ACCEPTED
+                    response.headers["Preference-Applied"] = "respond-async"
+                    response.headers["Location"] = "/api/v1/runs/{}".format(result.run.run_id)
             else:
                 response.status_code = status.HTTP_200_OK
                 response.headers["X-Command-Replayed"] = "true"

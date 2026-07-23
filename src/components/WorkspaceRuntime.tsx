@@ -230,6 +230,33 @@ export function WorkspaceRuntime({
   }, [api, onEntitlementsChange]);
 
   useEffect(() => {
+    if (!session || !run || !["queued", "running"].includes(run.status)) return;
+    let active = true;
+    let polling = false;
+    const refreshRun = async () => {
+      if (polling) return;
+      polling = true;
+      try {
+        const refreshed = await api.getRun(run.run_id);
+        if (!active) return;
+        setRun(refreshed);
+        if (!["queued", "running"].includes(refreshed.status)) {
+          await refreshWorkspace();
+        }
+      } catch (caught) {
+        if (active) handleFailure(caught, true);
+      } finally {
+        polling = false;
+      }
+    };
+    const timer = window.setInterval(() => void refreshRun(), 400);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [api, handleFailure, refreshWorkspace, run?.run_id, run?.status, session]);
+
+  useEffect(() => {
     let active = true;
     void api.resumeSession()
       .then(async (resumed) => {
@@ -528,7 +555,7 @@ export function WorkspaceRuntime({
             className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 text-sm font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
           >
             <Play size={15} aria-hidden="true" />
-            {busyAction === "run" ? "Ejecutando campaña gobernada…" : "Ejecutar campaña"}
+            {busyAction === "run" ? "Encolando campaña gobernada…" : "Ejecutar campaña"}
           </button>
           {!session && sessionPhase !== "restoring" && (
             <p className="mt-3 text-center text-[11px] leading-5 text-zinc-500">
@@ -580,6 +607,11 @@ export function WorkspaceRuntime({
                   <div>
                     <p className="font-mono text-[10px] text-zinc-500">{run.run_id}</p>
                     <p className="mt-1 text-base font-bold capitalize text-zinc-100">{run.status.replaceAll("_", " ")}</p>
+                    {["queued", "running"].includes(run.status) && (
+                      <p className="mt-1 font-mono text-[10px] text-sky-200/80">
+                        checkpoint {run.execution.fencing_token} · próxima estación {run.execution.next_station}
+                      </p>
+                    )}
                   </div>
                   <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-400">
                     {run.artifacts.length} artefactos

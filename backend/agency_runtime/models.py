@@ -47,6 +47,7 @@ class AgentStatus(str, Enum):
 
 
 class RunStatus(str, Enum):
+    QUEUED = "queued"
     RUNNING = "running"
     AWAITING_GREENLIGHT = "awaiting_greenlight"
     COMPLETED = "completed"
@@ -186,6 +187,28 @@ class Greenlight:
 
 
 @dataclass
+class RunExecution:
+    state: str = "inline"
+    next_station: str = "ceo"
+    lease_owner: str = ""
+    lease_expires_at: Optional[str] = None
+    fencing_token: int = 0
+    attempts: int = 0
+    checkpointed_at: Optional[str] = None
+    failure_detail: str = ""
+
+    def __post_init__(self) -> None:
+        if self.state not in {
+            "inline", "queued", "leased", "running",
+            "awaiting_greenlight", "completed", "failed"
+        }:
+            raise ValueError("run execution state is invalid")
+        if self.fencing_token < 0 or self.attempts < 0:
+            raise ValueError("run execution counters must not be negative")
+        if self.lease_owner and self.lease_expires_at is None:
+            raise ValueError("run execution lease requires an expiry")
+
+@dataclass
 class ExecutionRun:
     run_id: str
     brief: MissionBrief
@@ -197,6 +220,7 @@ class ExecutionRun:
     trace: List[TraceEvent] = field(default_factory=list)
     greenlight: Optional[Greenlight] = None
     completed_at: Optional[str] = None
+    execution: RunExecution = field(default_factory=RunExecution)
 
     def state_for(self, role: AgentRole) -> AgentState:
         return self.agent_states[role]

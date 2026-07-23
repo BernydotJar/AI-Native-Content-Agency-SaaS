@@ -632,6 +632,59 @@ print("session_revocation=pass")
 print("external_side_effects_enabled=false")
 PYCHECK
 
+async_status=$(curl -sS -o "$TMP_DIR/async-run.json" -D "$TMP_DIR/async-run.headers" -w '%{http_code}' \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $AUTH_KEY" \
+  -H 'Prefer: respond-async' \
+  -H 'Idempotency-Key: package-async-command-0001' \
+  -H 'X-Request-ID: package-async-create-0001' \
+  -d '{"title":"Packaged asynchronous runtime","objective":"Verify durable station checkpoints inside the production image","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/runs")
+[ "$async_status" = "202" ]
+ASYNC_RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/async-run.json")
+for _ in $(seq 1 100); do
+  curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+    "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${ASYNC_RUN_ID}" > "$TMP_DIR/async-current.json"
+  current_status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$TMP_DIR/async-current.json")
+  if [ "$current_status" = "awaiting_greenlight" ]; then
+    break
+  fi
+  sleep 0.15
+done
+curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events?limit=100" > "$TMP_DIR/async-audit.json"
+python3 - "$TMP_DIR/async-run.json" "$TMP_DIR/async-current.json" "$TMP_DIR/async-run.headers" "$TMP_DIR/async-audit.json" <<'PYASYNC'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    queued = json.load(handle)
+with open(sys.argv[2], encoding="utf-8") as handle:
+    final = json.load(handle)
+with open(sys.argv[3], encoding="utf-8") as handle:
+    headers = handle.read().lower()
+with open(sys.argv[4], encoding="utf-8") as handle:
+    audit = json.load(handle)
+assert queued["status"] == "queued"
+assert queued["execution"]["fencing_token"] == 0
+assert "preference-applied: respond-async" in headers
+assert "location: /api/v1/runs/" in headers
+assert final["status"] == "awaiting_greenlight"
+assert final["execution"]["state"] == "awaiting_greenlight"
+assert final["execution"]["fencing_token"] == 14
+assert final["execution"]["lease_owner"] == ""
+assert len(final["artifacts"]) == 7
+checkpoints = [
+    item for item in audit["events"]
+    if item["resource_id"] == final["run_id"] and item["action"] == "run.checkpointed"
+]
+assert [item["payload"]["fencing_token"] for item in checkpoints] == list(range(1, 15))
+assert all(item["actor"].startswith("system:worker-") for item in checkpoints)
+print("async_run_accepted=pass")
+print("async_run_durable_checkpoints=pass")
+print("async_run_package_greenlight=pass")
+PYASYNC
+
 if [ -f "$TMP_DIR/runtime.log" ] && {
   grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null ||
   grep -F "$VIEWER_KEY" "$TMP_DIR/runtime.log" >/dev/null ||

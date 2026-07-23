@@ -1,0 +1,505 @@
+{
+  "processingStations": [
+    "CEO Director",
+    "Research",
+    "Strategist",
+    "Growth",
+    "Writer",
+    "Media Studio",
+    "Risk & QA"
+  ],
+  "checkpointNumbers": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "finalStatus": "awaiting_greenlight",
+  "finalFencingToken": 14,
+  "finalRunId": "run-46f93b6c03c8a577",
+  "artifacts": 7,
+  "snapshots": [
+    {
+      "processingStations": [],
+      "checkpoint": "",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [],
+      "checkpoint": "checkpoint 0 · próxima estación ceo",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [],
+      "checkpoint": "checkpoint 0 · próxima estación ceo",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director"
+      ],
+      "checkpoint": "checkpoint 1 · próxima estación ceo",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director"
+      ],
+      "checkpoint": "checkpoint 2 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director"
+      ],
+      "checkpoint": "checkpoint 2 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 3 · próxima estación research",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 4 · próxima estación strategist",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 4 · próxima estación strategist",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research"
+      ],
+      "checkpoint": "checkpoint 4 · próxima estación strategist",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist"
+      ],
+      "checkpoint": "checkpoint 5 · próxima estación strategist",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist"
+      ],
+      "checkpoint": "checkpoint 5 · próxima estación strategist",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist"
+      ],
+      "checkpoint": "checkpoint 6 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist"
+      ],
+      "checkpoint": "checkpoint 6 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist"
+      ],
+      "checkpoint": "checkpoint 6 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 7 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 7 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 7 · próxima estación growth",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 8 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 8 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth"
+      ],
+      "checkpoint": "checkpoint 8 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 9 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 9 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 9 · próxima estación writer",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 10 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 10 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 10 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 10 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer"
+      ],
+      "checkpoint": "checkpoint 10 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 11 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 11 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 11 · próxima estación media",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 12 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 12 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio"
+      ],
+      "checkpoint": "checkpoint 12 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio",
+        "Risk & QA"
+      ],
+      "checkpoint": "checkpoint 13 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio",
+        "Risk & QA"
+      ],
+      "checkpoint": "checkpoint 13 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio",
+        "Risk & QA"
+      ],
+      "checkpoint": "checkpoint 13 · próxima estación risk",
+      "awaiting": false,
+      "artifacts": false
+    },
+    {
+      "processingStations": [
+        "CEO Director",
+        "Research",
+        "Strategist",
+        "Growth",
+        "Writer",
+        "Media Studio",
+        "Risk & QA"
+      ],
+      "checkpoint": "",
+      "awaiting": true,
+      "artifacts": true
+    }
+  ],
+  "browserTimersInventedState": false,
+  "providerCalls": 0,
+  "publications": 0
+}
