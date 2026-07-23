@@ -1,7 +1,7 @@
 # INC-019 Social OAuth and Encrypted Account Connection Review
 
 Updated: 2026-07-23
-Implementation commit: `e3bca9c95a3080e1e7677454996d9ad56469b4f4`
+Implementation commit: `6d5e59b`
 Branch: `agent/inc-019-social-oauth-publication`
 Status: `review`
 
@@ -24,6 +24,9 @@ in the browser, Git, API responses, logs or audit payloads.
 - `.env.local` auto-loading, tracked-file refusal and a fresh 32-byte key generator.
 - Helm/Terraform references to a pre-existing Secret; no secret values in Terraform state.
 - Settings UI with Connect/Disconnect, callback return notice and encrypted-storage status.
+- Secure SameSite=Lax browser session for top-level OAuth callback GETs; strict social OAuth configuration fails startup.
+- Exact X/Instagram callback URLs visible in Settings and provider failures classified by safe phase/reason.
+- Real Chromium cross-site callback regression for X and Instagram using mock provider transport.
 - No publication route; external publication remains disabled.
 
 ## Critic findings
@@ -35,27 +38,29 @@ in the browser, Git, API responses, logs or audit payloads.
 | Simultaneous PostgreSQL callbacks could both succeed. | HIGH | `UPDATE ... RETURNING` atomic consume; two-store race proves one success and one unavailable. |
 | Bootstrap could accept partial or unencrypted token groups. | HIGH | Exact required groups, explicit tenant, app/callback and encryption keys; application startup fails otherwise. |
 | Concurrent replicas could duplicate bootstrap audit. | MEDIUM | Deterministic event ID serialized by the durable command lock. |
-| Provider responses could be unbounded or reflect secrets. | HIGH | Streaming 1 MiB bound, no redirects/proxies/retries and fixed sanitized public errors. |
+| Provider responses could be unbounded or reflect secrets. | HIGH | Streaming 1 MiB bound, no redirects/proxies/retries and phase-safe sanitized public errors. |
+| SameSite=Strict dropped the browser session on provider return. | HIGH | Secure SameSite=Lax for OAuth return, strict-policy startup rejection and cross-site Chromium regression. |
 | UI could invite users to paste tokens in the browser. | HIGH UX | No token fields; admin receives provider OAuth redirect or uses server-side `.env.local`/Secret bootstrap. |
 | Account connection could be mistaken for publication readiness. | HIGH product | `publishing_available=false`, no publish route and INC-020 records exact-once publication as separate work. |
 
 ## Verification
 
 ```text
-Locked Python wheel                         PASS — 183 tests, 14 PostgreSQL skips
-PostgreSQL shared runtime                   PASS — 183/183
+Locked Python wheel                         PASS — 192 tests, 14 PostgreSQL skips
+PostgreSQL shared runtime                   PASS — 192/192
 PostgreSQL schema                           PASS — v2, migration, grants, backup/restore
 Frontend                                    PASS — 35/35
 Oxlint / TypeScript / Vite                  PASS
 Chromium accessibility                      PASS
 Chromium X/Instagram output                 PASS
+Chromium cross-site X/Instagram callbacks   PASS
 Buildah non-root package                    PASS
 OAuth routes governed                       PASS
 Social publication routes absent            PASS
 K3s/Helm/Terraform plan/apply/destroy       PASS
 Actionlint                                  PASS
 Gitleaks history/worktree                   PASS — zero leaks
-Clean-source supply chain                   PASS — fa54d84, no publication
+Clean-source supply chain                   PASS — 6d5e59b, no publication
 Compliance                                  PASS — DENY_RELEASE, 0 active providers
 Real X/Meta OAuth or publication             NOT_RUN
 Real credentials/tokens                     NOT_USED

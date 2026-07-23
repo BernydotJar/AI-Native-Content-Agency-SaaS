@@ -319,9 +319,17 @@
       "owner": "INC-019",
       "description": "OAuth state or tokens could replay, cross tenants or leak through persistence/API/logs.",
       "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; tenant/session/channel binding, atomic single-use state, AES-GCM AAD, sanitized errors and Gitleaks zero pass."
+    },
+    {
+      "id": "F-041",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "Browser sessions used SameSite=Strict, so X/Instagram cross-site OAuth callback GETs lost the HttpOnly session and returned authentication_failed before token exchange.",
+      "evidence": "6d5e59b; Secure SameSite=Lax policy, strict-policy startup rejection, exact callback visibility, safe phase diagnostics and real Chromium cross-site X/Instagram callback gates pass with mock provider transport."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
-  "updated_at": "2026-07-23T06:01:29Z"
+  "source_commit": "6d5e59b",
+  "updated_at": "2026-07-23T19:09:24Z"
 }

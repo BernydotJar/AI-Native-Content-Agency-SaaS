@@ -15,9 +15,10 @@ Cloud recommendation: `DENY_APPLY`
 - Campaign output/resource replay implementation: `9b0b65927fe9609e1f55835728332bb3e2aa09ca`
 - X/Instagram readiness implementation: `93c5f55852dc60409d231eca948c20d74a871aa0`
 - OAuth/encrypted account implementation: `e3bca9c95a3080e1e7677454996d9ad56469b4f4`
+- Cross-site OAuth callback repair: `6d5e59b`
 - Active branch remote: pending publication
 - Active draft PR and exact-head CI: pending
-- Real X/Instagram OAuth, token exchange and publication: not performed
+- Operator-observed Instagram authorization reached the callback; the previous Strict-cookie failure was repaired. Automated provider verification remains MockTransport-only; publication was not performed.
 - Real model calls, cloud deployment, registry publication, billing and spend: not performed
 
 ## Active increment
@@ -40,7 +41,9 @@ External effects during verification: none; all provider HTTP used `httpx.MockTr
 - Server-side bootstrap for existing X/Instagram tokens; partial groups fail startup.
 - `.env.local` loading, tracked-file refusal and 32-byte key generator.
 - Helm/Terraform references to a pre-existing Secret; no values enter Terraform state.
-- Settings UI with Connect/Disconnect and callback-return status.
+- Settings UI with Connect/Disconnect, exact callback URL and callback-return status.
+- Secure SameSite=Lax session policy for provider returns and phase-safe sanitized diagnostics.
+- Real Chromium cross-site callback regression for X and Instagram with mock provider transport.
 - No publication route; `publishing_available=false` remains authoritative.
 
 #### Local evidence
@@ -48,13 +51,14 @@ External effects during verification: none; all provider HTTP used `httpx.MockTr
 ```text
 Program validator                         PASS — 79 requirements, 20 tasks
 Compliance validator                      PASS — DENY_RELEASE, 0 active providers, 35 components
-Locked Python wheel                       PASS — 183 tests, 14 PostgreSQL skips
-PostgreSQL shared state                   PASS — 183/183
+Locked Python wheel                       PASS — 192 tests, 14 PostgreSQL skips
+PostgreSQL shared state                   PASS — 192/192
 PostgreSQL schema/grants                  PASS — v2, non-owner runtime, migration and restores
 Frontend                                  PASS — 35/35
 Oxlint / TypeScript / Vite                PASS
 Chromium accessibility                    PASS
 Chromium X/Instagram output               PASS
+Chromium X/Instagram cross-site callback  PASS
 Buildah non-root package                  PASS
 OAuth routes governed                     PASS
 Social publication routes absent          PASS
@@ -64,8 +68,8 @@ Gitleaks history/worktree                 PASS — zero leaks
 Operability                               PASS — 4 SLOs, 7 alerts, 8 exercises
 Real provider OAuth/publication           NOT_RUN
 Real credentials/tokens                   NOT_USED
-Clean-source supply chain                 PASS — source fa54d84, registry_publication=false
-Push / PR / exact-head CI                 PENDING
+Clean-source supply chain                 PASS — source 6d5e59b, registry_publication=false
+Push / PR / exact-head CI                 PENDING FOR 6d5e59b
 ```
 
 #### Critic decision
@@ -130,6 +134,6 @@ Open CRITICAL findings: `0`.
 
 ## Exact continuation condition
 
-Start from `e3bca9c95a3080e1e7677454996d9ad56469b4f4` plus the program checkpoint. Preserve
+Start from `6d5e59b` plus the program checkpoint. Preserve
 `DENY_RELEASE`, `DENY_APPLY`, `active_external_providers=0`, publication disabled and zero
 real provider calls. Publish and verify INC-019 before requesting user authentication.

@@ -467,7 +467,7 @@
       "scope": "X/Instagram OAuth, encryption and callback replay",
       "command": "locked wheel and PostgreSQL runtime gates",
       "result": "PASS",
-      "observed": "183 locked tests and 183/183 PostgreSQL tests PASS; AES-GCM, schema v2, same-session callbacks, Professional Instagram, cross-replica single-use state and bootstrap pass with mock transports."
+      "observed": "192 locked tests and 192/192 PostgreSQL tests PASS; AES-GCM, schema v2, cross-site SameSite=Lax callbacks, Professional Instagram, cross-replica single-use state and bootstrap pass with mock transports."
     },
     {
       "id": "INC019-ADMIN-UX",
@@ -502,10 +502,24 @@
       "scope": "clean-source SBOM, vulnerability/license policy and provenance",
       "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
       "result": "PASS",
-      "observed": "Clean source fa54d84; 32 Python packages evaluated, exact cryptography dual-license mapping, vulnerability baseline, provenance and Cosign offline PASS; registry_publication=false."
+      "observed": "Clean source 6d5e59b; SBOM, exact license policy, vulnerability baseline, provenance and Cosign offline PASS with Buildah; registry_publication=false."
+    },
+    {
+      "id": "INC019-CROSS-SITE-CALLBACK",
+      "scope": "browser session preservation across X/Instagram OAuth returns",
+      "command": "npm run verify:social-oauth-browser",
+      "result": "PASS",
+      "observed": "Chromium created an HttpOnly SameSite=Lax session on 127.0.0.1, navigated through a different-site localhost provider page, returned through X and Instagram callbacks, connected both accounts and observed no external provider HTTP beyond MockTransport."
+    },
+    {
+      "id": "INC019-CALLBACK-DIAGNOSTICS",
+      "scope": "exact callback visibility and sanitized provider failure phase",
+      "command": "locked backend and frontend contracts",
+      "result": "PASS",
+      "observed": "API/UI expose callback URLs without secrets; X request-token, X access-token, Instagram code exchange and profile phases produce bounded actionable codes without provider bodies or credentials."
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
-  "updated_at": "2026-07-23T06:09:20Z"
+  "source_commit": "6d5e59b",
+  "updated_at": "2026-07-23T19:09:24Z"
 }

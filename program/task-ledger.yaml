@@ -1090,7 +1090,7 @@
       "status": "review",
       "role": "Integration Engineer / Security Reviewer",
       "objective": "Connect tenant-owned X and Instagram accounts through OAuth or encrypted server-side token bootstrap.",
-      "context": "Implementation e3bca9c adds schema v2, AES-GCM token storage, single-use callbacks, admin UI and Secret references. Publication remains disabled.",
+      "context": "OAuth/account connection is implemented; repair 6d5e59b changes the browser session cookie to Secure SameSite=Lax for cross-site provider returns, exposes exact callbacks and adds phase-safe provider diagnostics.",
       "dependencies": [
         "INC-003",
         "INC-012",
@@ -1139,10 +1139,10 @@
         "all local gates pass"
       ],
       "validation_commands": [
-        "183 locked/PostgreSQL tests",
+        "192 locked/PostgreSQL tests",
         "35 frontend tests",
-        "Chromium",
-        "Buildah package",
+        "Chromium accessibility/social output/cross-site OAuth",
+        "Buildah package and supply chain",
         "K3s/Helm/Terraform",
         "Actionlint/Gitleaks"
       ],
@@ -1153,7 +1153,7 @@
         "merge",
         "deployment"
       ],
-      "implementation_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
+      "implementation_commit": "6d5e59b",
       "readiness_commit": "93c5f55852dc60409d231eca948c20d74a871aa0",
       "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
     },
@@ -1222,7 +1222,7 @@
       ]
     }
   ],
-  "updated_at": "2026-07-23T06:01:29Z",
+  "updated_at": "2026-07-23T19:09:24Z",
   "workstreams": [
     {
       "acceptance_criteria": [
