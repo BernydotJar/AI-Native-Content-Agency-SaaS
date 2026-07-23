@@ -12,6 +12,7 @@ SCRIPT = ROOT / "scripts" / "run-local-product.sh"
 PACKAGE = ROOT / "package.json"
 LOCAL_BUILD_LOCK = ROOT / "backend" / "requirements-local-build.lock"
 SOCIAL_KEY_SCRIPT = ROOT / "scripts" / "generate-social-encryption-key.py"
+ENV_EXAMPLE = ROOT / ".env.example"
 
 
 class LocalProductRunnerTests(unittest.TestCase):
@@ -210,6 +211,73 @@ class LocalProductRunnerTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 65)
         self.assertIn("refusing tracked environment file", completed.stderr)
+
+    def test_env_example_keeps_social_token_bootstrap_opt_in(self):
+        assignments = {}
+        for line in ENV_EXAMPLE.read_text(encoding="utf-8").splitlines():
+            if not line or line.lstrip().startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            assignments[name] = value
+        self.assertEqual(assignments["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"], "")
+        self.assertEqual(assignments["AGENCY_X_USER_ACCESS_TOKEN"], "")
+        self.assertEqual(assignments["AGENCY_INSTAGRAM_ACCESS_TOKEN"], "")
+
+    def test_runner_rejects_bootstrap_tenant_without_tokens_before_build(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            env_file = Path(tempdir) / ".env.local"
+            env_file.write_text(
+                "AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID=local-tenant\n"
+                "AGENCY_X_CONSUMER_KEY=oauth-app-key\n"
+                "AGENCY_X_CONSUMER_SECRET=oauth-app-secret\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"],
+                cwd=ROOT,
+                env={
+                    "PATH": "/usr/local/bin:/usr/bin:/bin",
+                    "AGENCY_PYTHON_BIN": sys.executable,
+                    "AGENCY_ENV_FILE": str(env_file),
+                    "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 65)
+        self.assertIn("clear AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID", completed.stderr)
+        self.assertNotIn("oauth-app-secret", completed.stdout + completed.stderr)
+        self.assertNotIn("building production web bundle", completed.stdout)
+
+    def test_runner_accepts_oauth_only_configuration_without_bootstrap_tenant(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            env_file = Path(tempdir) / ".env.local"
+            env_file.write_text(
+                "AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID=\n"
+                "AGENCY_X_CONSUMER_KEY=oauth-app-key\n"
+                "AGENCY_X_CONSUMER_SECRET=oauth-app-secret\n"
+                "AGENCY_X_REDIRECT_URI=http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"],
+                cwd=ROOT,
+                env={
+                    "PATH": "/usr/local/bin:/usr/bin:/bin",
+                    "AGENCY_PYTHON_BIN": sys.executable,
+                    "AGENCY_ENV_FILE": str(env_file),
+                    "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("local_product_config=pass", completed.stdout)
+        self.assertNotIn("oauth-app-secret", completed.stdout + completed.stderr)
 
     def test_runner_rejects_an_explicit_unsupported_python_before_build(self):
         with tempfile.TemporaryDirectory() as tempdir:

@@ -20,6 +20,53 @@ if [[ -f "$LOCAL_ENV_FILE" ]]; then
 ' "$(basename "$LOCAL_ENV_FILE")"
 fi
 
+validate_social_bootstrap_environment() {
+  local tenant="${AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID:-}"
+  local x_fields=(
+    AGENCY_X_USER_ACCESS_TOKEN
+    AGENCY_X_USER_ACCESS_TOKEN_SECRET
+    AGENCY_X_ACCOUNT_ID
+    AGENCY_X_ACCOUNT_USERNAME
+  )
+  local instagram_fields=(
+    AGENCY_INSTAGRAM_ACCESS_TOKEN
+    AGENCY_INSTAGRAM_ACCOUNT_ID
+    AGENCY_INSTAGRAM_ACCOUNT_USERNAME
+  )
+  local x_configured=0
+  local instagram_configured=0
+  local field=""
+
+  for field in "${x_fields[@]}"; do
+    if [[ -n "${!field:-}" ]]; then
+      x_configured=$((x_configured + 1))
+    fi
+  done
+  for field in "${instagram_fields[@]}"; do
+    if [[ -n "${!field:-}" ]]; then
+      instagram_configured=$((instagram_configured + 1))
+    fi
+  done
+
+  if [[ -n "$tenant" && $x_configured -eq 0 && $instagram_configured -eq 0 ]]; then
+    printf '%s\n' 'social bootstrap configuration is incomplete: clear AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID for OAuth-only setup, or provide a complete X/Instagram token group' >&2
+    return 65
+  fi
+  if [[ -z "$tenant" && ( $x_configured -gt 0 || $instagram_configured -gt 0 ) ]]; then
+    printf '%s\n' 'social bootstrap configuration is incomplete: set AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID when bootstrap tokens are provided' >&2
+    return 65
+  fi
+  if [[ $x_configured -ne 0 && $x_configured -ne ${#x_fields[@]} ]]; then
+    printf '%s\n' 'X social bootstrap configuration is incomplete; provide all X token/account fields or leave all of them empty' >&2
+    return 65
+  fi
+  if [[ $instagram_configured -ne 0 && $instagram_configured -ne ${#instagram_fields[@]} ]]; then
+    printf '%s\n' 'Instagram social bootstrap configuration is incomplete; provide token, account ID and username or leave all of them empty' >&2
+    return 65
+  fi
+}
+validate_social_bootstrap_environment || exit $?
+
 MODE="run"
 if [[ "${1:-}" == "--check" ]]; then
   MODE="check"

@@ -70,7 +70,10 @@ a los diez minutos y está ligado a tenant, sesión y canal.
 Configura siempre el tenant receptor y el grupo completo del canal. Una configuración
 parcial hace fallar el arranque.
 
+For OAuth-only setup, keep `AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID` empty.
+
 ```dotenv
+# Set this only when at least one complete token group below is configured.
 AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID=local-tenant
 
 AGENCY_X_USER_ACCESS_TOKEN=
