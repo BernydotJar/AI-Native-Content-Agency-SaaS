@@ -35,6 +35,16 @@
   ],
   "reviewed_license_mappings": [
     {
+      "package": "cryptography",
+      "version": "49.0.0",
+      "reported_license": "Apache-2.0 OR BSD-3-Clause",
+      "normalized_licenses": [
+        "Apache-2.0",
+        "BSD-3-Clause"
+      ],
+      "reason": "Syft reports the exact cryptography 49.0.0 release as a dual Apache-2.0 OR BSD-3-Clause package; both normalized licenses are allowlisted and this mapping is pinned to the exact package/version/report."
+    },
+    {
       "package": "pg8000",
       "version": "1.31.5",
       "reported_license": "BSD 3-Clause License",

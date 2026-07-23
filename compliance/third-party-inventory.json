@@ -28,7 +28,7 @@
     },
     {
       "path": "artifacts/supply-chain/license-policy.json",
-      "sha256": "2f1aec443c58b0712291d521835126a09a5245576675675ad164fac7f8efcb70"
+      "sha256": "f27836f7a7ff4f1aac6ec22380064aea08fda28cd91d79ab6d5a6d5df6639a1a"
     },
     {
       "path": "backend/agency_runtime/integration_reviews/video_use.json",
