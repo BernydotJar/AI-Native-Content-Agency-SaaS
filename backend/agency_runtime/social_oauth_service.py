@@ -47,7 +47,16 @@ class SocialOAuthUnavailableError(SocialOAuthError):
 
 
 class SocialOAuthProviderError(SocialOAuthError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        phase: str = "provider",
+        reason: str = "invalid_response",
+    ) -> None:
+        super().__init__(message)
+        self.phase = phase
+        self.reason = reason
 
 
 class SocialOAuthCallbackError(SocialOAuthError):
@@ -174,6 +183,7 @@ class SocialOAuthService:
         consumer_key, consumer_secret = config.credentials
         response = self._oauth1_post(
             _X_ACCESS_TOKEN_URL,
+            phase="x_access_token",
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
             token=oauth_token,
@@ -240,6 +250,7 @@ class SocialOAuthService:
         response = self._bounded_request(
             "POST",
             _INSTAGRAM_ACCESS_TOKEN_URL,
+            phase="instagram_token_exchange",
             data={
                 "client_id": app_id,
                 "client_secret": app_secret,
@@ -254,6 +265,7 @@ class SocialOAuthService:
         profile_response = self._bounded_request(
             "GET",
             _INSTAGRAM_PROFILE_URL,
+            phase="instagram_profile",
             params={"fields": "id,username,account_type,user_id"},
             headers={"Authorization": "Bearer {}".format(access_token)},
         )
@@ -313,6 +325,7 @@ class SocialOAuthService:
         consumer_key, consumer_secret = config.credentials
         response = self._oauth1_post(
             _X_REQUEST_TOKEN_URL,
+            phase="x_request_token",
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
             token=None,
@@ -404,6 +417,7 @@ class SocialOAuthService:
         self,
         url: str,
         *,
+        phase: str,
         consumer_key: str,
         consumer_secret: str,
         token: Optional[str],
@@ -432,10 +446,12 @@ class SocialOAuthService:
             for name, value in sorted(oauth.items())
         )
         return self._bounded_request(
-            "POST", url, headers={"Authorization": authorization}
+            "POST", url, phase=phase, headers={"Authorization": authorization}
         )
 
-    def _bounded_request(self, method: str, url: str, **kwargs: object) -> httpx.Response:
+    def _bounded_request(
+        self, method: str, url: str, *, phase: str, **kwargs: object
+    ) -> httpx.Response:
         try:
             with self._client.stream(method, url, **kwargs) as upstream:
                 chunks = []
@@ -444,7 +460,9 @@ class SocialOAuthService:
                     total += len(chunk)
                     if total > _MAX_RESPONSE_BYTES:
                         raise SocialOAuthProviderError(
-                            "social provider response is too large"
+                            "social provider response is too large",
+                            phase=phase,
+                            reason="invalid_response",
                         )
                     chunks.append(chunk)
                 response = httpx.Response(
@@ -457,10 +475,16 @@ class SocialOAuthService:
             raise
         except httpx.HTTPError as error:
             raise SocialOAuthProviderError(
-                "social provider request failed"
+                "social provider request failed",
+                phase=phase,
+                reason="unreachable",
             ) from error
         if response.status_code < 200 or response.status_code >= 300:
-            raise SocialOAuthProviderError("social provider rejected the request")
+            raise SocialOAuthProviderError(
+                "social provider rejected the request",
+                phase=phase,
+                reason="rejected",
+            )
         return response
 
 

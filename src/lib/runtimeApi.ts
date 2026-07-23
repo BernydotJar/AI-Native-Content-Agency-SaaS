@@ -143,6 +143,7 @@ export interface RuntimeSocialChannel {
   configuration_state: SocialChannelConfigurationState;
   credentials_configured: boolean;
   callback_configured: boolean;
+  callback_url: string;
   connection_state: "not_connected" | "connected";
   oauth_start_available: boolean;
   oauth_runtime_configured: boolean;

@@ -93,6 +93,9 @@ class SocialChannelApiTests(unittest.TestCase):
             )
             self.assertTrue(all(channel["oauth_start_available"] is False for channel in channels))
             self.assertTrue(all(channel["connection_state"] == "not_connected" for channel in channels))
+            callbacks = {channel["channel_id"]: channel["callback_url"] for channel in channels}
+            self.assertEqual(callbacks["x"], environment["AGENCY_X_REDIRECT_URI"])
+            self.assertEqual(callbacks["instagram"], environment["AGENCY_INSTAGRAM_REDIRECT_URI"])
             serialized = json.dumps(response.json())
             for secret in (
                 "x-consumer-key-value",

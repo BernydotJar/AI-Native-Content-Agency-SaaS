@@ -53,7 +53,7 @@ class BrowserSessionTests(unittest.TestCase):
             self.assertIsNotNone(cookie_value)
             set_cookie = created.headers["set-cookie"].lower()
             self.assertIn("httponly", set_cookie)
-            self.assertIn("samesite=strict", set_cookie)
+            self.assertIn("samesite=lax", set_cookie)
             self.assertNotIn("secure", set_cookie)
             self.assertNotIn(API_KEY, created.text)
             self.assertNotIn(cookie_value, created.text)

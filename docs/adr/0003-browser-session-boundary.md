@@ -11,7 +11,7 @@ The React application needed to invoke the authenticated runtime. Embedding a te
 
 1. Exchange the tenant API key once through `POST /api/v1/sessions` over the same origin.
 2. Store only SHA-256 hashes of the session token and CSRF token in SQLite.
-3. Return the session token exclusively in an `HttpOnly`, `SameSite=Strict`, path-scoped cookie; default `Secure=true`.
+3. Return the session token exclusively in an `HttpOnly`, `SameSite=Lax`, path-scoped cookie; default `Secure=true`.
 4. Return the CSRF token in the JSON response and keep it only in React memory.
 5. Require `X-CSRF-Token` for every state-changing request authenticated by cookie.
 6. Allow bearer machine clients to continue without CSRF.
@@ -34,4 +34,4 @@ The React application needed to invoke the authenticated runtime. Embedding a te
 - The one-time key exchange still requires TLS and should later be replaced by a managed user identity flow.
 - Tenant API keys represent a tenant, not an individual person; reviewer identity remains supplied by the operator.
 - There is no login rate limiter, account lockout, MFA, or external identity provider yet.
-- `SameSite=Strict` assumes the SPA and API remain same-origin.
+- `SameSite=Lax` preserves the cookie on top-level safe-method OAuth returns from X/Instagram; all state-changing requests still require a rotated CSRF token, and OAuth callbacks consume a tenant/session/channel-bound single-use state.

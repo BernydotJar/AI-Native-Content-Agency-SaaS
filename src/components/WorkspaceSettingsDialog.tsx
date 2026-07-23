@@ -278,6 +278,9 @@ export function WorkspaceSettingsDialog({
                       <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                         <p className="font-mono text-[8px] uppercase text-zinc-600">Callback</p>
                         <p className="mt-1 text-[10px] font-semibold text-zinc-300">{channel.callback_configured ? "Configurada" : "Pendiente"}</p>
+                        {channel.callback_url && (
+                          <p className="mt-2 break-all font-mono text-[9px] leading-4 text-zinc-600">{channel.callback_url}</p>
+                        )}
                       </div>
                       <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                         <p className="font-mono text-[8px] uppercase text-zinc-600">Cuenta</p>

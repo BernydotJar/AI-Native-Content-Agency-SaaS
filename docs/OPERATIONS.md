@@ -86,7 +86,7 @@ Source attribution depends on Uvicorn proxy handling. Set `FORWARDED_ALLOW_IPS` 
 
 ## Browser sessions
 
-Production defaults are `HttpOnly`, `SameSite=Strict`, `Secure=true`, and an eight-hour TTL. Configure them with `AGENCY_SESSION_COOKIE_NAME`, `AGENCY_SESSION_COOKIE_SECURE`, and `AGENCY_SESSION_TTL_SECONDS`. Disable `Secure` only for isolated local HTTP smoke tests.
+Production defaults are `HttpOnly`, `SameSite=Lax`, `Secure=true`, and an eight-hour TTL. `Lax` is required for top-level OAuth callback GETs; mutations continue to require CSRF. Configure them with `AGENCY_SESSION_COOKIE_NAME`, `AGENCY_SESSION_COOKIE_SECURE`, `AGENCY_SESSION_COOKIE_SAMESITE`, and `AGENCY_SESSION_TTL_SECONDS`. Disable `Secure` only for isolated local HTTP smoke tests.
 
 Mutations authenticated by cookie require `X-CSRF-Token`; bearer clients do not. Session recovery rotates the CSRF token. Sessions retain tenant, subject, role, key ID, and credential fingerprint so deactivating a key invalidates its existing sessions.
 

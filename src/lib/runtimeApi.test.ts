@@ -239,6 +239,7 @@ describe("runtime API client", () => {
           configuration_state: "ready_for_authentication",
           credentials_configured: true,
           callback_configured: true,
+          callback_url: "https://agency.example/api/v1/social-channels/instagram/oauth/callback",
           connection_state: "not_connected",
           oauth_start_available: false,
           oauth_runtime_configured: false,

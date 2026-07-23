@@ -163,3 +163,60 @@ El siguiente límite obligatorio es una intención de publicación durable con:
 
 Instagram además requiere una imagen, reel o carrusel accesible por el proveedor; un
 caption sin asset nunca se marca como publicable.
+
+## Túneles HTTPS, sesión y callback
+
+Para un callback público HTTPS, abre y autentica el producto desde el mismo origen
+público que aparece en la callback. No crees la sesión en `127.0.0.1` y luego esperes
+que una callback `trycloudflare.com` reciba esa cookie host-only.
+
+El runtime emite la sesión con:
+
+```text
+HttpOnly
+SameSite=Lax
+Secure=true cuando la callback social es HTTPS
+Path=/
+```
+
+`SameSite=Lax` permite que una navegación GET de nivel superior vuelva desde X o
+Instagram, mientras el state OAuth single-use conserva la protección de correlación. El
+runtime se niega a habilitar OAuth social con `SameSite=Strict`.
+
+Con Quick Tunnel, cada reinicio puede generar otro dominio. Actualiza siempre los tres
+lugares antes de reiniciar el producto:
+
+1. `AGENCY_X_REDIRECT_URI` o `AGENCY_INSTAGRAM_REDIRECT_URI`;
+2. callback registrada en el portal del proveedor;
+3. origen HTTPS utilizado para abrir el producto y crear la sesión.
+
+Ejecuta el preflight:
+
+```bash
+./scripts/run-local-product.sh --check
+```
+
+Para una callback HTTPS debe informar:
+
+```text
+session_cookie_secure=true
+session_cookie_samesite=lax
+```
+
+## Diagnóstico OAuth seguro
+
+Configuración muestra la callback exacta de X e Instagram para compararla con el portal.
+Los errores públicos no incluyen cuerpos de proveedor, tokens ni secretos y distinguen:
+
+- `social_provider_unreachable`: red o disponibilidad del proveedor;
+- `social_provider_rejected`: callback, credenciales o permisos rechazados;
+- `social_provider_response_invalid`: respuesta OAuth inesperada;
+- `social_oauth_callback_invalid`: state/token de callback inválido, expirado o reutilizado.
+
+Para X, la callback enviada durante `oauth/request_token` debe coincidir exactamente con
+la registrada en Developer Console. Para Instagram, la callback de Business Login debe
+coincidir exactamente con `AGENCY_INSTAGRAM_REDIRECT_URI`.
+
+La regresión de navegador `npm run verify:social-oauth-browser` realiza un retorno
+cross-site real para X e Instagram con proveedores simulados. No contacta servicios
+externos y prueba que la sesión HttpOnly sobrevive al callback.

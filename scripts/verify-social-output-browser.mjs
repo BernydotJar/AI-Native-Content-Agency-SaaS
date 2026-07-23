@@ -298,7 +298,7 @@ async function run() {
     value: cookieValue,
     url: baseUrl,
     httpOnly: true,
-    sameSite: "Strict",
+    sameSite: "Lax",
   });
   const loaded = client.once("Page.loadEventFired");
   await client.send("Page.navigate", { url: baseUrl });
@@ -398,7 +398,7 @@ async function run() {
     settingsState: { ...settingsState, text: undefined },
     externalRequestsPerformed: false,
     limitations: [
-      "OAuth callbacks, access-token storage and real publication are not implemented in this readiness increment.",
+      "OAuth callbacks and encrypted token storage are verified in a separate cross-site browser gate using mock provider transport; no real provider authorization or publication occurs.",
       "The screenshot is automated evidence for later human visual review, not a human accessibility approval.",
     ],
   }, null, 2)}\n`);

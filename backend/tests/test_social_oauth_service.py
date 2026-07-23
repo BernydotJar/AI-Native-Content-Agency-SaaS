@@ -52,7 +52,8 @@ class SocialOAuthServiceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.path = Path(self.temp.name) / "runtime.sqlite3"
-        self.store = SQLiteSocialOAuthStore(self.path)
+        self.clock = lambda: "2026-07-23T07:00:00+00:00"
+        self.store = SQLiteSocialOAuthStore(self.path, clock=self.clock)
         self.registry = SocialChannelRegistry.from_environment(environment())
         self.cipher = SocialTokenCipher.from_environment(
             json.dumps({"social-v1": encryption_key()}), "social-v1"
@@ -71,7 +72,7 @@ class SocialOAuthServiceTests(unittest.TestCase):
             store=self.store,
             cipher=self.cipher,
             transport=httpx.MockTransport(handler),
-            clock=lambda: "2026-07-23T07:00:00+00:00",
+            clock=self.clock,
             token_factory=SequenceFactory(*states),
             oauth_nonce_factory=SequenceFactory(*nonces),
             timestamp_factory=lambda: 1784790000,
@@ -255,6 +256,8 @@ class SocialOAuthServiceTests(unittest.TestCase):
             service.start(
                 tenant_id="tenant-alpha", session_id="session-alpha", channel_id="x"
             )
+        self.assertEqual(captured.exception.phase, "x_request_token")
+        self.assertEqual(captured.exception.reason, "rejected")
         rendered = str(captured.exception)
         self.assertNotIn(X_SECRET, rendered)
         self.assertNotIn(IG_SECRET, rendered)

@@ -876,6 +876,7 @@ def create_app(
     tenant_api_keys: Optional[Mapping[str, str]] = None,
     identity_credentials: Optional[Sequence[Mapping[str, object]]] = None,
     session_cookie_secure: Optional[bool] = None,
+    session_cookie_samesite: Optional[str] = None,
     session_ttl_seconds: Optional[int] = None,
     login_max_failures: Optional[int] = None,
     login_source_max_failures: Optional[int] = None,
@@ -921,6 +922,13 @@ def create_app(
         if session_cookie_secure is None
         else session_cookie_secure
     )
+    cookie_samesite = (
+        os.environ.get("AGENCY_SESSION_COOKIE_SAMESITE", "lax").strip().lower()
+        if session_cookie_samesite is None
+        else session_cookie_samesite.strip().lower()
+    )
+    if cookie_samesite not in {"lax", "strict"}:
+        raise ValueError("session cookie SameSite must be lax or strict")
     ttl_seconds = (
         int(os.environ.get("AGENCY_SESSION_TTL_SECONDS", "28800"))
         if session_ttl_seconds is None
@@ -1008,6 +1016,10 @@ def create_app(
             cipher=social_cipher,
             transport=social_oauth_transport,
         )
+        if cookie_samesite != "lax":
+            raise ValueError(
+                "social OAuth callbacks require AGENCY_SESSION_COOKIE_SAMESITE=lax"
+            )
         try:
             bootstrapped_social_connections = bootstrap_social_connections(
                 environment=social_source,
@@ -1084,6 +1096,7 @@ def create_app(
     app.state.social_oauth_service = social_oauth_service
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
+    app.state.session_cookie_samesite = cookie_samesite
     bearer = HTTPBearer(auto_error=False)
 
     def _request_id(request: Request) -> str:
@@ -1357,6 +1370,49 @@ def create_app(
             ) from error
         return principal
 
+    def _social_provider_error(
+        request: Request,
+        error: SocialOAuthProviderError,
+        channel_id: str,
+    ) -> PublicApiError:
+        phase = getattr(error, "phase", "provider")
+        reason = getattr(error, "reason", "invalid_response")
+        API_LOGGER.warning(
+            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s",
+            _request_id(request),
+            channel_id,
+            phase,
+            reason,
+        )
+        display = "X" if channel_id == "x" else "Instagram"
+        phase_labels = {
+            "x_request_token": "inicio OAuth",
+            "x_access_token": "intercambio de token",
+            "instagram_token_exchange": "intercambio de código",
+            "instagram_profile": "validación de cuenta profesional",
+        }
+        phase_label = phase_labels.get(phase, "flujo OAuth")
+        if reason == "unreachable":
+            detail = "{} no pudo alcanzarse durante {}; revisa red y disponibilidad del proveedor".format(
+                display, phase_label
+            )
+            code = "social_provider_unreachable"
+        elif reason == "rejected":
+            detail = "{} rechazó {}; verifica callback exacta, credenciales y permisos de la app".format(
+                display, phase_label
+            )
+            code = "social_provider_rejected"
+        else:
+            detail = "{} devolvió una respuesta OAuth inválida durante {}".format(
+                display, phase_label
+            )
+            code = "social_provider_response_invalid"
+        return PublicApiError(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            code=code,
+            detail=detail,
+        )
+
     def require_identity_reader(
         request: Request,
         principal: TenantPrincipal = Depends(require_principal),
@@ -1421,7 +1477,9 @@ def create_app(
 
     def _social_channel_document(tenant_id: str, channel_id: str) -> Dict[str, object]:
         contract = app.state.social_channel_registry.get(channel_id)
+        private_config = app.state.social_channel_registry.private_config(channel_id)
         document = contract.public_dict()
+        document["callback_url"] = private_config.redirect_uri
         record = service.social_store.get_connection(tenant_id, contract.channel_id)
         connected = record is not None
         document["connection_state"] = "connected" if connected else "not_connected"
@@ -1529,7 +1587,7 @@ def create_app(
             path="/",
             secure=cookie_secure,
             httponly=True,
-            samesite="strict",
+            samesite=cookie_samesite,
         )
         metrics.session_changed("created")
         return {
@@ -1587,7 +1645,7 @@ def create_app(
             path="/",
             secure=cookie_secure,
             httponly=True,
-            samesite="strict",
+            samesite=cookie_samesite,
         )
         metrics.session_changed("revoked")
         return {"status": "revoked"}
@@ -1696,11 +1754,7 @@ def create_app(
                 detail="social authentication is not ready",
             ) from error
         except SocialOAuthProviderError as error:
-            raise PublicApiError(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                code="social_provider_failed",
-                detail="social provider request failed",
-            ) from error
+            raise _social_provider_error(request, error, channel_id) from error
         service.record_social_event(
             principal=principal,
             request_id=request.state.request_id,
@@ -1745,11 +1799,7 @@ def create_app(
                 detail="social authentication callback is invalid or expired",
             ) from error
         except SocialOAuthProviderError as error:
-            raise PublicApiError(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                code="social_provider_failed",
-                detail="social provider request failed",
-            ) from error
+            raise _social_provider_error(request, error, "x") from error
         service.record_social_event(
             principal=principal,
             request_id=request.state.request_id,
@@ -1794,11 +1844,7 @@ def create_app(
                 detail="social authentication callback is invalid or expired",
             ) from error
         except SocialOAuthProviderError as error:
-            raise PublicApiError(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                code="social_provider_failed",
-                detail="social provider request failed",
-            ) from error
+            raise _social_provider_error(request, error, "instagram") from error
         service.record_social_event(
             principal=principal,
             request_id=request.state.request_id,

@@ -259,6 +259,26 @@ class SocialOAuthApiTests(unittest.TestCase):
             )
             self.assertEqual(len(calls), 2)
 
+    def test_x_rejection_returns_actionable_sanitized_phase(self):
+        def rejected(request):
+            return httpx.Response(
+                403,
+                text="callback rejected {} {}".format(X_SECRET, IG_SECRET),
+            )
+
+        with TestClient(self.app(rejected)) as client:
+            csrf = open_session(client, ADMIN_KEY)
+            response = client.post(
+                "/api/v1/social-channels/x/oauth/start",
+                headers={"X-CSRF-Token": csrf},
+            )
+            self.assertEqual(response.status_code, 502)
+            self.assertEqual(response.json()["code"], "social_provider_rejected")
+            self.assertIn("callback exacta", response.json()["detail"])
+            serialized = json.dumps(response.json())
+            self.assertNotIn(X_SECRET, serialized)
+            self.assertNotIn(IG_SECRET, serialized)
+
     def test_viewer_and_bearer_admin_cannot_start_browser_oauth(self):
         no_http = lambda request: (_ for _ in ()).throw(AssertionError("no HTTP"))
         with TestClient(self.app(no_http)) as viewer:
@@ -357,6 +377,39 @@ class SocialOAuthApiTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             self.app(lambda request: None, unencrypted)
+
+    def test_social_oauth_requires_lax_session_cookie_for_cross_site_callback(self):
+        with self.assertRaisesRegex(ValueError, "COOKIE_SAMESITE=lax"):
+            create_app(
+                database_path=str(self.database),
+                identity_credentials=identities(),
+                session_cookie_secure=True,
+                session_cookie_samesite="strict",
+                social_environment=environment(),
+                social_oauth_transport=httpx.MockTransport(
+                    lambda request: (_ for _ in ()).throw(AssertionError("no HTTP"))
+                ),
+            )
+
+    def test_social_session_cookie_is_secure_lax_for_oauth_return(self):
+        no_http = lambda request: (_ for _ in ()).throw(AssertionError("no HTTP"))
+        with TestClient(
+            create_app(
+                database_path=str(self.database),
+                identity_credentials=identities(),
+                session_cookie_secure=True,
+                session_cookie_samesite="lax",
+                social_environment=environment(),
+                social_oauth_transport=httpx.MockTransport(no_http),
+            ),
+            base_url="https://agency.example",
+        ) as client:
+            opened = client.post("/api/v1/sessions", json={"api_key": ADMIN_KEY})
+            self.assertEqual(opened.status_code, 201)
+            cookie = opened.headers["set-cookie"].lower()
+            self.assertIn("secure", cookie)
+            self.assertIn("httponly", cookie)
+            self.assertIn("samesite=lax", cookie)
 
     def test_partial_encryption_configuration_fails_application_startup(self):
         broken = environment()

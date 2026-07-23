@@ -566,7 +566,7 @@ assert resumed_session["entitlements"] == ["theme:premium"]
 assert resumed_session["csrf_token"]
 assert resumed_session["csrf_token"] != session["csrf_token"]
 assert "httponly" in session_headers
-assert "samesite=strict" in session_headers
+assert "samesite=lax" in session_headers
 assert run["tenant_id"] == "local-verification"
 assert run["status"] == "awaiting_greenlight"
 assert run["agent_states"]["publisher"]["status"] == "waiting_greenlight"

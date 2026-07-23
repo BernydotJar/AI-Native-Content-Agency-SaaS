@@ -36,7 +36,8 @@ class LocalProductRunnerTests(unittest.TestCase):
         self.assertIn("pip==24.3.1", compatibility_lock)
         self.assertIn("--hash=sha256:", compatibility_lock)
         self.assertIn('AGENCY_STATIC_DIR="$ROOT_DIR/dist"', source)
-        self.assertIn("AGENCY_SESSION_COOKIE_SECURE=false", source)
+        self.assertIn("AGENCY_SESSION_COOKIE_SAMESITE", source)
+        self.assertIn("AGENCY_SESSION_COOKIE_SECURE", source)
         self.assertNotIn("set -x", source)
         self.assertNotIn("eval ", source)
 
@@ -85,6 +86,31 @@ class LocalProductRunnerTests(unittest.TestCase):
         )
         self.assertNotEqual(denied.returncode, 0)
         self.assertIn("refuses non-loopback host", denied.stderr)
+
+    def test_runner_uses_secure_lax_cookie_for_public_https_social_callback(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            env_file = Path(tempdir) / ".env.local"
+            env_file.write_text(
+                "AGENCY_INSTAGRAM_REDIRECT_URI=https://agency.example/api/v1/social-channels/instagram/oauth/callback\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"],
+                cwd=ROOT,
+                env={
+                    "PATH": "/usr/local/bin:/usr/bin:/bin",
+                    "AGENCY_PYTHON_BIN": sys.executable,
+                    "AGENCY_ENV_FILE": str(env_file),
+                    "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("session_cookie_secure=true", completed.stdout)
+        self.assertIn("session_cookie_samesite=lax", completed.stdout)
 
     def test_runner_loads_untracked_env_file_without_printing_values(self):
         with tempfile.TemporaryDirectory() as tempdir:

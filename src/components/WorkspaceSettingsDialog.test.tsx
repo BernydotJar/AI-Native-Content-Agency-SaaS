@@ -11,6 +11,7 @@ const DISCONNECTED: RuntimeSocialChannel = {
   configuration_state: "ready_for_authentication",
   credentials_configured: true,
   callback_configured: true,
+  callback_url: "https://agency.example/api/v1/social-channels/x/oauth/callback",
   connection_state: "not_connected",
   oauth_start_available: true,
   oauth_runtime_configured: true,
@@ -80,6 +81,7 @@ describe("WorkspaceSettingsDialog social accounts", () => {
     expect(input.onConnectSocial).toHaveBeenCalledWith("x");
     expect(screen.queryByLabelText(/access token|consumer secret|app secret/i)).not.toBeInTheDocument();
     expect(screen.getByText(/token storage cifrado/i)).toBeInTheDocument();
+    expect(screen.getByText("https://agency.example/api/v1/social-channels/x/oauth/callback")).toBeInTheDocument();
   });
 
   it("shows connected metadata and lets an admin disconnect", () => {

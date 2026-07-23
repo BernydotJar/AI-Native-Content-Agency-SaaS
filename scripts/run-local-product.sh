@@ -164,7 +164,14 @@ export AGENCY_HOST="$HOST"
 export PORT="$PORT_VALUE"
 export AGENCY_MEMORY_DB="$DATABASE_PATH"
 export AGENCY_STATIC_DIR="$ROOT_DIR/dist"
-export AGENCY_SESSION_COOKIE_SECURE=false
+export AGENCY_SESSION_COOKIE_SAMESITE="${AGENCY_SESSION_COOKIE_SAMESITE:-lax}"
+if [[ -z "${AGENCY_SESSION_COOKIE_SECURE+x}" ]]; then
+  if [[ "${AGENCY_X_REDIRECT_URI:-}" == https://* || "${AGENCY_INSTAGRAM_REDIRECT_URI:-}" == https://* ]]; then
+    export AGENCY_SESSION_COOKIE_SECURE=true
+  else
+    export AGENCY_SESSION_COOKIE_SECURE=false
+  fi
+fi
 export FORWARDED_ALLOW_IPS=127.0.0.1
 
 if [[ "$MODE" == "check" ]]; then
@@ -176,6 +183,8 @@ if [[ "$MODE" == "check" ]]; then
   printf 'python_bin=%s\n' "$PYTHON_BIN"
   printf 'python_version=%s\n' "$PYTHON_VERSION"
   printf 'identity_source=%s\n' "$([[ -n "$GENERATED_LOCAL_KEY" ]] && printf ephemeral || printf environment)"
+  printf 'session_cookie_secure=%s\n' "$AGENCY_SESSION_COOKIE_SECURE"
+  printf 'session_cookie_samesite=%s\n' "$AGENCY_SESSION_COOKIE_SAMESITE"
   printf 'build_lock_strategy=primary_then_hash_locked_compatibility\n'
   printf 'external_provider_calls=not_started\n'
   exit 0
