@@ -17,9 +17,13 @@ cp .env.example .env.local
 npm run generate:social-key
 ```
 
-Copia las dos líneas generadas dentro de `.env.local`. El archivo está ignorado por Git
-y `npm run start:local` lo carga automáticamente. El runner se niega a utilizar un archivo
-local que Git esté rastreando.
+El generador reemplaza únicamente las dos asignaciones de cifrado vacías dentro de
+`.env.local`, oculta el valor y fija permisos `0600`. Se niega a sobrescribir una clave
+existente, un symlink o un archivo que Git esté rastreando. No redirijas la salida de
+`npm run` hacia el archivo: npm también imprime encabezados de ejecución.
+
+El archivo está ignorado por Git y `npm run start:local` lo carga automáticamente. El
+runner se niega a utilizar un archivo local que Git esté rastreando.
 
 Verifica antes de guardar valores:
 

@@ -21,6 +21,10 @@ class LocalProductRunnerTests(unittest.TestCase):
             package["scripts"]["start:local"],
             "./scripts/run-local-product.sh",
         )
+        self.assertEqual(
+            package["scripts"]["generate:social-key"],
+            "python3 scripts/generate-social-encryption-key.py --env-file .env.local",
+        )
         source = SCRIPT.read_text()
         self.assertIn("--require-hashes -r backend/requirements.lock", source)
         self.assertIn("requirements-local-build.lock", source)
@@ -152,6 +156,60 @@ class LocalProductRunnerTests(unittest.TestCase):
         raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
         self.assertEqual(len(raw), 32)
         self.assertNotIn(encoded, SOCIAL_KEY_SCRIPT.read_text())
+
+    def test_social_key_generator_safely_updates_an_untracked_env_file(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            env_file = Path(tempdir) / ".env.local"
+            env_file.write_text(
+                "AGENCY_X_CONSUMER_KEY=\n"
+                "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=\n"
+                "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(SOCIAL_KEY_SCRIPT), "--env-file", str(env_file)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            content = env_file.read_text(encoding="utf-8")
+            mode = env_file.stat().st_mode & 0o777
+            repeated = subprocess.run(
+                [sys.executable, str(SOCIAL_KEY_SCRIPT), "--env-file", str(env_file)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("value hidden", completed.stdout)
+        self.assertNotIn("local-social-v1\":", completed.stdout)
+        self.assertIn("AGENCY_X_CONSUMER_KEY=", content)
+        self.assertIn("AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=local-social-v1", content)
+        self.assertIn("AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON='{", content)
+        self.assertEqual(mode, 0o600)
+        self.assertEqual(repeated.returncode, 65)
+        self.assertIn("already configured", repeated.stderr)
+
+    def test_social_key_generator_refuses_a_tracked_env_file(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(SOCIAL_KEY_SCRIPT),
+                "--env-file",
+                str(ROOT / ".env.example"),
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 65)
+        self.assertIn("refusing tracked environment file", completed.stderr)
 
     def test_runner_rejects_an_explicit_unsupported_python_before_build(self):
         with tempfile.TemporaryDirectory() as tempdir:
