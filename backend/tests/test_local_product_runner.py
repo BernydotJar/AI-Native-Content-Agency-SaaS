@@ -1,3 +1,4 @@
+import base64
 import json
 import subprocess
 import sys
@@ -10,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "run-local-product.sh"
 PACKAGE = ROOT / "package.json"
 LOCAL_BUILD_LOCK = ROOT / "backend" / "requirements-local-build.lock"
+SOCIAL_KEY_SCRIPT = ROOT / "scripts" / "generate-social-encryption-key.py"
 
 
 class LocalProductRunnerTests(unittest.TestCase):
@@ -78,6 +80,78 @@ class LocalProductRunnerTests(unittest.TestCase):
         )
         self.assertNotEqual(denied.returncode, 0)
         self.assertIn("refuses non-loopback host", denied.stderr)
+
+    def test_runner_loads_untracked_env_file_without_printing_values(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            env_file = Path(tempdir) / ".env.local"
+            env_file.write_text(
+                "AGENCY_X_CONSUMER_SECRET=runner-secret-must-not-leak\n"
+                "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=runner-social-v1\n"
+            )
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"],
+                cwd=ROOT,
+                env={
+                    "PATH": "/usr/local/bin:/usr/bin:/bin",
+                    "AGENCY_PYTHON_BIN": sys.executable,
+                    "AGENCY_ENV_FILE": str(env_file),
+                    "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("loaded local environment: .env.local (values hidden)", completed.stdout)
+        self.assertNotIn("runner-secret-must-not-leak", completed.stdout + completed.stderr)
+
+    def test_runner_refuses_a_tracked_environment_file(self):
+        completed = subprocess.run(
+            [str(SCRIPT), "--check"],
+            cwd=ROOT,
+            env={
+                "PATH": "/usr/local/bin:/usr/bin:/bin",
+                "AGENCY_PYTHON_BIN": sys.executable,
+                "AGENCY_ENV_FILE": str(ROOT / ".env.example"),
+                "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+            },
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 66)
+        self.assertIn("refusing tracked local environment file", completed.stderr)
+
+    def test_social_key_generator_emits_a_fresh_32_byte_base64url_key(self):
+        first = subprocess.run(
+            [sys.executable, str(SOCIAL_KEY_SCRIPT)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout
+        second = subprocess.run(
+            [sys.executable, str(SOCIAL_KEY_SCRIPT)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout
+        self.assertNotEqual(first, second)
+        line = next(
+            item for item in first.splitlines()
+            if item.startswith("AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=")
+        )
+        encoded_json = line.split("=", 1)[1].strip("'")
+        payload = json.loads(encoded_json)
+        encoded = payload["local-social-v1"]
+        raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+        self.assertEqual(len(raw), 32)
+        self.assertNotIn(encoded, SOCIAL_KEY_SCRIPT.read_text())
 
     def test_runner_rejects_an_explicit_unsupported_python_before_build(self):
         with tempfile.TemporaryDirectory() as tempdir:

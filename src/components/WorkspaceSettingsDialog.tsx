@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Cable, Check, LockKeyhole, Palette, RefreshCw, ServerCog, X } from "lucide-react";
+import { Cable, Check, Link2, LoaderCircle, LockKeyhole, Palette, RefreshCw, ServerCog, Unplug, X } from "lucide-react";
 import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
 import type { ThemeId } from "../lib/themeCatalog";
@@ -18,6 +18,12 @@ interface WorkspaceSettingsDialogProps {
   providerLoading: boolean;
   providerError: string;
   sessionActive: boolean;
+  sessionRole: "viewer" | "operator" | "approver" | "admin" | null;
+  socialActionChannel: RuntimeSocialChannel["channel_id"] | null;
+  socialActionError: string;
+  socialNotice: string;
+  onConnectSocial: (channelId: RuntimeSocialChannel["channel_id"]) => void;
+  onDisconnectSocial: (channelId: RuntimeSocialChannel["channel_id"]) => void;
   onRefreshProviders: () => void;
 }
 
@@ -47,6 +53,12 @@ export function WorkspaceSettingsDialog({
   providerLoading,
   providerError,
   sessionActive,
+  sessionRole,
+  socialActionChannel,
+  socialActionError,
+  socialNotice,
+  onConnectSocial,
+  onDisconnectSocial,
   onRefreshProviders,
 }: WorkspaceSettingsDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
@@ -238,6 +250,8 @@ export function WorkspaceSettingsDialog({
                 <p className="mt-0.5 text-[11px] text-zinc-500">X e Instagram usan credenciales server-side y autorización por cuenta.</p>
               </div>
             </div>
+            {socialNotice && <p role="status" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-3 text-xs text-emerald-100">{socialNotice}</p>}
+            {socialActionError && <p role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-300/[0.05] p-3 text-xs text-red-100">{socialActionError}</p>}
             {!sessionActive ? (
               <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar canales sociales.</p>
             ) : socialChannels.length === 0 ? (
@@ -252,7 +266,7 @@ export function WorkspaceSettingsDialog({
                         <p className="mt-1 text-[10px] leading-5 text-zinc-500">{channel.account_requirement}</p>
                       </div>
                       <span className={`self-start rounded-full border px-3 py-1 font-mono text-[9px] uppercase ${channel.configured ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200" : "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"}`}>
-                        {SOCIAL_STATE_LABELS[channel.configuration_state]}
+                        {channel.connection_state === "connected" ? "Cuenta conectada" : SOCIAL_STATE_LABELS[channel.configuration_state]}
                       </span>
                     </div>
 
@@ -277,11 +291,47 @@ export function WorkspaceSettingsDialog({
                       {channel.requires_media && <p className="text-amber-100/80">Instagram requiere imagen, reel o carrusel además del caption.</p>}
                     </div>
 
-                    <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-3 text-[10px] leading-5 text-sky-100/80">
-                      {channel.configured
-                        ? "La app y callback están listas. Falta implementar y ejecutar la autorización OAuth con token storage cifrado antes de publicar."
-                        : "Define las variables indicadas en el servidor y pulsa Actualizar; los valores nunca se devuelven al navegador."}
-                    </div>
+                    {channel.connected_account ? (
+                      <div className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-3 text-[10px] leading-5 text-emerald-100/90">
+                        <p className="font-bold">@{channel.connected_account.account_username}</p>
+                        <p>Cuenta {channel.connected_account.account_id} · tokens cifrados server-side.</p>
+                        <p>Scopes: {channel.connected_account.scopes.join(" · ")}</p>
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-3 text-[10px] leading-5 text-sky-100/80">
+                        {!channel.configured
+                          ? "Define las variables indicadas en el servidor y pulsa Actualizar; los valores nunca se devuelven al navegador."
+                          : !channel.oauth_runtime_configured
+                            ? "La app y callback están listas; falta configurar la clave de cifrado server-side para habilitar OAuth."
+                            : "La app, callback y token storage cifrado están listos. Autoriza una cuenta para completar la conexión."}
+                      </div>
+                    )}
+
+                    {sessionRole === "admin" && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {channel.connected_account ? (
+                          <button
+                            type="button"
+                            onClick={() => onDisconnectSocial(channel.channel_id)}
+                            disabled={socialActionChannel !== null}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-red-300/20 px-3 text-xs font-bold text-red-100 disabled:opacity-40"
+                          >
+                            {socialActionChannel === channel.channel_id ? <LoaderCircle size={13} className="animate-spin" aria-hidden="true" /> : <Unplug size={13} aria-hidden="true" />}
+                            Desconectar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onConnectSocial(channel.channel_id)}
+                            disabled={!channel.oauth_start_available || socialActionChannel !== null}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--primary-color)] px-3 text-xs font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
+                          >
+                            {socialActionChannel === channel.channel_id ? <LoaderCircle size={13} className="animate-spin" aria-hidden="true" /> : <Link2 size={13} aria-hidden="true" />}
+                            Conectar cuenta
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>

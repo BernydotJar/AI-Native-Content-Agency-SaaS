@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "1"
+POSTGRES_SCHEMA_VERSION = "2"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -48,6 +48,8 @@ POSTGRES_REQUIRED_TABLES = (
     "runtime_sessions",
     "authentication_rate_limits",
     "memories",
+    "social_oauth_states",
+    "social_connections",
 )
 POSTGRES_REQUIRED_SEQUENCES = ("audit_events_sequence_seq",)
 POSTGRES_REQUIRED_COLUMNS = {
@@ -106,6 +108,35 @@ POSTGRES_REQUIRED_COLUMNS = {
             "tags_json",
             "observed_at",
             "stored_at",
+        }
+    ),
+    "social_oauth_states": frozenset(
+        {
+            "state_id",
+            "tenant_id",
+            "session_id",
+            "channel_id",
+            "state_digest",
+            "provider_token_digest",
+            "encrypted_payload",
+            "key_id",
+            "created_at",
+            "expires_at",
+            "consumed_at",
+        }
+    ),
+    "social_connections": frozenset(
+        {
+            "tenant_id",
+            "channel_id",
+            "account_id",
+            "account_username",
+            "encrypted_tokens",
+            "key_id",
+            "scopes_json",
+            "token_expires_at",
+            "connected_at",
+            "updated_at",
         }
     ),
 }
@@ -597,6 +628,46 @@ class PostgresRuntimeDatabase:
             CREATE INDEX IF NOT EXISTS idx_memories_namespace_confidence
                 ON public.memories(namespace, confidence DESC, stored_at DESC)
             """,
+            """
+            CREATE TABLE IF NOT EXISTS public.social_oauth_states (
+                state_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                channel_id TEXT NOT NULL CHECK (channel_id IN ('x', 'instagram')),
+                state_digest TEXT NOT NULL UNIQUE,
+                provider_token_digest TEXT,
+                encrypted_payload TEXT NOT NULL,
+                key_id TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                consumed_at TIMESTAMPTZ
+            )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_social_oauth_states_lookup
+                ON public.social_oauth_states(
+                    tenant_id, session_id, channel_id, state_digest, consumed_at
+                )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS public.social_connections (
+                tenant_id TEXT NOT NULL,
+                channel_id TEXT NOT NULL CHECK (channel_id IN ('x', 'instagram')),
+                account_id TEXT NOT NULL,
+                account_username TEXT NOT NULL,
+                encrypted_tokens TEXT NOT NULL,
+                key_id TEXT NOT NULL,
+                scopes_json JSONB NOT NULL,
+                token_expires_at TIMESTAMPTZ,
+                connected_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (tenant_id, channel_id)
+            )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_social_connections_tenant_updated
+                ON public.social_connections(tenant_id, updated_at DESC)
+            """,
         )
         with self.pool.connection() as connection:
             connection.execute(
@@ -610,6 +681,14 @@ class PostgresRuntimeDatabase:
                 INSERT INTO public.runtime_schema_meta(key, value)
                 VALUES ('schema_version', %s)
                 ON CONFLICT (key) DO NOTHING
+                """,
+                (SCHEMA_VERSION,),
+            )
+            connection.execute(
+                """
+                UPDATE public.runtime_schema_meta
+                SET value = %s
+                WHERE key = 'schema_version' AND value = '1'
                 """,
                 (SCHEMA_VERSION,),
             )

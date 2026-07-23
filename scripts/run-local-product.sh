@@ -2,6 +2,24 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCAL_ENV_FILE="${AGENCY_ENV_FILE:-$ROOT_DIR/.env.local}"
+if [[ -f "$LOCAL_ENV_FILE" ]]; then
+  if [[ "$LOCAL_ENV_FILE" == "$ROOT_DIR/"* ]]; then
+    relative_env="${LOCAL_ENV_FILE#$ROOT_DIR/}"
+    if git -C "$ROOT_DIR" ls-files --error-unmatch "$relative_env" >/dev/null 2>&1; then
+      printf 'refusing tracked local environment file: %s
+' "$relative_env" >&2
+      exit 66
+    fi
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  source "$LOCAL_ENV_FILE"
+  set +a
+  printf '[local-product] loaded local environment: %s (values hidden)
+' "$(basename "$LOCAL_ENV_FILE")"
+fi
+
 MODE="run"
 if [[ "${1:-}" == "--check" ]]; then
   MODE="check"

@@ -10,9 +10,11 @@ from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
+import httpx
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
@@ -51,6 +53,16 @@ from .persistence import (
 )
 from .serialization import execution_run_from_document, execution_run_to_document
 from .social_channels import SocialChannelRegistry
+from .social_oauth import SocialTokenCipher, SocialTokenCipherConfigurationError
+from .social_oauth_service import (
+    SocialOAuthCallbackError,
+    SocialOAuthProviderError,
+    SocialOAuthService,
+    SocialOAuthUnavailableError,
+    bootstrap_social_connections,
+    social_bootstrap_requested,
+)
+from .social_oauth_store import PostgresSocialOAuthStore, SQLiteSocialOAuthStore
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
 from .version import VERSION
@@ -312,10 +324,12 @@ class RuntimeService:
                 schema_mode=normalized_schema_mode,
             )
             self.run_store = PostgresRunStore(self._postgres_database)
+            self.social_store = PostgresSocialOAuthStore(self._postgres_database)
             self.storage_backend = "postgresql"
             self.shared_state = True
         else:
             self.run_store = SQLiteRunStore(database_path)
+            self.social_store = SQLiteSocialOAuthStore(database_path)
             self.storage_backend = "sqlite"
             self.shared_state = False
         self._tenant_runtimes: Dict[str, TenantRuntime] = {}
@@ -339,6 +353,7 @@ class RuntimeService:
 
     def check(self) -> None:
         self.run_store.check()
+        self.social_store.check()
 
     @staticmethod
     def _brief(request: BriefRequest) -> MissionBrief:
@@ -790,6 +805,28 @@ class RuntimeService:
         if budget_cents < 0 or budget_cents > greenlight.authorized_budget_cents:
             raise GreenlightError("Greenlight budget is not authorized")
 
+    def record_social_event(
+        self,
+        *,
+        principal: TenantPrincipal,
+        request_id: str,
+        action: str,
+        channel_id: str,
+        payload: Mapping[str, object],
+    ) -> None:
+        with self._lock:
+            self.run_store.append_audit(
+                principal.tenant_id,
+                AuditWrite(
+                    request_id=request_id,
+                    action=action,
+                    resource_type="social_connection",
+                    resource_id=channel_id,
+                    actor=_actor(principal),
+                    payload=dict(payload),
+                ),
+            )
+
     def audit_events(
         self, tenant_id: str, after_sequence: int, limit: int
     ) -> Tuple[AuditEvent, ...]:
@@ -803,6 +840,7 @@ class RuntimeService:
             for runtime in self._tenant_runtimes.values():
                 runtime.memory.close()
             self._tenant_runtimes.clear()
+            self.social_store.close()
             self.run_store.close()
 
 
@@ -849,6 +887,7 @@ def create_app(
     max_request_body_bytes: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
     social_environment: Optional[Mapping[str, str]] = None,
+    social_oauth_transport: Optional[httpx.BaseTransport] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     db_url = (
@@ -953,6 +992,64 @@ def create_app(
     model_gateway = ModelGateway.from_environment(provider_source)
     social_source = os.environ if social_environment is None else social_environment
     social_channel_registry = SocialChannelRegistry.from_environment(social_source)
+    raw_social_keys = str(
+        social_source.get("AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON", "")
+    ).strip()
+    active_social_key = str(
+        social_source.get("AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID", "")
+    ).strip()
+    if raw_social_keys or active_social_key:
+        social_cipher = SocialTokenCipher.from_environment(
+            raw_social_keys or None, active_social_key or None
+        )
+        social_oauth_service: Optional[SocialOAuthService] = SocialOAuthService(
+            registry=social_channel_registry,
+            store=service.social_store,
+            cipher=social_cipher,
+            transport=social_oauth_transport,
+        )
+        try:
+            bootstrapped_social_connections = bootstrap_social_connections(
+                environment=social_source,
+                registry=social_channel_registry,
+                store=service.social_store,
+                cipher=social_cipher,
+            )
+        except SocialOAuthUnavailableError as error:
+            raise ValueError("social token bootstrap configuration is invalid") from error
+        for bootstrapped in bootstrapped_social_connections:
+            event_id = stable_id(
+                "social-bootstrap", bootstrapped.tenant_id,
+                bootstrapped.channel_id, bootstrapped.account_id, length=48
+            )
+            with service.run_store.command_lock(event_id):
+                if service.run_store.audit_event(bootstrapped.tenant_id, event_id) is None:
+                    service.run_store.append_audit(
+                        bootstrapped.tenant_id,
+                        AuditWrite(
+                            request_id=stable_id(
+                                "request", "social-bootstrap", bootstrapped.tenant_id,
+                                bootstrapped.channel_id, length=32
+                            ),
+                            action="social.bootstrapped",
+                            resource_type="social_connection",
+                            resource_id=bootstrapped.channel_id,
+                            actor="system:social-bootstrap",
+                            payload={
+                                "account_id": bootstrapped.account_id,
+                                "account_username": bootstrapped.account_username,
+                                "scopes": list(bootstrapped.scopes),
+                                "token_storage": "encrypted_server_side",
+                            },
+                            event_id=event_id,
+                        ),
+                    )
+    else:
+        if social_bootstrap_requested(social_source):
+            raise ValueError(
+                "social token encryption keys are required for token bootstrap"
+            )
+        social_oauth_service = None
     metrics = RuntimeMetrics()
 
     @asynccontextmanager
@@ -960,6 +1057,8 @@ def create_app(
         try:
             yield
         finally:
+            if social_oauth_service is not None:
+                social_oauth_service.close()
             model_gateway.close()
             service.close()
 
@@ -969,9 +1068,9 @@ def create_app(
         description=(
             "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
             "state, durable rate limiting, HttpOnly browser sessions and audit "
-            "evidence. No endpoint "
-            "publishes content, spends "
-            "budget, renders media, or contacts external services."
+            "evidence. Explicit administrator OAuth endpoints may contact allowlisted "
+            "social identity providers. No endpoint publishes content, spends budget, "
+            "or renders media."
         ),
         lifespan=lifespan,
     )
@@ -982,6 +1081,7 @@ def create_app(
     app.state.provider_registry = provider_registry
     app.state.model_gateway = model_gateway
     app.state.social_channel_registry = social_channel_registry
+    app.state.social_oauth_service = social_oauth_service
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
@@ -1293,6 +1393,58 @@ def create_app(
     ) -> TenantPrincipal:
         return _authorize(request, principal, "greenlight:revoke")
 
+    def require_social_manager(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        authorized = _authorize(request, principal, "social:manage")
+        if authorized.auth_method != "session" or not authorized.session_id:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="browser_session_required",
+                detail="browser session is required",
+            )
+        return authorized
+
+    def require_social_callback_manager(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_principal),
+    ) -> TenantPrincipal:
+        authorized = _authorize(request, principal, "social:manage")
+        if authorized.auth_method != "session" or not authorized.session_id:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="browser_session_required",
+                detail="browser session is required",
+            )
+        return authorized
+
+    def _social_channel_document(tenant_id: str, channel_id: str) -> Dict[str, object]:
+        contract = app.state.social_channel_registry.get(channel_id)
+        document = contract.public_dict()
+        record = service.social_store.get_connection(tenant_id, contract.channel_id)
+        connected = record is not None
+        document["connection_state"] = "connected" if connected else "not_connected"
+        document["oauth_runtime_configured"] = social_oauth_service is not None
+        document["oauth_start_available"] = bool(
+            social_oauth_service is not None and contract.configured and not connected
+        )
+        document["publishing_available"] = False
+        document["external_effects_enabled"] = False
+        document["connected_account"] = (
+            None
+            if record is None
+            else {
+                "account_id": record.account_id,
+                "account_username": record.account_username,
+                "scopes": list(record.scopes),
+                "token_expires_at": record.token_expires_at,
+                "connected_at": record.connected_at,
+                "token_storage": "encrypted_server_side",
+            }
+        )
+        return document
+
     @app.get("/healthz", tags=["operations"])
     def healthz() -> Dict[str, object]:
         return {
@@ -1496,7 +1648,10 @@ def create_app(
     ) -> Dict[str, object]:
         return {
             "tenant_id": principal.tenant_id,
-            "channels": app.state.social_channel_registry.public_list(),
+            "channels": [
+                _social_channel_document(principal.tenant_id, contract.channel_id)
+                for contract in app.state.social_channel_registry.list()
+            ],
         }
 
     @app.get("/api/v1/social-channels/{channel_id}", tags=["integrations"])
@@ -1505,12 +1660,189 @@ def create_app(
         principal: TenantPrincipal = Depends(require_identity_reader),
     ) -> Dict[str, object]:
         try:
-            channel = app.state.social_channel_registry.get(channel_id)
+            channel = _social_channel_document(principal.tenant_id, channel_id)
         except KeyError as error:
             raise HTTPException(status_code=404, detail="social channel not found") from error
+        return {"tenant_id": principal.tenant_id, "channel": channel}
+
+    @app.post(
+        "/api/v1/social-channels/{channel_id}/oauth/start",
+        status_code=status.HTTP_201_CREATED,
+        tags=["integrations"],
+    )
+    def start_social_oauth(
+        channel_id: str,
+        request: Request,
+        principal: TenantPrincipal = Depends(require_social_manager),
+    ) -> Dict[str, object]:
+        if social_oauth_service is None:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="social_oauth_unavailable",
+                detail="social authentication is unavailable",
+            )
+        try:
+            result = social_oauth_service.start(
+                tenant_id=principal.tenant_id,
+                session_id=principal.session_id,
+                channel_id=channel_id,
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="social channel not found") from error
+        except SocialOAuthUnavailableError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="social_oauth_unavailable",
+                detail="social authentication is not ready",
+            ) from error
+        except SocialOAuthProviderError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                code="social_provider_failed",
+                detail="social provider request failed",
+            ) from error
+        service.record_social_event(
+            principal=principal,
+            request_id=request.state.request_id,
+            action="social.oauth_started",
+            channel_id=result.channel_id,
+            payload={"expires_at": result.expires_at},
+        )
+        return {
+            "channel_id": result.channel_id,
+            "authorization_url": result.authorization_url,
+            "expires_at": result.expires_at,
+        }
+
+    @app.get(
+        "/api/v1/social-channels/x/oauth/callback",
+        tags=["integrations"],
+        include_in_schema=True,
+    )
+    def complete_x_oauth(
+        request: Request,
+        oauth_token: str = Query(min_length=1, max_length=8192),
+        oauth_verifier: str = Query(min_length=1, max_length=8192),
+        principal: TenantPrincipal = Depends(require_social_callback_manager),
+    ) -> RedirectResponse:
+        if social_oauth_service is None:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="social_oauth_unavailable",
+                detail="social authentication is unavailable",
+            )
+        try:
+            connection = social_oauth_service.complete_x(
+                tenant_id=principal.tenant_id,
+                session_id=principal.session_id,
+                oauth_token=oauth_token,
+                oauth_verifier=oauth_verifier,
+            )
+        except SocialOAuthCallbackError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="social_oauth_callback_invalid",
+                detail="social authentication callback is invalid or expired",
+            ) from error
+        except SocialOAuthProviderError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                code="social_provider_failed",
+                detail="social provider request failed",
+            ) from error
+        service.record_social_event(
+            principal=principal,
+            request_id=request.state.request_id,
+            action="social.connected",
+            channel_id="x",
+            payload={
+                "account_id": connection.account_id,
+                "account_username": connection.account_username,
+                "scopes": list(connection.scopes),
+            },
+        )
+        return RedirectResponse(url="/?social_channel=x&status=connected", status_code=303)
+
+    @app.get(
+        "/api/v1/social-channels/instagram/oauth/callback",
+        tags=["integrations"],
+        include_in_schema=True,
+    )
+    def complete_instagram_oauth(
+        request: Request,
+        code: str = Query(min_length=1, max_length=8192),
+        state_value: str = Query(alias="state", min_length=32, max_length=256),
+        principal: TenantPrincipal = Depends(require_social_callback_manager),
+    ) -> RedirectResponse:
+        if social_oauth_service is None:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="social_oauth_unavailable",
+                detail="social authentication is unavailable",
+            )
+        try:
+            connection = social_oauth_service.complete_instagram(
+                tenant_id=principal.tenant_id,
+                session_id=principal.session_id,
+                state_value=state_value,
+                code=code,
+            )
+        except SocialOAuthCallbackError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="social_oauth_callback_invalid",
+                detail="social authentication callback is invalid or expired",
+            ) from error
+        except SocialOAuthProviderError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                code="social_provider_failed",
+                detail="social provider request failed",
+            ) from error
+        service.record_social_event(
+            principal=principal,
+            request_id=request.state.request_id,
+            action="social.connected",
+            channel_id="instagram",
+            payload={
+                "account_id": connection.account_id,
+                "account_username": connection.account_username,
+                "scopes": list(connection.scopes),
+            },
+        )
+        return RedirectResponse(
+            url="/?social_channel=instagram&status=connected", status_code=303
+        )
+
+    @app.delete(
+        "/api/v1/social-channels/{channel_id}/connection",
+        tags=["integrations"],
+    )
+    def disconnect_social_channel(
+        channel_id: str,
+        request: Request,
+        principal: TenantPrincipal = Depends(require_social_manager),
+    ) -> Dict[str, object]:
+        try:
+            app.state.social_channel_registry.get(channel_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="social channel not found") from error
+        disconnected = service.social_store.delete_connection(
+            principal.tenant_id, channel_id
+        )
+        if disconnected:
+            service.record_social_event(
+                principal=principal,
+                request_id=request.state.request_id,
+                action="social.disconnected",
+                channel_id=channel_id,
+                payload={"tokens_deleted": True},
+            )
         return {
             "tenant_id": principal.tenant_id,
-            "channel": channel.public_dict(),
+            "channel_id": channel_id,
+            "connection_state": "not_connected",
+            "disconnected": disconnected,
         }
 
     @app.get("/api/v1/audit-events", tags=["audit"])

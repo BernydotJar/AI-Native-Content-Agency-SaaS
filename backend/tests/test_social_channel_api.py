@@ -102,7 +102,7 @@ class SocialChannelApiTests(unittest.TestCase):
             ):
                 self.assertNotIn(secret, serialized)
 
-    def test_detail_is_uniform_and_no_oauth_or_publish_mutation_exists(self):
+    def test_detail_and_openapi_expose_only_governed_oauth_mutations(self):
         with TestClient(self.app()) as client:
             instagram = client.get(
                 "/api/v1/social-channels/instagram", headers=auth()
@@ -117,8 +117,6 @@ class SocialChannelApiTests(unittest.TestCase):
             self.assertEqual(missing.json()["code"], "resource_not_found")
 
             for path in (
-                "/api/v1/social-channels/x/oauth/start",
-                "/api/v1/social-channels/instagram/oauth/start",
                 "/api/v1/social-channels/x/publish",
                 "/api/v1/social-channels/instagram/publish",
             ):
@@ -136,11 +134,23 @@ class SocialChannelApiTests(unittest.TestCase):
                 {
                     "/api/v1/social-channels",
                     "/api/v1/social-channels/{channel_id}",
+                    "/api/v1/social-channels/{channel_id}/oauth/start",
+                    "/api/v1/social-channels/x/oauth/callback",
+                    "/api/v1/social-channels/instagram/oauth/callback",
+                    "/api/v1/social-channels/{channel_id}/connection",
                 },
             )
-            self.assertTrue(
-                all(set(methods) == {"get"} for methods in social_paths.values())
+            self.assertEqual(set(social_paths["/api/v1/social-channels"]), {"get"})
+            self.assertEqual(set(social_paths["/api/v1/social-channels/{channel_id}"]), {"get"})
+            self.assertEqual(
+                set(social_paths["/api/v1/social-channels/{channel_id}/oauth/start"]),
+                {"post"},
             )
+            self.assertEqual(
+                set(social_paths["/api/v1/social-channels/{channel_id}/connection"]),
+                {"delete"},
+            )
+
 
 
 if __name__ == "__main__":

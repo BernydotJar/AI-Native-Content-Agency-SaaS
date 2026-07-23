@@ -33,7 +33,7 @@ SUPPORT_FILES = (
     "program/release-plan.md",
     "program/critique-findings.json",
 )
-DIRECT_PYTHON = ("fastapi", "httpx", "pg8000", "uvicorn")
+DIRECT_PYTHON = ("cryptography", "fastapi", "httpx", "pg8000", "uvicorn")
 REQUIRED_BLOCKERS = {"F-004", "F-007", "F-008", "F-010", "F-011"}
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -233,6 +233,7 @@ def validate_inventory(root: Path, data: Mapping[str, Any]) -> int:
             "backend/setup.cfg runtime dependencies differ from reviewed direct set"
         )
     python_licenses = {
+        "cryptography": "Apache-2.0",
         "fastapi": "MIT",
         "httpx": "BSD-3-Clause",
         "pg8000": "BSD-3-Clause",

@@ -41,13 +41,24 @@ runtime:
   social:
     # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
     existingSecret: ""
+    encryptionKeysJsonKey: "social-token-encryption-keys.json"
+    activeEncryptionKeyIdKey: "social-token-active-key-id"
+    bootstrapTenantId: ""
     x:
       consumerKeyKey: "x-consumer-key"
       consumerSecretKey: "x-consumer-secret"
+      userAccessTokenKey: "x-user-access-token"
+      userAccessTokenSecretKey: "x-user-access-token-secret"
+      accountIdKey: "x-account-id"
+      accountUsernameKey: "x-account-username"
       redirectUri: ""
     instagram:
       appIdKey: "instagram-app-id"
       appSecretKey: "instagram-app-secret"
+      accessTokenKey: "instagram-access-token"
+      accountIdKey: "instagram-account-id"
+      accountUsernameKey: "instagram-account-username"
+      tokenExpiresAtKey: "instagram-token-expires-at"
       redirectUri: ""
 
 # Used only by the SQLite backend. PostgreSQL stores all runtime state externally.

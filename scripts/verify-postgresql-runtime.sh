@@ -103,6 +103,8 @@ REVOKE ALL ON TABLE public.audit_events FROM PUBLIC;
 REVOKE ALL ON TABLE public.runtime_sessions FROM PUBLIC;
 REVOKE ALL ON TABLE public.authentication_rate_limits FROM PUBLIC;
 REVOKE ALL ON TABLE public.memories FROM PUBLIC;
+REVOKE ALL ON TABLE public.social_oauth_states FROM PUBLIC;
+REVOKE ALL ON TABLE public.social_connections FROM PUBLIC;
 REVOKE ALL ON SEQUENCE public.audit_events_sequence_seq FROM PUBLIC;
 
 GRANT SELECT ON TABLE public.runtime_schema_meta TO :"runtime_role";
@@ -111,6 +113,8 @@ GRANT SELECT, INSERT ON TABLE public.audit_events TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_sessions TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authentication_rate_limits TO :"runtime_role";
 GRANT SELECT, INSERT ON TABLE public.memories TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_oauth_states TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_connections TO :"runtime_role";
 GRANT USAGE, SELECT ON SEQUENCE public.audit_events_sequence_seq TO :"runtime_role";
 
 ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
@@ -392,6 +396,8 @@ try:
             "runtime_sessions": {"SELECT", "INSERT", "UPDATE"},
             "authentication_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "memories": {"SELECT", "INSERT"},
+            "social_oauth_states": {"SELECT", "INSERT", "UPDATE", "DELETE"},
+            "social_connections": {"SELECT", "INSERT", "UPDATE", "DELETE"},
         }
         all_table_privileges = {
             "SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"
@@ -437,7 +443,7 @@ AGENCY_DATABASE_URL="$DATABASE_URL" \
 SCHEMA_INCOMPATIBLE_STATUS=$?
 set -e
 "$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
-  --command "UPDATE public.runtime_schema_meta SET value = '1' WHERE key = 'schema_version'" \
+  --command "UPDATE public.runtime_schema_meta SET value = '2' WHERE key = 'schema_version'" \
   >/dev/null
 if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
   printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
@@ -812,14 +818,16 @@ try:
             "runtime_sessions",
             "authentication_rate_limits",
             "memories",
+            "social_oauth_states",
+            "social_connections",
         ):
             observed = connection.execute(
                 "SELECT COUNT(*) AS total FROM {}".format(table)
             ).fetchone()
-            if observed is None or observed["total"] != expected[table]:
+            if observed is None or observed["total"] != expected.get(table, 0):
                 raise SystemExit(
                     "migration count mismatch for {}: expected {}, observed {}".format(
-                        table, expected[table], observed
+                        table, expected.get(table, 0), observed
                     )
                 )
         failures = connection.execute(
@@ -835,7 +843,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "1":
+        if schema is None or schema["value"] != "2":
             raise SystemExit("unexpected schema version: {}".format(schema))
 finally:
     runtime.close()
@@ -944,14 +952,16 @@ try:
             "runtime_sessions",
             "authentication_rate_limits",
             "memories",
+            "social_oauth_states",
+            "social_connections",
         ):
             observed = connection.execute(
                 "SELECT COUNT(*) AS total FROM {}".format(table)
             ).fetchone()
-            if observed is None or observed["total"] != expected[table]:
+            if observed is None or observed["total"] != expected.get(table, 0):
                 raise SystemExit(
                     "restore count mismatch for {}: expected {}, observed {}".format(
-                        table, expected[table], observed
+                        table, expected.get(table, 0), observed
                     )
                 )
         failures = connection.execute(
@@ -967,7 +977,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "1":
+        if schema is None or schema["value"] != "2":
             raise SystemExit("unexpected restored schema version: {}".format(schema))
         restored_run = connection.execute(
             "SELECT tenant_id, status FROM runtime_runs LIMIT 1"
@@ -983,7 +993,7 @@ printf 'postgresql_backup_restore=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"
 printf 'driver=pg8000\n'
-printf 'schema_version=1\n'
+printf 'schema_version=2\n'
 printf 'wheel_install=pass\n'
 printf 'postgres_integration=pass\n'
 printf 'sqlite_migration=pass\n'

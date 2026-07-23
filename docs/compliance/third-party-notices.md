@@ -38,6 +38,7 @@ The repository declares `MIT` in `LICENSE` with SHA-256 `b5915031a7d4c6d50a2e853
 
 | Package | Version | License review |
 |---|---:|---|
+| `cryptography` | `49.0.0` | `Apache-2.0` selected from dual licensing |
 | `fastapi` | `0.139.2` | `MIT` |
 | `httpx` | `0.28.1` | `BSD-3-Clause` |
 | `pg8000` | `1.31.5` | `BSD-3-Clause` |

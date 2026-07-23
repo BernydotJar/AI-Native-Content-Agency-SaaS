@@ -93,6 +93,7 @@ runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"
 social_existing_secret           = "ai-native-content-agency-social"
+social_bootstrap_tenant_id        = "tenant-alpha"
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -257,6 +258,16 @@ for name, key in {
     "AGENCY_X_CONSUMER_SECRET": "x-consumer-secret",
     "AGENCY_INSTAGRAM_APP_ID": "instagram-app-id",
     "AGENCY_INSTAGRAM_APP_SECRET": "instagram-app-secret",
+    "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON": "social-token-encryption-keys.json",
+    "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID": "social-token-active-key-id",
+    "AGENCY_X_USER_ACCESS_TOKEN": "x-user-access-token",
+    "AGENCY_X_USER_ACCESS_TOKEN_SECRET": "x-user-access-token-secret",
+    "AGENCY_X_ACCOUNT_ID": "x-account-id",
+    "AGENCY_X_ACCOUNT_USERNAME": "x-account-username",
+    "AGENCY_INSTAGRAM_ACCESS_TOKEN": "instagram-access-token",
+    "AGENCY_INSTAGRAM_ACCOUNT_ID": "instagram-account-id",
+    "AGENCY_INSTAGRAM_ACCOUNT_USERNAME": "instagram-account-username",
+    "AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT": "instagram-token-expires-at",
 }.items():
     assert environment[name]["valueFrom"]["secretKeyRef"] == {
         "name": "ai-native-content-agency-social",
@@ -265,6 +276,7 @@ for name, key in {
     }
 assert environment["AGENCY_X_REDIRECT_URI"]["value"].endswith("/social-channels/x/oauth/callback")
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].endswith("/social-channels/instagram/oauth/callback")
+assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alpha"
 print("identity_rbac_configuration=pass")
 print("social_channel_secret_refs=pass")
 PY
@@ -296,6 +308,7 @@ runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = ""
 runtime_auth_identity_credentials_key = "identity-credentials.json"
 social_existing_secret           = "ai-native-content-agency-social"
+social_bootstrap_tenant_id        = "tenant-alpha"
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -324,6 +337,8 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
 assert "postgresql://runtime:local-validation-only" not in serialized
+for forbidden in ("x-user-access-token-value", "instagram-access-token-value", "social-encryption-key-value"):
+    assert forbidden not in serialized
 changes = plan.get("resource_changes", [])
 assert any(
     item["address"] == "helm_release.app"
@@ -362,6 +377,10 @@ assert environment["AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS"]["value"] == "20"
 assert environment["AGENCY_POSTGRES_SCHEMA_MODE"]["value"] == "validate"
 assert environment["AGENCY_X_CONSUMER_KEY"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
 assert environment["AGENCY_INSTAGRAM_APP_SECRET"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
+assert environment["AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON"]["valueFrom"]["secretKeyRef"]["key"] == "social-token-encryption-keys.json"
+assert environment["AGENCY_X_USER_ACCESS_TOKEN"]["valueFrom"]["secretKeyRef"]["key"] == "x-user-access-token"
+assert environment["AGENCY_INSTAGRAM_ACCESS_TOKEN"]["valueFrom"]["secretKeyRef"]["key"] == "instagram-access-token"
+assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alpha"
 assert environment["AGENCY_X_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
 assert all(

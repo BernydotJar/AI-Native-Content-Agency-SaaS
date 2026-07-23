@@ -241,6 +241,7 @@ describe("runtime API client", () => {
           callback_configured: true,
           connection_state: "not_connected",
           oauth_start_available: false,
+          oauth_runtime_configured: false,
           publishing_available: false,
           external_effects_enabled: false,
           credential_location: "server_environment",
@@ -251,6 +252,7 @@ describe("runtime API client", () => {
           publish_protocol: "POST /media then POST /media_publish",
           supported_content: ["image", "reel", "carousel"],
           requires_media: true,
+          connected_account: null,
         }],
       }));
     const api = createRuntimeApi(fetchMock as typeof fetch);
@@ -286,6 +288,7 @@ describe("runtime API client", () => {
         connection_state: "not_connected",
         publishing_available: false,
         requires_media: true,
+        connected_account: null,
       }),
     ]);
 
@@ -305,6 +308,46 @@ describe("runtime API client", () => {
       expect.objectContaining({ credentials: "include" }),
     );
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("API_KEY");
+  });
+
+  it("starts and disconnects social OAuth with cookie credentials and CSRF", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        channel_id: "x",
+        authorization_url: "https://api.x.com/oauth/authorize?oauth_token=request-token",
+        expires_at: "2026-07-23T08:00:00+00:00",
+      }, 201))
+      .mockResolvedValueOnce(jsonResponse({
+        tenant_id: "tenant-alpha",
+        channel_id: "x",
+        connection_state: "not_connected",
+        disconnected: true,
+      }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.startSocialOAuth("x", "csrf-social-001")).resolves.toEqual(
+      expect.objectContaining({ channel_id: "x" }),
+    );
+    await expect(api.disconnectSocialChannel("x", "csrf-social-001")).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/social-channels/x/oauth/start",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-social-001" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/social-channels/x/connection",
+      expect.objectContaining({
+        method: "DELETE",
+        credentials: "include",
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-social-001" }),
+      }),
+    );
   });
 
   it("preserves the safe public error code and request correlation", async () => {

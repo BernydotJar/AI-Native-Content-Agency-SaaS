@@ -35,6 +35,7 @@ _ROLE_PERMISSIONS = {
             "greenlight:decide",
             "greenlight:revoke",
             "audit:read",
+            "social:manage",
         }
     ),
 }

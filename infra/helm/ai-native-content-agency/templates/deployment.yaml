@@ -173,6 +173,70 @@ spec:
                   name: {{ .Values.runtime.social.existingSecret | quote }}
                   key: {{ .Values.runtime.social.instagram.appSecretKey | quote }}
                   optional: true
+            - name: AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.encryptionKeysJsonKey | quote }}
+                  optional: true
+            - name: AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.activeEncryptionKeyIdKey | quote }}
+                  optional: true
+            - name: AGENCY_X_USER_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.userAccessTokenKey | quote }}
+                  optional: true
+            - name: AGENCY_X_USER_ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.userAccessTokenSecretKey | quote }}
+                  optional: true
+            - name: AGENCY_X_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.accountIdKey | quote }}
+                  optional: true
+            - name: AGENCY_X_ACCOUNT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.accountUsernameKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accessTokenKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accountIdKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCOUNT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accountUsernameKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.tokenExpiresAtKey | quote }}
+                  optional: true
+{{- end }}
+{{- if .Values.runtime.social.bootstrapTenantId }}
+            - name: AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID
+              value: {{ .Values.runtime.social.bootstrapTenantId | quote }}
 {{- end }}
 {{- if .Values.runtime.social.x.redirectUri }}
             - name: AGENCY_X_REDIRECT_URI

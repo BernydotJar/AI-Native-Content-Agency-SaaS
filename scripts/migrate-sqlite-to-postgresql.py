@@ -19,6 +19,8 @@ TABLES = (
     "runtime_sessions",
     "authentication_failures",
     "memories",
+    "social_oauth_states",
+    "social_connections",
 )
 TARGET_TABLES = (
     "runtime_runs",
@@ -26,6 +28,8 @@ TARGET_TABLES = (
     "runtime_sessions",
     "authentication_rate_limits",
     "memories",
+    "social_oauth_states",
+    "social_connections",
 )
 
 
@@ -269,6 +273,51 @@ def migrate_memories(
     return len(records)
 
 
+def migrate_social_oauth_states(source: sqlite3.Connection, target: Any) -> int:
+    records = rows(source, "social_oauth_states")
+    for row in records:
+        target.execute(
+            """
+            INSERT INTO social_oauth_states(
+                state_id, tenant_id, session_id, channel_id, state_digest,
+                provider_token_digest, encrypted_payload, key_id,
+                created_at, expires_at, consumed_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                row["state_id"], row["tenant_id"], row["session_id"],
+                row["channel_id"], row["state_digest"],
+                row["provider_token_digest"], row["encrypted_payload"],
+                row["key_id"], _datetime(str(row["created_at"])),
+                _datetime(str(row["expires_at"])),
+                _datetime(str(row["consumed_at"])) if row["consumed_at"] is not None else None,
+            ),
+        )
+    return len(records)
+
+
+def migrate_social_connections(source: sqlite3.Connection, target: Any) -> int:
+    records = rows(source, "social_connections")
+    for row in records:
+        target.execute(
+            """
+            INSERT INTO social_connections(
+                tenant_id, channel_id, account_id, account_username,
+                encrypted_tokens, key_id, scopes_json, token_expires_at,
+                connected_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, CAST(%s AS jsonb), %s, %s, %s)
+            """,
+            (
+                row["tenant_id"], row["channel_id"], row["account_id"],
+                row["account_username"], row["encrypted_tokens"], row["key_id"],
+                canonical_json(parsed_json(row["scopes_json"], expected=list)),
+                _datetime(str(row["token_expires_at"])) if row["token_expires_at"] is not None else None,
+                _datetime(str(row["connected_at"])), _datetime(str(row["updated_at"])),
+            ),
+        )
+    return len(records)
+
+
 def verify_migration(
     source_summary: Mapping[str, int],
     target_summary: Mapping[str, int],
@@ -280,6 +329,8 @@ def verify_migration(
         "audit_events": "audit_events",
         "runtime_sessions": "runtime_sessions",
         "memories": "memories",
+        "social_oauth_states": "social_oauth_states",
+        "social_connections": "social_connections",
     }
     mismatches = {
         source_table: {
@@ -375,6 +426,8 @@ def main() -> int:
                 "audit_events": migrate_audit(source, target),
                 "runtime_sessions": migrate_sessions(source, target),
                 "memories": migrate_memories(source, target),
+                "social_oauth_states": migrate_social_oauth_states(source, target),
+                "social_connections": migrate_social_connections(source, target),
             }
             failure_events, failure_buckets = migrate_rate_limits(source, target)
             migrated["authentication_failure_events"] = failure_events

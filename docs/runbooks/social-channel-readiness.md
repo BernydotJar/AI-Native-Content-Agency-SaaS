@@ -1,72 +1,158 @@
-# X and Instagram channel readiness
+# Conexión segura de X e Instagram
 
-This runbook configures **application readiness only**. It does not issue an OAuth redirect,
-persist an access token, or publish content. Those mutation paths remain absent until the
-encrypted tenant token store and durable publication intent/receipt are implemented.
+El runtime admite dos formas de conectar una cuenta social:
 
-## Local readiness
+1. **OAuth interactivo**, recomendado para clientes y operación SaaS.
+2. **Bootstrap server-side de tokens existentes**, útil para pruebas controladas o
+   migraciones. Los tokens nunca se introducen en el navegador.
 
-Export values in the shell that starts the integrated product. Do not place real values in
-Git, `.env` files, screenshots, issue comments, or browser storage.
+La conexión de una cuenta no habilita publicación automática. `Publicar` continúa
+bloqueado hasta que exista una intención/receipt durable de publicación y Greenlight
+válido para el artefacto y canal exactos.
+
+## Preparación local
 
 ```bash
-export AGENCY_X_CONSUMER_KEY='<from X developer console>'
-export AGENCY_X_CONSUMER_SECRET='<from X developer console>'
-export AGENCY_X_REDIRECT_URI='http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback'
+cp .env.example .env.local
+npm run generate:social-key
+```
 
-export AGENCY_INSTAGRAM_APP_ID='<from Meta app dashboard>'
-export AGENCY_INSTAGRAM_APP_SECRET='<from Meta app dashboard>'
-export AGENCY_INSTAGRAM_REDIRECT_URI='http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback'
+Copia las dos líneas generadas dentro de `.env.local`. El archivo está ignorado por Git
+y `npm run start:local` lo carga automáticamente. El runner se niega a utilizar un archivo
+local que Git esté rastreando.
 
+Verifica antes de guardar valores:
+
+```bash
+git check-ignore -v .env.local
+git status --short
+```
+
+## OAuth interactivo
+
+Configura la aplicación y las callback URLs exactas:
+
+```dotenv
+AGENCY_X_CONSUMER_KEY=
+AGENCY_X_CONSUMER_SECRET=
+AGENCY_X_REDIRECT_URI=http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback
+
+AGENCY_INSTAGRAM_APP_ID=
+AGENCY_INSTAGRAM_APP_SECRET=
+AGENCY_INSTAGRAM_REDIRECT_URI=http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback
+```
+
+Inicia el producto:
+
+```bash
 npm run start:local
 ```
 
-The local runner inherits these variables. It does not print their values. After connecting
-the workspace, open **Configuración → Canales de publicación**. Each configured channel
-must show **Lista para autenticar**. The API response contains only variable names and
-boolean readiness state.
+Después:
 
-The callback paths above are reserved configuration values; the current readiness slice
-intentionally exposes no OAuth callback route. Registering them in provider consoles is
-useful only after the OAuth implementation lands.
+1. conecta el espacio con la credencial local del tenant;
+2. abre **Configuración → Canales de publicación**;
+3. pulsa **Conectar cuenta** como administrador;
+4. autoriza la cuenta en X o Instagram;
+5. vuelve al mismo navegador y sesión;
+6. confirma que aparece `@usuario` y `tokens cifrados server-side`.
 
-## Kubernetes and Terraform
+X usa OAuth 1.0a user context de tres pasos. Instagram usa Authorization Code y sólo
+acepta cuentas Professional (Business o Creator). El state OAuth es single-use, expira
+a los diez minutos y está ligado a tenant, sesión y canal.
 
-Create one Secret outside Terraform. Example key names:
+## Bootstrap de tokens existentes
+
+Configura siempre el tenant receptor y el grupo completo del canal. Una configuración
+parcial hace fallar el arranque.
+
+```dotenv
+AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID=local-tenant
+
+AGENCY_X_USER_ACCESS_TOKEN=
+AGENCY_X_USER_ACCESS_TOKEN_SECRET=
+AGENCY_X_ACCOUNT_ID=
+AGENCY_X_ACCOUNT_USERNAME=
+
+AGENCY_INSTAGRAM_ACCESS_TOKEN=
+AGENCY_INSTAGRAM_ACCOUNT_ID=
+AGENCY_INSTAGRAM_ACCOUNT_USERNAME=
+AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT=
+```
+
+Al iniciar, los tokens se cifran con AES-GCM antes de persistirse. El bootstrap es
+idempotente y registra `social.bootstrapped` una sola vez por tenant/canal/cuenta.
+
+No mezcles valores parciales. Para X se requieren los cuatro campos. Para Instagram se
+requieren token, account ID y username; la expiración es opcional.
+
+## Cifrado y rotación
+
+```dotenv
+AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=local-social-v1
+AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON='{"local-social-v1":"<base64url-32-bytes>"}'
+```
+
+El JSON puede contener varias claves durante una rotación. El key ID activo cifra datos
+nuevos y las claves anteriores permiten leer ciphertext existente hasta completar la
+rotación. El AAD liga cada ciphertext a tenant, canal y tipo de registro.
+
+Nunca elimines una clave antigua antes de re-cifrar los registros que la utilizan.
+
+## Seguridad y roles
+
+- Sólo `admin` puede iniciar OAuth o desconectar una cuenta.
+- Inicio y disconnect requieren sesión HttpOnly y CSRF.
+- El callback exige la misma sesión y consume state una sola vez.
+- Viewer, operator, approver y bearer API key no pueden iniciar OAuth.
+- Access tokens, refresh tokens, request-token secrets y claves AES no aparecen en API,
+  auditoría, logs ni browser storage.
+- Desconectar sobrescribe y elimina el ciphertext local; PostgreSQL elimina la fila.
+- Errores upstream son sanitizados y no se reintentan automáticamente.
+
+## Kubernetes y Terraform
+
+Crea un Secret fuera de Terraform. El chart sólo referencia nombres de data keys:
 
 ```text
 x-consumer-key
 x-consumer-secret
 instagram-app-id
 instagram-app-secret
+social-token-encryption-keys.json
+social-token-active-key-id
+
+# opcionales para bootstrap
+x-user-access-token
+x-user-access-token-secret
+x-account-id
+x-account-username
+instagram-access-token
+instagram-account-id
+instagram-account-username
+instagram-token-expires-at
 ```
 
-Set these non-secret Terraform variables:
+Terraform recibe únicamente:
 
-```hcl
-social_existing_secret  = "ai-native-content-agency-social"
-x_redirect_uri          = "https://app.example.com/api/v1/social-channels/x/oauth/callback"
-instagram_redirect_uri  = "https://app.example.com/api/v1/social-channels/instagram/oauth/callback"
-```
+- nombre del Secret;
+- nombres de las data keys;
+- callback URLs;
+- tenant de bootstrap opcional.
 
-Terraform passes only the Secret name, Secret data-key names, and callback URIs to Helm.
-It does not create the Secret or receive its values.
+Ningún valor secreto entra al state de Terraform.
 
-## Expected product behavior
+## Estado de publicación
 
-- X shows a text post preview and treats media as optional.
-- Instagram shows a caption preview and requires image, reel, or carousel media.
-- Both show Copy → Asset → Greenlight → Account → Publication.
-- `Publicar` remains disabled while the account is not connected or the durable publisher
-  boundary is unavailable.
-- Setting app credentials does not authorize a customer account.
+La cuenta puede quedar conectada y visible, pero publicación permanece deshabilitada.
+El siguiente límite obligatorio es una intención de publicación durable con:
 
-## External test gate
+- tenant, cuenta, run, artefacto/version/hash y canal;
+- Greenlight y fencing token exactos;
+- receipt del proveedor;
+- replay sin segunda publicación;
+- estado `unknown` que bloquea retry automático;
+- reconciliación y revocación.
 
-A real test later requires:
-
-1. registered callback URLs in X and Meta developer consoles;
-2. an X account used for sandbox authorization;
-3. an Instagram Professional account (Business or Creator);
-4. explicit approval to use the credentials and create external posts;
-5. implemented encrypted token storage and publication intent/receipt reconciliation.
+Instagram además requiere una imagen, reel o carrusel accesible por el proveedor; un
+caption sin asset nunca se marca como publicable.

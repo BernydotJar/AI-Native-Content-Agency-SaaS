@@ -29,7 +29,7 @@ that distinction before any external effect exists.
 - `missing_credentials`
 - `missing_redirect_uri`
 - `ready_for_authentication`
-- future: `connected`
+- `connected`
 - future: `publishing_available`
 
 ## Security and correctness invariants

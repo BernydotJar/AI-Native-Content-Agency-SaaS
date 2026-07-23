@@ -84,11 +84,12 @@ This prevents `pip install ./backend` from resolving a different graph during im
 The current verified core includes:
 
 - `agency-runtime==0.7.0`;
+- `cryptography==49.0.0`;
 - `fastapi==0.139.2`;
 - `starlette==1.3.1`;
 - `uvicorn==0.51.0`;
 - `pydantic==2.13.4`;
-- `httpx==0.28.1` in the test graph.
+- `httpx==0.28.1` in the runtime and test graphs.
 
 The locks were generated and byte-regenerated with Python 3.11. CI verifies the wheel under Python 3.13, and the production image installs the same runtime pins under Python 3.13.14 on Alpine 3.23 before `pip check` and the full packaged HTTP smoke.
 

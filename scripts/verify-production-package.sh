@@ -16,6 +16,8 @@ INSTAGRAM_TEST_APP_ID=local-package-instagram-app-id
 INSTAGRAM_TEST_SECRET=local-package-instagram-app-secret
 X_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/x/oauth/callback
 INSTAGRAM_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/instagram/oauth/callback
+SOCIAL_TEST_ACTIVE_KEY_ID=package-social-v1
+SOCIAL_TEST_ENCRYPTION_KEYS_JSON='{"package-social-v1":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}'
 IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import json, os; print(json.dumps([
     {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True,"entitlements":["theme:premium"]},
     {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
@@ -197,6 +199,8 @@ build_with_docker() {
     -e "AGENCY_INSTAGRAM_APP_ID=$INSTAGRAM_TEST_APP_ID" \
     -e "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
     -e "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
+    -e "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
+    -e "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
 
@@ -225,7 +229,9 @@ build_with_buildah() {
     --env "AGENCY_X_REDIRECT_URI=$X_TEST_REDIRECT" \
     --env "AGENCY_INSTAGRAM_APP_ID=$INSTAGRAM_TEST_APP_ID" \
     --env "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
-    --env "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" "$RUNTIME_ID"
+    --env "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
+    --env "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
+    --env "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
     > "$TMP_DIR/runtime.log" 2>&1 &
@@ -311,6 +317,14 @@ curl -fsS \
   > "$TMP_DIR/social-channels.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/openapi.json" > "$TMP_DIR/openapi.json"
 set +e
+social_oauth_bearer_status=$(curl -sS -o "$TMP_DIR/social-oauth-bearer-denied.json" -w '%{http_code}' \
+  -X POST -H "Authorization: Bearer $AUTH_KEY" \
+  -H 'X-Request-ID: package-social-oauth-bearer-denied-0001' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/x/oauth/start")
+set -e
+[ "$social_oauth_bearer_status" = "400" ]
+grep -q '"code":"browser_session_required"' "$TMP_DIR/social-oauth-bearer-denied.json"
+set +e
 integration_execute_status=$(curl -sS -o "$TMP_DIR/integration-execute-denied.json" -w '%{http_code}' \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $VIEWER_KEY" \
@@ -395,8 +409,10 @@ channels = social["channels"]
 assert [item["channel_id"] for item in channels] == ["x", "instagram"]
 assert all(item["configuration_state"] == "ready_for_authentication" for item in channels)
 assert all(item["connection_state"] == "not_connected" for item in channels)
-assert all(item["oauth_start_available"] is False for item in channels)
+assert all(item["oauth_runtime_configured"] is True for item in channels)
+assert all(item["oauth_start_available"] is True for item in channels)
 assert all(item["publishing_available"] is False for item in channels)
+assert all(item["connected_account"] is None for item in channels)
 assert channels[0]["requires_media"] is False
 assert channels[1]["requires_media"] is True
 serialized_social = json.dumps(social)
@@ -405,6 +421,7 @@ for secret in (
     "local-package-x-consumer-secret",
     "local-package-instagram-app-id",
     "local-package-instagram-app-secret",
+    "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
 ):
     assert secret not in serialized_social
 social_paths = {
@@ -415,8 +432,16 @@ social_paths = {
 assert set(social_paths) == {
     "/api/v1/social-channels",
     "/api/v1/social-channels/{channel_id}",
+    "/api/v1/social-channels/{channel_id}/oauth/start",
+    "/api/v1/social-channels/x/oauth/callback",
+    "/api/v1/social-channels/instagram/oauth/callback",
+    "/api/v1/social-channels/{channel_id}/connection",
 }
-assert all(set(methods) == {"get"} for methods in social_paths.values())
+assert set(social_paths["/api/v1/social-channels"]) == {"get"}
+assert set(social_paths["/api/v1/social-channels/{channel_id}"]) == {"get"}
+assert set(social_paths["/api/v1/social-channels/{channel_id}/oauth/start"]) == {"post"}
+assert set(social_paths["/api/v1/social-channels/{channel_id}/connection"]) == {"delete"}
+assert "/api/v1/social-channels/{channel_id}/publish" not in openapi["paths"]
 print("provider_registry=pass")
 print("model_gateway_disabled=pass")
 print("model_gateway_execution_route_absent=pass")
@@ -426,7 +451,8 @@ print("integration_read_only_api=pass")
 print("integration_execution_disabled=pass")
 print("social_channel_readiness=pass")
 print("social_secrets_absent=pass")
-print("social_mutation_routes_absent=pass")
+print("social_oauth_routes_governed=pass")
+print("social_publication_routes_absent=pass")
 PYINTEGRATION
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
   -H 'Content-Type: application/json' \
@@ -583,7 +609,7 @@ assert denial["payload"] == {
 assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
 assert 'agency_browser_sessions_total{action="created"} 1' in metrics
-assert 'agency_authentication_attempts_total{outcome="succeeded"} 5' in metrics
+assert 'agency_authentication_attempts_total{outcome="succeeded"} 7' in metrics
 assert "x-request-id: package-session-0001" in session_headers
 assert "x-request-id: package-create-0001" in run_headers
 assert "x-request-id: package-approve-0001" in approval_headers

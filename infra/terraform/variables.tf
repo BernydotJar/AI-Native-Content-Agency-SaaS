@@ -313,3 +313,50 @@ variable "instagram_redirect_uri" {
     error_message = "instagram_redirect_uri must be empty, HTTPS, or loopback HTTP without query or fragment."
   }
 }
+
+variable "social_oauth_secret_keys" {
+  description = "Data-key names inside social_existing_secret for encryption and optional server-side token bootstrap. Values are names only; secret material never enters Terraform state."
+  type = object({
+    encryption_keys_json       = string
+    active_encryption_key_id   = string
+    x_user_access_token        = string
+    x_user_access_token_secret = string
+    x_account_id               = string
+    x_account_username         = string
+    instagram_access_token     = string
+    instagram_account_id       = string
+    instagram_account_username = string
+    instagram_token_expires_at = string
+  })
+  default = {
+    encryption_keys_json       = "social-token-encryption-keys.json"
+    active_encryption_key_id   = "social-token-active-key-id"
+    x_user_access_token        = "x-user-access-token"
+    x_user_access_token_secret = "x-user-access-token-secret"
+    x_account_id               = "x-account-id"
+    x_account_username         = "x-account-username"
+    instagram_access_token     = "instagram-access-token"
+    instagram_account_id       = "instagram-account-id"
+    instagram_account_username = "instagram-account-username"
+    instagram_token_expires_at = "instagram-token-expires-at"
+  }
+
+  validation {
+    condition = alltrue([
+      for value in values(var.social_oauth_secret_keys) :
+      can(regex("^[A-Za-z0-9._-]+$", value))
+    ])
+    error_message = "Every social_oauth_secret_keys value must be a valid Kubernetes Secret data key."
+  }
+}
+
+variable "social_bootstrap_tenant_id" {
+  description = "Optional tenant receiving pre-issued X/Instagram tokens from the existing Secret. Leave empty when OAuth is used."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.social_bootstrap_tenant_id == "" || can(regex("^[A-Za-z0-9][A-Za-z0-9._:@-]{0,255}$", var.social_bootstrap_tenant_id))
+    error_message = "social_bootstrap_tenant_id must be empty or a valid tenant identifier."
+  }
+}

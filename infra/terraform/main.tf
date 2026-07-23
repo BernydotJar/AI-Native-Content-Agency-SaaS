@@ -160,6 +160,61 @@ resource "helm_release" "app" {
     value = var.instagram_redirect_uri
   }
 
+  set {
+    name  = "runtime.social.encryptionKeysJsonKey"
+    value = var.social_oauth_secret_keys.encryption_keys_json
+  }
+
+  set {
+    name  = "runtime.social.activeEncryptionKeyIdKey"
+    value = var.social_oauth_secret_keys.active_encryption_key_id
+  }
+
+  set {
+    name  = "runtime.social.x.userAccessTokenKey"
+    value = var.social_oauth_secret_keys.x_user_access_token
+  }
+
+  set {
+    name  = "runtime.social.x.userAccessTokenSecretKey"
+    value = var.social_oauth_secret_keys.x_user_access_token_secret
+  }
+
+  set {
+    name  = "runtime.social.x.accountIdKey"
+    value = var.social_oauth_secret_keys.x_account_id
+  }
+
+  set {
+    name  = "runtime.social.x.accountUsernameKey"
+    value = var.social_oauth_secret_keys.x_account_username
+  }
+
+  set {
+    name  = "runtime.social.instagram.accessTokenKey"
+    value = var.social_oauth_secret_keys.instagram_access_token
+  }
+
+  set {
+    name  = "runtime.social.instagram.accountIdKey"
+    value = var.social_oauth_secret_keys.instagram_account_id
+  }
+
+  set {
+    name  = "runtime.social.instagram.accountUsernameKey"
+    value = var.social_oauth_secret_keys.instagram_account_username
+  }
+
+  set {
+    name  = "runtime.social.instagram.tokenExpiresAtKey"
+    value = var.social_oauth_secret_keys.instagram_token_expires_at
+  }
+
+  set {
+    name  = "runtime.social.bootstrapTenantId"
+    value = var.social_bootstrap_tenant_id
+  }
+
   lifecycle {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures

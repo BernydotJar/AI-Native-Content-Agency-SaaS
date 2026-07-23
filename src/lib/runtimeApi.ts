@@ -120,6 +120,21 @@ export type SocialChannelConfigurationState =
   | "missing_redirect_uri"
   | "ready_for_authentication";
 
+export interface RuntimeSocialConnectedAccount {
+  account_id: string;
+  account_username: string;
+  scopes: string[];
+  token_expires_at: string | null;
+  connected_at: string;
+  token_storage: "encrypted_server_side";
+}
+
+export interface RuntimeSocialOAuthStart {
+  channel_id: "x" | "instagram";
+  authorization_url: string;
+  expires_at: string;
+}
+
 export interface RuntimeSocialChannel {
   channel_id: "x" | "instagram";
   display_name: string;
@@ -130,6 +145,7 @@ export interface RuntimeSocialChannel {
   callback_configured: boolean;
   connection_state: "not_connected" | "connected";
   oauth_start_available: boolean;
+  oauth_runtime_configured: boolean;
   publishing_available: boolean;
   external_effects_enabled: boolean;
   credential_location: "server_environment";
@@ -140,6 +156,7 @@ export interface RuntimeSocialChannel {
   publish_protocol: string;
   supported_content: string[];
   requires_media: boolean;
+  connected_account: RuntimeSocialConnectedAccount | null;
 }
 
 export interface RuntimeAuditEvent {
@@ -195,6 +212,14 @@ export interface RuntimeApi {
   providerCatalog(): Promise<RuntimeProviderCatalog>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
   socialChannels(): Promise<RuntimeSocialChannel[]>;
+  startSocialOAuth(
+    channelId: RuntimeSocialChannel["channel_id"],
+    csrfToken: string,
+  ): Promise<RuntimeSocialOAuthStart>;
+  disconnectSocialChannel(
+    channelId: RuntimeSocialChannel["channel_id"],
+    csrfToken: string,
+  ): Promise<void>;
   revokeSession(csrfToken: string): Promise<void>;
 }
 
@@ -337,6 +362,26 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
     async socialChannels() {
       const payload = await requestJson<{ channels: RuntimeSocialChannel[] }>(fetchImpl, "/api/v1/social-channels");
       return payload.channels;
+    },
+    startSocialOAuth(channelId, csrfToken) {
+      return requestJson<RuntimeSocialOAuthStart>(
+        fetchImpl,
+        `/api/v1/social-channels/${encodeURIComponent(channelId)}/oauth/start`,
+        {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken },
+        },
+      );
+    },
+    async disconnectSocialChannel(channelId, csrfToken) {
+      await requestJson<{ disconnected: boolean }>(
+        fetchImpl,
+        `/api/v1/social-channels/${encodeURIComponent(channelId)}/connection`,
+        {
+          method: "DELETE",
+          headers: { "X-CSRF-Token": csrfToken },
+        },
+      );
     },
     async revokeSession(csrfToken) {
       await requestJson<{ status: string }>(fetchImpl, "/api/v1/sessions/current", {

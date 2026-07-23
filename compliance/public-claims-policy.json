@@ -37,7 +37,7 @@
     },
     {
       "path": "README.md",
-      "text": "ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto"
+      "text": "ningún endpoint publica contenido, renderiza media ni gasta presupuesto"
     },
     {
       "path": "src/App.tsx",

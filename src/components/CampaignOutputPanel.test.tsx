@@ -47,6 +47,7 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     callback_configured: false,
     connection_state: "not_connected",
     oauth_start_available: false,
+    oauth_runtime_configured: false,
     publishing_available: false,
     external_effects_enabled: false,
     credential_location: "server_environment",
@@ -57,6 +58,7 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     publish_protocol: "POST /2/tweets",
     supported_content: ["text", "image", "video"],
     requires_media: false,
+    connected_account: null,
   },
   {
     channel_id: "instagram",
@@ -68,6 +70,7 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     callback_configured: true,
     connection_state: "not_connected",
     oauth_start_available: false,
+    oauth_runtime_configured: false,
     publishing_available: false,
     external_effects_enabled: false,
     credential_location: "server_environment",
@@ -78,6 +81,7 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     publish_protocol: "POST /media then POST /media_publish",
     supported_content: ["image", "reel", "carousel"],
     requires_media: true,
+    connected_account: null,
   },
 ];
 

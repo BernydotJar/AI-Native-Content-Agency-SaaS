@@ -14,7 +14,8 @@
     "validate:program": "python3 scripts/validate-program-state.py",
     "validate:compliance": "python3 scripts/verify-release-compliance.py",
     "validate:operability": "python3 scripts/verify-operability.py",
-    "verify:social-browser": "node scripts/verify-social-output-browser.mjs"
+    "verify:social-browser": "node scripts/verify-social-output-browser.mjs",
+    "generate:social-key": "python3 scripts/generate-social-encryption-key.py"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",

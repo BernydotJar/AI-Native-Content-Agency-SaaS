@@ -93,6 +93,9 @@ export default function App() {
   const [providerGateway, setProviderGateway] = useState<RuntimeProviderGatewayStatus>(DEFAULT_GATEWAY_STATUS);
   const [integrations, setIntegrations] = useState<RuntimeIntegrationSummary[]>([]);
   const [socialChannels, setSocialChannels] = useState<RuntimeSocialChannel[]>([]);
+  const [socialActionChannel, setSocialActionChannel] = useState<RuntimeSocialChannel["channel_id"] | null>(null);
+  const [socialActionError, setSocialActionError] = useState("");
+  const [socialNotice, setSocialNotice] = useState("");
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
@@ -152,6 +155,49 @@ export default function App() {
   useEffect(() => {
     void refreshFabric();
   }, [refreshFabric]);
+
+  useEffect(() => {
+    if (!session) return;
+    const query = new URLSearchParams(window.location.search);
+    const channel = query.get("social_channel");
+    const status = query.get("status");
+    if ((channel === "x" || channel === "instagram") && status === "connected") {
+      setSettingsOpen(true);
+      setSocialNotice(`${channel === "x" ? "X" : "Instagram"} quedó conectado correctamente.`);
+      void refreshFabric();
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    }
+  }, [refreshFabric, session]);
+
+  const connectSocialChannel = async (channelId: RuntimeSocialChannel["channel_id"]) => {
+    if (!session || session.role !== "admin") return;
+    setSocialActionChannel(channelId);
+    setSocialActionError("");
+    setSocialNotice("");
+    try {
+      const started = await runtimeApi.startSocialOAuth(channelId, session.csrf_token);
+      window.location.assign(started.authorization_url);
+    } catch (error) {
+      setSocialActionError(error instanceof Error ? error.message : "No se pudo iniciar la autorización social.");
+      setSocialActionChannel(null);
+    }
+  };
+
+  const disconnectSocialChannel = async (channelId: RuntimeSocialChannel["channel_id"]) => {
+    if (!session || session.role !== "admin") return;
+    setSocialActionChannel(channelId);
+    setSocialActionError("");
+    setSocialNotice("");
+    try {
+      await runtimeApi.disconnectSocialChannel(channelId, session.csrf_token);
+      await refreshFabric();
+      setSocialNotice(`${channelId === "x" ? "X" : "Instagram"} quedó desconectado y sus tokens fueron eliminados.`);
+    } catch (error) {
+      setSocialActionError(error instanceof Error ? error.message : "No se pudo desconectar la cuenta social.");
+    } finally {
+      setSocialActionChannel(null);
+    }
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-x-clip bg-[var(--bg-obsidian)] font-sans text-[var(--text-light)]">
@@ -287,6 +333,12 @@ export default function App() {
         providerLoading={fabricLoading}
         providerError={fabricError}
         sessionActive={Boolean(session)}
+        sessionRole={session?.role ?? null}
+        socialActionChannel={socialActionChannel}
+        socialActionError={socialActionError}
+        socialNotice={socialNotice}
+        onConnectSocial={(channelId) => void connectSocialChannel(channelId)}
+        onDisconnectSocial={(channelId) => void disconnectSocialChannel(channelId)}
         onRefreshProviders={() => void refreshFabric()}
       />
     </div>

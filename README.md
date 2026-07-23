@@ -2,7 +2,7 @@
 
 Aplicación full-stack y sandbox gobernado para operar una agencia de contenido AI-native de ocho agentes. El repositorio combina una experiencia React/TypeScript, una consola conectada a FastAPI, persistencia SQLite/PostgreSQL y un corpus local de instrucciones, conocimiento y skills.
 
-> Estado actual: candidato sandbox full-stack `0.7.0`, verificable localmente y empaquetado como imagen OCI/Helm. La consola consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece separado. No existe evidencia de deployment GCP/staging/producción y ningún adaptador contacta servicios externos, publica contenido, renderiza media ni gasta presupuesto. No representa aprobación legal, de privacidad ni regulatoria. El estado operacional vigente está en [`program/current-state.md`](program/current-state.md).
+> Estado actual: candidato sandbox full-stack `0.7.0`, verificable localmente y empaquetado como imagen OCI/Helm. La consola consume el backend durable mediante cookie HttpOnly + CSRF; la imagen usa bases fijadas por digest y produce SBOM, reporte de vulnerabilidades, provenance y firmas verificables. El simulador cinematográfico original permanece separado. No existe evidencia de deployment GCP/staging/producción. Sólo los endpoints OAuth iniciados explícitamente por un admin pueden contactar X/Meta; ningún endpoint publica contenido, renderiza media ni gasta presupuesto. No representa aprobación legal, de privacidad ni regulatoria. El estado operacional vigente está en [`program/current-state.md`](program/current-state.md).
 
 ## Qué funciona hoy
 
@@ -35,7 +35,7 @@ FastAPI + agency_runtime
 ├── orquestador secuencial de ocho agentes
 ├── Greenlight ligado a IDs/hashes de artefactos y fencing token
 ├── registro server-side de cinco proveedores de modelos
-├── readiness GET-only de X/Instagram e integraciones revisadas
+├── OAuth tenant-scoped de X/Instagram con tokens cifrados e integraciones revisadas
 └── auditoría, métricas, backup/restore e idempotencia durable
 ```
 
@@ -98,8 +98,8 @@ npm run verify:social-browser  # FastAPI + run X/Instagram + Chromium; cero egre
 
 La configuración server-side de X/Instagram y los callbacks esperados están en
 [`docs/runbooks/social-channel-readiness.md`](docs/runbooks/social-channel-readiness.md).
-Definir las app keys cambia el estado a **Lista para autenticar**, pero no autoriza una
-cuenta ni habilita publicación real.
+Definir las app keys y la clave de cifrado cambia el estado a **Lista para autenticar**. Un
+admin puede completar OAuth y ver la cuenta conectada; esto todavía no habilita publicación.
 
 Para una identidad local estable, define `AGENCY_IDENTITY_CREDENTIALS_JSON` antes de ejecutar `npm run start:local`. El runner rechaza hosts no loopback y no activa proveedores externos.
 
@@ -159,7 +159,7 @@ En ninguno de los dos casos Greenlight equivale a publicar, comprar medios ni au
 Las siguientes capacidades son contratos mock o representaciones visuales, no conexiones activas:
 
 - Meta Ads MCP y gasto publicitario;
-- OAuth, tokens y publicación real de X, LinkedIn, Facebook, TikTok o Instagram; existe únicamente readiness GET-only para X/Instagram;
+- publicación real de X, Instagram, LinkedIn, Facebook o TikTok; X/Instagram ya tienen OAuth y tokens cifrados, pero no existe todavía una ruta de publicación;
 - navegador/Puppeteer, GitHub y Context7 durante el runtime de producto;
 - generación, edición o lectura real de video e imagen;
 - streaming SSE/WebSocket;
@@ -235,6 +235,10 @@ Endpoints iniciales:
 - `GET /api/v1/integrations/{integration_id}`
 - `GET /api/v1/social-channels`
 - `GET /api/v1/social-channels/{channel_id}`
+- `POST /api/v1/social-channels/{channel_id}/oauth/start`
+- `GET /api/v1/social-channels/x/oauth/callback`
+- `GET /api/v1/social-channels/instagram/oauth/callback`
+- `DELETE /api/v1/social-channels/{channel_id}/connection`
 - `GET /api/v1/audit-events`
 - `POST /api/v1/runs`
 - `GET /api/v1/runs/{run_id}`
@@ -252,7 +256,7 @@ El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones 
 
 `WorkspaceRuntime` usa `src/lib/runtimeApi.ts` contra el mismo origen. La credencial de tenant no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; sólo existe dentro del diálogo de conexión y se limpia después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
 
-La experiencia permite crear o abrir una ejecución, inspeccionar los posts finales por canal, ver el media requirement de Instagram, aprobar/rechazar/revocar Greenlight y consultar auditoría. X e Instagram muestran Copy → Asset → Greenlight → Cuenta → Publicación. El catálogo social sólo informa configuración server-side; no expone OAuth ni rutas de publicación. Research, media, ads y efectos externos siguen sin egress hasta que exista un adapter autorizado, token storage cifrado y receipt durable. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md) y el [runbook social](docs/runbooks/social-channel-readiness.md).
+La experiencia permite crear o abrir una ejecución, inspeccionar los posts finales por canal, ver el media requirement de Instagram, aprobar/rechazar/revocar Greenlight y consultar auditoría. X e Instagram muestran Copy → Asset → Greenlight → Cuenta → Publicación. Un admin puede iniciar OAuth, volver con la misma sesión, ver metadata de la cuenta y desconectarla; tokens y secretos permanecen cifrados server-side. No existe ruta de publicación: research, media, ads y efectos de publicación siguen sin egress hasta que exista un adapter con intent/receipt durable. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md) y el [runbook social](docs/runbooks/social-channel-readiness.md).
 
 Los temas accesibles azul, rojo, verde y naranja viven en **Configuración**. El tema premium sólo se activa cuando la identidad activa entrega el entitlement exacto `theme:premium`; falla cerrado, se revoca al refrescar identidad y no usa storage persistente. Esto no implementa checkout, facturación ni DRM. Consulta [Accessible campaign themes](docs/design-system/accessibility-themes.md).
 
