@@ -175,3 +175,5 @@ GitHub Action and disabled external-candidate inventory in
 [`docs/compliance/third-party-notices.md`](compliance/third-party-notices.md).
 `npm run validate:compliance` detects manifest/lock/hash/license drift and keeps
 release denied while human privacy/legal decisions remain unresolved.
+
+- `cryptography@49.0.0` is pinned and its Syft-reported `Apache-2.0 OR BSD-3-Clause` metadata is mapped exactly to the two allowlisted licenses; version/report drift fails closed.

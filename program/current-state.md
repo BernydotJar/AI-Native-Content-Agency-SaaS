@@ -64,7 +64,7 @@ Gitleaks history/worktree                 PASS — zero leaks
 Operability                               PASS — 4 SLOs, 7 alerts, 8 exercises
 Real provider OAuth/publication           NOT_RUN
 Real credentials/tokens                   NOT_USED
-Clean-source supply chain                 PENDING FOR PROGRAM CHECKPOINT
+Clean-source supply chain                 PASS — source fa54d84, registry_publication=false
 Push / PR / exact-head CI                 PENDING
 ```
 
@@ -123,9 +123,8 @@ Open CRITICAL findings: `0`.
 
 ## Ready work
 
-1. Commit this INC-019 program checkpoint.
-2. Run clean-source supply chain with `registry_publication=false`.
-3. Push `agent/inc-019-social-oauth-publication`, verify exact remote SHA, create a stacked draft PR and require eight-job CI.
+1. Preserve clean-source supply-chain evidence for `fa54d84`.
+2. Push `agent/inc-019-social-oauth-publication`, verify exact remote SHA, create a stacked draft PR and require eight-job CI.
 4. After exact CI passes, provide the user pull, `.env.local`, callback-registration and authentication steps.
 5. Resume INC-020 with mock transports; do not publish a real post until durable authority and explicit authorization exist.
 

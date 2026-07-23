@@ -496,9 +496,16 @@
       "command": "not implemented",
       "result": "NOT_RUN",
       "observed": "No publication route or adapter exists; publishing_available=false and INC-020 owns durable intent/receipt/reconciliation."
+    },
+    {
+      "id": "INC019-SUPPLY-CHAIN",
+      "scope": "clean-source SBOM, vulnerability/license policy and provenance",
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "result": "PASS",
+      "observed": "Clean source fa54d84; 32 Python packages evaluated, exact cryptography dual-license mapping, vulnerability baseline, provenance and Cosign offline PASS; registry_publication=false."
     }
   ],
   "schema_version": "program-eval-results.v1",
   "source_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
-  "updated_at": "2026-07-23T06:02:44Z"
+  "updated_at": "2026-07-23T06:09:20Z"
 }

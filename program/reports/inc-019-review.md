@@ -55,6 +55,7 @@ Social publication routes absent            PASS
 K3s/Helm/Terraform plan/apply/destroy       PASS
 Actionlint                                  PASS
 Gitleaks history/worktree                   PASS — zero leaks
+Clean-source supply chain                   PASS — fa54d84, no publication
 Compliance                                  PASS — DENY_RELEASE, 0 active providers
 Real X/Meta OAuth or publication             NOT_RUN
 Real credentials/tokens                     NOT_USED
