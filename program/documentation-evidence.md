@@ -54,3 +54,7 @@ Known documentation repairs in `INC-001`:
 | `docs/runbooks/model-gateway.md` | bounded provider protocol and activation boundary | protocol clients pass; durable outbound authority and real egress remain disabled |
 | `specs/014-model-gateway/` | INC-014 bounded model gateway contract | local implementation `56f9ee8`; remote delivery blocked by sandbox connector |
 | `program/reports/inc-014-review.md` | INC-014 producer/critic/verifier record | gateway local gates pass; no provider calls/spend |
+
+| `docs/runbooks/social-channel-readiness.md` | OAuth, encrypted tokens, `.env.local`, rotation and Secret operations | local implementation `e3bca9c`; publication remains disabled |
+| `program/reports/inc-019-review.md` | INC-019 producer/critic/verifier record | 183 backend/PostgreSQL, 35 frontend, Chromium/package/infra pass |
+| `specs/020-social-publication-authority/` | exact-once X/Instagram publication boundary | specified; no real publication route or request |

@@ -117,7 +117,7 @@
         "INC-009"
       ],
       "id": "INC-013",
-      "status": "review"
+      "status": "done"
     },
     {
       "id": "INC-014",
@@ -125,7 +125,7 @@
         "INC-004",
         "INC-013"
       ],
-      "status": "review"
+      "status": "done"
     },
     {
       "id": "INC-015",
@@ -134,8 +134,48 @@
         "INC-014"
       ],
       "status": "pending"
+    },
+    {
+      "id": "INC-016",
+      "depends_on": [
+        "INC-013"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "INC-017",
+      "depends_on": [
+        "INC-004",
+        "INC-016"
+      ],
+      "status": "review"
+    },
+    {
+      "id": "INC-018",
+      "depends_on": [
+        "INC-004",
+        "INC-017"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "INC-019",
+      "depends_on": [
+        "INC-003",
+        "INC-012",
+        "INC-017"
+      ],
+      "status": "review"
+    },
+    {
+      "id": "INC-020",
+      "depends_on": [
+        "INC-004",
+        "INC-019"
+      ],
+      "status": "pending"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-22T18:04:42Z"
+  "updated_at": "2026-07-23T06:01:29Z"
 }

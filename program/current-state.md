@@ -1,6 +1,6 @@
 # Current Operational State
 
-Updated: 2026-07-22T18:04:42Z
+Updated: 2026-07-23
 Program phase: active
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
@@ -9,184 +9,128 @@ Cloud recommendation: `DENY_APPLY`
 
 - Root: `/workspace`
 - Repository: `BernydotJar/AI-Native-Content-Agency-SaaS`
-- Active branch: `agent/inc-014-model-gateway`
-- Stacked local base: `agent/inc-013-product-workspace@c78231cc0ae0d670e1267821bfc7d12d5f18e554`
-- INC-014 implementation: `56f9ee84cb46e479bf3c46658306599102ae0051`
-- Local program checkpoint: the commit containing this document, directly above `56f9ee8`
-- Active branch remote: not published
-- Draft PR for INC-014: not created
-- Exact-head CI for INC-014: pending
-- Latest published stack head remains `agent/inc-011-release-compliance@c55c473c60f5469e8d7f78519fa7455395ac58a8`, run `29880287343`, eight of eight jobs successful
-- INC-013 and INC-014 are local-only because the official sandbox push connector fails before invoking Git
-- Deployment, persistent infrastructure, package publication, real provider calls, destructive data action, billing and spend: not authorized and not performed
+- Active branch: `agent/inc-019-social-oauth-publication`
+- Published product base: `agent/inc-016-cinematic-runtime-ux@9c9c548e188c0c4a22154531a41b655d943e14b7`
+- Published base evidence: draft PR `#10`, GitHub Actions run `29956435978`, eight of eight jobs successful
+- Campaign output/resource replay implementation: `9b0b65927fe9609e1f55835728332bb3e2aa09ca`
+- X/Instagram readiness implementation: `93c5f55852dc60409d231eca948c20d74a871aa0`
+- OAuth/encrypted account implementation: `e3bca9c95a3080e1e7677454996d9ad56469b4f4`
+- Active branch remote: pending publication
+- Active draft PR and exact-head CI: pending
+- Real X/Instagram OAuth, token exchange and publication: not performed
+- Real model calls, cloud deployment, registry publication, billing and spend: not performed
 
 ## Active increment
 
-### INC-014 — Bounded multi-provider model gateway
+### INC-019 — Tenant-owned X and Instagram account connection
 
 Status: `review`
-Owner: Integration Engineer / Security Critic
-External effects: none
+Owner: Integration Engineer / Security Reviewer
+External effects during verification: none; all provider HTTP used `httpx.MockTransport`
 
 #### Implemented
 
-- OpenAI Responses, Anthropic Messages and OpenAI-compatible DeepSeek, Moonshot/Kimi K3 and Llama clients.
-- Private credential-bearing execution configuration separated from public provider contracts.
-- Exact provider selection and egress-host allowlist.
-- HTTPS-only endpoints; IP literals, localhost, `.local`, embedded credentials, query and fragment fail closed.
-- Environment proxies and redirects disabled; one attempt only with no automatic retry.
-- Bounded input characters, output tokens, response bytes and timeout.
-- Strict response parsing, sanitized errors and secret-free in-memory receipts.
-- Authenticated GET-only gateway status with `durable_outbound_receipt=false` and `automatic_run_integration=false`.
-- `httpx==0.28.1` installed in the hash-locked runtime and reconciled in license/compliance evidence.
-- No public completion route and no orchestrator/run invocation of `ModelGateway.complete()`.
+- X OAuth 1.0a request-token, authorization and access-token contracts.
+- Instagram Authorization Code contract with Professional-account validation.
+- AES-GCM token encryption with versioned key IDs, tenant/channel AAD and key rotation.
+- Single-use ten-minute OAuth state bound to tenant, browser session and channel.
+- SQLite/PostgreSQL schema v2 stores and atomic PostgreSQL callback consumption.
+- Admin-only OAuth start/disconnect using HttpOnly session and CSRF.
+- Connected-account metadata without access-token disclosure.
+- Server-side bootstrap for existing X/Instagram tokens; partial groups fail startup.
+- `.env.local` loading, tracked-file refusal and 32-byte key generator.
+- Helm/Terraform references to a pre-existing Secret; no values enter Terraform state.
+- Settings UI with Connect/Disconnect and callback-return status.
+- No publication route; `publishing_available=false` remains authoritative.
 
 #### Local evidence
 
 ```text
-Program validator                         PASS — 79 requirements, 15 tasks
-Compliance validator                      PASS — DENY_RELEASE, 0 active providers, 34 components
-Locked Python wheel                       PASS — 145 tests, 11 PostgreSQL skips
-PostgreSQL shared state                   PASS — 145/145
-Frontend                                  PASS — 26/26
-Oxlint / TypeScript / Vite                 PASS
-Real Chromium regression                  PASS
+Program validator                         PASS — 79 requirements, 20 tasks
+Compliance validator                      PASS — DENY_RELEASE, 0 active providers, 35 components
+Locked Python wheel                       PASS — 183 tests, 14 PostgreSQL skips
+PostgreSQL shared state                   PASS — 183/183
+PostgreSQL schema/grants                  PASS — v2, non-owner runtime, migration and restores
+Frontend                                  PASS — 35/35
+Oxlint / TypeScript / Vite                PASS
+Chromium accessibility                    PASS
+Chromium X/Instagram output               PASS
 Buildah non-root package                  PASS
-Packaged gateway disabled                 PASS
-Packaged inference route absent           PASS
-K3s/Helm/Terraform plan/apply/destroy      PASS — agentless control plane
+OAuth routes governed                     PASS
+Social publication routes absent          PASS
+K3s/Helm/Terraform plan/apply/destroy     PASS
 Actionlint                                PASS
 Gitleaks history/worktree                 PASS — zero leaks
-Whitespace                                PASS
-Real provider calls/credentials/spend      NOT_RUN / NOT_USED
-Final cross-product E2E                   DEFERRED TO FINAL PROGRAM GATE
-Clean-source supply chain                 PASS — source 723dcd0, registry_publication=false
-Push / PR / exact-head CI                 BLOCKED BY SANDBOX CONNECTOR
+Operability                               PASS — 4 SLOs, 7 alerts, 8 exercises
+Real provider OAuth/publication           NOT_RUN
+Real credentials/tokens                   NOT_USED
+Clean-source supply chain                 PENDING FOR PROGRAM CHECKPOINT
+Push / PR / exact-head CI                 PENDING
 ```
 
 #### Critic decision
 
-Protocol execution is bounded and verifiable, but connecting it directly to current
-`run.create` could duplicate spend if the provider succeeds and local persistence fails.
-The gateway therefore remains disconnected. Exact findings and repairs are in
-`program/reports/inc-014-review.md`.
+Account connection is ready for operator testing after branch publication and provider
+callback registration. It must not be described as publication readiness. The exact
+producer/critic/verifier record is `program/reports/inc-019-review.md`.
 
-#### Next increment
+## Explicit product boundaries
 
-`INC-015` must persist an outbound intent before the provider call, fence a single
-executor, persist a successful receipt before run completion, reuse compatible receipts
-and block uncertain states without another call. Tests will continue using mock
-transports until privacy/legal and explicit egress/spend authorization exist.
+### INC-015 — Durable model effect authority
 
-#### Delivery blocker — BLK-SANDBOX-PUSH-001
+Status: `pending`
 
-- Category: tooling / infrastructure / permission.
-- Evidence: `Cloud_Sandbox_MCP.git_push` fails before invoking Git because its ownership setup attempts to start Docker and cannot create the Docker NAT chain (`iptables: Permission denied`).
-- Attempted resolution: normalized `/workspace` ownership to `node:node`, verified `git fsck`, retried the official connector; identical pre-Git failure remained.
-- Repository status: clean commits exist locally; no force push, GitHub ref API or alternate bypass was used.
-- Resume condition: repair the official push connector or provide an explicitly authorized supported export/push mechanism.
+DeepSeek is configured and the bounded gateway exists, but model inference is not attached
+to campaign runs. Durable model intent/fence/receipt and replay protection remain required.
 
-## Completed checkpoints
+### INC-018 — Durable asynchronous run execution
 
-### INC-009 — Browser/video integration review and disabled contracts
+Status: `pending`
 
-Status: `done`
+The topology currently receives terminal station state because orchestration is
+synchronous. Fake progress is prohibited; queued workers, leases and durable checkpoints
+remain required.
 
-Exact head `83cde2a2d8c11e063f938ad5fc3dc68863462646`, PR `#8` and GitHub Actions run `29878917100` prove the exact source review, strict disabled contracts and no execution surface. `video-use` remains `reviewed_disabled`.
+### INC-020 — Exact-once social publication authority
 
-### INC-012 — PostgreSQL migration/runtime authority separation
+Status: `pending`
 
-Status: `done`
-
-Exact published head and CI prove the non-owner PostgreSQL runtime boundary. `F-009` is closed.
-
-### INC-004 — Durable command idempotency and Greenlight fencing
-
-Status: `done`
-
-Exact published head and CI prove durable compatible replay, uniform conflicts, authenticated decision identity, Greenlight revocation/fencing and cross-replica package-once behavior. `F-002` is closed.
-
-### INC-007 — Backend-first operator journey and degraded states
-
-Status: `done`
-
-Exact remote head `dad71025bf14281930b8fafa2edae81e2a7c6c84`, PR `#6` and GitHub Actions run `29874693956` prove the operator journey and package regression.
-
-## Other external or human-gated checkpoints
-
-### INC-005 — Operability and production backup controls
-
-Status: `blocked`
-
-Local/CI SLO, alert, backup freshness, restore and rollback controls pass. Persistent paging, scheduler, KMS/encryption, immutable off-host retention, workload rollback, load/soak and measured RTO remain external. `F-008` remains HIGH/open.
-
-### INC-008 — Accessible themes and accessibility evidence
-
-Status: `blocked`
-
-Exact head `6d904792d2b6e8b3d97fdd88ccf2e077d0bfb792` and run `29877012638` prove automated work. Human screen-reader, rendered contrast, 400% zoom/reflow and visual review remain `NOT_RUN`; `F-007` remains HIGH/open.
+Accounts can be connected and tokens are encrypted, but X `POST /2/tweets` and Instagram
+`/media` → `/media_publish` are deliberately absent. Publication requires durable intent,
+fence, exact artifact/media/Greenlight binding, receipt and unknown-outcome reconciliation.
 
 ## Open global HIGH release findings
 
-1. **F-004 — Authorized staging/cloud runtime observation.** Externally gated.
-2. **F-007 — Human accessibility evidence.** Accountable human review absent.
-3. **F-008 — Production backup scheduling/encryption/off-host retention/alerts.** External controls absent.
-4. **F-010 — Retention, deletion, legal hold and data-subject workflow.** Machine register proves policy remains unapproved; accountable human decisions absent.
-5. **F-011 — Semantic/adversarial evaluation harness.** Static copy scan passes; semantic prompt-injection, groundedness, citation, harmful-use and legal-overclaim thresholds remain absent.
+- `F-004` staging/cloud runtime observation — external.
+- `F-007` accountable human accessibility evidence — human.
+- `F-008` production scheduler/KMS/off-host backup/alerts — external.
+- `F-010` approved retention/deletion/legal hold/data-subject workflow — human/legal.
+- `F-011` semantic/adversarial model evaluations — pending.
+- `F-034` model inference durable authority — INC-015.
+- `F-037` truthful asynchronous station progress — INC-018.
+- `F-039` exact-once social publication — INC-020.
 
-Open CRITICAL findings: zero.
+Open CRITICAL findings: `0`.
 
-## Exact blockers
+## Human/external gates
 
-### BLK-PRIVACY-001
-
-- Category: human decision / legal review / data
-- Evidence: `1843aa9`; `compliance/privacy-decision-register.json`; `docs/compliance/release-compliance-review.md`; `npm run validate:compliance` reports `DENY_RELEASE`, eight open human decisions and zero active providers.
-- Attempted resolution: exact inventory, provider/data register, claims policy, release-denial contract and nine negative mutation tests; no policy values were invented and no destructive workflow was enabled.
-- Independent work remaining: no additional repository automation can choose the accountable policy facts; semantic eval work remains separately blocked by `INC-008`/`INC-010` dependency.
-- Resume condition: privacy/legal, security and business/data-owner reviewers record exact entity/customer scope, jurisdiction, controller/processor role, policy source/version/effective date, retention/deletion/correction/legal-hold/backup rules and provider terms. Then implement and independently verify the approved policy on the exact tree.
-
-### BLK-A11Y-MANUAL-001
-
-- Category: human decision / review
-- Evidence: real Chromium automation passes, but no accountable human assistive-technology/visual review exists.
-- Resume condition: execute `docs/accessibility/manual-review-protocol.md` against the exact production bundle and resolve every finding.
-
-### BLK-PR-REVIEW-001
-
-- Category: human decision / repository policy
-- Evidence: PR `#3` is green/mergeable but reports `REVIEW_REQUIRED`.
-- Resume condition: eligible independent reviewer approval, followed by normal stacked merges.
-
-### BLK-GCP-001
-
-- Category: credential / permission / infrastructure / human decision
-- Evidence: no authorized cloud target, billing, saved plan/apply, persistent monitoring or runtime endpoint.
-- Resume condition: explicit target/billing authorization, preflight, reviewed plan and spend/apply authorization.
-
-### BLK-BACKUP-PROD-001
-
-- Category: infrastructure / permission / credential / human decision
-- Evidence: repository-local freshness/alert/restore gates pass; no authorized scheduler, KMS, encrypted immutable off-host destination, retention lock or real alert delivery exists.
-- Resume condition: authorized target/storage/KMS, approved retention, scheduler, alert delivery and staging restore/incident exercise.
-
-### BLK-VIDEO-USE-ACTIVATION-001
-
-- Category: integration / security / privacy / supply chain / human decision
-- Evidence: exact source review retains HIGH path containment, external audio disclosure and missing outbound authority/receipt controls; zero providers active.
-- Resume condition: satisfy `docs/integrations/video-use-review.md`, close every HIGH and obtain explicit provider/effect authorization.
+- Register exact X and Meta callback URLs.
+- Authenticate authorized X and Instagram Professional sandbox accounts.
+- Approve one sandbox publication per channel only after INC-020 passes.
+- Approve privacy/retention/token-handling policy and current provider terms/pricing.
+- Authorize provider egress/spend, production deployment and merge.
+- Complete independent accessibility and PR review.
 
 ## Ready work
 
-1. Preserve clean-source supply-chain evidence for `723dcd0` and the local checkpoint above it.
-2. Continue `INC-015` locally with SQLite/PostgreSQL intent/receipt/fencing tests and mock transports only.
-3. Publish INC-013/014/015 normally when `BLK-SANDBOX-PUSH-001` is resolved; then require exact remote SHA, stacked draft PRs and eight-job CI for each head.
-4. Keep real provider credentials, egress, spend, publication and final broad E2E disabled until their explicit gates.
+1. Commit this INC-019 program checkpoint.
+2. Run clean-source supply chain with `registry_publication=false`.
+3. Push `agent/inc-019-social-oauth-publication`, verify exact remote SHA, create a stacked draft PR and require eight-job CI.
+4. After exact CI passes, provide the user pull, `.env.local`, callback-registration and authentication steps.
+5. Resume INC-020 with mock transports; do not publish a real post until durable authority and explicit authorization exist.
 
 ## Exact continuation condition
 
-Start from the clean checkpoint above `56f9ee84cb46e479bf3c46658306599102ae0051`. Run supply chain without registry
-publication. Then implement `INC-015` economic idempotency without issuing any real
-provider request. Do not expose a completion route or attach the gateway to runs until
-intent/fence/receipt/reconciliation tests pass in SQLite and PostgreSQL. Preserve
-`DENY_RELEASE`, `DENY_APPLY`, all human/external blockers and `BLK-SANDBOX-PUSH-001`.
+Start from `e3bca9c95a3080e1e7677454996d9ad56469b4f4` plus the program checkpoint. Preserve
+`DENY_RELEASE`, `DENY_APPLY`, `active_external_providers=0`, publication disabled and zero
+real provider calls. Publish and verify INC-019 before requesting user authentication.

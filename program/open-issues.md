@@ -100,3 +100,16 @@ spend after provider success followed by local persistence failure.
 Exact resume condition: complete INC-015 with SQLite/PostgreSQL intent, fencing,
 receipt-before-completion, replay reuse, pending/unknown blocking, reconciliation and
 failure-injection evidence. Real credentials/egress still require separate approval.
+
+
+## OI-013 — Exact-once social publication
+
+Category: integration / distributed systems / financial safety / external effect
+
+X and Instagram accounts can be connected through OAuth or encrypted server-side token
+bootstrap. No provider publication adapter, intent, receipt or unknown-outcome
+reconciliation exists.
+
+Exact resume condition: complete INC-020 with tenant/account/run/artifact/media/Greenlight
+binding, fenced execution, durable receipt, replay reuse, pending/unknown blocking, mock
+transport gates and explicit authorization for one sandbox post per channel.

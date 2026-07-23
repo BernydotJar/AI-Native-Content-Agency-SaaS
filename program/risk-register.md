@@ -35,3 +35,7 @@ Updated: 2026-07-22
 | R-026 | HIGH | A provider call succeeds but local persistence fails, causing a replay to duplicate spend. | Gateway remains disconnected; INC-015 requires persisted intent, fencing, receipt-before-completion and unknown-state reconciliation. | Open, execution disabled |
 | R-027 | HIGH | Protocol-ready status is mistaken for active inference or approval to transfer prompts/spend. | API/UI expose durable receipt and automatic integration as false; no completion route; package and compliance gates enforce zero active providers. | Controlled while disabled |
 | R-028 | MEDIUM | Sandbox push tooling prevents exact remote delivery evidence for local INC-013/014 commits. | Clean local commits, git integrity, explicit blocker and no bypass; official connector repair required. | Tooling blocked |
+
+| R-029 | HIGH | OAuth tokens leak, cross tenants or replay through a second callback. | INC-019 uses AES-GCM tenant/channel AAD, expiring session-bound state, atomic consume and no token-bearing API/log/audit fields. | Controlled locally; exact remote CI pending |
+| R-030 | HIGH | Account connection is mistaken for authority to publish or incur provider cost. | No publication route, `publishing_available=false`, explicit INC-020 durable intent/receipt gate. | Controlled while publication disabled |
+| R-031 | MEDIUM | Server-side token bootstrap is partially configured or enters Terraform state. | Exact required groups fail startup; Terraform receives only Secret/key names; package/infra gates scan for values. | Controlled locally |

@@ -279,9 +279,49 @@
       "owner": "INC-014",
       "description": "Provider protocol clients could leak credentials prompts or upstream bodies, or retry and duplicate spend.",
       "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
+    },
+    {
+      "id": "F-036",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-017",
+      "description": "Repeated missions returned a misleading conflict and publishable copy was hidden behind generic diagnostics.",
+      "evidence": "9b0b65927fe9609e1f55835728332bb3e2aa09ca; audited 200 replay, resource lock and channel output pass."
+    },
+    {
+      "id": "F-037",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "owner": "INC-018",
+      "description": "Synchronous orchestration prevents truthful intermediate topology progress and station-level crash recovery.",
+      "evidence": "specs/018-async-run-execution records queued worker/lease/checkpoint work; no fake timers are used."
+    },
+    {
+      "id": "F-038",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "No tenant social OAuth, encrypted token store or connected-account control existed.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; X/Instagram OAuth, AES-GCM tokens, schema v2, admin UI and disconnect pass 183 locked/PostgreSQL and 35 frontend tests."
+    },
+    {
+      "id": "F-039",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "owner": "INC-020",
+      "description": "Connected accounts cannot publish because no durable social publication intent, provider receipt or unknown-outcome reconciliation exists.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; publishing_available=false and no publication route; specs/020-social-publication-authority defines the gate."
+    },
+    {
+      "id": "F-040",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "OAuth state or tokens could replay, cross tenants or leak through persistence/API/logs.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; tenant/session/channel binding, atomic single-use state, AES-GCM AAD, sanitized errors and Gitleaks zero pass."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
-  "updated_at": "2026-07-22T18:05:11Z"
+  "source_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
+  "updated_at": "2026-07-23T06:01:29Z"
 }

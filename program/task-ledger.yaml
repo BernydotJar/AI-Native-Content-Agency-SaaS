@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-014-model-gateway",
+  "branch": "agent/inc-019-social-oauth-publication",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -739,7 +739,7 @@
         "checkpoints/**"
       ],
       "role": "Product Engineer / Critic",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-013",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -754,7 +754,10 @@
       "workstream_id": "WS-05",
       "write_lock": "single writer: orchestrator",
       "implementation_commit": "a89907f",
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
+      "publication_state": "EXACT_REMOTE_CI_PASS_IN_STACK",
+      "delivered_head": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "pull_request": 10,
+      "ci_run": 29956435978
     },
     {
       "acceptance_criteria": [
@@ -816,7 +819,7 @@
         "checkpoints/**"
       ],
       "role": "Integration Engineer / Security Critic",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-014",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -831,7 +834,10 @@
       "workstream_id": "WS-08",
       "write_lock": "single writer: orchestrator",
       "implementation_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_BY_CONNECTOR"
+      "publication_state": "EXACT_REMOTE_CI_PASS_IN_STACK",
+      "delivered_head": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "pull_request": 10,
+      "ci_run": 29956435978
     },
     {
       "acceptance_criteria": [
@@ -897,9 +903,326 @@
       ],
       "workstream_id": "WS-08",
       "write_lock": "unclaimed"
+    },
+    {
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "task_id": "INC-016",
+      "workstream_id": "WS-05",
+      "status": "done",
+      "role": "Product Engineer / Visual Critic",
+      "objective": "Restore cinematic product hierarchy while preserving one backend-authoritative runtime.",
+      "context": "Exact remote head 9c9c548 restores orbital hero, live topology and station inspector without simulation timers or mock authority.",
+      "dependencies": [
+        "INC-013"
+      ],
+      "authoritative_inputs": [
+        "user screenshots and critique",
+        "runtime session/run/artifact state"
+      ],
+      "allowed_paths": [
+        "src/**",
+        "scripts/**",
+        "backend/tests/**",
+        "docs/**",
+        "program/**",
+        "compliance/**"
+      ],
+      "prohibited_paths": [
+        "browser simulation runtime",
+        "synthetic progress timers",
+        "external publication"
+      ],
+      "write_lock": "released",
+      "expected_outputs": [
+        "cinematic hero",
+        "backend-derived topology",
+        "station inspector",
+        "portable local runner"
+      ],
+      "acceptance_criteria": [
+        "cinematic hierarchy restored",
+        "topology uses durable run state",
+        "no browser simulation authority",
+        "exact-head CI passes"
+      ],
+      "validation_commands": [
+        "frontend and Chromium",
+        "locked Python/PostgreSQL",
+        "container and supply chain"
+      ],
+      "human_gates": [
+        "merge",
+        "production deployment"
+      ],
+      "implementation_commit": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "publication_state": "EXACT_REMOTE_CI_PASS",
+      "pull_request": 10,
+      "ci_run": 29956435978
+    },
+    {
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "task_id": "INC-017",
+      "workstream_id": "WS-05",
+      "status": "review",
+      "role": "Product Engineer / Concurrency Critic",
+      "objective": "Expose usable campaign posts and make deterministic run replay safe.",
+      "context": "Implementation 9b0b659 converts same-brief conflicts into audited replay, serializes distinct keys on one run and centers channel posts.",
+      "dependencies": [
+        "INC-004",
+        "INC-016"
+      ],
+      "authoritative_inputs": [
+        "observed 409 logs",
+        "user screenshots",
+        "durable idempotency",
+        "copy_deck artifacts"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/017-usable-campaign-output/**"
+      ],
+      "prohibited_paths": [
+        "fake progress",
+        "automatic publication",
+        "social secrets in browser"
+      ],
+      "write_lock": "single writer: orchestrator",
+      "expected_outputs": [
+        "audited replay",
+        "resource lock",
+        "channel posts",
+        "compact evidence",
+        "admin diagnostics"
+      ],
+      "acceptance_criteria": [
+        "same brief returns 200 replay",
+        "changed same-key payload remains 409",
+        "cross-replica create once",
+        "posts from copy_deck",
+        "local gates pass"
+      ],
+      "validation_commands": [
+        "locked wheel/PostgreSQL",
+        "frontend/Chromium",
+        "Buildah/infra/hygiene"
+      ],
+      "human_gates": [
+        "merge",
+        "production",
+        "external publication"
+      ],
+      "implementation_commit": "9b0b65927fe9609e1f55835728332bb3e2aa09ca",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
+    },
+    {
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "task_id": "INC-018",
+      "workstream_id": "WS-04",
+      "status": "pending",
+      "role": "Distributed Systems Engineer / Runtime Critic",
+      "objective": "Execute stations through a durable asynchronous worker for truthful progress.",
+      "context": "POST /runs currently returns terminal state; fake timers remain prohibited.",
+      "dependencies": [
+        "INC-004",
+        "INC-017"
+      ],
+      "authoritative_inputs": [
+        "specs/018-async-run-execution",
+        "orchestrator/persistence",
+        "Greenlight fencing"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/018-async-run-execution/**"
+      ],
+      "prohibited_paths": [
+        "fake browser progress",
+        "unfenced worker",
+        "cloud resources"
+      ],
+      "write_lock": "unclaimed",
+      "expected_outputs": [
+        "queued run",
+        "worker lease/fence",
+        "station checkpoints",
+        "polling/SSE",
+        "crash recovery"
+      ],
+      "acceptance_criteria": [
+        "run returns before completion",
+        "one fenced worker",
+        "restart-safe progress",
+        "idempotent station completion"
+      ],
+      "validation_commands": [
+        "SQLite/PostgreSQL races",
+        "failure injection",
+        "frontend progress",
+        "package/restore"
+      ],
+      "human_gates": [
+        "production worker deployment",
+        "merge"
+      ]
+    },
+    {
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "task_id": "INC-019",
+      "workstream_id": "WS-08",
+      "status": "review",
+      "role": "Integration Engineer / Security Reviewer",
+      "objective": "Connect tenant-owned X and Instagram accounts through OAuth or encrypted server-side token bootstrap.",
+      "context": "Implementation e3bca9c adds schema v2, AES-GCM token storage, single-use callbacks, admin UI and Secret references. Publication remains disabled.",
+      "dependencies": [
+        "INC-003",
+        "INC-012",
+        "INC-017"
+      ],
+      "authoritative_inputs": [
+        "official X OAuth documentation",
+        "official Meta Instagram API documentation",
+        "Greenlight/tenant/session contracts",
+        "specs/019-social-oauth-publication/**"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "infra/**",
+        "compliance/**",
+        "program/**",
+        "specs/019-social-oauth-publication/**"
+      ],
+      "prohibited_paths": [
+        "real provider calls in CI",
+        "tokens in browser/Git/logs",
+        "publication routes",
+        "unbounded retry"
+      ],
+      "write_lock": "single writer: orchestrator",
+      "expected_outputs": [
+        "X OAuth 1.0a",
+        "Instagram Authorization Code",
+        "AES-GCM token store",
+        "single-use state",
+        "account metadata",
+        "disconnect",
+        "token bootstrap",
+        "Helm/Terraform Secret refs"
+      ],
+      "acceptance_criteria": [
+        "state tenant/session/channel bound",
+        "tokens encrypted and hidden",
+        "Professional Instagram required",
+        "admin-only connect/disconnect",
+        "cross-replica replay blocked",
+        "all local gates pass"
+      ],
+      "validation_commands": [
+        "183 locked/PostgreSQL tests",
+        "35 frontend tests",
+        "Chromium",
+        "Buildah package",
+        "K3s/Helm/Terraform",
+        "Actionlint/Gitleaks"
+      ],
+      "human_gates": [
+        "real X/Instagram login",
+        "callback registration",
+        "provider terms review",
+        "merge",
+        "deployment"
+      ],
+      "implementation_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
+      "readiness_commit": "93c5f55852dc60409d231eca948c20d74a871aa0",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING"
+    },
+    {
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "task_id": "INC-020",
+      "workstream_id": "WS-08",
+      "status": "pending",
+      "role": "Distributed Systems Integration Engineer / Security Reviewer",
+      "objective": "Publish approved X and Instagram artifacts exactly once through durable intent/fence/receipt authority.",
+      "context": "Accounts can be connected and tokens are encrypted, but there is deliberately no publication route or provider post request.",
+      "dependencies": [
+        "INC-004",
+        "INC-019"
+      ],
+      "authoritative_inputs": [
+        "specs/020-social-publication-authority/**",
+        "INC-004 fencing",
+        "INC-019 connected accounts",
+        "Greenlight artifact authority"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/020-social-publication-authority/**"
+      ],
+      "prohibited_paths": [
+        "real publication in CI",
+        "automatic retry of unknown outcomes",
+        "tokens/provider bodies in logs",
+        "publication without Greenlight"
+      ],
+      "write_lock": "unclaimed",
+      "expected_outputs": [
+        "durable publication intent",
+        "X/Instagram adapters",
+        "receipt/reconciliation",
+        "confirmation UI",
+        "sandbox evidence"
+      ],
+      "acceptance_criteria": [
+        "intent before call",
+        "one fenced executor",
+        "replay creates no duplicate",
+        "unknown blocks retry",
+        "disconnect/revocation invalidates authority",
+        "Instagram media required"
+      ],
+      "validation_commands": [
+        "SQLite/PostgreSQL race tests",
+        "mock provider contracts",
+        "Chromium/package/supply chain"
+      ],
+      "human_gates": [
+        "authorized sandbox posts",
+        "pricing/terms review",
+        "privacy/legal approval",
+        "production budget",
+        "merge/deployment"
+      ]
     }
   ],
-  "updated_at": "2026-07-22T00:26:50Z",
+  "updated_at": "2026-07-23T06:01:29Z",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -984,12 +1307,12 @@
       "evals": [],
       "id": "WS-04",
       "name": "Backend, APIs and Agent Runtime",
-      "next_ready_task": "INC-005",
+      "next_ready_task": "INC-018",
       "objective": "Close idempotency, structured errors, revocation and runtime gaps.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "done",
+      "status": "in_progress",
       "validation": [],
       "write_locks": []
     },
@@ -1007,12 +1330,12 @@
       "evals": [],
       "id": "WS-05",
       "name": "Frontend and Production Console",
-      "next_ready_task": "INC-013",
+      "next_ready_task": "INC-017",
       "objective": "Unify critical journeys and backend authority.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "in_progress",
+      "status": "review",
       "validation": [],
       "write_locks": []
     },
@@ -1060,7 +1383,7 @@
       "evals": [],
       "id": "WS-07",
       "name": "Identity, Security, Privacy and Tenant Isolation",
-      "next_ready_task": "INC-003",
+      "next_ready_task": "INC-019",
       "objective": "Threat/privacy models, retention and adversarial verification.",
       "owner": "orchestrator",
       "requirements": [],
@@ -1180,7 +1503,7 @@
       "evals": [],
       "id": "WS-12",
       "name": "Documentation, Versioning and Release Readiness",
-      "next_ready_task": "INC-001",
+      "next_ready_task": "INC-019",
       "objective": "Keep versions, claims, runbooks and release evidence coherent.",
       "owner": "orchestrator",
       "requirements": [],

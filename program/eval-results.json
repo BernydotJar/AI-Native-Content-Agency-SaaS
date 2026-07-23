@@ -461,9 +461,44 @@
       "observed": "Clean source 723dcd0; SBOM, vulnerability/license policy, provenance and Cosign offline verification PASS; registry_publication=false.",
       "result": "PASS",
       "scope": "clean-source supply-chain evidence"
+    },
+    {
+      "id": "INC019-OAUTH-CONTRACTS",
+      "scope": "X/Instagram OAuth, encryption and callback replay",
+      "command": "locked wheel and PostgreSQL runtime gates",
+      "result": "PASS",
+      "observed": "183 locked tests and 183/183 PostgreSQL tests PASS; AES-GCM, schema v2, same-session callbacks, Professional Instagram, cross-replica single-use state and bootstrap pass with mock transports."
+    },
+    {
+      "id": "INC019-ADMIN-UX",
+      "scope": "admin connect/disconnect and secret-free browser contract",
+      "command": "frontend tests/lint/build and Chromium gates",
+      "result": "PASS",
+      "observed": "35/35 frontend tests, TypeScript/Vite and Chromium PASS; admin Connect/Disconnect is real, viewer mutations are hidden, account metadata is visible and no token fields exist."
+    },
+    {
+      "id": "INC019-PACKAGE-INFRA",
+      "scope": "non-root package, OAuth boundary and Secret references",
+      "command": "Buildah package plus K3s/Helm/Terraform/actionlint/Gitleaks",
+      "result": "PASS",
+      "observed": "OAuth routes governed, publication routes absent, package secrets absent, Secret refs only, Terraform state secret-free, infrastructure cleanup and zero leaks PASS."
+    },
+    {
+      "id": "INC019-REAL-OAUTH",
+      "scope": "real X/Meta account authorization",
+      "command": "not run",
+      "result": "NOT_RUN",
+      "observed": "No real app credential, access token, callback exchange or provider HTTP was used; user authentication is deferred until exact remote CI passes."
+    },
+    {
+      "id": "INC020-REAL-PUBLICATION",
+      "scope": "real X/Instagram publication",
+      "command": "not implemented",
+      "result": "NOT_RUN",
+      "observed": "No publication route or adapter exists; publishing_available=false and INC-020 owns durable intent/receipt/reconciliation."
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
-  "updated_at": "2026-07-22T18:13:26Z"
+  "source_commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
+  "updated_at": "2026-07-23T06:02:44Z"
 }
