@@ -43,3 +43,5 @@ artifacts/accessibility/generated/
 .env
 .env.*
 !.env.example
+# Generated social browser evidence
+artifacts/social/generated/
