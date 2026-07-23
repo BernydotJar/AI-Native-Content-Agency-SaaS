@@ -1,0 +1,32 @@
+{
+  "runId": "run-27e0bea9d23ce094",
+  "outputState": {
+    "horizontalOverflow": false,
+    "xVisible": true,
+    "instagramVisible": true,
+    "captionVisible": true,
+    "assetPending": true,
+    "stagesVisible": true,
+    "publishButtons": [
+      {
+        "disabled": true,
+        "text": "Publicar"
+      },
+      {
+        "disabled": true,
+        "text": "Publicar"
+      }
+    ]
+  },
+  "settingsState": {
+    "hasX": true,
+    "hasInstagram": true,
+    "readyCount": 2,
+    "envNames": true
+  },
+  "externalRequestsPerformed": false,
+  "limitations": [
+    "OAuth callbacks, access-token storage and real publication are not implemented in this readiness increment.",
+    "The screenshot is automated evidence for later human visual review, not a human accessibility approval."
+  ]
+}

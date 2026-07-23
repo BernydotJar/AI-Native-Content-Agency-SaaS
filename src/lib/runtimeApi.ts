@@ -115,6 +115,33 @@ export interface RuntimeIntegrationSummary {
   [key: string]: unknown;
 }
 
+export type SocialChannelConfigurationState =
+  | "missing_credentials"
+  | "missing_redirect_uri"
+  | "ready_for_authentication";
+
+export interface RuntimeSocialChannel {
+  channel_id: "x" | "instagram";
+  display_name: string;
+  oauth_flow: string;
+  configured: boolean;
+  configuration_state: SocialChannelConfigurationState;
+  credentials_configured: boolean;
+  callback_configured: boolean;
+  connection_state: "not_connected" | "connected";
+  oauth_start_available: boolean;
+  publishing_available: boolean;
+  external_effects_enabled: boolean;
+  credential_location: "server_environment";
+  credential_environments: string[];
+  redirect_environment: string;
+  scopes: string[];
+  account_requirement: string;
+  publish_protocol: string;
+  supported_content: string[];
+  requires_media: boolean;
+}
+
 export interface RuntimeAuditEvent {
   sequence: number;
   event_id: string;
@@ -167,6 +194,7 @@ export interface RuntimeApi {
   auditEvents(): Promise<RuntimeAuditEvent[]>;
   providerCatalog(): Promise<RuntimeProviderCatalog>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
+  socialChannels(): Promise<RuntimeSocialChannel[]>;
   revokeSession(csrfToken: string): Promise<void>;
 }
 
@@ -305,6 +333,10 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
     async integrations() {
       const payload = await requestJson<{ integrations: RuntimeIntegrationSummary[] }>(fetchImpl, "/api/v1/integrations");
       return payload.integrations;
+    },
+    async socialChannels() {
+      const payload = await requestJson<{ channels: RuntimeSocialChannel[] }>(fetchImpl, "/api/v1/social-channels");
+      return payload.channels;
     },
     async revokeSession(csrfToken) {
       await requestJson<{ status: string }>(fetchImpl, "/api/v1/sessions/current", {

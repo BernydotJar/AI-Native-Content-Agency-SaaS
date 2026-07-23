@@ -125,6 +125,41 @@ resource "helm_release" "app" {
     value = tostring(var.session_cookie_secure)
   }
 
+  set {
+    name  = "runtime.social.existingSecret"
+    value = var.social_existing_secret
+  }
+
+  set {
+    name  = "runtime.social.x.consumerKeyKey"
+    value = var.x_consumer_key_secret_key
+  }
+
+  set {
+    name  = "runtime.social.x.consumerSecretKey"
+    value = var.x_consumer_secret_secret_key
+  }
+
+  set {
+    name  = "runtime.social.x.redirectUri"
+    value = var.x_redirect_uri
+  }
+
+  set {
+    name  = "runtime.social.instagram.appIdKey"
+    value = var.instagram_app_id_secret_key
+  }
+
+  set {
+    name  = "runtime.social.instagram.appSecretKey"
+    value = var.instagram_app_secret_secret_key
+  }
+
+  set {
+    name  = "runtime.social.instagram.redirectUri"
+    value = var.instagram_redirect_uri
+  }
+
   lifecycle {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures

@@ -39,3 +39,7 @@ crash.log
 artifacts/supply-chain/generated/
 # Generated browser accessibility evidence
 artifacts/accessibility/generated/
+# Local environment and credentials
+.env
+.env.*
+!.env.example

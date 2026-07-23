@@ -228,6 +228,30 @@ describe("runtime API client", () => {
           execution_available: false,
           external_effects_enabled: false,
         }],
+      }))
+      .mockResolvedValueOnce(jsonResponse({
+        tenant_id: "tenant-alpha",
+        channels: [{
+          channel_id: "instagram",
+          display_name: "Instagram",
+          oauth_flow: "instagram_business_login",
+          configured: true,
+          configuration_state: "ready_for_authentication",
+          credentials_configured: true,
+          callback_configured: true,
+          connection_state: "not_connected",
+          oauth_start_available: false,
+          publishing_available: false,
+          external_effects_enabled: false,
+          credential_location: "server_environment",
+          credential_environments: ["AGENCY_INSTAGRAM_APP_ID", "AGENCY_INSTAGRAM_APP_SECRET"],
+          redirect_environment: "AGENCY_INSTAGRAM_REDIRECT_URI",
+          scopes: ["instagram_business_basic", "instagram_business_content_publish"],
+          account_requirement: "Instagram Professional account (Business or Creator)",
+          publish_protocol: "POST /media then POST /media_publish",
+          supported_content: ["image", "reel", "carousel"],
+          requires_media: true,
+        }],
       }));
     const api = createRuntimeApi(fetchMock as typeof fetch);
 
@@ -255,6 +279,15 @@ describe("runtime API client", () => {
         execution_available: false,
       }),
     ]);
+    await expect(api.socialChannels()).resolves.toEqual([
+      expect.objectContaining({
+        channel_id: "instagram",
+        configuration_state: "ready_for_authentication",
+        connection_state: "not_connected",
+        publishing_available: false,
+        requires_media: true,
+      }),
+    ]);
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -264,6 +297,11 @@ describe("runtime API client", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/v1/integrations",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/social-channels",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("API_KEY");

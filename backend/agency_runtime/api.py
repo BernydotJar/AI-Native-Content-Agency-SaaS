@@ -50,6 +50,7 @@ from .persistence import (
     SessionRecord,
 )
 from .serialization import execution_run_from_document, execution_run_to_document
+from .social_channels import SocialChannelRegistry
 from .tools import build_sandbox_toolset
 from .utils import stable_id, to_primitive
 from .version import VERSION
@@ -847,6 +848,7 @@ def create_app(
     postgres_schema_mode: Optional[str] = None,
     max_request_body_bytes: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
+    social_environment: Optional[Mapping[str, str]] = None,
 ) -> FastAPI:
     db_path = database_path or os.environ.get("AGENCY_MEMORY_DB", ":memory:")
     db_url = (
@@ -949,6 +951,8 @@ def create_app(
     provider_source = os.environ if provider_environment is None else provider_environment
     provider_registry = ProviderRegistry.from_environment(provider_source)
     model_gateway = ModelGateway.from_environment(provider_source)
+    social_source = os.environ if social_environment is None else social_environment
+    social_channel_registry = SocialChannelRegistry.from_environment(social_source)
     metrics = RuntimeMetrics()
 
     @asynccontextmanager
@@ -977,6 +981,7 @@ def create_app(
     app.state.integration_registry = IntegrationRegistry.default()
     app.state.provider_registry = provider_registry
     app.state.model_gateway = model_gateway
+    app.state.social_channel_registry = social_channel_registry
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     bearer = HTTPBearer(auto_error=False)
@@ -1483,6 +1488,29 @@ def create_app(
         return {
             "tenant_id": principal.tenant_id,
             "integration": manifest.public_dict(),
+        }
+
+    @app.get("/api/v1/social-channels", tags=["integrations"])
+    def list_social_channels(
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        return {
+            "tenant_id": principal.tenant_id,
+            "channels": app.state.social_channel_registry.public_list(),
+        }
+
+    @app.get("/api/v1/social-channels/{channel_id}", tags=["integrations"])
+    def get_social_channel(
+        channel_id: str,
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        try:
+            channel = app.state.social_channel_registry.get(channel_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="social channel not found") from error
+        return {
+            "tenant_id": principal.tenant_id,
+            "channel": channel.public_dict(),
         }
 
     @app.get("/api/v1/audit-events", tags=["audit"])

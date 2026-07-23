@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { RuntimeRun } from "../lib/runtimeApi";
+import type { RuntimeRun, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { CampaignOutputPanel } from "./CampaignOutputPanel";
 
 const RUN: RuntimeRun = {
@@ -36,14 +36,63 @@ const RUN: RuntimeRun = {
   external_side_effects_enabled: false,
 };
 
+const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
+  {
+    channel_id: "x",
+    display_name: "X",
+    oauth_flow: "oauth_1_0a_user_context",
+    configured: false,
+    configuration_state: "missing_credentials",
+    credentials_configured: false,
+    callback_configured: false,
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_X_CONSUMER_KEY", "AGENCY_X_CONSUMER_SECRET"],
+    redirect_environment: "AGENCY_X_REDIRECT_URI",
+    scopes: ["tweet.read", "tweet.write", "users.read"],
+    account_requirement: "X account authorized by the tenant",
+    publish_protocol: "POST /2/tweets",
+    supported_content: ["text", "image", "video"],
+    requires_media: false,
+  },
+  {
+    channel_id: "instagram",
+    display_name: "Instagram",
+    oauth_flow: "instagram_business_login",
+    configured: true,
+    configuration_state: "ready_for_authentication",
+    credentials_configured: true,
+    callback_configured: true,
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_INSTAGRAM_APP_ID", "AGENCY_INSTAGRAM_APP_SECRET"],
+    redirect_environment: "AGENCY_INSTAGRAM_REDIRECT_URI",
+    scopes: ["instagram_business_basic", "instagram_business_content_publish"],
+    account_requirement: "Instagram Professional account (Business or Creator)",
+    publish_protocol: "POST /media then POST /media_publish",
+    supported_content: ["image", "reel", "carousel"],
+    requires_media: true,
+  },
+];
+
 describe("CampaignOutputPanel", () => {
   it("renders channel-ready posts and keeps publication blocked before Greenlight", () => {
-    render(<CampaignOutputPanel run={RUN} />);
+    render(<CampaignOutputPanel run={RUN} socialChannels={SOCIAL_CHANNELS} />);
 
     expect(screen.getByRole("heading", { name: /Posts listos para revisión/i })).toBeInTheDocument();
     expect(screen.getByText("X")).toBeInTheDocument();
     expect(screen.getByText("Instagram")).toBeInTheDocument();
     expect(screen.getByText(/Una señal puede convertirse en acción/i)).toBeInTheDocument();
+    expect(screen.getByText(/Vista previa de Instagram/i)).toBeInTheDocument();
+    expect(screen.getByText(/Asset visual pendiente/i)).toBeInTheDocument();
+    expect(screen.getByText(/Instagram exige imagen, reel o carrusel/i)).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /Estado de publicación para Instagram/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Requiere Greenlight/i)).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy((buttons: HTMLElement[]) =>
       buttons.every((button) => button.hasAttribute("disabled")),
@@ -59,11 +108,54 @@ describe("CampaignOutputPanel", () => {
       configurable: true,
       value: { writeText },
     });
-    render(<CampaignOutputPanel run={RUN} />);
+    render(<CampaignOutputPanel run={RUN} socialChannels={SOCIAL_CHANNELS} />);
 
     fireEvent.click(screen.getAllByRole("button", { name: /Copiar post/i })[0]);
     expect(writeText).toHaveBeenCalledWith(
       "Una señal puede convertirse en acción.\n\nConstruye una campaña verificable con un equipo AI-native.\n\nConoce la propuesta.",
+    );
+  });
+
+  it("makes the Instagram account setup path explicit", () => {
+    const onOpenSettings = vi.fn();
+    render(
+      <CampaignOutputPanel
+        run={RUN}
+        socialChannels={SOCIAL_CHANNELS}
+        onOpenSettings={onOpenSettings}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Configurar X/i })).toBeInTheDocument();
+    const authenticateInstagram = screen.getByRole("button", { name: /Autenticar cuenta/i });
+    fireEvent.click(authenticateInstagram);
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows missing rendered media after Greenlight instead of claiming Instagram is publishable", () => {
+    const completed: RuntimeRun = {
+      ...RUN,
+      status: "completed",
+      greenlight: {
+        greenlight_id: "greenlight-001",
+        decision: "approved",
+        reviewer: "approver@example.com",
+        note: "Approved",
+        approved_artifact_ids: ["copy-001"],
+        approved_artifact_hashes: ["hash-001"],
+        authorized_channels: ["x", "instagram"],
+        authorized_budget_cents: 0,
+        fencing_token: 1,
+        revoked_at: null,
+        revoked_by: "",
+        revocation_reason: "",
+      },
+    };
+    render(<CampaignOutputPanel run={completed} socialChannels={SOCIAL_CHANNELS} />);
+
+    expect(screen.getByText("Falta asset visual")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy((buttons: HTMLElement[]) =>
+      buttons.every((button) => button.hasAttribute("disabled")),
     );
   });
 

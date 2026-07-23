@@ -92,6 +92,13 @@ postgresql_connect_timeout_seconds = 15
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"
+social_existing_secret           = "ai-native-content-agency-social"
+x_consumer_key_secret_key        = "x-consumer-key"
+x_consumer_secret_secret_key     = "x-consumer-secret"
+x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
+instagram_app_id_secret_key      = "instagram-app-id"
+instagram_app_secret_secret_key  = "instagram-app-secret"
+instagram_redirect_uri           = "http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback"
 login_max_failures               = 5
 login_source_max_failures        = 50
 login_window_seconds             = 300
@@ -163,6 +170,13 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   ai-native-content-agency-postgresql \
   --from-literal='database-url=postgresql://runtime:local-validation-only@postgresql.example.invalid:5432/agency' \
   >/dev/null
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
+  ai-native-content-agency-social \
+  --from-literal='x-consumer-key=local-x-key-not-for-external-use' \
+  --from-literal='x-consumer-secret=local-x-secret-not-for-external-use' \
+  --from-literal='instagram-app-id=local-instagram-app-id' \
+  --from-literal='instagram-app-secret=local-instagram-secret-not-for-external-use' \
+  >/dev/null
 
 log "validating Terraform and planning Helm release"
 terraform -chdir="$TF_ROOT" fmt -check -recursive
@@ -177,6 +191,9 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
+serialized = json.dumps(plan, sort_keys=True)
+assert "local-x-secret-not-for-external-use" not in serialized
+assert "local-instagram-secret-not-for-external-use" not in serialized
 changes = plan.get("resource_changes", [])
 assert any(
     item["address"] == "helm_release.app"
@@ -235,7 +252,21 @@ assert environment["AGENCY_LOGIN_MAX_FAILURES"]["value"] == "5"
 assert environment["AGENCY_LOGIN_SOURCE_MAX_FAILURES"]["value"] == "50"
 assert environment["AGENCY_LOGIN_WINDOW_SECONDS"]["value"] == "300"
 assert environment["FORWARDED_ALLOW_IPS"]["value"] == "127.0.0.1"
+for name, key in {
+    "AGENCY_X_CONSUMER_KEY": "x-consumer-key",
+    "AGENCY_X_CONSUMER_SECRET": "x-consumer-secret",
+    "AGENCY_INSTAGRAM_APP_ID": "instagram-app-id",
+    "AGENCY_INSTAGRAM_APP_SECRET": "instagram-app-secret",
+}.items():
+    assert environment[name]["valueFrom"]["secretKeyRef"] == {
+        "name": "ai-native-content-agency-social",
+        "key": key,
+        "optional": True,
+    }
+assert environment["AGENCY_X_REDIRECT_URI"]["value"].endswith("/social-channels/x/oauth/callback")
+assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].endswith("/social-channels/instagram/oauth/callback")
 print("identity_rbac_configuration=pass")
+print("social_channel_secret_refs=pass")
 PY
 
 log "destroying Terraform-managed release"
@@ -264,6 +295,13 @@ postgresql_schema_mode           = "validate"
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = ""
 runtime_auth_identity_credentials_key = "identity-credentials.json"
+social_existing_secret           = "ai-native-content-agency-social"
+x_consumer_key_secret_key        = "x-consumer-key"
+x_consumer_secret_secret_key     = "x-consumer-secret"
+x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
+instagram_app_id_secret_key      = "instagram-app-id"
+instagram_app_secret_secret_key  = "instagram-app-secret"
+instagram_redirect_uri           = "http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback"
 login_max_failures               = 5
 login_source_max_failures        = 50
 login_window_seconds             = 300
@@ -322,6 +360,10 @@ assert environment["AGENCY_DATABASE_POOL_MIN_SIZE"]["value"] == "1"
 assert environment["AGENCY_DATABASE_POOL_MAX_SIZE"]["value"] == "8"
 assert environment["AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS"]["value"] == "20"
 assert environment["AGENCY_POSTGRES_SCHEMA_MODE"]["value"] == "validate"
+assert environment["AGENCY_X_CONSUMER_KEY"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
+assert environment["AGENCY_INSTAGRAM_APP_SECRET"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
+assert environment["AGENCY_X_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
+assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
 assert all(
     volume["name"] != "runtime-data"
     for volume in deployment["spec"]["template"]["spec"]["volumes"]

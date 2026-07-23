@@ -228,3 +228,88 @@ variable "helm_timeout_seconds" {
     error_message = "helm_timeout_seconds must be an integer of at least 30."
   }
 }
+
+variable "social_existing_secret" {
+  description = "Optional pre-provisioned Kubernetes Secret containing X and Instagram app credentials. Secret values never enter Terraform state."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.social_existing_secret == "" || can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.social_existing_secret))
+    error_message = "social_existing_secret must be empty or a valid Kubernetes Secret name."
+  }
+}
+
+variable "x_consumer_key_secret_key" {
+  description = "Key within social_existing_secret containing the X Consumer Key or OAuth client ID."
+  type        = string
+  default     = "x-consumer-key"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+$", var.x_consumer_key_secret_key))
+    error_message = "x_consumer_key_secret_key must be a valid Secret data key."
+  }
+}
+
+variable "x_consumer_secret_secret_key" {
+  description = "Key within social_existing_secret containing the X Consumer Secret or OAuth client secret."
+  type        = string
+  default     = "x-consumer-secret"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+$", var.x_consumer_secret_secret_key))
+    error_message = "x_consumer_secret_secret_key must be a valid Secret data key."
+  }
+}
+
+variable "x_redirect_uri" {
+  description = "Registered X OAuth callback URI. Leave empty until the app callback is configured."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.x_redirect_uri == "" ||
+      can(regex("^https://[^?#]+$", var.x_redirect_uri)) ||
+      can(regex("^http://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?/[^?#]*$", var.x_redirect_uri))
+    )
+    error_message = "x_redirect_uri must be empty, HTTPS, or loopback HTTP without query or fragment."
+  }
+}
+
+variable "instagram_app_id_secret_key" {
+  description = "Key within social_existing_secret containing the Instagram App ID."
+  type        = string
+  default     = "instagram-app-id"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+$", var.instagram_app_id_secret_key))
+    error_message = "instagram_app_id_secret_key must be a valid Secret data key."
+  }
+}
+
+variable "instagram_app_secret_secret_key" {
+  description = "Key within social_existing_secret containing the Instagram App Secret."
+  type        = string
+  default     = "instagram-app-secret"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]+$", var.instagram_app_secret_secret_key))
+    error_message = "instagram_app_secret_secret_key must be a valid Secret data key."
+  }
+}
+
+variable "instagram_redirect_uri" {
+  description = "Registered Instagram Business Login callback URI. Leave empty until the app callback is configured."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.instagram_redirect_uri == "" ||
+      can(regex("^https://[^?#]+$", var.instagram_redirect_uri)) ||
+      can(regex("^http://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?/[^?#]*$", var.instagram_redirect_uri))
+    )
+    error_message = "instagram_redirect_uri must be empty, HTTPS, or loopback HTTP without query or fragment."
+  }
+}

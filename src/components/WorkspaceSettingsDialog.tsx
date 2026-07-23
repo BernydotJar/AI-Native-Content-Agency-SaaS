@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Cable, Check, LockKeyhole, Palette, RefreshCw, ServerCog, X } from "lucide-react";
-import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus } from "../lib/runtimeApi";
+import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
 import type { ThemeId } from "../lib/themeCatalog";
 import { useModalDialog } from "../lib/useModalDialog";
@@ -14,6 +14,7 @@ interface WorkspaceSettingsDialogProps {
   providers: readonly RuntimeProvider[];
   gateway: RuntimeProviderGatewayStatus;
   integrations: readonly RuntimeIntegrationSummary[];
+  socialChannels: readonly RuntimeSocialChannel[];
   providerLoading: boolean;
   providerError: string;
   sessionActive: boolean;
@@ -27,6 +28,12 @@ const STATE_LABELS: Record<RuntimeProvider["configuration_state"], string> = {
   missing_endpoint: "Falta endpoint",
 };
 
+const SOCIAL_STATE_LABELS: Record<RuntimeSocialChannel["configuration_state"], string> = {
+  missing_credentials: "Faltan credenciales",
+  missing_redirect_uri: "Falta callback OAuth",
+  ready_for_authentication: "Lista para autenticar",
+};
+
 export function WorkspaceSettingsDialog({
   open,
   onClose,
@@ -36,6 +43,7 @@ export function WorkspaceSettingsDialog({
   providers,
   gateway,
   integrations,
+  socialChannels,
   providerLoading,
   providerError,
   sessionActive,
@@ -220,20 +228,80 @@ export function WorkspaceSettingsDialog({
             </div>
           </section>
 
+          <section aria-labelledby="social-channel-settings-title" className="border-t border-white/[0.07] pt-7">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[var(--primary-color)]">
+                <Cable size={16} aria-hidden="true" />
+              </span>
+              <div>
+                <h3 id="social-channel-settings-title" className="text-sm font-bold text-zinc-100">Canales de publicación</h3>
+                <p className="mt-0.5 text-[11px] text-zinc-500">X e Instagram usan credenciales server-side y autorización por cuenta.</p>
+              </div>
+            </div>
+            {!sessionActive ? (
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar canales sociales.</p>
+            ) : socialChannels.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">El catálogo de canales está temporalmente vacío.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {socialChannels.map((channel) => (
+                  <article key={channel.channel_id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-100">{channel.display_name}</h4>
+                        <p className="mt-1 text-[10px] leading-5 text-zinc-500">{channel.account_requirement}</p>
+                      </div>
+                      <span className={`self-start rounded-full border px-3 py-1 font-mono text-[9px] uppercase ${channel.configured ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200" : "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"}`}>
+                        {SOCIAL_STATE_LABELS[channel.configuration_state]}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                        <p className="font-mono text-[8px] uppercase text-zinc-600">Credenciales</p>
+                        <p className="mt-1 text-[10px] font-semibold text-zinc-300">{channel.credentials_configured ? "Configuradas" : "Pendientes"}</p>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                        <p className="font-mono text-[8px] uppercase text-zinc-600">Callback</p>
+                        <p className="mt-1 text-[10px] font-semibold text-zinc-300">{channel.callback_configured ? "Configurada" : "Pendiente"}</p>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                        <p className="font-mono text-[8px] uppercase text-zinc-600">Cuenta</p>
+                        <p className="mt-1 text-[10px] font-semibold text-zinc-300">{channel.connection_state === "connected" ? "Conectada" : "Sin autenticar"}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-white/[0.06] bg-black/20 p-3 text-[9px] leading-5 text-zinc-500">
+                      <p><span className="text-zinc-300">Variables:</span> {channel.credential_environments.join(" · ")} · {channel.redirect_environment}</p>
+                      <p><span className="text-zinc-300">Protocolo:</span> {channel.publish_protocol}</p>
+                      {channel.requires_media && <p className="text-amber-100/80">Instagram requiere imagen, reel o carrusel además del caption.</p>}
+                    </div>
+
+                    <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-3 text-[10px] leading-5 text-sky-100/80">
+                      {channel.configured
+                        ? "La app y callback están listas. Falta implementar y ejecutar la autorización OAuth con token storage cifrado antes de publicar."
+                        : "Define las variables indicadas en el servidor y pulsa Actualizar; los valores nunca se devuelven al navegador."}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section aria-labelledby="integration-settings-title" className="border-t border-white/[0.07] pt-7">
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[var(--primary-color)]">
                 <Cable size={16} aria-hidden="true" />
               </span>
               <div>
-                <h3 id="integration-settings-title" className="text-sm font-bold text-zinc-100">Integraciones y publicación</h3>
-                <p className="mt-0.5 text-[11px] text-zinc-500">Conexiones tenant-scoped, permisos y disponibilidad operativa.</p>
+                <h3 id="integration-settings-title" className="text-sm font-bold text-zinc-100">Integraciones revisadas</h3>
+                <p className="mt-0.5 text-[11px] text-zinc-500">Herramientas adicionales evaluadas y deshabilitadas por defecto.</p>
               </div>
             </div>
             {!sessionActive ? (
               <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar integraciones.</p>
             ) : integrations.length === 0 ? (
-              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">No hay integraciones registradas para este tenant.</p>
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">No hay integraciones revisadas para este tenant.</p>
             ) : (
               <div className="mt-4 space-y-2">
                 {integrations.map((integration) => (

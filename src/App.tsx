@@ -15,6 +15,7 @@ import type {
   RuntimeProvider,
   RuntimeProviderGatewayStatus,
   RuntimeRun,
+  RuntimeSocialChannel,
 } from "./lib/runtimeApi";
 import {
   DEFAULT_THEME_ID,
@@ -91,6 +92,7 @@ export default function App() {
   const [providers, setProviders] = useState<RuntimeProvider[]>([]);
   const [providerGateway, setProviderGateway] = useState<RuntimeProviderGatewayStatus>(DEFAULT_GATEWAY_STATUS);
   const [integrations, setIntegrations] = useState<RuntimeIntegrationSummary[]>([]);
+  const [socialChannels, setSocialChannels] = useState<RuntimeSocialChannel[]>([]);
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
@@ -124,19 +126,22 @@ export default function App() {
       setProviders([]);
       setProviderGateway(DEFAULT_GATEWAY_STATUS);
       setIntegrations([]);
+      setSocialChannels([]);
       setFabricError("");
       return;
     }
     setFabricLoading(true);
     setFabricError("");
     try {
-      const [providerCatalog, nextIntegrations] = await Promise.all([
+      const [providerCatalog, nextIntegrations, nextSocialChannels] = await Promise.all([
         runtimeApi.providerCatalog(),
         runtimeApi.integrations(),
+        runtimeApi.socialChannels(),
       ]);
       setProviders(providerCatalog.providers);
       setProviderGateway(providerCatalog.gateway);
       setIntegrations(nextIntegrations);
+      setSocialChannels(nextSocialChannels);
     } catch {
       setFabricError("Provider and integration status is temporarily unavailable.");
     } finally {
@@ -247,7 +252,11 @@ export default function App() {
             <p>El output editorial ocupa el centro; evidencia y configuración permanecen disponibles sin competir con el trabajo.</p>
           </div>
           <div className="mt-5">
-            <CampaignOutputPanel run={run} />
+            <CampaignOutputPanel
+              run={run}
+              socialChannels={socialChannels}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
           </div>
         </section>
       </main>
@@ -274,6 +283,7 @@ export default function App() {
         providers={providers}
         gateway={providerGateway}
         integrations={integrations}
+        socialChannels={socialChannels}
         providerLoading={fabricLoading}
         providerError={fabricError}
         sessionActive={Boolean(session)}

@@ -38,6 +38,17 @@ runtime:
     cookieName: "agency_session"
     cookieSecure: true
     ttlSeconds: 28800
+  social:
+    # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
+    existingSecret: ""
+    x:
+      consumerKeyKey: "x-consumer-key"
+      consumerSecretKey: "x-consumer-secret"
+      redirectUri: ""
+    instagram:
+      appIdKey: "instagram-app-id"
+      appSecretKey: "instagram-app-secret"
+      redirectUri: ""
 
 # Used only by the SQLite backend. PostgreSQL stores all runtime state externally.
 persistence:

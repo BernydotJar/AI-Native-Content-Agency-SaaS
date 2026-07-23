@@ -10,6 +10,12 @@ HOST_PORT=${HOST_PORT:-18080}
 CONTAINER_BUILDER=${CONTAINER_BUILDER:-auto}
 AUTH_KEY=${AUTH_KEY:-local-production-verification-key-2026}
 VIEWER_KEY=${VIEWER_KEY:-local-viewer-verification-key-2026}
+X_TEST_KEY=local-package-x-consumer-key
+X_TEST_SECRET=local-package-x-consumer-secret
+INSTAGRAM_TEST_APP_ID=local-package-instagram-app-id
+INSTAGRAM_TEST_SECRET=local-package-instagram-app-secret
+X_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/x/oauth/callback
+INSTAGRAM_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/instagram/oauth/callback
 IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import json, os; print(json.dumps([
     {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True,"entitlements":["theme:premium"]},
     {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
@@ -84,6 +90,27 @@ if grep -q 'name: AGENCY_DATABASE_URL' "$TMP_DIR/rendered.yaml"; then
   printf 'SQLite render unexpectedly contains PostgreSQL URL configuration\n' >&2
   exit 3
 fi
+
+if grep -q 'name: AGENCY_X_CONSUMER_KEY\|name: AGENCY_INSTAGRAM_APP_ID' "$TMP_DIR/rendered.yaml"; then
+  printf 'default render unexpectedly contains social credentials\n' >&2
+  exit 3
+fi
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.social.existingSecret=agency-social \
+  --set-string runtime.social.x.redirectUri="$X_TEST_REDIRECT" \
+  --set-string runtime.social.instagram.redirectUri="$INSTAGRAM_TEST_REDIRECT" \
+  > "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_X_CONSUMER_KEY' "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_X_CONSUMER_SECRET' "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_INSTAGRAM_APP_ID' "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_INSTAGRAM_APP_SECRET' "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_X_REDIRECT_URI' "$TMP_DIR/social.yaml"
+grep -q 'name: AGENCY_INSTAGRAM_REDIRECT_URI' "$TMP_DIR/social.yaml"
+if grep -q "$X_TEST_SECRET\|$INSTAGRAM_TEST_SECRET" "$TMP_DIR/social.yaml"; then
+  printf 'social render leaked credential values\n' >&2
+  exit 3
+fi
+printf 'social_secret_refs=pass\n'
 
 "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.storage.backend=postgresql \
@@ -164,6 +191,12 @@ build_with_docker() {
     -e "AGENCY_LOGIN_WINDOW_SECONDS=60" \
     -e "AGENCY_SESSION_COOKIE_SECURE=false" \
     -e "AGENCY_SESSION_TTL_SECONDS=600" \
+    -e "AGENCY_X_CONSUMER_KEY=$X_TEST_KEY" \
+    -e "AGENCY_X_CONSUMER_SECRET=$X_TEST_SECRET" \
+    -e "AGENCY_X_REDIRECT_URI=$X_TEST_REDIRECT" \
+    -e "AGENCY_INSTAGRAM_APP_ID=$INSTAGRAM_TEST_APP_ID" \
+    -e "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
+    -e "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
 
@@ -186,7 +219,13 @@ build_with_buildah() {
     --env "AGENCY_LOGIN_SOURCE_MAX_FAILURES=10" \
     --env "AGENCY_LOGIN_WINDOW_SECONDS=60" \
     --env "AGENCY_SESSION_COOKIE_SECURE=false" \
-    --env "AGENCY_SESSION_TTL_SECONDS=600" "$RUNTIME_ID"
+    --env "AGENCY_SESSION_TTL_SECONDS=600" \
+    --env "AGENCY_X_CONSUMER_KEY=$X_TEST_KEY" \
+    --env "AGENCY_X_CONSUMER_SECRET=$X_TEST_SECRET" \
+    --env "AGENCY_X_REDIRECT_URI=$X_TEST_REDIRECT" \
+    --env "AGENCY_INSTAGRAM_APP_ID=$INSTAGRAM_TEST_APP_ID" \
+    --env "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
+    --env "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
     > "$TMP_DIR/runtime.log" 2>&1 &
@@ -265,6 +304,11 @@ curl -fsS \
   -H 'X-Request-ID: package-integrations-detail-0001' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/integrations/video-use" \
   > "$TMP_DIR/integration-detail.json"
+curl -fsS \
+  -H "Authorization: Bearer $VIEWER_KEY" \
+  -H 'X-Request-ID: package-social-channels-0001' \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/social-channels" \
+  > "$TMP_DIR/social-channels.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/openapi.json" > "$TMP_DIR/openapi.json"
 set +e
 integration_execute_status=$(curl -sS -o "$TMP_DIR/integration-execute-denied.json" -w '%{http_code}' \
@@ -279,7 +323,7 @@ case "$integration_execute_status" in
   *) printf 'integration execution route returned unsafe status: %s\n' "$integration_execute_status" >&2; exit 4 ;;
 esac
 python3 - "$TMP_DIR/providers.json" "$TMP_DIR/integrations.json" "$TMP_DIR/integration-detail.json" \
-  "$TMP_DIR/openapi.json" "$TMP_DIR/integration-execute-denied.json" <<'PYINTEGRATION'
+  "$TMP_DIR/social-channels.json" "$TMP_DIR/openapi.json" "$TMP_DIR/integration-execute-denied.json" <<'PYINTEGRATION'
 import json
 import sys
 
@@ -290,8 +334,10 @@ with open(sys.argv[2], encoding="utf-8") as handle:
 with open(sys.argv[3], encoding="utf-8") as handle:
     detail = json.load(handle)
 with open(sys.argv[4], encoding="utf-8") as handle:
-    openapi = json.load(handle)
+    social = json.load(handle)
 with open(sys.argv[5], encoding="utf-8") as handle:
+    openapi = json.load(handle)
+with open(sys.argv[6], encoding="utf-8") as handle:
     denied = json.load(handle)
 
 assert providers_payload["tenant_id"] == "local-verification"
@@ -344,6 +390,33 @@ assert set(paths) == {
 assert all(set(methods) == {"get"} for methods in paths.values())
 assert denied["code"] in {"resource_not_found", "method_not_allowed"}
 assert denied["detail"] in {"resource not found", "method not allowed"}
+assert social["tenant_id"] == "local-verification"
+channels = social["channels"]
+assert [item["channel_id"] for item in channels] == ["x", "instagram"]
+assert all(item["configuration_state"] == "ready_for_authentication" for item in channels)
+assert all(item["connection_state"] == "not_connected" for item in channels)
+assert all(item["oauth_start_available"] is False for item in channels)
+assert all(item["publishing_available"] is False for item in channels)
+assert channels[0]["requires_media"] is False
+assert channels[1]["requires_media"] is True
+serialized_social = json.dumps(social)
+for secret in (
+    "local-package-x-consumer-key",
+    "local-package-x-consumer-secret",
+    "local-package-instagram-app-id",
+    "local-package-instagram-app-secret",
+):
+    assert secret not in serialized_social
+social_paths = {
+    path: methods
+    for path, methods in openapi["paths"].items()
+    if path.startswith("/api/v1/social-channels")
+}
+assert set(social_paths) == {
+    "/api/v1/social-channels",
+    "/api/v1/social-channels/{channel_id}",
+}
+assert all(set(methods) == {"get"} for methods in social_paths.values())
 print("provider_registry=pass")
 print("model_gateway_disabled=pass")
 print("model_gateway_execution_route_absent=pass")
@@ -351,6 +424,9 @@ print("provider_secrets_absent=pass")
 print("integration_review_manifest=pass")
 print("integration_read_only_api=pass")
 print("integration_execution_disabled=pass")
+print("social_channel_readiness=pass")
+print("social_secrets_absent=pass")
+print("social_mutation_routes_absent=pass")
 PYINTEGRATION
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
   -H 'Content-Type: application/json' \
@@ -530,8 +606,13 @@ print("session_revocation=pass")
 print("external_side_effects_enabled=false")
 PYCHECK
 
-if [ -f "$TMP_DIR/runtime.log" ] && { grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null || grep -F "$VIEWER_KEY" "$TMP_DIR/runtime.log" >/dev/null; }; then
-  printf 'runtime logs leaked the bearer credential\n' >&2
+if [ -f "$TMP_DIR/runtime.log" ] && {
+  grep -F "$AUTH_KEY" "$TMP_DIR/runtime.log" >/dev/null ||
+  grep -F "$VIEWER_KEY" "$TMP_DIR/runtime.log" >/dev/null ||
+  grep -F "$X_TEST_SECRET" "$TMP_DIR/runtime.log" >/dev/null ||
+  grep -F "$INSTAGRAM_TEST_SECRET" "$TMP_DIR/runtime.log" >/dev/null;
+}; then
+  printf 'runtime logs leaked a credential\n' >&2
   exit 5
 fi
 

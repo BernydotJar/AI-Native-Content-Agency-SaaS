@@ -10,8 +10,8 @@ Aplicación full-stack y sandbox gobernado para operar una agencia de contenido 
 - Topología Fabric-style con sensor de entrada y ocho estaciones: CEO, Research, Strategist, Growth, Writer, Media, Risk y Publisher.
 - Tema visual movido a `Configuración`; no compite con el brief ni cambia permisos, recomendaciones o autoridad política.
 - Credencial de tenant solicitada una sola vez dentro de un diálogo seguro; después el navegador opera con cookie HttpOnly + CSRF y elimina el campo de la experiencia principal.
-- Contexto de ejecución compacto que muestra evidencia aplicada, decisiones Scholar, estrategia, riesgo y entregables, sin presentar el algoritmo interno de memoria como una tarea del usuario.
-- Fabric operacional que deriva del servidor el estado de OpenAI, Anthropic, DeepSeek, Moonshot/Kimi y Llama, además de integraciones revisadas y outputs por estación.
+- Resultado editorial por canal con copy visible, asset, Greenlight, cuenta y publicación; Instagram muestra explícitamente el caption y el media asset pendiente.
+- Configuración administrativa que deriva del servidor el estado de OpenAI, Anthropic, DeepSeek, Moonshot/Kimi, Llama, X, Instagram e integraciones revisadas, sin devolver valores secretos.
 - Runtime Python de ocho agentes con artefactos, evidencia, traza, memoria tenant-scoped, persistencia durable de runs/Greenlights y un límite duro entre Risk y Publisher.
 - FastAPI con identidad individual, RBAC (`viewer`, `operator`, `approver`, `admin`), bearer auth para máquinas, sesiones HttpOnly + CSRF para navegador, rate limiting durable y aislamiento cross-tenant.
 - Registro autenticado y sólo lectura de candidatos de integración revisados; `video-use` está pinneado como `reviewed_disabled` y no tiene ruta de ejecución.
@@ -23,11 +23,11 @@ Aplicación full-stack y sandbox gobernado para operar una agencia de contenido 
 ```text
 React 19 + TypeScript + Vite
 ├── App.tsx: shell de producto y estado compartido del workspace
-├── WorkspaceRuntime: sesión, brief, run, artefactos y Greenlight
+├── WorkspaceRuntime: sesión, brief, run y Greenlight
 ├── PipelineGraph: topología de ocho estaciones derivada del run
-├── RunContextPanel: contexto y evidencia aplicados
-├── OperationalFabricPanel: providers, integraciones y outputs reales
-└── WorkspaceSettingsDialog: apariencia y configuración infrecuente
+├── CampaignOutputPanel: posts, media, aprobación, cuenta y publicación por canal
+├── StationInspector: estado y artefactos de la estación seleccionada
+└── WorkspaceSettingsDialog: temas, providers, X, Instagram e integraciones revisadas
 
 FastAPI + agency_runtime
 ├── identidad individual, RBAC, sesión HttpOnly y CSRF
@@ -35,7 +35,7 @@ FastAPI + agency_runtime
 ├── orquestador secuencial de ocho agentes
 ├── Greenlight ligado a IDs/hashes de artefactos y fencing token
 ├── registro server-side de cinco proveedores de modelos
-├── registro GET-only de integraciones revisadas
+├── readiness GET-only de X/Instagram e integraciones revisadas
 └── auditoría, métricas, backup/restore e idempotencia durable
 ```
 
@@ -93,7 +93,13 @@ npm test                     # pruebas de interacción y contratos TS
 npm run preview              # inspección visual estática de dist/
 npm run start:local          # producto local integrado SPA + FastAPI + SQLite
 npm run verify:accessibility-browser
+npm run verify:social-browser  # FastAPI + run X/Instagram + Chromium; cero egress externo
 ```
+
+La configuración server-side de X/Instagram y los callbacks esperados están en
+[`docs/runbooks/social-channel-readiness.md`](docs/runbooks/social-channel-readiness.md).
+Definir las app keys cambia el estado a **Lista para autenticar**, pero no autoriza una
+cuenta ni habilita publicación real.
 
 Para una identidad local estable, define `AGENCY_IDENTITY_CREDENTIALS_JSON` antes de ejecutar `npm run start:local`. El runner rechaza hosts no loopback y no activa proveedores externos.
 
@@ -153,7 +159,7 @@ En ninguno de los dos casos Greenlight equivale a publicar, comprar medios ni au
 Las siguientes capacidades son contratos mock o representaciones visuales, no conexiones activas:
 
 - Meta Ads MCP y gasto publicitario;
-- APIs de X, LinkedIn, Facebook, TikTok, Instagram o cualquier publisher;
+- OAuth, tokens y publicación real de X, LinkedIn, Facebook, TikTok o Instagram; existe únicamente readiness GET-only para X/Instagram;
 - navegador/Puppeteer, GitHub y Context7 durante el runtime de producto;
 - generación, edición o lectura real de video e imagen;
 - streaming SSE/WebSocket;
@@ -227,6 +233,8 @@ Endpoints iniciales:
 - `GET /api/v1/providers`
 - `GET /api/v1/integrations`
 - `GET /api/v1/integrations/{integration_id}`
+- `GET /api/v1/social-channels`
+- `GET /api/v1/social-channels/{channel_id}`
 - `GET /api/v1/audit-events`
 - `POST /api/v1/runs`
 - `GET /api/v1/runs/{run_id}`
@@ -244,7 +252,7 @@ El servicio persiste runs, trazas, evidencia, artefactos, Greenlights, sesiones 
 
 `WorkspaceRuntime` usa `src/lib/runtimeApi.ts` contra el mismo origen. La credencial de tenant no entra al bundle ni se escribe en `localStorage`/`sessionStorage`; sólo existe dentro del diálogo de conexión y se limpia después del intercambio. Una recarga recupera la sesión HttpOnly y rota el CSRF mediante `/api/v1/sessions/current`.
 
-La experiencia permite crear o abrir una ejecución, mostrar Scholar y artefactos versionados, aprobar/rechazar/revocar Greenlight y consultar auditoría. Conserva una clave idempotente en memoria durante retries ambiguos y la invalida cuando cambia el comando. Research, media, ads y publicación externa siguen sin egress hasta que exista un adapter autorizado y verificable. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md).
+La experiencia permite crear o abrir una ejecución, inspeccionar los posts finales por canal, ver el media requirement de Instagram, aprobar/rechazar/revocar Greenlight y consultar auditoría. X e Instagram muestran Copy → Asset → Greenlight → Cuenta → Publicación. El catálogo social sólo informa configuración server-side; no expone OAuth ni rutas de publicación. Research, media, ads y efectos externos siguen sin egress hasta que exista un adapter autorizado, token storage cifrado y receipt durable. Consulta [ADR 0003](docs/adr/0003-browser-session-boundary.md) y el [runbook social](docs/runbooks/social-channel-readiness.md).
 
 Los temas accesibles azul, rojo, verde y naranja viven en **Configuración**. El tema premium sólo se activa cuando la identidad activa entrega el entitlement exacto `theme:premium`; falla cerrado, se revoca al refrescar identidad y no usa storage persistente. Esto no implementa checkout, facturación ni DRM. Consulta [Accessible campaign themes](docs/design-system/accessibility-themes.md).
 

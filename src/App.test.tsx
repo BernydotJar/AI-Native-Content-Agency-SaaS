@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { runtimeApi } from "./lib/runtimeApi";
-import type { BrowserRuntimeSession, RuntimeProvider } from "./lib/runtimeApi";
+import type { BrowserRuntimeSession, RuntimeProvider, RuntimeSocialChannel } from "./lib/runtimeApi";
 
 const SESSION: BrowserRuntimeSession = {
   tenant_id: "tenant-alpha",
@@ -33,6 +33,51 @@ const PROVIDERS: RuntimeProvider[] = [
   credential_location: "server_environment",
   recommended_models: [String(model || `${provider_id}-recommended`)],
 }));
+
+const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
+  {
+    channel_id: "x",
+    display_name: "X",
+    oauth_flow: "oauth_1_0a_user_context",
+    configured: false,
+    configuration_state: "missing_credentials",
+    credentials_configured: false,
+    callback_configured: false,
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_X_CONSUMER_KEY", "AGENCY_X_CONSUMER_SECRET"],
+    redirect_environment: "AGENCY_X_REDIRECT_URI",
+    scopes: ["tweet.read", "tweet.write", "users.read"],
+    account_requirement: "X account authorized by the tenant",
+    publish_protocol: "POST /2/tweets",
+    supported_content: ["text", "image", "video"],
+    requires_media: false,
+  },
+  {
+    channel_id: "instagram",
+    display_name: "Instagram",
+    oauth_flow: "instagram_business_login",
+    configured: true,
+    configuration_state: "ready_for_authentication",
+    credentials_configured: true,
+    callback_configured: true,
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_INSTAGRAM_APP_ID", "AGENCY_INSTAGRAM_APP_SECRET"],
+    redirect_environment: "AGENCY_INSTAGRAM_REDIRECT_URI",
+    scopes: ["instagram_business_basic", "instagram_business_content_publish"],
+    account_requirement: "Instagram Professional account (Business or Creator)",
+    publish_protocol: "POST /media then POST /media_publish",
+    supported_content: ["image", "reel", "carousel"],
+    requires_media: true,
+  },
+];
 
 beforeEach(() => {
   vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue(null);
@@ -65,6 +110,7 @@ beforeEach(() => {
     execution_available: false,
     external_effects_enabled: false,
   }]);
+  vi.spyOn(runtimeApi, "socialChannels").mockResolvedValue(SOCIAL_CHANNELS);
 });
 
 afterEach(() => {
@@ -127,6 +173,11 @@ describe("product workspace shell", () => {
     expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
     expect(screen.getByText(/Gateway de inferencia deshabilitado/i)).toBeInTheDocument();
     expect(screen.getByText("Video Use")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Canales de publicación/i })).toBeInTheDocument();
+    expect(screen.getByText(/Instagram Professional account/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lista para autenticar/i)).toBeInTheDocument();
+    expect(screen.getByText(/AGENCY_INSTAGRAM_APP_ID/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("instagram-app-secret-value");
   });
 
   it("keeps premium appearance server-entitled and outside the command flow", async () => {
