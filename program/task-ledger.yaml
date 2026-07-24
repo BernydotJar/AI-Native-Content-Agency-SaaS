@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-018-durable-run-execution",
+  "branch": "agent/inc-020-social-publication-authority",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1169,10 +1169,10 @@
       ],
       "task_id": "INC-020",
       "workstream_id": "WS-08",
-      "status": "pending",
+      "status": "review",
       "role": "Distributed Systems Integration Engineer / Security Reviewer",
       "objective": "Publish approved X and Instagram artifacts exactly once through durable intent/fence/receipt authority.",
-      "context": "Accounts can be connected and tokens are encrypted, but there is deliberately no publication route or provider post request.",
+      "context": "Implementation 8eb0cf7 adds default-disabled exact-once X/Instagram publication with durable binding, fenced execution, bounded receipts, idempotent reconciliation, audit repair, confirmation UI and zero-real-HTTP browser/package evidence.",
       "dependencies": [
         "INC-004",
         "INC-019"
@@ -1198,7 +1198,7 @@
         "tokens/provider bodies in logs",
         "publication without Greenlight"
       ],
-      "write_lock": "unclaimed",
+      "write_lock": "released",
       "expected_outputs": [
         "durable publication intent",
         "X/Instagram adapters",
@@ -1207,17 +1207,28 @@
         "sandbox evidence"
       ],
       "acceptance_criteria": [
-        "intent before call",
-        "one fenced executor",
-        "replay creates no duplicate",
-        "unknown blocks retry",
-        "disconnect/revocation invalidates authority",
-        "Instagram media required"
+        "intent persists before provider request",
+        "one fenced executor per exact effect binding",
+        "compatible replay and reconciliation create no duplicate effect",
+        "unknown outcomes block automatic retry",
+        "disconnect and Greenlight revocation invalidate unused authority",
+        "Instagram requires approved reachable media",
+        "receipt-success audit is repairable without a second provider call",
+        "installed image effect smoke uses MockTransport plus socket guard",
+        "async worker/read lock ordering is deadlock-free"
       ],
       "validation_commands": [
-        "SQLite/PostgreSQL race tests",
-        "mock provider contracts",
-        "Chromium/package/supply chain"
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "npm run verify:social-browser",
+        "npm run verify:social-oauth-browser",
+        "npm run verify:async-run-browser",
+        "npm run verify:social-publication-browser",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh"
       ],
       "human_gates": [
         "authorized sandbox posts",
@@ -1225,10 +1236,12 @@
         "privacy/legal approval",
         "production budget",
         "merge/deployment"
-      ]
+      ],
+      "implementation_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING_REAL_PUBLICATION_DISABLED"
     }
   ],
-  "updated_at": "2026-07-23T20:25:00Z",
+  "updated_at": "2026-07-24T07:25:45Z",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -1422,7 +1435,7 @@
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "in_progress",
+      "status": "review",
       "validation": [],
       "write_locks": []
     },

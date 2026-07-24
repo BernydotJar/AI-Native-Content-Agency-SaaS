@@ -307,10 +307,10 @@
     {
       "id": "F-039",
       "severity": "HIGH",
-      "status": "OPEN",
+      "status": "CLOSED",
       "owner": "INC-020",
-      "description": "Connected accounts cannot publish because no durable social publication intent, provider receipt or unknown-outcome reconciliation exists.",
-      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; publishing_available=false and no publication route; specs/020-social-publication-authority defines the gate."
+      "description": "Connected-account publication required durable intent, exact artifact/media/Greenlight binding, provider receipt, replay protection and unknown-outcome reconciliation.",
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; schema v3 SQLite/PostgreSQL stores, bounded X/Instagram adapters, unique binding authority, one-call compatible replay, unknown blocking, idempotent reconciliation, revocation and exact Chromium/package MockTransport gates pass. Real publication remains disabled and human-authorized."
     },
     {
       "id": "F-040",
@@ -327,9 +327,17 @@
       "owner": "INC-019",
       "description": "Browser sessions used SameSite=Strict, so X/Instagram cross-site OAuth callback GETs lost the HttpOnly session and returned authentication_failed before token exchange.",
       "evidence": "6d5e59b; Secure SameSite=Lax policy, strict-policy startup rejection, exact callback visibility, safe phase diagnostics and real Chromium cross-site X/Instagram callback gates pass with mock provider transport."
+    },
+    {
+      "id": "F-042",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-020",
+      "description": "The asynchronous worker acquired the durable run-store lock before resolving the tenant runtime while GET /runs acquired the service lock first, allowing a lock inversion after prior inline work.",
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; faulthandler reproduced the cycle at poll 14, runtime resolution moved before the durable lock, deterministic order test passes, the prior-inline plus async reproduction reaches Greenlight and the installed-image 14-checkpoint smoke passes."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "3cc304d10b64b8cb32bffeee52f36e583c46f844",
-  "updated_at": "2026-07-23T20:25:00Z"
+  "source_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
+  "updated_at": "2026-07-24T07:25:45Z"
 }

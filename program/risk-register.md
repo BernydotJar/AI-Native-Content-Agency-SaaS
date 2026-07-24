@@ -1,6 +1,6 @@
 # Risk Register
 
-Updated: 2026-07-22
+Updated: 2026-07-24
 
 | ID | Severity | Risk | Current control | Status |
 |---|---|---|---|---|
@@ -37,5 +37,7 @@ Updated: 2026-07-22
 | R-028 | MEDIUM | Sandbox push tooling prevents exact remote delivery evidence for local INC-013/014 commits. | Clean local commits, git integrity, explicit blocker and no bypass; official connector repair required. | Tooling blocked |
 
 | R-029 | HIGH | OAuth tokens leak, cross tenants or replay through a second callback. | INC-019 uses AES-GCM tenant/channel AAD, expiring session-bound state, atomic consume and no token-bearing API/log/audit fields. | Controlled locally; exact remote CI pending |
-| R-030 | HIGH | Account connection is mistaken for authority to publish or incur provider cost. | No publication route, `publishing_available=false`, explicit INC-020 durable intent/receipt gate. | Controlled while publication disabled |
+| R-030 | HIGH | Account connection is mistaken for authority to publish or incur provider cost. | `8eb0cf7` requires enabled server flag, admin confirmation, exact account/artifact/media/Greenlight binding, durable intent/fence/receipt, compatible replay and unknown reconciliation; defaults remain disabled. | Controlled locally; real sandbox/production authorization pending |
 | R-031 | MEDIUM | Server-side token bootstrap is partially configured or enters Terraform state. | Exact required groups fail startup; Terraform receives only Secret/key names; package/infra gates scan for values. | Controlled locally |
+
+| R-032 | HIGH | Worker and API lock order freezes durable run reads. | `8eb0cf7` resolves tenant runtime before acquiring the durable run lock; deterministic lock-order, prior-inline reproduction and installed-image checkpoint tests pass. | Closed locally; remote CI pending |

@@ -152,3 +152,25 @@ Consequence: deterministic sandbox stations may be recomputed only when a claim 
 before checkpoint persistence. Model inference and social publication remain governed by
 separate pending intent/receipt authorities; this decision does not authorize spend or
 publication.
+
+## D-016 — External social publication is an exact durable effect, not an OAuth capability
+
+Date: 2026-07-24
+Status: accepted locally at `8eb0cf7dee9b3400351a8b7d603a94666253f1e7`; remote CI and real sandbox authorization pending
+
+Decision: Account connection never grants publication authority. A social effect may execute
+only after the server reconstructs the exact approved copy/media/account/Greenlight binding,
+persists a unique intent and fencing token, and confirms the server-side publication flag.
+Compatible retries and different command keys reuse one receipt. Ambiguous outcomes become
+`unknown` and require idempotent human reconciliation. Audit success is deterministic and
+repairable on replay without a second provider call.
+
+Rationale: OAuth proves delegated account access but does not solve duplicate effects,
+stale approval, media substitution, persistence failure, audit gaps or operator intent.
+Treating a post as a durable economic effect closes those failure modes and keeps browser
+state non-authoritative.
+
+Consequence: X/Instagram adapters may exist while remaining disabled by default.
+MockTransport, a socket guard and installed-image tests are verification only; real account
+use, current terms/privacy review, sandbox authorization, deployment and spend remain human
+gates.

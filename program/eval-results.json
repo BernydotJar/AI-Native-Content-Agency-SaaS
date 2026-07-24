@@ -545,6 +545,34 @@
       "command": "verify-production-package, verify-local-infrastructure, verify-supply-chain",
       "observed": "Buildah image returns async 202, persists fences 1..14 and reaches Greenlight; K3s/Helm/Terraform, SBOM, policy, provenance and offline Cosign PASS; registry publication false",
       "result": "PASS"
+    },
+    {
+      "id": "INC020-BACKEND-AUTHORITY",
+      "scope": "social publication persistence/protocols/concurrency",
+      "command": "verify-python-locks and verify-postgresql-runtime",
+      "observed": "226 locked-wheel tests with 19 PostgreSQL skips and 226/226 PostgreSQL tests PASS; schema v3, non-owner grants, unique binding, replay, unknown, reconciliation, revocation, audit repair and deadlock regression pass.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-BROWSER-PACKAGE",
+      "scope": "human confirmation and installed artifact",
+      "command": "five Chromium gates and verify-production-package",
+      "observed": "38 frontend tests; all Chromium gates PASS; provider calls 0 before confirmation, 1 after success and 1 after compatible replay; non-root image runs MockTransport effect with socket guard and real_provider_http=false.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-INFRA-OPERABILITY",
+      "scope": "deployment defaults, observability and hygiene",
+      "command": "verify-local-infrastructure, verify-operability, actionlint, gitleaks",
+      "observed": "SQLite/PostgreSQL Helm/Terraform plan-apply-destroy and cleanup PASS; publication default false, Secret refs only, 4 SLOs, 8 alerts, 9 exercises, workflow/secret/whitespace gates PASS.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-SUPPLY-CHAIN",
+      "scope": "clean-source software supply chain",
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "observed": "Source 8eb0cf7dee9b3400351a8b7d603a94666253f1e7; 32 packages evaluated; SBOM, vulnerability/license policy, provenance and offline Cosign verification PASS; source_dirty=false; registry_publication=false.",
+      "result": "PASS"
     }
   ],
   "schema_version": "program-eval-results.v1",

@@ -173,9 +173,9 @@
         "INC-004",
         "INC-019"
       ],
-      "status": "pending"
+      "status": "review"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-23T20:25:00Z"
+  "updated_at": "2026-07-24T07:25:45Z"
 }

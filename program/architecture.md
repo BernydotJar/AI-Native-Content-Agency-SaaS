@@ -26,8 +26,8 @@ The multi-stage OCI image serves the SPA and FastAPI as UID/GID 10001. Helm and 
 - Browser sessions use HttpOnly/SameSite cookies and an in-memory CSRF token.
 - Machine clients use bearer credentials.
 - Runs, sessions, audit events, authentication-rate buckets, and memories are stored in SQLite or PostgreSQL.
-- Inbound run/Greenlight commands use durable idempotency, exact artifact binding, revocation and fencing for the current sandbox. Future outbound providers still require a transactional outbox and provider receipt.
-- Tools are deterministic sandbox adapters. They perform no external publication, media generation, navigation, repository mutation, or ad spend.
+- Inbound run/Greenlight commands use durable idempotency, exact artifact binding, revocation and fencing. Social publication additionally uses a default-disabled durable intent, unique effect binding, provider receipt, unknown-state reconciliation and audit repair; model providers remain disconnected.
+- Station tools remain deterministic sandbox adapters. Social publication adapters exist behind an explicit disabled-by-default authority; no real publication, media generation, navigation, repository mutation or ad spend was performed.
 - Reviewed external candidates are immutable package data exposed through authenticated GET endpoints; `video-use` remains `reviewed_disabled` with no executable adapter.
 
 ## Deployment evidence boundary
@@ -55,7 +55,7 @@ Agentless K3s does not prove pod scheduling. OCI smoke does not prove Kubernetes
 
 ## Known architectural gaps
 
-- durable asynchronous station leases/checkpoints exist; provider/model/social effects still require separate intent/outbox/receipt authorities;
+- durable asynchronous station leases/checkpoints and social publication intent/receipt authority exist; model inference still requires its separate durable effect integration;
 - no enabled browser/video provider adapter; the exact `video-use` review remains disabled on HIGH findings;
 - no object store for media or large artifacts;
 - no managed IdP, SSO, MFA, recovery, or lifecycle provisioning;

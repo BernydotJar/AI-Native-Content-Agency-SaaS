@@ -102,14 +102,16 @@ receipt-before-completion, replay reuse, pending/unknown blocking, reconciliatio
 failure-injection evidence. Real credentials/egress still require separate approval.
 
 
-## OI-013 — Exact-once social publication
+## OI-013 — Authorized social publication observation
 
-Category: integration / distributed systems / financial safety / external effect
+Category: integration / privacy / external effect / human authorization
 
-X and Instagram accounts can be connected through OAuth or encrypted server-side token
-bootstrap. No provider publication adapter, intent, receipt or unknown-outcome
-reconciliation exists.
+INC-020 is implemented locally at `8eb0cf7dee9b3400351a8b7d603a94666253f1e7`: exact binding, fenced execution, durable
+receipts, compatible replay, unknown blocking, idempotent reconciliation and
+MockTransport/browser/package gates pass. Publication remains disabled by default and no
+real X or Instagram request was made.
 
-Exact resume condition: complete INC-020 with tenant/account/run/artifact/media/Greenlight
-binding, fenced execution, durable receipt, replay reuse, pending/unknown blocking, mock
-transport gates and explicit authorization for one sandbox post per channel.
+Exact resume condition: publish the branch and pass exact-head CI; approve current provider
+terms/privacy/account scope; register exact callbacks; authorize one sandbox post per
+channel; record and reconcile provider receipts. Production enablement remains a separate
+release decision.
