@@ -34,7 +34,7 @@ Updated: 2026-07-24
 
 | R-026 | HIGH | A provider call succeeds but local persistence fails, causing a replay to duplicate spend. | Gateway remains disconnected; INC-015 requires persisted intent, fencing, receipt-before-completion and unknown-state reconciliation. | Open, execution disabled |
 | R-027 | HIGH | Protocol-ready status is mistaken for active inference or approval to transfer prompts/spend. | API/UI expose durable receipt and automatic integration as false; no completion route; package and compliance gates enforce zero active providers. | Controlled while disabled |
-| R-028 | MEDIUM | Sandbox push tooling prevents exact remote delivery evidence for local INC-013/014 commits. | Clean local commits, git integrity, explicit blocker and no bypass; official connector repair required. | Tooling blocked |
+| R-028 | MEDIUM | Sandbox push tooling prevents exact remote delivery evidence for local INC-013/014/018/020 commits. | Clean local commits, supply-chain evidence, git integrity, explicit blocker and no bypass; the official wrapper failed before Git again at `50b55f3`. | Tooling blocked |
 
 | R-029 | HIGH | OAuth tokens leak, cross tenants or replay through a second callback. | INC-019 uses AES-GCM tenant/channel AAD, expiring session-bound state, atomic consume and no token-bearing API/log/audit fields. | Controlled locally; exact remote CI pending |
 | R-030 | HIGH | Account connection is mistaken for authority to publish or incur provider cost. | `8eb0cf7` requires enabled server flag, admin confirmation, exact account/artifact/media/Greenlight binding, durable intent/fence/receipt, compatible replay and unknown reconciliation; defaults remain disabled. | Controlled locally; real sandbox/production authorization pending |

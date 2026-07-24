@@ -12,7 +12,7 @@ Cloud recommendation: `DENY_APPLY`
 - Active branch: `agent/inc-020-social-publication-authority`
 - Current implementation: `8eb0cf7dee9b3400351a8b7d603a94666253f1e7`
 - Parent program checkpoint: `ca79d79d83346ca4b275a54787647cfdbd5c07c1`
-- Active branch remote / PR / exact-head CI: pending
+- Active branch remote / PR / exact-head CI: blocked; the official push wrapper failed before Git while starting Docker and creating its NAT chain
 - Latest known published product base remains `agent/inc-016-cinematic-runtime-ux@9c9c548e188c0c4a22154531a41b655d943e14b7`, draft PR `#10`, run `29956435978`, eight of eight jobs successful
 - Real model calls, X/Instagram publication, cloud deployment, registry publication, billing and spend: not performed
 
@@ -61,7 +61,7 @@ Actionlint / Gitleaks / whitespace        PASS
 Clean-source supply chain                 PASS — source 8eb0cf7, registry_publication=false
 Real provider publication                 NOT_RUN
 Real credentials/tokens                   NOT_USED
-Push / PR / exact-head CI                 PENDING
+Push / PR / exact-head CI                 BLOCKED — wrapper failed before Git
 ```
 
 The producer/critic/verifier record is `program/reports/inc-020-review.md`.
