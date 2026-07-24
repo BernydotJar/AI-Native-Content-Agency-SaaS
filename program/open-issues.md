@@ -81,13 +81,14 @@ and deletion evidence; then obtain explicit external-effect authorization.
 Category: tooling / infrastructure / permission
 
 The official `Cloud_Sandbox_MCP.git_push` action fails before Git because its ownership
-setup attempts to start Docker and cannot create the Docker NAT chain in this sandbox.
-Workspace ownership was normalized, `git fsck` passed and the official action was
-retried with the same result. No force push or alternate GitHub ref API was used.
+wrapper starts Docker and Docker cannot create the NAT chain without host iptables
+permission. The failure repeated for the clean INC-020 checkpoint
+`50b55f3791fad030710b567e297c0704532cddee`; local commits, `git fsck` and all local gates
+remain valid, but no remote SHA, PR or exact-head CI can be claimed. No force push or
+alternate ref API was used.
 
-Exact resume condition: repair the official connector or provide an explicitly
-authorized supported export/push mechanism, then publish the exact local heads and
-require their own PR/CI evidence.
+Exact resume condition: repair the connector so it invokes Git without privileged Docker
+startup, or publish the exact branch from an authenticated user checkout.
 
 ## OI-012 — Durable model effect authority
 

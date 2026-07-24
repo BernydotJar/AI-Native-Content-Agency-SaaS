@@ -1238,7 +1238,7 @@
         "merge/deployment"
       ],
       "implementation_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING_REAL_PUBLICATION_DISABLED"
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED"
     }
   ],
   "updated_at": "2026-07-24T07:25:45Z",
