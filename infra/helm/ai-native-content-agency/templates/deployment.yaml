@@ -35,6 +35,31 @@
 {{- if not .Values.runtime.auth.identityCredentialsKey }}
 {{- fail "runtime.auth.identityCredentialsKey is required for individual identity and RBAC" }}
 {{- end }}
+{{- $modelProvider := lower (trim .Values.runtime.model.selectedProvider) -}}
+{{- if and .Values.runtime.model.effectAuthorityEnabled (not .Values.runtime.model.executionEnabled) }}
+{{- fail "runtime.model.effectAuthorityEnabled requires runtime.model.executionEnabled" }}
+{{- end }}
+{{- if .Values.runtime.model.executionEnabled }}
+{{- if not (has $modelProvider (list "openai" "anthropic" "deepseek" "moonshot" "llama")) }}
+{{- fail "runtime.model.selectedProvider must be allowlisted when model execution is enabled" }}
+{{- end }}
+{{- if not .Values.runtime.model.egressAllowedHosts }}
+{{- fail "runtime.model.egressAllowedHosts is required when model execution is enabled" }}
+{{- end }}
+{{- if not .Values.runtime.model.existingSecret }}
+{{- fail "runtime.model.existingSecret is required when model execution is enabled" }}
+{{- end }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.model.maxOutputTokens) 1) (gt (int .Values.runtime.model.maxOutputTokens) 8192) }}
+{{- fail "runtime.model.maxOutputTokens must be between 1 and 8192" }}
+{{- end }}
+{{- if .Values.runtime.model.existingSecret }}
+{{- range $provider := list "openai" "anthropic" "deepseek" "moonshot" "llama" }}
+{{- if not (index $.Values.runtime.model.apiKeyKeys $provider) }}
+{{- fail (printf "runtime.model.apiKeyKeys.%s is required when runtime.model.existingSecret is set" $provider) }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if .Values.runtime.social.existingSecret }}
 {{- if not .Values.runtime.social.x.consumerKeyKey }}
 {{- fail "runtime.social.x.consumerKeyKey is required when runtime.social.existingSecret is set" }}
@@ -148,6 +173,58 @@ spec:
               value: {{ .Values.runtime.session.cookieSecure | quote }}
             - name: AGENCY_SESSION_TTL_SECONDS
               value: {{ .Values.runtime.session.ttlSeconds | quote }}
+            - name: AGENCY_MODEL_EXECUTION_ENABLED
+              value: {{ .Values.runtime.model.executionEnabled | quote }}
+            - name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED
+              value: {{ .Values.runtime.model.effectAuthorityEnabled | quote }}
+            - name: AGENCY_MODEL_PROVIDER
+              value: {{ $modelProvider | quote }}
+            - name: AGENCY_MODEL_EGRESS_ALLOWED_HOSTS
+              value: {{ .Values.runtime.model.egressAllowedHosts | quote }}
+            - name: AGENCY_MODEL_MAX_OUTPUT_TOKENS
+              value: {{ .Values.runtime.model.maxOutputTokens | quote }}
+            - name: AGENCY_OPENAI_MODEL
+              value: {{ .Values.runtime.model.models.openai | quote }}
+            - name: AGENCY_ANTHROPIC_MODEL
+              value: {{ .Values.runtime.model.models.anthropic | quote }}
+            - name: AGENCY_DEEPSEEK_MODEL
+              value: {{ .Values.runtime.model.models.deepseek | quote }}
+            - name: AGENCY_MOONSHOT_MODEL
+              value: {{ .Values.runtime.model.models.moonshot | quote }}
+            - name: AGENCY_LLAMA_MODEL
+              value: {{ .Values.runtime.model.models.llama | quote }}
+{{- if .Values.runtime.model.existingSecret }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.openai | quote }}
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.anthropic | quote }}
+                  optional: true
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.deepseek | quote }}
+                  optional: true
+            - name: MOONSHOT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.moonshot | quote }}
+                  optional: true
+            - name: LLAMA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.llama | quote }}
+                  optional: true
+{{- end }}
             - name: AGENCY_SOCIAL_PUBLICATION_ENABLED
               value: {{ .Values.runtime.social.publicationEnabled | quote }}
 {{- if .Values.runtime.social.existingSecret }}

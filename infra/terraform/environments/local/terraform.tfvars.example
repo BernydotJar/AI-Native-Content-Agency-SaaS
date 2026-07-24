@@ -25,5 +25,12 @@ session_cookie_secure           = true
 helm_wait                       = true
 helm_timeout_seconds            = 300
 
+# Model execution and durable economic authority stay disabled until explicitly authorized.
+model_execution_enabled        = false
+model_effect_authority_enabled = false
+model_provider                 = ""
+model_egress_allowed_hosts     = ""
+model_existing_secret          = ""
+
 # External social publication stays disabled until explicitly authorized.
 social_publication_enabled = false

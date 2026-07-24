@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "3"
+POSTGRES_SCHEMA_VERSION = "4"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -51,6 +51,7 @@ POSTGRES_REQUIRED_TABLES = (
     "social_oauth_states",
     "social_connections",
     "social_publication_intents",
+    "model_effect_intents",
 )
 POSTGRES_REQUIRED_SEQUENCES = ("audit_events_sequence_seq",)
 POSTGRES_REQUIRED_COLUMNS = {
@@ -161,6 +162,35 @@ POSTGRES_REQUIRED_COLUMNS = {
             "execution_fencing_token",
             "provider_container_id",
             "provider_post_id",
+            "receipt_json",
+            "failure_reason",
+            "created_at",
+            "updated_at",
+            "completed_at",
+            "revoked_at",
+        }
+    ),
+    "model_effect_intents": frozenset(
+        {
+            "effect_id",
+            "tenant_id",
+            "run_id",
+            "station",
+            "source_artifact_id",
+            "source_artifact_hash",
+            "instruction_hash",
+            "provider_id",
+            "model",
+            "endpoint_host",
+            "request_sha256",
+            "max_output_tokens",
+            "max_cost_micros",
+            "idempotency_digest",
+            "binding_digest",
+            "status",
+            "execution_fencing_token",
+            "output_text",
+            "output_sha256",
             "receipt_json",
             "failure_reason",
             "created_at",
@@ -743,6 +773,51 @@ class PostgresRuntimeDatabase:
                     tenant_id, channel_id, account_id, status, updated_at DESC
                 )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS public.model_effect_intents (
+                effect_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                station TEXT NOT NULL,
+                source_artifact_id TEXT NOT NULL,
+                source_artifact_hash TEXT NOT NULL,
+                instruction_hash TEXT NOT NULL,
+                provider_id TEXT NOT NULL,
+                model TEXT NOT NULL,
+                endpoint_host TEXT NOT NULL,
+                request_sha256 TEXT NOT NULL,
+                max_output_tokens BIGINT NOT NULL CHECK (max_output_tokens > 0),
+                max_cost_micros BIGINT NOT NULL CHECK (max_cost_micros >= 0),
+                idempotency_digest TEXT NOT NULL,
+                binding_digest TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (
+                    status IN ('pending', 'succeeded', 'unknown', 'failed', 'revoked')
+                ),
+                execution_fencing_token BIGINT NOT NULL CHECK (execution_fencing_token > 0),
+                output_text TEXT NOT NULL,
+                output_sha256 TEXT NOT NULL,
+                receipt_json JSONB NOT NULL,
+                failure_reason TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                completed_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ,
+                UNIQUE (tenant_id, idempotency_digest),
+                UNIQUE (tenant_id, binding_digest)
+            )
+            """,
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_model_effect_binding
+                ON public.model_effect_intents(tenant_id, binding_digest)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_model_effect_run
+                ON public.model_effect_intents(tenant_id, run_id, updated_at DESC)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_model_effect_status
+                ON public.model_effect_intents(tenant_id, status, updated_at DESC)
+            """,
         )
         with self.pool.connection() as connection:
             connection.execute(
@@ -763,7 +838,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value IN ('1', '2')
+                WHERE key = 'schema_version' AND value IN ('1', '2', '3')
                 """,
                 (SCHEMA_VERSION,),
             )

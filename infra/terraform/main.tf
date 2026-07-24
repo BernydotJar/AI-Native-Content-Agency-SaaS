@@ -126,6 +126,86 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.model.executionEnabled"
+    value = tostring(var.model_execution_enabled)
+  }
+
+  set {
+    name  = "runtime.model.effectAuthorityEnabled"
+    value = tostring(var.model_effect_authority_enabled)
+  }
+
+  set {
+    name  = "runtime.model.selectedProvider"
+    value = lower(trimspace(var.model_provider))
+  }
+
+  set {
+    name  = "runtime.model.egressAllowedHosts"
+    value = var.model_egress_allowed_hosts
+  }
+
+  set {
+    name  = "runtime.model.maxOutputTokens"
+    value = tostring(var.model_max_output_tokens)
+  }
+
+  set {
+    name  = "runtime.model.existingSecret"
+    value = var.model_existing_secret
+  }
+
+  set {
+    name  = "runtime.model.apiKeyKeys.openai"
+    value = var.model_api_key_secret_keys.openai
+  }
+
+  set {
+    name  = "runtime.model.apiKeyKeys.anthropic"
+    value = var.model_api_key_secret_keys.anthropic
+  }
+
+  set {
+    name  = "runtime.model.apiKeyKeys.deepseek"
+    value = var.model_api_key_secret_keys.deepseek
+  }
+
+  set {
+    name  = "runtime.model.apiKeyKeys.moonshot"
+    value = var.model_api_key_secret_keys.moonshot
+  }
+
+  set {
+    name  = "runtime.model.apiKeyKeys.llama"
+    value = var.model_api_key_secret_keys.llama
+  }
+
+  set {
+    name  = "runtime.model.models.openai"
+    value = var.model_names.openai
+  }
+
+  set {
+    name  = "runtime.model.models.anthropic"
+    value = var.model_names.anthropic
+  }
+
+  set {
+    name  = "runtime.model.models.deepseek"
+    value = var.model_names.deepseek
+  }
+
+  set {
+    name  = "runtime.model.models.moonshot"
+    value = var.model_names.moonshot
+  }
+
+  set {
+    name  = "runtime.model.models.llama"
+    value = var.model_names.llama
+  }
+
+  set {
     name  = "runtime.social.publicationEnabled"
     value = tostring(var.social_publication_enabled)
   }
@@ -224,6 +304,20 @@ resource "helm_release" "app" {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures
       error_message = "login_source_max_failures must be greater than or equal to login_max_failures."
+    }
+
+    precondition {
+      condition     = !var.model_effect_authority_enabled || var.model_execution_enabled
+      error_message = "model_effect_authority_enabled requires model_execution_enabled."
+    }
+
+    precondition {
+      condition = !var.model_execution_enabled || (
+        length(trimspace(var.model_existing_secret)) > 0 &&
+        length(trimspace(var.model_provider)) > 0 &&
+        length(trimspace(var.model_egress_allowed_hosts)) > 0
+      )
+      error_message = "enabled model execution requires model_existing_secret, model_provider and model_egress_allowed_hosts."
     }
 
     precondition {

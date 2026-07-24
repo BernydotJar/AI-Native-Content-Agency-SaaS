@@ -37,6 +37,7 @@ _ROLE_PERMISSIONS = {
             "audit:read",
             "social:manage",
             "social:publish",
+            "model:execute",
         }
     ),
 }

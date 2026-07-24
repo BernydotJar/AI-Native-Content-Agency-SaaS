@@ -27,8 +27,11 @@ class ModelGatewayTests(unittest.TestCase):
             },
             transport=httpx.MockTransport(handler),
         )
+        request = ModelRequest(request_id="request-disabled-001", user="hello")
         with self.assertRaises(ModelGatewayDisabledError):
-            gateway.complete(ModelRequest(request_id="request-disabled-001", user="hello"))
+            gateway.describe(request)
+        with self.assertRaises(ModelGatewayDisabledError):
+            gateway.complete(request)
         self.assertEqual(calls, [])
         self.assertFalse(gateway.public_status()["execution_enabled"])
         gateway.close()
@@ -76,13 +79,18 @@ class ModelGatewayTests(unittest.TestCase):
             },
             transport=httpx.MockTransport(handler),
         )
-        result = gateway.complete(
-            ModelRequest(
-                request_id="request-openai-001",
-                system="Return a concise campaign insight.",
-                user="Explain the audience tension.",
-            )
+        request = ModelRequest(
+            request_id="request-openai-001",
+            system="Return a concise campaign insight.",
+            user="Explain the audience tension.",
         )
+        descriptor = gateway.describe(request)
+        self.assertEqual(descriptor.provider_id, "openai")
+        self.assertEqual(descriptor.model, "gpt-5.2")
+        self.assertEqual(descriptor.endpoint_host, "api.openai.com")
+        self.assertEqual(descriptor.max_output_tokens, 128)
+        self.assertEqual(len(descriptor.request_sha256), 64)
+        result = gateway.complete(request)
 
         self.assertEqual(result.text, "Lead with verifiable evidence.")
         self.assertEqual(result.receipt.provider_id, "openai")
@@ -90,6 +98,7 @@ class ModelGatewayTests(unittest.TestCase):
         self.assertEqual(result.receipt.input_tokens, 14)
         self.assertEqual(result.receipt.output_tokens, 6)
         self.assertEqual(result.receipt.total_tokens, 20)
+        self.assertEqual(result.receipt.request_sha256, descriptor.request_sha256)
         serialized = json.dumps(result.receipt.public_dict(), sort_keys=True)
         self.assertNotIn(secret, serialized)
         self.assertNotIn(result.text, serialized)

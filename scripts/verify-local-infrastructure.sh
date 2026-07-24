@@ -92,6 +92,11 @@ postgresql_connect_timeout_seconds = 15
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"
+model_execution_enabled          = false
+model_effect_authority_enabled   = false
+model_provider                   = ""
+model_egress_allowed_hosts       = ""
+model_existing_secret            = "ai-native-content-agency-model"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
 social_publication_enabled         = false
@@ -179,6 +184,14 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   --from-literal='instagram-app-id=local-instagram-app-id' \
   --from-literal='instagram-app-secret=local-instagram-secret-not-for-external-use' \
   >/dev/null
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
+  ai-native-content-agency-model \
+  --from-literal='openai-api-key=local-openai-key-not-for-external-use' \
+  --from-literal='anthropic-api-key=local-anthropic-key-not-for-external-use' \
+  --from-literal='deepseek-api-key=local-deepseek-key-not-for-external-use' \
+  --from-literal='moonshot-api-key=local-moonshot-key-not-for-external-use' \
+  --from-literal='llama-api-key=local-llama-key-not-for-external-use' \
+  >/dev/null
 
 log "validating Terraform and planning Helm release"
 terraform -chdir="$TF_ROOT" fmt -check -recursive
@@ -195,7 +208,17 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
 assert 'runtime.social.publicationEnabled' in serialized
+assert 'runtime.model.executionEnabled' in serialized
+assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'false' in serialized.lower()
+for forbidden in (
+    "local-openai-key-not-for-external-use",
+    "local-anthropic-key-not-for-external-use",
+    "local-deepseek-key-not-for-external-use",
+    "local-moonshot-key-not-for-external-use",
+    "local-llama-key-not-for-external-use",
+):
+    assert forbidden not in serialized
 assert "local-x-secret-not-for-external-use" not in serialized
 assert "local-instagram-secret-not-for-external-use" not in serialized
 changes = plan.get("resource_changes", [])
@@ -281,7 +304,23 @@ assert environment["AGENCY_X_REDIRECT_URI"]["value"].endswith("/social-channels/
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].endswith("/social-channels/instagram/oauth/callback")
 assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alpha"
 assert environment["AGENCY_SOCIAL_PUBLICATION_ENABLED"]["value"] == "false"
+assert environment["AGENCY_MODEL_EXECUTION_ENABLED"]["value"] == "false"
+assert environment["AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED"]["value"] == "false"
+for name, key in {
+    "OPENAI_API_KEY": "openai-api-key",
+    "ANTHROPIC_API_KEY": "anthropic-api-key",
+    "DEEPSEEK_API_KEY": "deepseek-api-key",
+    "MOONSHOT_API_KEY": "moonshot-api-key",
+    "LLAMA_API_KEY": "llama-api-key",
+}.items():
+    assert environment[name]["valueFrom"]["secretKeyRef"] == {
+        "name": "ai-native-content-agency-model",
+        "key": key,
+        "optional": True,
+    }
 print("identity_rbac_configuration=pass")
+print("model_effect_default_disabled=pass")
+print("model_provider_secret_refs=pass")
 print("social_publication_default_disabled=pass")
 print("social_channel_secret_refs=pass")
 PY
@@ -312,6 +351,11 @@ postgresql_schema_mode           = "validate"
 runtime_auth_existing_secret     = "ai-native-content-agency-runtime"
 runtime_auth_tenant_api_keys_key = ""
 runtime_auth_identity_credentials_key = "identity-credentials.json"
+model_execution_enabled          = false
+model_effect_authority_enabled   = false
+model_provider                   = ""
+model_egress_allowed_hosts       = ""
+model_existing_secret            = "ai-native-content-agency-model"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
 social_publication_enabled         = false
@@ -343,7 +387,17 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
 assert 'runtime.social.publicationEnabled' in serialized
+assert 'runtime.model.executionEnabled' in serialized
+assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'false' in serialized.lower()
+for forbidden in (
+    "local-openai-key-not-for-external-use",
+    "local-anthropic-key-not-for-external-use",
+    "local-deepseek-key-not-for-external-use",
+    "local-moonshot-key-not-for-external-use",
+    "local-llama-key-not-for-external-use",
+):
+    assert forbidden not in serialized
 assert "postgresql://runtime:local-validation-only" not in serialized
 for forbidden in ("x-user-access-token-value", "instagram-access-token-value", "social-encryption-key-value"):
     assert forbidden not in serialized
@@ -391,6 +445,13 @@ assert environment["AGENCY_INSTAGRAM_ACCESS_TOKEN"]["valueFrom"]["secretKeyRef"]
 assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alpha"
 assert environment["AGENCY_X_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
+assert environment["AGENCY_MODEL_EXECUTION_ENABLED"]["value"] == "false"
+assert environment["AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED"]["value"] == "false"
+assert environment["OPENAI_API_KEY"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-model",
+    "key": "openai-api-key",
+    "optional": True,
+}
 assert all(
     volume["name"] != "runtime-data"
     for volume in deployment["spec"]["template"]["spec"]["volumes"]
@@ -430,5 +491,7 @@ printf 'postgresql_multi_replica_configuration=pass\n'
 printf 'terraform_postgresql_url_in_state=false\n'
 printf 'terraform_postgresql_plan_apply_destroy=pass\n'
 printf 'identity_rbac_configuration=pass\n'
+printf 'model_effect_default_disabled=pass\n'
+printf 'model_provider_secret_refs=pass\n'
 printf 'workload_execution=not_validated_agentless_control_plane\n'
 printf 'cleanup=pass\n'

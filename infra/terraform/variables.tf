@@ -229,6 +229,101 @@ variable "helm_timeout_seconds" {
   }
 }
 
+variable "model_execution_enabled" {
+  description = "Enables the bounded model gateway. Keep false until provider, privacy and cost controls are approved."
+  type        = bool
+  default     = false
+}
+
+variable "model_effect_authority_enabled" {
+  description = "Enables durable model effects on governed run artifacts. Requires model_execution_enabled."
+  type        = bool
+  default     = false
+}
+
+variable "model_provider" {
+  description = "Exact allowlisted model provider selected server-side."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.model_provider == "" || contains(["openai", "anthropic", "deepseek", "moonshot", "llama"], lower(trimspace(var.model_provider)))
+    error_message = "model_provider must be empty or an allowlisted provider."
+  }
+}
+
+variable "model_egress_allowed_hosts" {
+  description = "Comma-separated exact HTTPS hosts permitted for model egress."
+  type        = string
+  default     = ""
+}
+
+variable "model_max_output_tokens" {
+  description = "Maximum output tokens for one governed model effect."
+  type        = number
+  default     = 512
+
+  validation {
+    condition     = var.model_max_output_tokens >= 1 && var.model_max_output_tokens <= 8192 && floor(var.model_max_output_tokens) == var.model_max_output_tokens
+    error_message = "model_max_output_tokens must be an integer between 1 and 8192."
+  }
+}
+
+variable "model_existing_secret" {
+  description = "Optional pre-provisioned Kubernetes Secret containing provider API keys. Secret values never enter Terraform state."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.model_existing_secret == "" || can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.model_existing_secret))
+    error_message = "model_existing_secret must be empty or a valid Kubernetes Secret name."
+  }
+}
+
+variable "model_api_key_secret_keys" {
+  description = "Data-key names inside model_existing_secret. Values are names only."
+  type = object({
+    openai    = string
+    anthropic = string
+    deepseek  = string
+    moonshot  = string
+    llama     = string
+  })
+  default = {
+    openai    = "openai-api-key"
+    anthropic = "anthropic-api-key"
+    deepseek  = "deepseek-api-key"
+    moonshot  = "moonshot-api-key"
+    llama     = "llama-api-key"
+  }
+
+  validation {
+    condition = alltrue([
+      for value in values(var.model_api_key_secret_keys) :
+      can(regex("^[A-Za-z0-9._-]+$", value))
+    ])
+    error_message = "Every model_api_key_secret_keys value must be a valid Secret data key."
+  }
+}
+
+variable "model_names" {
+  description = "Provider-specific model identifiers configured outside the Secret."
+  type = object({
+    openai    = string
+    anthropic = string
+    deepseek  = string
+    moonshot  = string
+    llama     = string
+  })
+  default = {
+    openai    = ""
+    anthropic = ""
+    deepseek  = ""
+    moonshot  = ""
+    llama     = ""
+  }
+}
+
 variable "social_publication_enabled" {
   description = "Explicitly enables governed external social publication. Keep false until provider terms, account authorization and release gates are approved."
   type        = bool
