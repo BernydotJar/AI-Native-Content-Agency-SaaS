@@ -266,11 +266,11 @@
     },
     {
       "description": "Real model inference is not attached to governed runs because durable outbound intent/receipt and economic replay protection are absent.",
-      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; bounded provider protocols pass, but API status reports durable_outbound_receipt=false and automatic_run_integration=false; docs/runbooks/model-gateway.md defines the next gate.",
+      "evidence": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b; SQLite/PostgreSQL schema v4 intent stores, one fenced executor, server-side provider/model binding, durable output/receipt, compatible replay, unknown blocking, idempotent reconciliation, run-attachment/audit repair, admin session+CSRF API and zero-socket MockTransport fixture are implemented. Real credentials, egress and spend remain unused; exact-head CI is pending.",
       "id": "F-034",
       "owner": "INC-015",
       "severity": "HIGH",
-      "status": "OPEN"
+      "status": "CLOSED"
     },
     {
       "id": "F-035",
@@ -338,6 +338,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
-  "updated_at": "2026-07-24T07:25:45Z"
+  "source_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
+  "updated_at": "2026-07-24T22:09:46Z"
 }

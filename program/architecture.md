@@ -26,7 +26,7 @@ The multi-stage OCI image serves the SPA and FastAPI as UID/GID 10001. Helm and 
 - Browser sessions use HttpOnly/SameSite cookies and an in-memory CSRF token.
 - Machine clients use bearer credentials.
 - Runs, sessions, audit events, authentication-rate buckets, and memories are stored in SQLite or PostgreSQL.
-- Inbound run/Greenlight commands use durable idempotency, exact artifact binding, revocation and fencing. Social publication additionally uses a default-disabled durable intent, unique effect binding, provider receipt, unknown-state reconciliation and audit repair; model providers remain disconnected.
+- Inbound run/Greenlight commands use durable idempotency, exact artifact binding, revocation and fencing. Social publication and explicit model operations each use separate default-disabled durable intents, unique effect bindings, fenced execution, bounded provider receipts, unknown-state reconciliation and audit repair.
 - Station tools remain deterministic sandbox adapters. Social publication adapters exist behind an explicit disabled-by-default authority; no real publication, media generation, navigation, repository mutation or ad spend was performed.
 - Reviewed external candidates are immutable package data exposed through authenticated GET endpoints; `video-use` remains `reviewed_disabled` with no executable adapter.
 

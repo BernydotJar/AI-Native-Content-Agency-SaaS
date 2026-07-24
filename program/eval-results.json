@@ -573,9 +573,30 @@
       "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
       "observed": "Source 8eb0cf7dee9b3400351a8b7d603a94666253f1e7; 32 packages evaluated; SBOM, vulnerability/license policy, provenance and offline Cosign verification PASS; source_dirty=false; registry_publication=false.",
       "result": "PASS"
+    },
+    {
+      "id": "INC015-LOCKED-WHEEL-AUTHORITY",
+      "scope": "durable model-effect API, SQLite persistence, RBAC and regression",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "245 locked-wheel tests PASS with 23 PostgreSQL-only skips; exact-once execution, default-disabled behavior, browser-session/CSRF authority, replay repair, unknown reconciliation and secret-free public contracts pass.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC015-EXACT-HEAD-DELIVERY-GATES",
+      "scope": "PostgreSQL v4, installed image, Helm/Terraform and supply chain",
+      "command": "delegated to exact-head CI after push",
+      "observed": "Not rerun after the final infrastructure edits because the operator explicitly requested no further demos or tests. The branch contains the gates and remains default-disabled; CI is the next arbiter.",
+      "result": "PENDING_REMOTE_CI"
+    },
+    {
+      "id": "INC015-REAL-MODEL-EFFECT",
+      "scope": "real provider prompt transfer and spend",
+      "command": "not run",
+      "observed": "No provider credential, real HTTP request, prompt transfer, token charge or production activation occurred.",
+      "result": "NOT_RUN"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "6d5e59b",
-  "updated_at": "2026-07-23T19:09:24Z"
+  "source_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
+  "updated_at": "2026-07-24T22:09:46Z"
 }

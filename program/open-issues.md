@@ -94,13 +94,13 @@ startup, or publish the exact branch from an authenticated user checkout.
 
 Category: distributed systems / financial safety / integration
 
-Five provider protocols now pass bounded local contracts, but no outbound intent or
-receipt is durable. Connecting the gateway to runs before that boundary could duplicate
-spend after provider success followed by local persistence failure.
+Implemented locally at `6eb7fa070bcbe71c840ca316fc86d369d9d1691b`: schema v4 SQLite/PostgreSQL intent stores, exact binding,
+fenced execution, durable output/receipt, replay reuse, `unknown` blocking, idempotent
+reconciliation, run attachment/audit repair and default-disabled deployment controls.
 
-Exact resume condition: complete INC-015 with SQLite/PostgreSQL intent, fencing,
-receipt-before-completion, replay reuse, pending/unknown blocking, reconciliation and
-failure-injection evidence. Real credentials/egress still require separate approval.
+Exact resume condition: publish the branch and pass exact-head PostgreSQL, package,
+infrastructure and supply-chain CI. Real credentials, prompt transfer, egress and spend still
+require separate provider/privacy/budget/release approval.
 
 
 ## OI-013 — Authorized social publication observation

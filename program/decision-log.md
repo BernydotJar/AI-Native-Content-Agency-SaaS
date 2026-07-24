@@ -174,3 +174,23 @@ Consequence: X/Instagram adapters may exist while remaining disabled by default.
 MockTransport, a socket guard and installed-image tests are verification only; real account
 use, current terms/privacy review, sandbox authorization, deployment and spend remain human
 gates.
+
+## D-017 — Model inference is a durable economic effect
+
+Date: 2026-07-24
+Status: accepted locally at `6eb7fa070bcbe71c840ca316fc86d369d9d1691b`; exact-head CI and real provider authorization pending
+
+Decision: a model operation may execute only after the server resolves the provider/model,
+constructs the governed request, persists an exact tenant/run/station/source/request/cost
+binding and assigns a fencing token. Compatible retries reuse one stored output and receipt.
+Ambiguous outcomes become `unknown`; no automatic retry or Greenlight approval is allowed
+until idempotent administrator reconciliation attaches the result and repairs audit evidence.
+
+Rationale: provider protocol readiness does not prevent duplicate token spend after an
+ambiguous response or local persistence failure. Browser-selected provider/model/prompt state
+also cannot be trusted as economic authority.
+
+Consequence: the five-provider gateway can be invoked explicitly through a governed admin
+command while both model flags remain false by default. Automatic per-station inference,
+real credentials, prompt transfer, egress, budget and production activation remain separate
+human and release gates.

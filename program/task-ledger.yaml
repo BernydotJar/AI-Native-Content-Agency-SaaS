@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-020-social-publication-authority",
+  "branch": "agent/inc-015-model-effect-authority-v2",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -864,7 +864,7 @@
         "SQLite and PostgreSQL transaction contracts",
         "Greenlight fencing architecture"
       ],
-      "context": "Protocol clients exist, but connecting them before a durable outbound intent/receipt would permit duplicate spend after a provider success followed by local persistence failure.",
+      "context": "Durable model-effect authority is implemented at 6eb7fa070bcbe71c840ca316fc86d369d9d1691b with schema v4, server-side provider binding, fenced exact-once execution, replay repair, unknown reconciliation and default-disabled deployment controls.",
       "dependencies": [
         "INC-004",
         "INC-014"
@@ -894,7 +894,7 @@
         "checkpoints/**"
       ],
       "role": "Distributed Systems Engineer / Security Reviewer",
-      "status": "pending",
+      "status": "review",
       "task_id": "INC-015",
       "validation_commands": [
         "focused SQLite and PostgreSQL race and failure-injection tests",
@@ -902,7 +902,10 @@
         "zero-egress mock transport verification"
       ],
       "workstream_id": "WS-08",
-      "write_lock": "unclaimed"
+      "write_lock": "released",
+      "implementation_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
+      "publication_state": "LOCAL_COMMITTED_REMOTE_CI_PENDING",
+      "validation_summary": "245 locked-wheel tests passed; local API and socket-guard MockTransport contracts passed. Final PostgreSQL/package/infrastructure/supply-chain reruns were intentionally delegated to exact-head CI by operator instruction."
     },
     {
       "read_only_paths": [
