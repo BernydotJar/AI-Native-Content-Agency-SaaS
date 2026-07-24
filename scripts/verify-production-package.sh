@@ -102,6 +102,31 @@ if grep -q 'name: AGENCY_X_CONSUMER_KEY\|name: AGENCY_INSTAGRAM_APP_ID' "$TMP_DI
   printf 'default render unexpectedly contains social credentials\n' >&2
   exit 3
 fi
+grep -A1 'name: AGENCY_MODEL_EXECUTION_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
+grep -A1 'name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
+if grep -q 'name: OPENAI_API_KEY\|name: ANTHROPIC_API_KEY\|name: DEEPSEEK_API_KEY\|name: MOONSHOT_API_KEY\|name: LLAMA_API_KEY' "$TMP_DIR/rendered.yaml"; then
+  printf 'default render unexpectedly contains model provider Secret refs\n' >&2
+  exit 3
+fi
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.model.executionEnabled=true \
+  --set runtime.model.effectAuthorityEnabled=true \
+  --set-string runtime.model.selectedProvider=openai \
+  --set-string runtime.model.egressAllowedHosts=api.openai.com \
+  --set-string runtime.model.existingSecret=agency-model \
+  --set-string runtime.model.models.openai=gpt-5.2 \
+  > "$TMP_DIR/model.yaml"
+grep -q 'name: OPENAI_API_KEY' "$TMP_DIR/model.yaml"
+grep -A5 'name: OPENAI_API_KEY' "$TMP_DIR/model.yaml" | grep -q 'name: "agency-model"'
+grep -A1 'name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED' "$TMP_DIR/model.yaml" | grep -q 'value: "true"'
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.model.effectAuthorityEnabled=true >/dev/null 2>&1; then
+  printf 'Helm model authority dependency guard did not fail\n' >&2
+  exit 3
+fi
+printf 'model_effect_default_disabled=pass\n'
+printf 'model_provider_secret_refs=pass\n'
+printf 'model_authority_guard=pass\n'
 "$HELM_BIN" template agency "$CHART_PATH" \
   --set-string runtime.social.existingSecret=agency-social \
   --set-string runtime.social.x.redirectUri="$X_TEST_REDIRECT" \
@@ -206,6 +231,8 @@ build_with_docker() {
     -e "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
     -e "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
     -e "AGENCY_SOCIAL_PUBLICATION_ENABLED=false" \
+    -e "AGENCY_MODEL_EXECUTION_ENABLED=false" \
+    -e "AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED=false" \
     -e "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
@@ -238,6 +265,8 @@ build_with_buildah() {
     --env "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
     --env "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
     --env "AGENCY_SOCIAL_PUBLICATION_ENABLED=false" \
+    --env "AGENCY_MODEL_EXECUTION_ENABLED=false" \
+    --env "AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED=false" \
     --env "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
@@ -386,6 +415,9 @@ assert provider_paths == {"/api/v1/providers": openapi["paths"]["/api/v1/provide
 assert set(provider_paths["/api/v1/providers"]) == {"get"}
 assert "/api/v1/model-completions" not in openapi["paths"]
 assert "/api/v1/providers/execute" not in openapi["paths"]
+assert set(openapi["paths"]["/api/v1/runs/{run_id}/model-effects/{station}"]) == {"post"}
+assert set(openapi["paths"]["/api/v1/runs/{run_id}/model-effects"]) == {"get"}
+assert set(openapi["paths"]["/api/v1/model-effects/{effect_id}/reconcile"]) == {"post"}
 
 assert listing["tenant_id"] == "local-verification"
 assert len(listing["integrations"]) == 1
@@ -456,7 +488,7 @@ assert set(openapi["paths"]["/api/v1/runs/{run_id}/social-publications"]) == {"g
 assert set(openapi["paths"]["/api/v1/social-publications/{intent_id}/reconcile"]) == {"post"}
 print("provider_registry=pass")
 print("model_gateway_disabled=pass")
-print("model_gateway_execution_route_absent=pass")
+print("model_effect_routes_governed=pass")
 print("provider_secrets_absent=pass")
 print("integration_review_manifest=pass")
 print("integration_read_only_api=pass")
@@ -484,6 +516,18 @@ curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/run.headers" \
   -d '{"title":"Packaged runtime verification","objective":"Verify the production browser session package","audience":"production reviewers","platforms":["x","instagram"],"budget_cents":0,"campaign_goal":"verification"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs" > "$TMP_DIR/run.json"
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/run.json")
+WRITER_ARTIFACT_ID=$(python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); print(next(item["artifact_id"] for item in data["artifacts"] if item["created_by"] == "writer"))' "$TMP_DIR/run.json")
+set +e
+model_effect_disabled_status=$(curl -sS -o "$TMP_DIR/model-effect-disabled.json" -w '%{http_code}' \
+  -b "$TMP_DIR/cookies.txt" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H 'Idempotency-Key: package-model-effect-disabled-0001' \
+  -H 'X-Request-ID: package-model-effect-disabled-0001' \
+  -d "{"source_artifact_id":"$WRITER_ARTIFACT_ID","instruction":"Package default-disabled verification","max_cost_micros":0}" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/model-effects/writer")
+set -e
+[ "$model_effect_disabled_status" = "409" ]
 curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/approval.headers" \
   -H 'Content-Type: application/json' \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
@@ -523,7 +567,8 @@ python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/session.json" \
   "$TMP_DIR/metrics.txt" "$TMP_DIR/session.headers" "$TMP_DIR/run.headers" \
   "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status" \
   "$TMP_DIR/viewer-denied.json" "$viewer_create_status" \
-  "$TMP_DIR/publication-disabled.json" "$publication_disabled_status" <<'PYCHECK'
+  "$TMP_DIR/publication-disabled.json" "$publication_disabled_status" \
+  "$TMP_DIR/model-effect-disabled.json" "$model_effect_disabled_status" <<'PYCHECK'
 import json
 import sys
 
@@ -558,18 +603,23 @@ viewer_create_status = sys.argv[15]
 with open(sys.argv[16], encoding="utf-8") as handle:
     publication_disabled = json.load(handle)
 publication_disabled_status = sys.argv[17]
+with open(sys.argv[18], encoding="utf-8") as handle:
+    model_effect_disabled = json.load(handle)
+model_effect_disabled_status = sys.argv[19]
 
 assert health == {
     "status": "ok",
     "version": "0.7.0",
     "runtime_mode": "deterministic_sandbox",
     "external_side_effects_enabled": False,
+    "model_effect_authority_enabled": False,
     "auth_configured": True,
     "individual_identity_configured": True,
 }
 assert ready["status"] == "ready"
 assert ready["auth_configured"] is True
 assert ready["individual_identity_configured"] is True
+assert ready["model_effect_authority_enabled"] is False
 assert "credential_count" not in ready
 assert ready["login_rate_limit"] == {
     "credential_max_failures": 3,
@@ -579,6 +629,9 @@ assert ready["login_rate_limit"] == {
 assert viewer_create_status == "403"
 assert publication_disabled_status == "409"
 assert publication_disabled["code"] == "social_publication_unavailable"
+assert model_effect_disabled_status == "409"
+assert model_effect_disabled["code"] == "model_effect_unavailable"
+assert model_effect_disabled["detail"] == "model effect authority is disabled"
 assert publication_disabled["detail"] == "social publication is disabled"
 assert viewer_denied == {
     "code": "authorization_denied",
@@ -660,6 +713,7 @@ print("request_correlation=pass")
 print("api_vertical_slice=pass")
 print("publisher_gate=pass")
 print("social_publication_default_disabled=pass")
+print("model_effect_default_disabled=pass")
 print("sandbox_package=pass")
 print("durable_audit=pass")
 print("prometheus_metrics=pass")
@@ -733,10 +787,13 @@ if [ -f "$TMP_DIR/runtime.log" ] && {
 fi
 
 PUBLICATION_FIXTURE="$REPOSITORY_ROOT/scripts/fixtures/verify_social_publication_package.py"
+MODEL_EFFECT_FIXTURE="$REPOSITORY_ROOT/scripts/fixtures/verify_model_effect_package.py"
 case "$RUNTIME_KIND" in
   docker)
     docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
       --network none -i "$IMAGE_TAG" python - < "$PUBLICATION_FIXTURE"
+    docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+      --network none -i "$IMAGE_TAG" python - < "$MODEL_EFFECT_FIXTURE"
     ;;
   buildah)
     MOCK_RUNTIME_ID=agency-production-publication-mock
@@ -745,6 +802,9 @@ case "$RUNTIME_KIND" in
     buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
       --storage-driver vfs run --isolation chroot \
       "$MOCK_RUNTIME_ID" python - < "$PUBLICATION_FIXTURE"
+    buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
+      --storage-driver vfs run --isolation chroot \
+      "$MOCK_RUNTIME_ID" python - < "$MODEL_EFFECT_FIXTURE"
     ;;
   *)
     printf 'unsupported runtime for publication package fixture: %s\n' "$RUNTIME_KIND" >&2

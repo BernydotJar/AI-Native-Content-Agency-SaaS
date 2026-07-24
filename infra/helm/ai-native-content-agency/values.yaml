@@ -38,6 +38,27 @@ runtime:
     cookieName: "agency_session"
     cookieSecure: true
     ttlSeconds: 28800
+  model:
+    # Both switches remain off until provider/privacy/economic authority is explicitly approved.
+    executionEnabled: false
+    effectAuthorityEnabled: false
+    selectedProvider: ""
+    egressAllowedHosts: ""
+    maxOutputTokens: 512
+    # Optional pre-provisioned Secret. The chart never creates or stores provider keys.
+    existingSecret: ""
+    apiKeyKeys:
+      openai: "openai-api-key"
+      anthropic: "anthropic-api-key"
+      deepseek: "deepseek-api-key"
+      moonshot: "moonshot-api-key"
+      llama: "llama-api-key"
+    models:
+      openai: ""
+      anthropic: ""
+      deepseek: ""
+      moonshot: ""
+      llama: ""
   social:
     # External publication remains off until an operator explicitly enables the durable authority.
     publicationEnabled: false

@@ -28,9 +28,23 @@ from .auth import (
     TenantPrincipal,
 )
 from .memory import MemoryStore, SQLiteMemory, utc_now
-from .model_gateway import ModelGateway
+from .model_effect import (
+    ModelEffectAuthority,
+    ModelEffectBlockedError,
+    ModelEffectCommand,
+    ModelEffectResult,
+    ModelEffectUnavailableError,
+    ModelEffectUnknownError,
+)
+from .model_effect_postgres import PostgresModelEffectStore
+from .model_effect_store import (
+    ModelEffectConflictError,
+    ModelEffectStateError,
+    SQLiteModelEffectStore,
+)
+from .model_gateway import ModelGateway, ModelRequest
 from .integrations import IntegrationContractError, IntegrationRegistry
-from .models import ExecutionRun, MissionBrief, Platform, RunStatus
+from .models import AgentRole, Artifact, ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
 from .orchestrator import AgencyOrchestrator, GreenlightError
 from .postgres import (
@@ -308,6 +322,20 @@ class SocialPublicationReconcileRequest(BaseModel):
     note: str = Field(min_length=1, max_length=1000)
 
 
+class ModelEffectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_artifact_id: str = Field(min_length=1, max_length=256)
+    instruction: str = Field(min_length=1, max_length=4096)
+    max_cost_micros: int = Field(ge=0, le=10_000_000_000)
+
+
+class ModelEffectReconcileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    output_text: str = Field(min_length=1, max_length=1_000_000)
+    provider_request_id: str = Field(default="", max_length=256)
+    note: str = Field(min_length=1, max_length=1000)
+
+
 class BrowserSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     api_key: str = Field(min_length=24, max_length=512)
@@ -361,12 +389,14 @@ class RuntimeService:
             self.run_store = PostgresRunStore(self._postgres_database)
             self.social_store = PostgresSocialOAuthStore(self._postgres_database)
             self.publication_store = PostgresSocialPublicationStore(self._postgres_database)
+            self.model_effect_store = PostgresModelEffectStore(self._postgres_database)
             self.storage_backend = "postgresql"
             self.shared_state = True
         else:
             self.run_store = SQLiteRunStore(database_path)
             self.social_store = SQLiteSocialOAuthStore(database_path)
             self.publication_store = SQLiteSocialPublicationStore(database_path)
+            self.model_effect_store = SQLiteModelEffectStore(database_path)
             self.storage_backend = "sqlite"
             self.shared_state = False
         self._tenant_runtimes: Dict[str, TenantRuntime] = {}
@@ -393,6 +423,7 @@ class RuntimeService:
         self.run_store.check()
         self.social_store.check()
         self.publication_store.check()
+        self.model_effect_store.check()
 
     @staticmethod
     def _brief(request: BriefRequest) -> MissionBrief:
@@ -802,7 +833,10 @@ class RuntimeService:
             if replay is not None:
                 return CommandResult(replay, True)
             runtime = self._runtime_for(tenant_id)
-            runtime.orchestrator.restore_run(self.run_store.get(tenant_id, run_id))
+            current_run = self.run_store.get(tenant_id, run_id)
+            if decision == "approved":
+                self.assert_model_effects_ready_for_approval(tenant_id, current_run)
+            runtime.orchestrator.restore_run(current_run)
             if decision == "approved":
                 run = runtime.orchestrator.approve(run_id, subject_id, request.note)
             else:
@@ -1055,6 +1089,214 @@ class RuntimeService:
             idempotency_key=idempotency_key,
         )
 
+    def prepare_model_effect(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        station: str,
+        request: ModelEffectRequest,
+        idempotency_key: str,
+    ) -> ModelEffectCommand:
+        try:
+            role = AgentRole(station)
+        except ValueError as error:
+            raise KeyError("model station not found") from error
+        if role not in {
+            AgentRole.RESEARCH,
+            AgentRole.STRATEGIST,
+            AgentRole.GROWTH,
+            AgentRole.WRITER,
+            AgentRole.MEDIA,
+            AgentRole.RISK,
+        }:
+            raise KeyError("model station not found")
+        run = self.get(tenant_id, run_id)
+        if run.status is not RunStatus.AWAITING_GREENLIGHT:
+            raise GreenlightError("run is not awaiting Greenlight")
+        source = next(
+            (
+                artifact
+                for artifact in run.artifacts
+                if artifact.artifact_id == request.source_artifact_id
+            ),
+            None,
+        )
+        if source is None or source.artifact_id not in run.state_for(role).artifact_ids:
+            raise GreenlightError("source artifact is not owned by the target station")
+        canonical_source = canonical_json(to_primitive(source))
+        source_hash = hashlib.sha256(canonical_source.encode("utf-8")).hexdigest()
+        instruction = request.instruction.strip()
+        instruction_hash = hashlib.sha256(instruction.encode("utf-8")).hexdigest()
+        model_request_id = stable_id(
+            "model-request",
+            tenant_id,
+            run_id,
+            station,
+            source.artifact_id,
+            source_hash,
+            instruction_hash,
+            request.max_cost_micros,
+            length=48,
+        )
+        return ModelEffectCommand(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            station=station,
+            source_artifact_id=source.artifact_id,
+            source_artifact_hash=source_hash,
+            instruction=instruction,
+            max_cost_micros=request.max_cost_micros,
+            idempotency_key=idempotency_key,
+            request=ModelRequest(
+                request_id=model_request_id,
+                system=(
+                    "Return only a bounded model-assisted refinement of the supplied "
+                    "governed artifact. Do not invent evidence, publication, spend or "
+                    "external execution."
+                ),
+                user=canonical_json(
+                    {
+                        "instruction": instruction,
+                        "source_artifact": to_primitive(source),
+                    }
+                ),
+            ),
+        )
+
+    def attach_model_effect_result(
+        self,
+        *,
+        principal: TenantPrincipal,
+        request_id: str,
+        result: ModelEffectResult,
+        action: str,
+    ) -> ExecutionRun:
+        role = AgentRole(result.station)
+        artifact_id = stable_id(
+            "artifact", "model-completion", result.effect_id, length=48
+        )
+        payload = {
+            "effect_id": result.effect_id,
+            "provider_id": result.provider_id,
+            "model": result.model,
+            "source_artifact_id": result.source_artifact_id,
+            "source_artifact_hash": result.source_artifact_hash,
+            "output_text": result.output_text,
+            "output_sha256": result.output_sha256,
+            "receipt": dict(result.receipt),
+        }
+        event_id = stable_id(
+            "model-effect-audit",
+            principal.tenant_id,
+            action,
+            result.effect_id,
+            length=48,
+        )
+        event_payload = {
+            "run_id": result.run_id,
+            "station": result.station,
+            "source_artifact_id": result.source_artifact_id,
+            "source_artifact_hash": result.source_artifact_hash,
+            "artifact_id": artifact_id,
+            "output_sha256": result.output_sha256,
+            "provider_id": result.provider_id,
+            "model": result.model,
+            "execution_fencing_token": result.execution_fencing_token,
+        }
+        lock_id = stable_id(
+            "model-effect-attachment",
+            principal.tenant_id,
+            result.effect_id,
+            length=48,
+        )
+        with self._lock, self.run_store.command_lock(lock_id):
+            run = self.run_store.get(principal.tenant_id, result.run_id)
+            if run.status is not RunStatus.AWAITING_GREENLIGHT:
+                raise RunStateConflictError(
+                    "model effect output cannot modify this run state"
+                )
+            existing = next(
+                (item for item in run.artifacts if item.artifact_id == artifact_id),
+                None,
+            )
+            if existing is not None:
+                if (
+                    existing.kind != "model_completion"
+                    or existing.created_by is not role
+                    or canonical_json(existing.payload) != canonical_json(payload)
+                ):
+                    raise RunStateConflictError(
+                        "model effect artifact conflicts with durable state"
+                    )
+                if self.run_store.audit_event(principal.tenant_id, event_id) is None:
+                    self.run_store.append_audit(
+                        principal.tenant_id,
+                        AuditWrite(
+                            request_id=request_id,
+                            action=action,
+                            resource_type="model_effect",
+                            resource_id=result.effect_id,
+                            actor=_actor(principal),
+                            payload=event_payload,
+                            event_id=event_id,
+                        ),
+                    )
+                return run
+            source = next(
+                item
+                for item in run.artifacts
+                if item.artifact_id == result.source_artifact_id
+            )
+            run.artifacts.append(
+                Artifact(
+                    artifact_id=artifact_id,
+                    kind="model_completion",
+                    title="Model-assisted {} refinement".format(result.station),
+                    created_by=role,
+                    payload=payload,
+                    evidence_ids=source.evidence_ids,
+                )
+            )
+            state = run.state_for(role)
+            if artifact_id not in state.artifact_ids:
+                state.artifact_ids.append(artifact_id)
+            return self.run_store.save(
+                principal.tenant_id,
+                run,
+                expected_status=RunStatus.AWAITING_GREENLIGHT.value,
+                audit=AuditWrite(
+                    request_id=request_id,
+                    action=action,
+                    resource_type="model_effect",
+                    resource_id=result.effect_id,
+                    actor=_actor(principal),
+                    payload=event_payload,
+                    event_id=event_id,
+                ),
+            )
+
+    def assert_model_effects_ready_for_approval(
+        self, tenant_id: str, run: ExecutionRun
+    ) -> None:
+        effects = self.model_effect_store.list_for_run(tenant_id, run.run_id)
+        unresolved = [
+            item.effect_id
+            for item in effects
+            if item.status in {"pending", "unknown"}
+        ]
+        if unresolved:
+            raise GreenlightError("model effect outcome is unresolved")
+        artifact_ids = {item.artifact_id for item in run.artifacts}
+        for effect in effects:
+            if effect.status != "succeeded":
+                continue
+            expected = stable_id(
+                "artifact", "model-completion", effect.effect_id, length=48
+            )
+            if expected not in artifact_ids:
+                raise GreenlightError("model effect output is not attached to the run")
+
     def record_publication_event(
         self,
         *,
@@ -1136,6 +1378,8 @@ class RuntimeService:
             self.social_store.close()
             if hasattr(self.publication_store, "close"):
                 self.publication_store.close()
+            if hasattr(self.model_effect_store, "close"):
+                self.model_effect_store.close()
             self.run_store.close()
 
 
@@ -1162,6 +1406,32 @@ def _publication_document(intent: object) -> Dict[str, object]:
         "execution_fencing_token": intent.execution_fencing_token,
         "provider_container_id": intent.provider_container_id,
         "provider_post_id": intent.provider_post_id,
+        "receipt": dict(intent.receipt),
+        "failure_reason": intent.failure_reason,
+        "created_at": intent.created_at,
+        "updated_at": intent.updated_at,
+        "completed_at": intent.completed_at,
+        "revoked_at": intent.revoked_at,
+    }
+
+
+def _model_effect_document(intent: object) -> Dict[str, object]:
+    return {
+        "effect_id": intent.effect_id,
+        "run_id": intent.run_id,
+        "station": intent.station,
+        "source_artifact_id": intent.source_artifact_id,
+        "source_artifact_hash": intent.source_artifact_hash,
+        "provider_id": intent.provider_id,
+        "model": intent.model,
+        "endpoint_host": intent.endpoint_host,
+        "request_sha256": intent.request_sha256,
+        "max_output_tokens": intent.max_output_tokens,
+        "max_cost_micros": intent.max_cost_micros,
+        "binding_digest": intent.binding_digest,
+        "status": intent.status,
+        "execution_fencing_token": intent.execution_fencing_token,
+        "output_sha256": intent.output_sha256,
         "receipt": dict(intent.receipt),
         "failure_reason": intent.failure_reason,
         "created_at": intent.created_at,
@@ -1206,6 +1476,7 @@ def create_app(
     postgres_schema_mode: Optional[str] = None,
     max_request_body_bytes: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
+    model_transport: Optional[httpx.BaseTransport] = None,
     social_environment: Optional[Mapping[str, str]] = None,
     social_oauth_transport: Optional[httpx.BaseTransport] = None,
     social_publication_transport: Optional[httpx.BaseTransport] = None,
@@ -1330,7 +1601,30 @@ def create_app(
     )
     provider_source = os.environ if provider_environment is None else provider_environment
     provider_registry = ProviderRegistry.from_environment(provider_source)
-    model_gateway = ModelGateway.from_environment(provider_source)
+    model_gateway = ModelGateway.from_environment(
+        provider_source,
+        transport=model_transport,
+    )
+    raw_model_effect_enabled = str(
+        provider_source.get("AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED", "false")
+    ).strip().lower()
+    if raw_model_effect_enabled not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+        "0",
+        "false",
+        "no",
+        "off",
+    }:
+        raise ValueError("AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED must be boolean")
+    model_effect_enabled = raw_model_effect_enabled in {"1", "true", "yes", "on"}
+    model_effect_authority = ModelEffectAuthority(
+        store=service.model_effect_store,
+        gateway=model_gateway,
+        enabled=model_effect_enabled,
+    )
     social_source = os.environ if social_environment is None else social_environment
     social_channel_registry = SocialChannelRegistry.from_environment(social_source)
     raw_social_keys = str(
@@ -1447,9 +1741,9 @@ def create_app(
             "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
             "state, durable rate limiting, HttpOnly browser sessions and audit "
             "evidence. Explicit administrator OAuth endpoints may contact allowlisted "
-            "social identity providers. Social publication is disabled by default and "
-            "requires an explicit server flag plus durable intent authority; model spend "
-            "and media rendering remain disabled."
+            "social identity providers. Social publication is disabled by default. Model "
+            "execution is also disabled by default; each requires a separate server flag "
+            "plus durable intent authority. Media rendering remains disabled."
         ),
         lifespan=lifespan,
     )
@@ -1460,6 +1754,7 @@ def create_app(
     app.state.integration_registry = IntegrationRegistry.default()
     app.state.provider_registry = provider_registry
     app.state.model_gateway = model_gateway
+    app.state.model_effect_authority = model_effect_authority
     app.state.social_channel_registry = social_channel_registry
     app.state.social_oauth_service = social_oauth_service
     app.state.social_publication_authority = social_publication_authority
@@ -1844,6 +2139,19 @@ def create_app(
             )
         return authorized
 
+    def require_model_executor(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        authorized = _authorize(request, principal, "model:execute")
+        if authorized.auth_method != "session" or not authorized.session_id:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="browser_session_required",
+                detail="browser session is required",
+            )
+        return authorized
+
     def require_social_callback_manager(
         request: Request,
         principal: TenantPrincipal = Depends(require_principal),
@@ -1904,7 +2212,10 @@ def create_app(
             "status": "ok",
             "version": VERSION,
             "runtime_mode": "deterministic_sandbox",
-            "external_side_effects_enabled": False,
+            "external_side_effects_enabled": bool(
+                publication_enabled or model_effect_authority.enabled
+            ),
+            "model_effect_authority_enabled": model_effect_authority.enabled,
             "auth_configured": authenticator.configured,
             "individual_identity_configured": authenticator.individual_identity_configured,
         }
@@ -1931,6 +2242,7 @@ def create_app(
             "shared_state": service.shared_state,
             "durable_run_store": service.shared_state or db_path != ":memory:",
             "durable_run_worker": run_worker.running,
+            "model_effect_authority_enabled": model_effect_authority.enabled,
             "individual_identity_configured": authenticator.individual_identity_configured,
             "login_rate_limit": {
                 "credential_max_failures": max_failures,
@@ -2064,11 +2376,196 @@ def create_app(
     def list_providers(
         principal: TenantPrincipal = Depends(require_identity_reader),
     ) -> Dict[str, object]:
+        gateway_status = dict(app.state.model_gateway.public_status())
+        gateway_status["durable_outbound_receipt"] = model_effect_authority.enabled
         return {
             "tenant_id": principal.tenant_id,
             "providers": app.state.provider_registry.public_list(),
-            "gateway": app.state.model_gateway.public_status(),
+            "gateway": gateway_status,
         }
+
+    @app.post(
+        "/api/v1/runs/{run_id}/model-effects/{station}",
+        status_code=status.HTTP_201_CREATED,
+        tags=["model-effects"],
+    )
+    def execute_model_effect(
+        run_id: str,
+        station: str,
+        effect_request: ModelEffectRequest,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_model_executor),
+    ) -> Dict[str, object]:
+        if not model_effect_authority.enabled:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="model_effect_unavailable",
+                detail="model effect authority is disabled",
+            )
+        try:
+            command = service.prepare_model_effect(
+                tenant_id=principal.tenant_id,
+                run_id=run_id,
+                station=station,
+                request=effect_request,
+                idempotency_key=idempotency_key,
+            )
+            result = model_effect_authority.execute(command)
+            updated_run = service.attach_model_effect_result(
+                principal=principal,
+                request_id=request.state.request_id,
+                result=result,
+                action="model.effect_succeeded",
+            )
+            if result.replayed:
+                response.status_code = status.HTTP_200_OK
+                response.headers["X-Command-Replayed"] = "true"
+            return {
+                "effect": result.public_dict(),
+                "run": _run_document(updated_run, principal.tenant_id),
+            }
+        except ModelEffectConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
+        except ModelEffectBlockedError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="model_effect_blocked",
+                detail="model effect is blocked by durable state",
+            ) from error
+        except ModelEffectUnknownError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="model_effect_unknown",
+                detail="model effect outcome requires reconciliation",
+            ) from error
+        except (ModelEffectUnavailableError, GreenlightError, RunStateConflictError, ValueError) as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="model_effect_unavailable",
+                detail="model effect is not ready",
+            ) from error
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+
+    @app.get(
+        "/api/v1/runs/{run_id}/model-effects",
+        tags=["model-effects"],
+    )
+    def list_model_effects(
+        run_id: str,
+        principal: TenantPrincipal = Depends(require_run_reader),
+    ) -> Dict[str, object]:
+        service.get(principal.tenant_id, run_id)
+        effects = service.model_effect_store.list_for_run(
+            principal.tenant_id,
+            run_id,
+        )
+        return {
+            "tenant_id": principal.tenant_id,
+            "run_id": run_id,
+            "effects": [_model_effect_document(item) for item in effects],
+        }
+
+    @app.post(
+        "/api/v1/model-effects/{effect_id}/reconcile",
+        tags=["model-effects"],
+    )
+    def reconcile_model_effect(
+        effect_id: str,
+        reconciliation: ModelEffectReconcileRequest,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_model_executor),
+    ) -> Dict[str, object]:
+        try:
+            existing = service.model_effect_store.get(
+                principal.tenant_id,
+                effect_id,
+            )
+            output_text = reconciliation.output_text.strip()
+            output_sha256 = hashlib.sha256(output_text.encode("utf-8")).hexdigest()
+            note_sha256 = hashlib.sha256(
+                reconciliation.note.strip().encode("utf-8")
+            ).hexdigest()
+            idempotency_digest = hashlib.sha256(
+                idempotency_key.encode("utf-8")
+            ).hexdigest()
+            reconciliation_binding_digest = hashlib.sha256(
+                canonical_json(
+                    {
+                        "effect_id": existing.effect_id,
+                        "effect_binding_digest": existing.binding_digest,
+                        "output_sha256": output_sha256,
+                        "provider_request_id": reconciliation.provider_request_id,
+                        "note_sha256": note_sha256,
+                    }
+                ).encode("utf-8")
+            ).hexdigest()
+            receipt = {
+                "provider_id": existing.provider_id,
+                "model": existing.model,
+                "provider_request_id": reconciliation.provider_request_id,
+                "request_sha256": existing.request_sha256,
+                "output_sha256": output_sha256,
+                "reconciled": True,
+                "reconciliation_note_sha256": note_sha256,
+                "reconciliation_idempotency_digest": idempotency_digest,
+                "reconciliation_binding_digest": reconciliation_binding_digest,
+                "effect_binding_digest": existing.binding_digest,
+                "execution_fencing_token": existing.execution_fencing_token,
+                "max_cost_micros": existing.max_cost_micros,
+            }
+            replayed = existing.status == "succeeded"
+            reconciled = service.model_effect_store.reconcile_success(
+                principal.tenant_id,
+                effect_id,
+                output_text,
+                receipt,
+            )
+            result = ModelEffectResult.from_intent(reconciled, replayed=replayed)
+            updated_run = service.attach_model_effect_result(
+                principal=principal,
+                request_id=request.state.request_id,
+                result=result,
+                action="model.effect_reconciled",
+            )
+            if replayed:
+                response.headers["X-Command-Replayed"] = "true"
+            return {
+                "effect": result.public_dict(),
+                "run": _run_document(updated_run, principal.tenant_id),
+            }
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        except ModelEffectStateError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="model_effect_reconciliation_conflict",
+                detail="model effect reconciliation conflicts with durable state",
+            ) from error
+        except (GreenlightError, RunStateConflictError, ValueError) as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="model_effect_reconciliation_unavailable",
+                detail="model effect reconciliation is not ready",
+            ) from error
 
     @app.get("/api/v1/integrations", tags=["integrations"])
     def list_integrations(

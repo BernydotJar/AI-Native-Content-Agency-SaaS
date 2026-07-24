@@ -595,7 +595,7 @@ def create_postgresql_backup(
     now: datetime | None = None,
 ) -> Path:
     environment, source_hash = connection_from_environment(database_url_environment)
-    if runtime_schema_version(environment) != "3":
+    if runtime_schema_version(environment) != "4":
         raise BackupError("PostgreSQL runtime schema version is unsupported for backup")
     destination = ensure_directory(Path(output_dir))
     created_at = now or utc_now()
@@ -649,7 +649,7 @@ def restore_postgresql_backup(
         postgres_restore_command(environment["PGDATABASE"]) + [str(backup_path)],
         environment,
     )
-    if runtime_schema_version(environment) != "3":
+    if runtime_schema_version(environment) != "4":
         raise BackupError("restored PostgreSQL runtime schema version is invalid")
     restored_tables = non_system_table_count(environment)
     if restored_tables <= 0:

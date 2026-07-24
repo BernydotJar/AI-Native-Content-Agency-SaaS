@@ -44,6 +44,15 @@ class ModelRequest:
 
 
 @dataclass(frozen=True)
+class ModelRequestDescriptor:
+    provider_id: str
+    model: str
+    endpoint_host: str
+    request_sha256: str
+    max_output_tokens: int
+
+
+@dataclass(frozen=True)
 class ModelReceipt:
     provider_id: str
     model: str
@@ -291,26 +300,21 @@ class ModelGateway:
         if self._client is not None:
             self._client.close()
 
+    def describe(self, request: ModelRequest) -> ModelRequestDescriptor:
+        if not self._policy.enabled or self._provider is None or self._client is None:
+            raise ModelGatewayDisabledError("model gateway execution is disabled")
+        normalized = self._validated_request(request)
+        return self._descriptor(normalized)
+
     def complete(self, request: ModelRequest) -> ModelResult:
         if not self._policy.enabled or self._provider is None or self._client is None:
             raise ModelGatewayDisabledError("model gateway execution is disabled")
         normalized = self._validated_request(request)
+        descriptor = self._descriptor(normalized)
         url, headers, body = self._provider_request(self._provider, normalized)
         payload, response_headers = self._post_json(url, headers, body)
         text, usage = self._parse_response(self._provider.protocol, payload)
         provider_request_id = self._provider_request_id(response_headers, payload)
-        request_hash = hashlib.sha256(
-            canonical_json(
-                {
-                    "provider_id": self._provider.provider_id,
-                    "model": self._provider.model,
-                    "request_id": normalized.request_id,
-                    "system": normalized.system,
-                    "user": normalized.user,
-                    "max_output_tokens": self._policy.max_output_tokens,
-                }
-            ).encode("utf-8")
-        ).hexdigest()
         output_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
         receipt = ModelReceipt(
             provider_id=self._provider.provider_id,
@@ -319,10 +323,32 @@ class ModelGateway:
             input_tokens=usage[0],
             output_tokens=usage[1],
             total_tokens=usage[2],
-            request_sha256=request_hash,
+            request_sha256=descriptor.request_sha256,
             output_sha256=output_hash,
         )
         return ModelResult(text=text, receipt=receipt)
+
+    def _descriptor(self, request: ModelRequest) -> ModelRequestDescriptor:
+        assert self._provider is not None
+        request_hash = hashlib.sha256(
+            canonical_json(
+                {
+                    "provider_id": self._provider.provider_id,
+                    "model": self._provider.model,
+                    "request_id": request.request_id,
+                    "system": request.system,
+                    "user": request.user,
+                    "max_output_tokens": self._policy.max_output_tokens,
+                }
+            ).encode("utf-8")
+        ).hexdigest()
+        return ModelRequestDescriptor(
+            provider_id=self._provider.provider_id,
+            model=self._provider.model,
+            endpoint_host=self._provider.endpoint_host,
+            request_sha256=request_hash,
+            max_output_tokens=self._policy.max_output_tokens,
+        )
 
     def _validated_request(self, request: ModelRequest) -> ModelRequest:
         request_id = request.request_id.strip()

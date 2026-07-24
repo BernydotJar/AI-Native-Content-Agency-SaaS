@@ -175,7 +175,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             with raw_connection(MIGRATION_DATABASE_URL) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "UPDATE runtime_schema_meta SET value = '3' WHERE key = 'schema_version'"
+                    "UPDATE runtime_schema_meta SET value = '4' WHERE key = 'schema_version'"
                 )
 
     def test_two_instances_share_run_audit_and_greenlight_state(self):
