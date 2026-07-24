@@ -96,6 +96,9 @@ export default function App() {
   const [socialActionChannel, setSocialActionChannel] = useState<RuntimeSocialChannel["channel_id"] | null>(null);
   const [socialActionError, setSocialActionError] = useState("");
   const [socialNotice, setSocialNotice] = useState("");
+  const [publicationBusy, setPublicationBusy] = useState<RuntimeSocialChannel["channel_id"] | null>(null);
+  const [publicationError, setPublicationError] = useState("");
+  const [publicationNotice, setPublicationNotice] = useState("");
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
@@ -180,6 +183,44 @@ export default function App() {
     } catch (error) {
       setSocialActionError(error instanceof Error ? error.message : "No se pudo iniciar la autorización social.");
       setSocialActionChannel(null);
+    }
+  };
+
+  const publishSocialArtifact = async (
+    channelId: RuntimeSocialChannel["channel_id"],
+    artifactId: string,
+    mediaArtifactId: string | null,
+    idempotencyKey: string,
+  ) => {
+    if (!session || session.role !== "admin" || !run?.greenlight) {
+      throw new Error("Se requiere una sesión admin y Greenlight activo.");
+    }
+    setPublicationBusy(channelId);
+    setPublicationError("");
+    setPublicationNotice("");
+    try {
+      const result = await runtimeApi.publishSocial(
+        run.run_id,
+        channelId,
+        artifactId,
+        mediaArtifactId,
+        run.greenlight.greenlight_id,
+        run.greenlight.fencing_token,
+        session.csrf_token,
+        idempotencyKey,
+      );
+      const label = channelId === "x" ? "X" : "Instagram";
+      setPublicationNotice(
+        `${label} confirmó la publicación ${result.provider_post_id ?? result.intent_id}. Receipt durable registrado.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "No se pudo determinar el resultado de la publicación.";
+      setPublicationError(message);
+      throw error;
+    } finally {
+      setPublicationBusy(null);
     }
   };
 
@@ -301,7 +342,12 @@ export default function App() {
             <CampaignOutputPanel
               run={run}
               socialChannels={socialChannels}
+              publicationAllowed={session?.role === "admin"}
+              publicationBusy={publicationBusy}
+              publicationError={publicationError}
+              publicationNotice={publicationNotice}
               onOpenSettings={() => setSettingsOpen(true)}
+              onPublish={publishSocialArtifact}
             />
           </div>
         </section>
@@ -314,7 +360,7 @@ export default function App() {
             <span>Sesión, estados, artefactos y Greenlight provienen del backend gobernado.</span>
           </div>
           <div className="text-right font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">
-            <span className="block">Runtime determinista local; no publica contenido ni ejecuta gasto externo.</span>
+            <span className="block">Los efectos externos requieren autoridad durable y Greenlight exacto.</span>
             <span className="mt-1 block">Las credenciales de proveedores permanecen server-side.</span>
           </div>
         </div>

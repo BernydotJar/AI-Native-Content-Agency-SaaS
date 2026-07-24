@@ -65,8 +65,22 @@ from .social_oauth_service import (
     social_bootstrap_requested,
 )
 from .social_oauth_store import PostgresSocialOAuthStore, SQLiteSocialOAuthStore
+from .social_publication import (
+    SocialPublicationAuthority,
+    SocialPublicationBlockedError,
+    SocialPublicationCommand,
+    SocialPublicationProviderRejectedError,
+    SocialPublicationUnavailableError,
+    SocialPublicationUnknownError,
+)
+from .social_publication_postgres import PostgresSocialPublicationStore
+from .social_publication_store import (
+    SQLiteSocialPublicationStore,
+    SocialPublicationConflictError,
+    SocialPublicationStateError,
+)
 from .tools import build_sandbox_toolset
-from .utils import stable_id, to_primitive
+from .utils import canonical_json, stable_id, to_primitive
 from .version import VERSION
 
 
@@ -279,6 +293,21 @@ class GreenlightRevocationRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=2000)
 
 
+class SocialPublicationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    artifact_id: str = Field(min_length=1, max_length=256)
+    media_artifact_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    greenlight_id: str = Field(min_length=1, max_length=256)
+    greenlight_fencing_token: int = Field(ge=0)
+
+
+class SocialPublicationReconcileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider_post_id: str = Field(min_length=1, max_length=256)
+    provider_request_id: str = Field(default="", max_length=256)
+    note: str = Field(min_length=1, max_length=1000)
+
+
 class BrowserSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     api_key: str = Field(min_length=24, max_length=512)
@@ -331,11 +360,13 @@ class RuntimeService:
             )
             self.run_store = PostgresRunStore(self._postgres_database)
             self.social_store = PostgresSocialOAuthStore(self._postgres_database)
+            self.publication_store = PostgresSocialPublicationStore(self._postgres_database)
             self.storage_backend = "postgresql"
             self.shared_state = True
         else:
             self.run_store = SQLiteRunStore(database_path)
             self.social_store = SQLiteSocialOAuthStore(database_path)
+            self.publication_store = SQLiteSocialPublicationStore(database_path)
             self.storage_backend = "sqlite"
             self.shared_state = False
         self._tenant_runtimes: Dict[str, TenantRuntime] = {}
@@ -361,6 +392,7 @@ class RuntimeService:
     def check(self) -> None:
         self.run_store.check()
         self.social_store.check()
+        self.publication_store.check()
 
     @staticmethod
     def _brief(request: BriefRequest) -> MissionBrief:
@@ -613,6 +645,7 @@ class RuntimeService:
 
     def execute_one_queued_run(self, worker_id: str) -> bool:
         for tenant_id, run_id in self.run_store.executable_runs(limit=100):
+            runtime = self._runtime_for(tenant_id)
             lock_id = "run-execution:{}:{}".format(tenant_id, run_id)
             with self.run_store.command_lock(lock_id):
                 run = self.run_store.get(tenant_id, run_id)
@@ -645,7 +678,6 @@ class RuntimeService:
                     tenant_id, run, expected_status=expected_status
                 )
 
-                runtime = self._runtime_for(tenant_id)
                 runtime.orchestrator.restore_run(run)
                 try:
                     run = runtime.orchestrator.advance(run_id)
@@ -915,6 +947,157 @@ class RuntimeService:
         if budget_cents < 0 or budget_cents > greenlight.authorized_budget_cents:
             raise GreenlightError("Greenlight budget is not authorized")
 
+    def prepare_social_publication(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        channel_id: str,
+        request: SocialPublicationRequest,
+        idempotency_key: str,
+    ) -> SocialPublicationCommand:
+        if channel_id not in {"x", "instagram"}:
+            raise KeyError("social channel not found")
+        run = self.get(tenant_id, run_id)
+        greenlight = run.greenlight
+        if (
+            run.status is not RunStatus.COMPLETED
+            or greenlight is None
+            or not greenlight.active
+        ):
+            raise GreenlightError("Greenlight is not active")
+        self.assert_greenlight_effect_authorized(
+            tenant_id,
+            run_id,
+            request.greenlight_id,
+            request.greenlight_fencing_token,
+            greenlight.approved_artifact_ids,
+            greenlight.approved_artifact_hashes,
+            channel_id,
+            0,
+        )
+        artifact_by_id = {item.artifact_id: item for item in run.artifacts}
+        artifact = artifact_by_id.get(request.artifact_id)
+        if artifact is None or artifact.kind != "copy_deck":
+            raise GreenlightError("approved copy artifact is unavailable")
+        try:
+            artifact_index = greenlight.approved_artifact_ids.index(artifact.artifact_id)
+        except ValueError as error:
+            raise GreenlightError("copy artifact is not approved") from error
+        approved_envelope_hash = greenlight.approved_artifact_hashes[artifact_index]
+        canonical_artifact = canonical_json(artifact)
+        actual_envelope_hash = stable_id(
+            "sha256", canonical_artifact, length=64
+        )
+        if actual_envelope_hash != approved_envelope_hash:
+            raise GreenlightError("copy artifact hash does not match Greenlight")
+        artifact_hash = hashlib.sha256(
+            canonical_artifact.encode("utf-8")
+        ).hexdigest()
+        variants = artifact.payload.get("variants")
+        if not isinstance(variants, Mapping):
+            raise GreenlightError("copy artifact variants are invalid")
+        variant = variants.get(channel_id)
+        if not isinstance(variant, Mapping):
+            raise GreenlightError("copy artifact has no authorized channel variant")
+        parts = []
+        for field in ("hook", "body", "cta"):
+            value = variant.get(field)
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+        if not parts:
+            raise GreenlightError("copy artifact channel variant is empty")
+        content = "\n\n".join(parts)
+
+        media_url = None
+        media_hash = None
+        if channel_id == "instagram":
+            if request.media_artifact_id is None:
+                raise GreenlightError("Instagram requires an approved media artifact")
+            media = artifact_by_id.get(request.media_artifact_id)
+            if media is None or media.kind != "publication_media":
+                raise GreenlightError("approved publication media is unavailable")
+            try:
+                media_index = greenlight.approved_artifact_ids.index(media.artifact_id)
+            except ValueError as error:
+                raise GreenlightError("media artifact is not approved") from error
+            expected_media_hash = greenlight.approved_artifact_hashes[media_index]
+            actual_media_artifact_hash = stable_id(
+                "sha256", canonical_json(media), length=64
+            )
+            if actual_media_artifact_hash != expected_media_hash:
+                raise GreenlightError("media artifact hash does not match Greenlight")
+            if media.payload.get("channel") != "instagram":
+                raise GreenlightError("media artifact channel does not match")
+            raw_url = media.payload.get("media_url")
+            raw_hash = media.payload.get("sha256")
+            if not isinstance(raw_url, str) or not isinstance(raw_hash, str):
+                raise GreenlightError("publication media contract is invalid")
+            media_url = raw_url
+            media_hash = raw_hash
+
+        connection = self.social_store.get_connection(tenant_id, channel_id)
+        if connection is None:
+            raise GreenlightError("authorized social account is not connected")
+        return SocialPublicationCommand(
+            tenant_id=tenant_id,
+            channel_id=channel_id,
+            account_id=connection.account_id,
+            run_id=run_id,
+            artifact_id=artifact.artifact_id,
+            artifact_hash=artifact_hash,
+            content=content,
+            media_url=media_url,
+            media_hash=media_hash,
+            greenlight_id=request.greenlight_id,
+            greenlight_fencing_token=request.greenlight_fencing_token,
+            budget_cents=0,
+            idempotency_key=idempotency_key,
+        )
+
+    def record_publication_event(
+        self,
+        *,
+        principal: TenantPrincipal,
+        request_id: str,
+        action: str,
+        intent_id: str,
+        payload: Mapping[str, object],
+    ) -> None:
+        event_id = stable_id(
+            "social-publication-audit",
+            principal.tenant_id,
+            action,
+            intent_id,
+            length=48,
+        )
+        expected_payload = dict(payload)
+        with self._lock, self.run_store.command_lock(event_id):
+            existing = self.run_store.audit_event(principal.tenant_id, event_id)
+            if existing is not None:
+                if (
+                    existing.action != action
+                    or existing.resource_type != "social_publication"
+                    or existing.resource_id != intent_id
+                    or dict(existing.payload) != expected_payload
+                ):
+                    raise AuditEventConflictError(
+                        "social publication audit event conflicts with durable state"
+                    )
+                return
+            self.run_store.append_audit(
+                principal.tenant_id,
+                AuditWrite(
+                    request_id=request_id,
+                    action=action,
+                    resource_type="social_publication",
+                    resource_id=intent_id,
+                    actor=_actor(principal),
+                    payload=expected_payload,
+                    event_id=event_id,
+                ),
+            )
+
     def record_social_event(
         self,
         *,
@@ -951,6 +1134,8 @@ class RuntimeService:
                 runtime.memory.close()
             self._tenant_runtimes.clear()
             self.social_store.close()
+            if hasattr(self.publication_store, "close"):
+                self.publication_store.close()
             self.run_store.close()
 
 
@@ -960,6 +1145,30 @@ def _run_document(run: ExecutionRun, tenant_id: str) -> Dict[str, object]:
     document["sandbox"] = True
     document["external_side_effects_enabled"] = False
     return document
+
+
+def _publication_document(intent: object) -> Dict[str, object]:
+    return {
+        "intent_id": intent.intent_id,
+        "channel_id": intent.channel_id,
+        "account_id": intent.account_id,
+        "run_id": intent.run_id,
+        "artifact_id": intent.artifact_id,
+        "artifact_hash": intent.artifact_hash,
+        "media_hash": intent.media_hash,
+        "greenlight_id": intent.greenlight_id,
+        "greenlight_fencing_token": intent.greenlight_fencing_token,
+        "status": intent.status,
+        "execution_fencing_token": intent.execution_fencing_token,
+        "provider_container_id": intent.provider_container_id,
+        "provider_post_id": intent.provider_post_id,
+        "receipt": dict(intent.receipt),
+        "failure_reason": intent.failure_reason,
+        "created_at": intent.created_at,
+        "updated_at": intent.updated_at,
+        "completed_at": intent.completed_at,
+        "revoked_at": intent.revoked_at,
+    }
 
 
 def _actor(principal: TenantPrincipal) -> str:
@@ -999,6 +1208,7 @@ def create_app(
     provider_environment: Optional[Mapping[str, str]] = None,
     social_environment: Optional[Mapping[str, str]] = None,
     social_oauth_transport: Optional[httpx.BaseTransport] = None,
+    social_publication_transport: Optional[httpx.BaseTransport] = None,
     run_worker_poll_interval_seconds: Optional[float] = None,
     run_lease_seconds: Optional[int] = None,
 ) -> FastAPI:
@@ -1129,6 +1339,13 @@ def create_app(
     active_social_key = str(
         social_source.get("AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID", "")
     ).strip()
+    raw_publication_enabled = str(
+        social_source.get("AGENCY_SOCIAL_PUBLICATION_ENABLED", "false")
+    ).strip().lower()
+    if raw_publication_enabled not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        raise ValueError("AGENCY_SOCIAL_PUBLICATION_ENABLED must be boolean")
+    publication_enabled = raw_publication_enabled in {"1", "true", "yes", "on"}
+    social_cipher: Optional[SocialTokenCipher] = None
     if raw_social_keys or active_social_key:
         social_cipher = SocialTokenCipher.from_environment(
             raw_social_keys or None, active_social_key or None
@@ -1185,6 +1402,24 @@ def create_app(
                 "social token encryption keys are required for token bootstrap"
             )
         social_oauth_service = None
+    if publication_enabled and social_cipher is None:
+        raise ValueError(
+            "social token encryption keys are required when publication is enabled"
+        )
+    if social_cipher is None:
+        social_publication_authority: Optional[SocialPublicationAuthority] = None
+    else:
+        x_private = social_channel_registry.private_config("x")
+        x_consumer_key, x_consumer_secret = x_private.credentials
+        social_publication_authority = SocialPublicationAuthority(
+            store=service.publication_store,
+            connection_store=service.social_store,
+            cipher=social_cipher,
+            x_consumer_key=x_consumer_key,
+            x_consumer_secret=x_consumer_secret,
+            enabled=publication_enabled,
+            transport=social_publication_transport,
+        )
     metrics = RuntimeMetrics()
     run_worker = DurableRunWorker(
         service.execute_one_queued_run,
@@ -1200,6 +1435,8 @@ def create_app(
             run_worker.stop()
             if social_oauth_service is not None:
                 social_oauth_service.close()
+            if social_publication_authority is not None:
+                social_publication_authority.close()
             model_gateway.close()
             service.close()
 
@@ -1210,8 +1447,9 @@ def create_app(
             "Tenant-scoped deterministic sandbox with individual RBAC, shared PostgreSQL "
             "state, durable rate limiting, HttpOnly browser sessions and audit "
             "evidence. Explicit administrator OAuth endpoints may contact allowlisted "
-            "social identity providers. No endpoint publishes content, spends budget, "
-            "or renders media."
+            "social identity providers. Social publication is disabled by default and "
+            "requires an explicit server flag plus durable intent authority; model spend "
+            "and media rendering remain disabled."
         ),
         lifespan=lifespan,
     )
@@ -1224,6 +1462,7 @@ def create_app(
     app.state.model_gateway = model_gateway
     app.state.social_channel_registry = social_channel_registry
     app.state.social_oauth_service = social_oauth_service
+    app.state.social_publication_authority = social_publication_authority
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -1592,6 +1831,19 @@ def create_app(
             )
         return authorized
 
+    def require_social_publisher(
+        request: Request,
+        principal: TenantPrincipal = Depends(require_mutation_principal),
+    ) -> TenantPrincipal:
+        authorized = _authorize(request, principal, "social:publish")
+        if authorized.auth_method != "session" or not authorized.session_id:
+            raise PublicApiError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                code="browser_session_required",
+                detail="browser session is required",
+            )
+        return authorized
+
     def require_social_callback_manager(
         request: Request,
         principal: TenantPrincipal = Depends(require_principal),
@@ -1617,8 +1869,21 @@ def create_app(
         document["oauth_start_available"] = bool(
             social_oauth_service is not None and contract.configured and not connected
         )
-        document["publishing_available"] = False
-        document["external_effects_enabled"] = False
+        publication_ready = bool(
+            social_publication_authority is not None
+            and social_publication_authority.enabled
+            and contract.configured
+            and connected
+        )
+        document["publication_runtime_configured"] = (
+            social_publication_authority is not None
+        )
+        document["publication_execution_enabled"] = bool(
+            social_publication_authority is not None
+            and social_publication_authority.enabled
+        )
+        document["publishing_available"] = publication_ready
+        document["external_effects_enabled"] = publication_ready
         document["connected_account"] = (
             None
             if record is None
@@ -2004,6 +2269,17 @@ def create_app(
             app.state.social_channel_registry.get(channel_id)
         except KeyError as error:
             raise HTTPException(status_code=404, detail="social channel not found") from error
+        connection = service.social_store.get_connection(
+            principal.tenant_id, channel_id
+        )
+        revoked_intents = 0
+        if connection is not None:
+            revoked_intents = service.publication_store.revoke_unused(
+                principal.tenant_id,
+                channel_id=channel_id,
+                account_id=connection.account_id,
+                reason="account_disconnected",
+            )
         disconnected = service.social_store.delete_connection(
             principal.tenant_id, channel_id
         )
@@ -2013,7 +2289,10 @@ def create_app(
                 request_id=request.state.request_id,
                 action="social.disconnected",
                 channel_id=channel_id,
-                payload={"tokens_deleted": True},
+                payload={
+                    "tokens_deleted": True,
+                    "pending_publication_intents_revoked": revoked_intents,
+                },
             )
         return {
             "tenant_id": principal.tenant_id,
@@ -2021,6 +2300,212 @@ def create_app(
             "connection_state": "not_connected",
             "disconnected": disconnected,
         }
+
+    @app.post(
+        "/api/v1/runs/{run_id}/social-publications/{channel_id}",
+        status_code=status.HTTP_201_CREATED,
+        tags=["social-publication"],
+    )
+    def publish_social_artifact(
+        run_id: str,
+        channel_id: str,
+        publication_request: SocialPublicationRequest,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_social_publisher),
+    ) -> Dict[str, object]:
+        if (
+            social_publication_authority is None
+            or not social_publication_authority.enabled
+        ):
+            metrics.social_publication("blocked")
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="social_publication_unavailable",
+                detail="social publication is disabled",
+            )
+        try:
+            command = service.prepare_social_publication(
+                tenant_id=principal.tenant_id,
+                run_id=run_id,
+                channel_id=channel_id,
+                request=publication_request,
+                idempotency_key=idempotency_key,
+            )
+            result = social_publication_authority.execute(command)
+            if result.replayed:
+                metrics.social_publication("replayed")
+                response.status_code = status.HTTP_200_OK
+                response.headers["X-Command-Replayed"] = "true"
+            else:
+                metrics.social_publication("succeeded")
+            service.record_publication_event(
+                principal=principal,
+                request_id=request.state.request_id,
+                action="social.publication_succeeded",
+                intent_id=result.intent_id,
+                payload={
+                    "channel_id": result.channel_id,
+                    "account_id": result.account_id,
+                    "run_id": result.run_id,
+                    "artifact_id": result.artifact_id,
+                    "artifact_hash": result.artifact_hash,
+                    "greenlight_id": result.greenlight_id,
+                    "greenlight_fencing_token": result.greenlight_fencing_token,
+                    "execution_fencing_token": result.execution_fencing_token,
+                    "provider_post_id": result.provider_post_id,
+                    "provider_container_id": result.provider_container_id,
+                },
+            )
+            return result.public_dict()
+        except SocialPublicationConflictError as error:
+            metrics.social_publication("blocked")
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
+        except SocialPublicationBlockedError as error:
+            metrics.social_publication("blocked")
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="social_publication_blocked",
+                detail="social publication is blocked by durable state",
+            ) from error
+        except SocialPublicationProviderRejectedError as error:
+            metrics.social_publication("rejected")
+            raise PublicApiError(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                code="social_publication_rejected",
+                detail="social provider rejected publication",
+            ) from error
+        except SocialPublicationUnknownError as error:
+            metrics.social_publication("unknown")
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="social_publication_unknown",
+                detail="social publication outcome requires reconciliation",
+            ) from error
+        except (
+            SocialPublicationUnavailableError,
+            GreenlightError,
+            ValueError,
+        ) as error:
+            metrics.social_publication("blocked")
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="social_publication_unavailable",
+                detail="social publication is not ready",
+            ) from error
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+
+    @app.get(
+        "/api/v1/runs/{run_id}/social-publications",
+        tags=["social-publication"],
+    )
+    def list_social_publications(
+        run_id: str,
+        principal: TenantPrincipal = Depends(require_run_reader),
+    ) -> Dict[str, object]:
+        service.get(principal.tenant_id, run_id)
+        intents = service.publication_store.list_for_run(
+            principal.tenant_id, run_id
+        )
+        return {
+            "tenant_id": principal.tenant_id,
+            "run_id": run_id,
+            "publications": [_publication_document(item) for item in intents],
+        }
+
+    @app.post(
+        "/api/v1/social-publications/{intent_id}/reconcile",
+        tags=["social-publication"],
+    )
+    def reconcile_social_publication(
+        intent_id: str,
+        reconciliation: SocialPublicationReconcileRequest,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_social_publisher),
+    ) -> Dict[str, object]:
+        try:
+            existing = service.publication_store.get(
+                principal.tenant_id, intent_id
+            )
+            note_sha256 = hashlib.sha256(
+                reconciliation.note.encode("utf-8")
+            ).hexdigest()
+            reconciliation_binding_digest = hashlib.sha256(
+                canonical_json(
+                    {
+                        "provider_post_id": reconciliation.provider_post_id,
+                        "provider_request_id": reconciliation.provider_request_id,
+                        "reconciliation_note_sha256": note_sha256,
+                    }
+                ).encode("utf-8")
+            ).hexdigest()
+            receipt = {
+                "provider": existing.channel_id,
+                "provider_post_id": reconciliation.provider_post_id,
+                "provider_request_id": reconciliation.provider_request_id,
+                "reconciled": True,
+                "reconciliation_note_sha256": note_sha256,
+                "reconciliation_idempotency_digest": hashlib.sha256(
+                    idempotency_key.encode("utf-8")
+                ).hexdigest(),
+                "reconciliation_binding_digest": reconciliation_binding_digest,
+                "artifact_hash": existing.artifact_hash,
+                "binding_digest": existing.binding_digest,
+            }
+            replayed = existing.status == "succeeded"
+            reconciled = service.publication_store.reconcile_success(
+                principal.tenant_id,
+                intent_id,
+                reconciliation.provider_post_id,
+                receipt,
+            )
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        except SocialPublicationStateError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="social_publication_reconciliation_conflict",
+                detail="publication reconciliation conflicts with durable state",
+            ) from error
+        if replayed:
+            metrics.social_publication("replayed")
+            response.headers["X-Command-Replayed"] = "true"
+        else:
+            metrics.social_publication("reconciled")
+        service.record_publication_event(
+            principal=principal,
+            request_id=request.state.request_id,
+            action="social.publication_reconciled",
+            intent_id=reconciled.intent_id,
+            payload={
+                "channel_id": reconciled.channel_id,
+                "run_id": reconciled.run_id,
+                "artifact_id": reconciled.artifact_id,
+                "artifact_hash": reconciled.artifact_hash,
+                "provider_post_id": reconciled.provider_post_id,
+                "reconciled": True,
+                "reconciliation_binding_digest": reconciliation_binding_digest,
+            },
+        )
+        return _publication_document(reconciled)
 
     @app.get("/api/v1/audit-events", tags=["audit"])
     def list_audit_events(
@@ -2203,18 +2688,35 @@ def create_app(
         principal: TenantPrincipal = Depends(require_greenlight_revoker),
     ) -> Dict[str, object]:
         try:
-            return _greenlight_result(
-                service.revoke_greenlight(
-                    principal.tenant_id,
-                    run_id,
-                    revocation_request,
-                    request.state.request_id,
-                    _actor(principal),
-                    principal.subject_id,
-                    idempotency_key,
-                ),
+            result = service.revoke_greenlight(
                 principal.tenant_id,
-                "revoked",
+                run_id,
+                revocation_request,
+                request.state.request_id,
+                _actor(principal),
+                principal.subject_id,
+                idempotency_key,
+            )
+            if not result.replayed:
+                revoked_intents = service.publication_store.revoke_unused(
+                    principal.tenant_id,
+                    run_id=run_id,
+                    reason="greenlight_revoked",
+                )
+                if revoked_intents:
+                    service.record_publication_event(
+                        principal=principal,
+                        request_id=request.state.request_id,
+                        action="social.publication_intents_revoked",
+                        intent_id=run_id,
+                        payload={
+                            "run_id": run_id,
+                            "reason": "greenlight_revoked",
+                            "pending_intents_revoked": revoked_intents,
+                        },
+                    )
+            return _greenlight_result(
+                result, principal.tenant_id, "revoked"
             )
         except IdempotencyConflictError as error:
             raise PublicApiError(

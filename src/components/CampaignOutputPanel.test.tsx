@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { RuntimeRun, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { CampaignOutputPanel } from "./CampaignOutputPanel";
@@ -59,6 +59,8 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     connection_state: "not_connected",
     oauth_start_available: false,
     oauth_runtime_configured: false,
+    publication_runtime_configured: false,
+    publication_execution_enabled: false,
     publishing_available: false,
     external_effects_enabled: false,
     credential_location: "server_environment",
@@ -83,6 +85,8 @@ const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
     connection_state: "not_connected",
     oauth_start_available: false,
     oauth_runtime_configured: false,
+    publication_runtime_configured: false,
+    publication_execution_enabled: false,
     publishing_available: false,
     external_effects_enabled: false,
     credential_location: "server_environment",
@@ -146,6 +150,81 @@ describe("CampaignOutputPanel", () => {
     const authenticateInstagram = screen.getByRole("button", { name: /Autenticar cuenta/i });
     fireEvent.click(authenticateInstagram);
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires a second explicit confirmation before publishing X", async () => {
+    const completed: RuntimeRun = {
+      ...RUN,
+      status: "completed",
+      greenlight: {
+        greenlight_id: "greenlight-publish-001",
+        decision: "approved",
+        reviewer: "approver@example.com",
+        note: "Approved",
+        approved_artifact_ids: ["copy-001"],
+        approved_artifact_hashes: ["hash-001"],
+        authorized_channels: ["x", "instagram"],
+        authorized_budget_cents: 0,
+        fencing_token: 0,
+        revoked_at: null,
+        revoked_by: "",
+        revocation_reason: "",
+      },
+    };
+    const connectedX: RuntimeSocialChannel = {
+      ...SOCIAL_CHANNELS[0],
+      configured: true,
+      configuration_state: "ready_for_authentication",
+      credentials_configured: true,
+      callback_configured: true,
+      callback_url: "https://agency.example/api/v1/social-channels/x/oauth/callback",
+      connection_state: "connected",
+      oauth_start_available: false,
+      oauth_runtime_configured: true,
+      publication_runtime_configured: true,
+      publication_execution_enabled: true,
+      publishing_available: true,
+      external_effects_enabled: true,
+      connected_account: {
+        account_id: "x-account-001",
+        account_username: "approved_x",
+        scopes: ["tweet.read", "tweet.write", "users.read"],
+        token_expires_at: null,
+        connected_at: "2026-07-23T20:30:00+00:00",
+        token_storage: "encrypted_server_side",
+      },
+    };
+    const onPublish = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CampaignOutputPanel
+        run={completed}
+        socialChannels={[connectedX, SOCIAL_CHANNELS[1]]}
+        publicationAllowed
+        onPublish={onPublish}
+      />,
+    );
+
+    const publishButtons = screen.getAllByRole("button", { name: /^Publicar$/i });
+    expect(publishButtons[0]).toBeEnabled();
+    expect(publishButtons[1]).toBeDisabled();
+    fireEvent.click(publishButtons[0]);
+
+    expect(onPublish).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: /Publicar en X/i })).toBeInTheDocument();
+    expect(screen.getByText("@approved_x")).toBeInTheDocument();
+    expect(screen.getByText(/intent durable se reservará antes/i)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Confirmar publicación externa/i }),
+    );
+    await waitFor(() => expect(onPublish).toHaveBeenCalledTimes(1));
+    expect(onPublish).toHaveBeenCalledWith(
+      "x",
+      "copy-001",
+      null,
+      expect.stringMatching(/^publish-run-output-001-x-/),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("shows missing rendered media after Greenlight instead of claiming Instagram is publishable", () => {

@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -47,6 +48,7 @@ class DurableRunExecutionTests(unittest.TestCase):
     def test_async_preference_returns_202_and_each_claim_persists_one_checkpoint(self):
         app = self.app()
         with TestClient(app) as client:
+            app.state.run_worker.stop()
             created = client.post("/api/v1/runs", json=BRIEF, headers=headers())
             self.assertEqual(created.status_code, 202)
             self.assertEqual(created.headers["Preference-Applied"], "respond-async")
@@ -102,9 +104,57 @@ class DurableRunExecutionTests(unittest.TestCase):
                 list(range(1, 15)),
             )
 
+    def test_worker_resolves_tenant_runtime_before_durable_run_lock(self):
+        app = self.app()
+        with TestClient(app) as client:
+            app.state.run_worker.stop()
+            inline = client.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Prior inline runtime"),
+                headers={
+                    "Authorization": "Bearer {}".format(API_KEY),
+                    "Idempotency-Key": "durable-run-prior-inline-0001",
+                },
+            )
+            self.assertEqual(inline.status_code, 201, inline.text)
+            queued = client.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Lock order asynchronous runtime"),
+                headers=headers("durable-run-lock-order-0001"),
+            )
+            self.assertEqual(queued.status_code, 202, queued.text)
+
+            service = app.state.runtime_service
+            events = []
+            original_runtime_for = service._runtime_for
+            original_command_lock = service.run_store.command_lock
+
+            def observed_runtime_for(tenant_id):
+                events.append("runtime")
+                return original_runtime_for(tenant_id)
+
+            @contextmanager
+            def observed_command_lock(lock_id):
+                if lock_id.startswith("run-execution:"):
+                    events.append("run_lock")
+                with original_command_lock(lock_id):
+                    yield
+
+            service._runtime_for = observed_runtime_for
+            service.run_store.command_lock = observed_command_lock
+            try:
+                self.assertTrue(service.execute_one_queued_run("lock-order-worker"))
+            finally:
+                service._runtime_for = original_runtime_for
+                service.run_store.command_lock = original_command_lock
+
+            self.assertGreaterEqual(len(events), 2)
+            self.assertEqual(events[:2], ["runtime", "run_lock"])
+
     def test_active_lease_blocks_and_expired_lease_is_recovered_after_restart(self):
         first_app = self.app()
         with TestClient(first_app) as first:
+            first_app.state.run_worker.stop()
             created = first.post(
                 "/api/v1/runs",
                 json=dict(BRIEF, title="Lease recovery campaign"),
@@ -125,6 +175,7 @@ class DurableRunExecutionTests(unittest.TestCase):
 
         second_app = self.app()
         with TestClient(second_app) as second:
+            second_app.state.run_worker.stop()
             store = second_app.state.runtime_service.run_store
             recovered = store.get("tenant-async", run_id)
             recovered.execution.lease_expires_at = (
@@ -139,7 +190,9 @@ class DurableRunExecutionTests(unittest.TestCase):
             self.assertEqual(checkpoint.state_for(next(iter(checkpoint.agent_states))).status.value, "processing")
 
     def test_without_preference_preserves_inline_contract(self):
-        with TestClient(self.app()) as client:
+        app = self.app()
+        with TestClient(app) as client:
+            app.state.run_worker.stop()
             inline = client.post(
                 "/api/v1/runs",
                 json=dict(BRIEF, title="Inline compatibility campaign"),

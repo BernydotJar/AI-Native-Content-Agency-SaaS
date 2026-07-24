@@ -243,6 +243,8 @@ describe("runtime API client", () => {
           connection_state: "not_connected",
           oauth_start_available: false,
           oauth_runtime_configured: false,
+          publication_runtime_configured: false,
+          publication_execution_enabled: false,
           publishing_available: false,
           external_effects_enabled: false,
           credential_location: "server_environment",
@@ -349,6 +351,58 @@ describe("runtime API client", () => {
         headers: expect.objectContaining({ "X-CSRF-Token": "csrf-social-001" }),
       }),
     );
+  });
+
+  it("publishes only artifact references through the governed social route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      intent_id: "publication-intent-001",
+      channel_id: "x",
+      account_id: "x-account-001",
+      run_id: "run-001",
+      artifact_id: "copy-001",
+      artifact_hash: "a".repeat(64),
+      greenlight_id: "greenlight-001",
+      greenlight_fencing_token: 0,
+      status: "succeeded",
+      execution_fencing_token: 1,
+      provider_container_id: null,
+      provider_post_id: "x-post-001",
+      receipt: { provider: "x" },
+      replayed: false,
+    }, 201));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.publishSocial(
+      "run-001",
+      "x",
+      "copy-001",
+      null,
+      "greenlight-001",
+      0,
+      "csrf-publication-001",
+      "publication-command-001",
+    )).resolves.toEqual(expect.objectContaining({ provider_post_id: "x-post-001" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/runs/run-001/social-publications/x",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({
+          "X-CSRF-Token": "csrf-publication-001",
+          "Idempotency-Key": "publication-command-001",
+        }),
+      }),
+    );
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    const body = JSON.parse(String(init.body));
+    expect(body).toEqual({
+      artifact_id: "copy-001",
+      media_artifact_id: null,
+      greenlight_id: "greenlight-001",
+      greenlight_fencing_token: 0,
+    });
+    expect(JSON.stringify(body)).not.toMatch(/content|media_url|access_token/i);
   });
 
   it("preserves the safe public error code and request correlation", async () => {

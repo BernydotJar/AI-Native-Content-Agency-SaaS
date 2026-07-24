@@ -28,6 +28,7 @@ TMP_DIR=$(mktemp -d)
 RUNTIME_KIND=""
 RUNTIME_ID=""
 RUNTIME_PID=""
+MOCK_RUNTIME_ID=""
 
 log() {
   printf '[production-verify] %s\n' "$*"
@@ -51,6 +52,10 @@ cleanup() {
   if [ "$RUNTIME_KIND" = "buildah" ] && [ -n "$RUNTIME_ID" ]; then
     buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
       --storage-driver vfs rm "$RUNTIME_ID" >/dev/null 2>&1 || true
+  fi
+  if [ "$RUNTIME_KIND" = "buildah" ] && [ -n "$MOCK_RUNTIME_ID" ]; then
+    buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
+      --storage-driver vfs rm "$MOCK_RUNTIME_ID" >/dev/null 2>&1 || true
   fi
   rm -rf "$TMP_DIR"
 }
@@ -200,6 +205,7 @@ build_with_docker() {
     -e "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
     -e "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
     -e "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
+    -e "AGENCY_SOCIAL_PUBLICATION_ENABLED=false" \
     -e "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" \
     -p "127.0.0.1:${HOST_PORT}:8080" "$IMAGE_TAG")
 }
@@ -231,6 +237,7 @@ build_with_buildah() {
     --env "AGENCY_INSTAGRAM_APP_SECRET=$INSTAGRAM_TEST_SECRET" \
     --env "AGENCY_INSTAGRAM_REDIRECT_URI=$INSTAGRAM_TEST_REDIRECT" \
     --env "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID=$SOCIAL_TEST_ACTIVE_KEY_ID" \
+    --env "AGENCY_SOCIAL_PUBLICATION_ENABLED=false" \
     --env "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON=$SOCIAL_TEST_ENCRYPTION_KEYS_JSON" "$RUNTIME_ID"
   buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
     --storage-driver vfs run --isolation chroot "$RUNTIME_ID" agency-api \
@@ -411,6 +418,8 @@ assert all(item["configuration_state"] == "ready_for_authentication" for item in
 assert all(item["connection_state"] == "not_connected" for item in channels)
 assert all(item["oauth_runtime_configured"] is True for item in channels)
 assert all(item["oauth_start_available"] is True for item in channels)
+assert all(item["publication_runtime_configured"] is True for item in channels)
+assert all(item["publication_execution_enabled"] is False for item in channels)
 assert all(item["publishing_available"] is False for item in channels)
 assert all(item["connected_account"] is None for item in channels)
 assert channels[0]["requires_media"] is False
@@ -442,6 +451,9 @@ assert set(social_paths["/api/v1/social-channels/{channel_id}"]) == {"get"}
 assert set(social_paths["/api/v1/social-channels/{channel_id}/oauth/start"]) == {"post"}
 assert set(social_paths["/api/v1/social-channels/{channel_id}/connection"]) == {"delete"}
 assert "/api/v1/social-channels/{channel_id}/publish" not in openapi["paths"]
+assert set(openapi["paths"]["/api/v1/runs/{run_id}/social-publications/{channel_id}"]) == {"post"}
+assert set(openapi["paths"]["/api/v1/runs/{run_id}/social-publications"]) == {"get"}
+assert set(openapi["paths"]["/api/v1/social-publications/{intent_id}/reconcile"]) == {"post"}
 print("provider_registry=pass")
 print("model_gateway_disabled=pass")
 print("model_gateway_execution_route_absent=pass")
@@ -452,7 +464,7 @@ print("integration_execution_disabled=pass")
 print("social_channel_readiness=pass")
 print("social_secrets_absent=pass")
 print("social_oauth_routes_governed=pass")
-print("social_publication_routes_absent=pass")
+print("social_publication_routes_governed=pass")
 PYINTEGRATION
 curl -fsS -c "$TMP_DIR/cookies.txt" -D "$TMP_DIR/session.headers" \
   -H 'Content-Type: application/json' \
@@ -480,6 +492,20 @@ curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/approval.headers" \
   -d '{"reviewer":"package-verifier","note":"Verified packaged sandbox release through browser session"}' \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/greenlight/approve" \
   > "$TMP_DIR/approved.json"
+COPY_ARTIFACT_ID=$(python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); print(next(item["artifact_id"] for item in data["artifacts"] if item["kind"] == "copy_deck"))' "$TMP_DIR/approved.json")
+GREENLIGHT_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["greenlight"]["greenlight_id"])' "$TMP_DIR/approved.json")
+GREENLIGHT_FENCE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["greenlight"]["fencing_token"])' "$TMP_DIR/approved.json")
+set +e
+publication_disabled_status=$(curl -sS -o "$TMP_DIR/publication-disabled.json" -w '%{http_code}' \
+  -b "$TMP_DIR/cookies.txt" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -H 'Idempotency-Key: package-publication-disabled-0001' \
+  -H 'X-Request-ID: package-publication-disabled-0001' \
+  -d "{\"artifact_id\":\"$COPY_ARTIFACT_ID\",\"media_artifact_id\":null,\"greenlight_id\":\"$GREENLIGHT_ID\",\"greenlight_fencing_token\":$GREENLIGHT_FENCE}" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/social-publications/x")
+set -e
+[ "$publication_disabled_status" = "409" ]
 curl -fsS -b "$TMP_DIR/cookies.txt" \
   "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events" > "$TMP_DIR/audit.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/metrics" > "$TMP_DIR/metrics.txt"
@@ -495,7 +521,9 @@ set -e
 python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/session.json" \
   "$TMP_DIR/resumed-session.json" "$TMP_DIR/run.json" "$TMP_DIR/approved.json" "$TMP_DIR/audit.json" \
   "$TMP_DIR/metrics.txt" "$TMP_DIR/session.headers" "$TMP_DIR/run.headers" \
-  "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status"   "$TMP_DIR/viewer-denied.json" "$viewer_create_status" <<'PYCHECK'
+  "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status" \
+  "$TMP_DIR/viewer-denied.json" "$viewer_create_status" \
+  "$TMP_DIR/publication-disabled.json" "$publication_disabled_status" <<'PYCHECK'
 import json
 import sys
 
@@ -527,6 +555,9 @@ post_revoke_status = sys.argv[13]
 with open(sys.argv[14], encoding="utf-8") as handle:
     viewer_denied = json.load(handle)
 viewer_create_status = sys.argv[15]
+with open(sys.argv[16], encoding="utf-8") as handle:
+    publication_disabled = json.load(handle)
+publication_disabled_status = sys.argv[17]
 
 assert health == {
     "status": "ok",
@@ -546,6 +577,9 @@ assert ready["login_rate_limit"] == {
     "window_seconds": 60,
 }
 assert viewer_create_status == "403"
+assert publication_disabled_status == "409"
+assert publication_disabled["code"] == "social_publication_unavailable"
+assert publication_disabled["detail"] == "social publication is disabled"
 assert viewer_denied == {
     "code": "authorization_denied",
     "detail": "request not permitted",
@@ -625,6 +659,7 @@ print("csrf_protection=pass")
 print("request_correlation=pass")
 print("api_vertical_slice=pass")
 print("publisher_gate=pass")
+print("social_publication_default_disabled=pass")
 print("sandbox_package=pass")
 print("durable_audit=pass")
 print("prometheus_metrics=pass")
@@ -643,7 +678,8 @@ async_status=$(curl -sS -o "$TMP_DIR/async-run.json" -D "$TMP_DIR/async-run.head
 [ "$async_status" = "202" ]
 ASYNC_RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/async-run.json")
 for _ in $(seq 1 100); do
-  curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+  curl -fsS --connect-timeout 2 --max-time 5 \
+    -H "Authorization: Bearer $AUTH_KEY" \
     "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${ASYNC_RUN_ID}" > "$TMP_DIR/async-current.json"
   current_status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$TMP_DIR/async-current.json")
   if [ "$current_status" = "awaiting_greenlight" ]; then
@@ -651,7 +687,8 @@ for _ in $(seq 1 100); do
   fi
   sleep 0.15
 done
-curl -fsS -H "Authorization: Bearer $AUTH_KEY" \
+curl -fsS --connect-timeout 2 --max-time 5 \
+  -H "Authorization: Bearer $AUTH_KEY" \
   "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events?limit=100" > "$TMP_DIR/async-audit.json"
 python3 - "$TMP_DIR/async-run.json" "$TMP_DIR/async-current.json" "$TMP_DIR/async-run.headers" "$TMP_DIR/async-audit.json" <<'PYASYNC'
 import json
@@ -694,5 +731,25 @@ if [ -f "$TMP_DIR/runtime.log" ] && {
   printf 'runtime logs leaked a credential\n' >&2
   exit 5
 fi
+
+PUBLICATION_FIXTURE="$REPOSITORY_ROOT/scripts/fixtures/verify_social_publication_package.py"
+case "$RUNTIME_KIND" in
+  docker)
+    docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=32m \
+      --network none -i "$IMAGE_TAG" python - < "$PUBLICATION_FIXTURE"
+    ;;
+  buildah)
+    MOCK_RUNTIME_ID=agency-production-publication-mock
+    buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
+      --storage-driver vfs from --name "$MOCK_RUNTIME_ID" "$IMAGE_TAG" >/dev/null
+    buildah --root "$TMP_DIR/buildah-root" --runroot "$TMP_DIR/buildah-runroot" \
+      --storage-driver vfs run --isolation chroot \
+      "$MOCK_RUNTIME_ID" python - < "$PUBLICATION_FIXTURE"
+    ;;
+  *)
+    printf 'unsupported runtime for publication package fixture: %s\n' "$RUNTIME_KIND" >&2
+    exit 5
+    ;;
+esac
 
 log "production package verification passed with ${RUNTIME_KIND}"

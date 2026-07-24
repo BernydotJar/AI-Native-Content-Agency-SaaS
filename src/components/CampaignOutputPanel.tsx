@@ -17,11 +17,29 @@ import type {
   RuntimeRun,
   RuntimeSocialChannel,
 } from "../lib/runtimeApi";
+import { PublicationConfirmationDialog } from "./PublicationConfirmationDialog";
 
 interface CampaignOutputPanelProps {
   run: RuntimeRun | null;
   socialChannels?: readonly RuntimeSocialChannel[];
+  publicationAllowed?: boolean;
+  publicationBusy?: RuntimeSocialChannel["channel_id"] | null;
+  publicationError?: string;
+  publicationNotice?: string;
   onOpenSettings?: () => void;
+  onPublish?: (
+    channelId: RuntimeSocialChannel["channel_id"],
+    artifactId: string,
+    mediaArtifactId: string | null,
+    idempotencyKey: string,
+  ) => Promise<void>;
+}
+
+interface PendingPublication {
+  channel: RuntimeSocialChannel;
+  artifactId: string;
+  mediaArtifactId: string | null;
+  idempotencyKey: string;
 }
 
 interface ChannelDraft {
@@ -71,6 +89,18 @@ function draftsFromRun(run: RuntimeRun | null): ChannelDraft[] {
   });
 }
 
+function publicationMediaArtifact(
+  run: RuntimeRun,
+  platform: RuntimePlatform,
+) {
+  return run.artifacts.find((artifact) =>
+    artifact.kind === "publication_media"
+    && artifact.payload.channel === platform
+    && typeof artifact.payload.media_url === "string"
+    && typeof artifact.payload.sha256 === "string"
+  );
+}
+
 function hasRenderedMedia(run: RuntimeRun): boolean {
   return run.artifacts.some((artifact) => {
     if (["rendered_media", "media_asset", "published_media"].includes(artifact.kind)) return true;
@@ -89,7 +119,7 @@ function readinessSteps(
   draft: ChannelDraft,
   channel: RuntimeSocialChannel | undefined,
 ): ReadinessStep[] {
-  const mediaReady = hasRenderedMedia(run);
+  const mediaReady = Boolean(publicationMediaArtifact(run, draft.platform));
   const greenlightReady = activeGreenlight(run, draft.platform);
   const terminalBlock = ["rejected", "revoked", "failed"].includes(run.status);
   const accountConnected = channel?.connection_state === "connected";
@@ -131,12 +161,14 @@ function readinessSteps(
     },
     {
       label: "Publicación",
-      detail: channel?.publishing_available && run.external_side_effects_enabled
-        ? "Efecto externo disponible"
-        : "Bloqueada hasta OAuth y receipt durable",
-      state: channel?.publishing_available && run.external_side_effects_enabled
-        ? "complete"
-        : "blocked",
+      detail: channel?.publishing_available
+        ? "Autoridad exact-once habilitada"
+        : channel?.publication_runtime_configured
+          ? channel.publication_execution_enabled
+            ? "Falta cuenta o configuración del canal"
+            : "Deshabilitada por el operador"
+          : "Runtime de publicación no configurado",
+      state: channel?.publishing_available ? "complete" : "blocked",
     },
   ];
 }
@@ -145,17 +177,20 @@ function publicationLabel(
   run: RuntimeRun,
   platform: RuntimePlatform,
   channel: RuntimeSocialChannel | undefined,
+  publicationAllowed: boolean,
 ): string {
   if (["rejected", "revoked", "failed"].includes(run.status)) return "Publicación bloqueada";
   if (run.status === "awaiting_greenlight") return "Requiere Greenlight";
   if (!activeGreenlight(run, platform)) return "Canal no autorizado";
-  if (channel?.requires_media && !hasRenderedMedia(run)) return "Falta asset visual";
+  if (channel?.requires_media && !publicationMediaArtifact(run, platform)) return "Falta asset visual";
   if (!channel) return "Integración no preparada";
   if (!channel.configured) return `Configura ${channel.display_name}`;
   if (channel.connection_state !== "connected") return "Lista para autenticar";
-  if (!channel.publishing_available || !run.external_side_effects_enabled) {
-    return "Publicación aún deshabilitada";
+  if (!publicationAllowed) return "Requiere administrador";
+  if (!channel.publication_execution_enabled) {
+    return "Deshabilitada por el operador";
   }
+  if (!channel.publishing_available) return "Publicación no disponible";
   return "Listo para publicar";
 }
 
@@ -219,16 +254,55 @@ function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }
 export function CampaignOutputPanel({
   run,
   socialChannels = [],
+  publicationAllowed = false,
+  publicationBusy = null,
+  publicationError = "",
+  publicationNotice = "",
   onOpenSettings,
+  onPublish,
 }: CampaignOutputPanelProps) {
   const [copied, setCopied] = useState<RuntimePlatform | null>(null);
   const [copyError, setCopyError] = useState("");
+  const [pendingPublication, setPendingPublication] = useState<PendingPublication | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const drafts = useMemo(() => draftsFromRun(run), [run]);
   const evidenceCount = new Set(run?.artifacts.flatMap((artifact) => artifact.evidence_ids) ?? []).size;
   const channelMap = useMemo(
     () => new Map(socialChannels.map((channel) => [channel.channel_id, channel])),
     [socialChannels],
   );
+
+  const beginPublication = (
+    draft: ChannelDraft,
+    channel: RuntimeSocialChannel,
+  ) => {
+    if (!run || !onPublish) return;
+    const copyDeck = run.artifacts.find((artifact) => artifact.kind === "copy_deck");
+    if (!copyDeck) return;
+    const media = publicationMediaArtifact(run, draft.platform);
+    setPendingPublication({
+      channel,
+      artifactId: copyDeck.artifact_id,
+      mediaArtifactId: media?.artifact_id ?? null,
+      idempotencyKey: `publish-${run.run_id}-${draft.platform}-${Date.now()}`,
+    });
+  };
+
+  const confirmPublication = async () => {
+    if (!pendingPublication || !onPublish) return;
+    setConfirming(true);
+    try {
+      await onPublish(
+        pendingPublication.channel.channel_id,
+        pendingPublication.artifactId,
+        pendingPublication.mediaArtifactId,
+        pendingPublication.idempotencyKey,
+      );
+      setPendingPublication(null);
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   const copyDraft = async (draft: ChannelDraft) => {
     try {
@@ -276,9 +350,9 @@ export function CampaignOutputPanel({
               const channel = draft.platform === "x" || draft.platform === "instagram"
                 ? channelMap.get(draft.platform)
                 : undefined;
-              const label = publicationLabel(run, draft.platform, channel);
+              const label = publicationLabel(run, draft.platform, channel, publicationAllowed);
               const steps = readinessSteps(run, draft, channel);
-              const canPublish = label === "Listo para publicar";
+              const canPublish = label === "Listo para publicar" && Boolean(onPublish);
               return (
                 <article key={draft.platform} className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -316,14 +390,31 @@ export function CampaignOutputPanel({
                         {channel?.configured ? "Autenticar cuenta" : `Configurar ${PLATFORM_LABELS[draft.platform]}`}
                       </button>
                     )}
-                    <button type="button" disabled={!canPublish} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--primary-color)] px-3 text-xs font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35" title={label}>
-                      <Send size={13} aria-hidden="true" /> Publicar
+                    <button
+                      type="button"
+                      onClick={() => channel && beginPublication(draft, channel)}
+                      disabled={!canPublish || publicationBusy !== null}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--primary-color)] px-3 text-xs font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
+                      title={label}
+                    >
+                      <Send size={13} aria-hidden="true" />
+                      {publicationBusy === draft.platform ? "Publicando…" : "Publicar"}
                     </button>
                   </div>
                 </article>
               );
             })}
           </div>
+          {publicationNotice && (
+            <p role="status" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-3 text-xs text-emerald-100">
+              {publicationNotice}
+            </p>
+          )}
+          {publicationError && !pendingPublication && (
+            <p role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-300/[0.05] p-3 text-xs text-red-100">
+              {publicationError}
+            </p>
+          )}
           {copyError && <p role="alert" className="mt-4 text-xs text-red-200">{copyError}</p>}
           <details className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-zinc-300">
@@ -341,6 +432,16 @@ export function CampaignOutputPanel({
           </details>
         </div>
       )}
+      <PublicationConfirmationDialog
+        open={pendingPublication !== null}
+        channel={pendingPublication?.channel ?? null}
+        artifactId={pendingPublication?.artifactId ?? ""}
+        mediaArtifactId={pendingPublication?.mediaArtifactId ?? null}
+        busy={confirming || publicationBusy !== null}
+        error={publicationError}
+        onClose={() => setPendingPublication(null)}
+        onConfirm={() => void confirmPublication()}
+      />
     </section>
   );
 }

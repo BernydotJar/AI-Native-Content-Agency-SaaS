@@ -39,6 +39,8 @@ runtime:
     cookieSecure: true
     ttlSeconds: 28800
   social:
+    # External publication remains off until an operator explicitly enables the durable authority.
+    publicationEnabled: false
     # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
     existingSecret: ""
     encryptionKeysJsonKey: "social-token-encryption-keys.json"

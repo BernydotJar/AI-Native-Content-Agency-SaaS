@@ -100,6 +100,20 @@
             "severity": "critical",
             "slo": "SLO-BACKUP-FRESHNESS"
           }
+        },
+        {
+          "alert": "AgencySocialPublicationUnknown",
+          "annotations": {
+            "runbook_url": "docs/runbooks/incident-response.md#social-publication-outcome-unknown",
+            "summary": "A social publication outcome is unknown and requires reconciliation"
+          },
+          "expr": "sum(increase(agency_social_publications_total{outcome=\"unknown\"}[15m])) > 0",
+          "for": "0m",
+          "labels": {
+            "owner": "WS-04",
+            "severity": "critical",
+            "slo": "SEC-011"
+          }
         }
       ]
     }

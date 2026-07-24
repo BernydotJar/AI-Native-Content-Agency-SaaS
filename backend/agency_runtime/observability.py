@@ -91,6 +91,7 @@ class RuntimeMetrics:
         self._sessions: Counter[str] = Counter()
         self._authentication: Counter[str] = Counter()
         self._security_denials: Counter[str] = Counter()
+        self._social_publications: Counter[str] = Counter()
 
     def record_http(
         self,
@@ -135,6 +136,19 @@ class RuntimeMetrics:
         with self._lock:
             self._security_denials[reason] += 1
 
+    def social_publication(self, outcome: str) -> None:
+        if outcome not in {
+            "succeeded",
+            "replayed",
+            "blocked",
+            "rejected",
+            "unknown",
+            "reconciled",
+        }:
+            raise ValueError("unsupported social publication outcome")
+        with self._lock:
+            self._social_publications[outcome] += 1
+
     def render(self) -> str:
         with self._lock:
             requests = dict(self._requests)
@@ -146,6 +160,7 @@ class RuntimeMetrics:
             sessions = dict(self._sessions)
             authentication = dict(self._authentication)
             security_denials = dict(self._security_denials)
+            social_publications = dict(self._social_publications)
 
         lines = [
             "# HELP agency_runtime_info Static runtime build information.",
@@ -256,6 +271,18 @@ class RuntimeMetrics:
             lines.append(
                 "agency_security_denials_total{} {}".format(
                     _labels({"reason": reason}), value
+                )
+            )
+        lines.extend(
+            [
+                "# HELP agency_social_publications_total Durable social publication outcomes without identity or content labels.",
+                "# TYPE agency_social_publications_total counter",
+            ]
+        )
+        for outcome, value in sorted(social_publications.items()):
+            lines.append(
+                "agency_social_publications_total{} {}".format(
+                    _labels({"outcome": outcome}), value
                 )
             )
         return "\n".join(lines) + "\n"

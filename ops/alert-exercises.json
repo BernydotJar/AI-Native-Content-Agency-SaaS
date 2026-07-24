@@ -1,124 +1,148 @@
 {
-  "schema_version": "agency-alert-exercises.v1",
   "scenarios": [
     {
+      "expected_alerts": [],
       "id": "healthy",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": []
+        "social_publication_unknown_15m": 0
+      }
     },
     {
-      "id": "availability-fast-burn",
-      "metrics": {
-        "api_error_ratio_5m": 0.02,
-        "api_error_ratio_1h": 0.02,
-        "api_p95_latency_seconds": 0.2,
-        "authentication_denials_per_second": 0.0,
-        "backup_age_seconds": 3600,
-        "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
       "expected_alerts": [
         "AgencyApiAvailabilityFastBurn",
         "AgencyApiAvailabilitySlowBurn"
-      ]
-    },
-    {
-      "id": "availability-slow-burn",
+      ],
+      "id": "availability-fast-burn",
       "metrics": {
-        "api_error_ratio_5m": 0.001,
-        "api_error_ratio_1h": 0.007,
+        "api_error_ratio_1h": 0.02,
+        "api_error_ratio_5m": 0.02,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": [
-        "AgencyApiAvailabilitySlowBurn"
-      ]
+        "social_publication_unknown_15m": 0
+      }
     },
     {
+      "expected_alerts": [
+        "AgencyApiAvailabilitySlowBurn"
+      ],
+      "id": "availability-slow-burn",
+      "metrics": {
+        "api_error_ratio_1h": 0.007,
+        "api_error_ratio_5m": 0.001,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
+        "readiness_probe_success": 1.0,
+        "social_publication_unknown_15m": 0
+      }
+    },
+    {
+      "expected_alerts": [
+        "AgencyApiLatencySloViolation"
+      ],
       "id": "latency-slo-violation",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 1.5,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": [
-        "AgencyApiLatencySloViolation"
-      ]
+        "social_publication_unknown_15m": 0
+      }
     },
     {
+      "expected_alerts": [
+        "AgencyRuntimeUnavailable"
+      ],
       "id": "runtime-unavailable",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 0.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": [
-        "AgencyRuntimeUnavailable"
-      ]
+        "social_publication_unknown_15m": 0
+      }
     },
     {
+      "expected_alerts": [
+        "AgencyAuthenticationAbuse"
+      ],
       "id": "authentication-abuse",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 1.5,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": [
-        "AgencyAuthenticationAbuse"
-      ]
+        "social_publication_unknown_15m": 0
+      }
     },
     {
+      "expected_alerts": [
+        "AgencyBackupStale"
+      ],
       "id": "backup-stale",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 90001,
+        "backup_signal_present": 1.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 1.0
-      },
-      "expected_alerts": [
-        "AgencyBackupStale"
-      ]
+        "social_publication_unknown_15m": 0
+      }
     },
     {
+      "expected_alerts": [
+        "AgencyBackupSignalMissing"
+      ],
       "id": "backup-signal-missing",
       "metrics": {
-        "api_error_ratio_5m": 0.0,
         "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
         "api_p95_latency_seconds": 0.2,
         "authentication_denials_per_second": 0.0,
         "backup_age_seconds": 3600,
+        "backup_signal_present": 0.0,
         "readiness_probe_success": 1.0,
-        "backup_signal_present": 0.0
-      },
+        "social_publication_unknown_15m": 0
+      }
+    },
+    {
       "expected_alerts": [
-        "AgencyBackupSignalMissing"
-      ]
+        "AgencySocialPublicationUnknown"
+      ],
+      "id": "social-publication-unknown",
+      "metrics": {
+        "api_error_ratio_1h": 0.0,
+        "api_error_ratio_5m": 0.0,
+        "api_p95_latency_seconds": 0.2,
+        "authentication_denials_per_second": 0.0,
+        "backup_age_seconds": 3600,
+        "backup_signal_present": 1.0,
+        "readiness_probe_success": 1.0,
+        "social_publication_unknown_15m": 1
+      }
     }
-  ]
+  ],
+  "schema_version": "agency-alert-exercises.v1"
 }

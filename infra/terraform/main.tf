@@ -126,6 +126,11 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.social.publicationEnabled"
+    value = tostring(var.social_publication_enabled)
+  }
+
+  set {
     name  = "runtime.social.existingSecret"
     value = var.social_existing_secret
   }

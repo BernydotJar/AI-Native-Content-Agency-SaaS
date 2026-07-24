@@ -291,7 +291,15 @@ export function WorkspaceSettingsDialog({
                     <div className="mt-4 rounded-xl border border-white/[0.06] bg-black/20 p-3 text-[9px] leading-5 text-zinc-500">
                       <p><span className="text-zinc-300">Variables:</span> {channel.credential_environments.join(" · ")} · {channel.redirect_environment}</p>
                       <p><span className="text-zinc-300">Protocolo:</span> {channel.publish_protocol}</p>
-                      {channel.requires_media && <p className="text-amber-100/80">Instagram requiere imagen, reel o carrusel además del caption.</p>}
+                      <p>
+                        <span className="text-zinc-300">Autoridad de publicación:</span>{" "}
+                        {!channel.publication_runtime_configured
+                          ? "No instalada"
+                          : channel.publication_execution_enabled
+                            ? "Habilitada por operador"
+                            : "Instalada · deshabilitada por defecto"}
+                      </p>
+                      {channel.requires_media && <p className="text-amber-100/80">Instagram requiere imagen, reel o carrusel aprobado además del caption.</p>}
                     </div>
 
                     {channel.connected_account ? (

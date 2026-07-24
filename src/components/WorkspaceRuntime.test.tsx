@@ -94,6 +94,7 @@ function api(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
     socialChannels: vi.fn().mockResolvedValue([]),
     startSocialOAuth: vi.fn(),
     disconnectSocialChannel: vi.fn().mockResolvedValue(undefined),
+    publishSocial: vi.fn(),
     revokeSession: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

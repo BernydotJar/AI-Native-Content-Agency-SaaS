@@ -151,18 +151,15 @@ Ningún valor secreto entra al state de Terraform.
 
 ## Estado de publicación
 
-La cuenta puede quedar conectada y visible, pero publicación permanece deshabilitada.
-El siguiente límite obligatorio es una intención de publicación durable con:
+La conexión de cuenta no habilita publicación. La autoridad exact-once está implementada
+pero `AGENCY_SOCIAL_PUBLICATION_ENABLED=false` es el default en local, Helm y Terraform.
+Cuando un operador autorizado la habilita, todavía exige cuenta exacta, Greenlight activo,
+artefactos aprobados e intent durable antes de tocar el proveedor. Consulte
+[Autoridad de publicación social](social-publication-authority.md).
 
-- tenant, cuenta, run, artefacto/version/hash y canal;
-- Greenlight y fencing token exactos;
-- receipt del proveedor;
-- replay sin segunda publicación;
-- estado `unknown` que bloquea retry automático;
-- reconciliación y revocación.
-
-Instagram además requiere una imagen, reel o carrusel accesible por el proveedor; un
-caption sin asset nunca se marca como publicable.
+Instagram además requiere un artefacto `publication_media` aprobado con URL HTTPS y hash;
+un caption o `media_plan` no renderizado nunca se marca como publicable. El producto actual
+no registra ese asset, por lo que Instagram permanece bloqueado.
 
 ## Túneles HTTPS, sesión y callback
 

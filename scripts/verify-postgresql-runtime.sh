@@ -105,6 +105,7 @@ REVOKE ALL ON TABLE public.authentication_rate_limits FROM PUBLIC;
 REVOKE ALL ON TABLE public.memories FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_oauth_states FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_connections FROM PUBLIC;
+REVOKE ALL ON TABLE public.social_publication_intents FROM PUBLIC;
 REVOKE ALL ON SEQUENCE public.audit_events_sequence_seq FROM PUBLIC;
 
 GRANT SELECT ON TABLE public.runtime_schema_meta TO :"runtime_role";
@@ -115,6 +116,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authentication_rate_limits 
 GRANT SELECT, INSERT ON TABLE public.memories TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_oauth_states TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_connections TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE ON TABLE public.social_publication_intents TO :"runtime_role";
 GRANT USAGE, SELECT ON SEQUENCE public.audit_events_sequence_seq TO :"runtime_role";
 
 ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA public
@@ -398,6 +400,7 @@ try:
             "memories": {"SELECT", "INSERT"},
             "social_oauth_states": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "social_connections": {"SELECT", "INSERT", "UPDATE", "DELETE"},
+            "social_publication_intents": {"SELECT", "INSERT", "UPDATE"},
         }
         all_table_privileges = {
             "SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"
@@ -443,7 +446,7 @@ AGENCY_DATABASE_URL="$DATABASE_URL" \
 SCHEMA_INCOMPATIBLE_STATUS=$?
 set -e
 "$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
-  --command "UPDATE public.runtime_schema_meta SET value = '2' WHERE key = 'schema_version'" \
+  --command "UPDATE public.runtime_schema_meta SET value = '3' WHERE key = 'schema_version'" \
   >/dev/null
 if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
   printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
@@ -820,6 +823,7 @@ try:
             "memories",
             "social_oauth_states",
             "social_connections",
+            "social_publication_intents",
         ):
             observed = connection.execute(
                 "SELECT COUNT(*) AS total FROM {}".format(table)
@@ -843,7 +847,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "2":
+        if schema is None or schema["value"] != "3":
             raise SystemExit("unexpected schema version: {}".format(schema))
 finally:
     runtime.close()
@@ -954,6 +958,7 @@ try:
             "memories",
             "social_oauth_states",
             "social_connections",
+            "social_publication_intents",
         ):
             observed = connection.execute(
                 "SELECT COUNT(*) AS total FROM {}".format(table)
@@ -977,7 +982,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "2":
+        if schema is None or schema["value"] != "3":
             raise SystemExit("unexpected restored schema version: {}".format(schema))
         restored_run = connection.execute(
             "SELECT tenant_id, status FROM runtime_runs LIMIT 1"
@@ -993,7 +998,7 @@ printf 'postgresql_backup_restore=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"
 printf 'driver=pg8000\n'
-printf 'schema_version=2\n'
+printf 'schema_version=3\n'
 printf 'wheel_install=pass\n'
 printf 'postgres_integration=pass\n'
 printf 'sqlite_migration=pass\n'

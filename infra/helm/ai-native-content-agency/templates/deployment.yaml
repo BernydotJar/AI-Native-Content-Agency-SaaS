@@ -148,6 +148,8 @@ spec:
               value: {{ .Values.runtime.session.cookieSecure | quote }}
             - name: AGENCY_SESSION_TTL_SECONDS
               value: {{ .Values.runtime.session.ttlSeconds | quote }}
+            - name: AGENCY_SOCIAL_PUBLICATION_ENABLED
+              value: {{ .Values.runtime.social.publicationEnabled | quote }}
 {{- if .Values.runtime.social.existingSecret }}
             - name: AGENCY_X_CONSUMER_KEY
               valueFrom:

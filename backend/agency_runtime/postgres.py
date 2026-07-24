@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "2"
+POSTGRES_SCHEMA_VERSION = "3"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -50,6 +50,7 @@ POSTGRES_REQUIRED_TABLES = (
     "memories",
     "social_oauth_states",
     "social_connections",
+    "social_publication_intents",
 )
 POSTGRES_REQUIRED_SEQUENCES = ("audit_events_sequence_seq",)
 POSTGRES_REQUIRED_COLUMNS = {
@@ -137,6 +138,35 @@ POSTGRES_REQUIRED_COLUMNS = {
             "token_expires_at",
             "connected_at",
             "updated_at",
+        }
+    ),
+    "social_publication_intents": frozenset(
+        {
+            "intent_id",
+            "tenant_id",
+            "channel_id",
+            "account_id",
+            "run_id",
+            "artifact_id",
+            "artifact_hash",
+            "content_hash",
+            "media_url_hash",
+            "media_hash",
+            "greenlight_id",
+            "greenlight_fencing_token",
+            "budget_cents",
+            "idempotency_digest",
+            "binding_digest",
+            "status",
+            "execution_fencing_token",
+            "provider_container_id",
+            "provider_post_id",
+            "receipt_json",
+            "failure_reason",
+            "created_at",
+            "updated_at",
+            "completed_at",
+            "revoked_at",
         }
     ),
 }
@@ -668,6 +698,51 @@ class PostgresRuntimeDatabase:
             CREATE INDEX IF NOT EXISTS idx_social_connections_tenant_updated
                 ON public.social_connections(tenant_id, updated_at DESC)
             """,
+            """
+            CREATE TABLE IF NOT EXISTS public.social_publication_intents (
+                intent_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                channel_id TEXT NOT NULL CHECK (channel_id IN ('x', 'instagram')),
+                account_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                artifact_id TEXT NOT NULL,
+                artifact_hash TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                media_url_hash TEXT,
+                media_hash TEXT,
+                greenlight_id TEXT NOT NULL,
+                greenlight_fencing_token BIGINT NOT NULL CHECK (greenlight_fencing_token >= 0),
+                budget_cents BIGINT NOT NULL CHECK (budget_cents >= 0),
+                idempotency_digest TEXT NOT NULL,
+                binding_digest TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('pending', 'succeeded', 'unknown', 'failed', 'revoked')),
+                execution_fencing_token BIGINT NOT NULL CHECK (execution_fencing_token > 0),
+                provider_container_id TEXT,
+                provider_post_id TEXT,
+                receipt_json JSONB NOT NULL,
+                failure_reason TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                completed_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ,
+                UNIQUE (tenant_id, idempotency_digest),
+                UNIQUE (tenant_id, binding_digest)
+            )
+            """,
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_social_publication_binding
+                ON public.social_publication_intents(tenant_id, binding_digest)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_social_publication_run
+                ON public.social_publication_intents(tenant_id, run_id, updated_at DESC)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_social_publication_account
+                ON public.social_publication_intents(
+                    tenant_id, channel_id, account_id, status, updated_at DESC
+                )
+            """,
         )
         with self.pool.connection() as connection:
             connection.execute(
@@ -688,7 +763,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value = '1'
+                WHERE key = 'schema_version' AND value IN ('1', '2')
                 """,
                 (SCHEMA_VERSION,),
             )

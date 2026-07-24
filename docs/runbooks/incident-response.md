@@ -39,6 +39,15 @@ Status: repository procedure; production paging and platform telemetry remain en
 3. Do not reveal whether a specific credential, subject or tenant exists.
 4. Escalate suspected credential compromise to the accountable security operator; real revocation is human-gated.
 
+## Social publication outcome unknown
+
+1. Confirm `AgencySocialPublicationUnknown` from the bounded `unknown` counter; do not inspect or export campaign copy, media URLs, tokens or tenant labels.
+2. Freeze automatic retry for the affected intent. An `unknown` state may represent a provider-side success after a lost response or local receipt failure.
+3. Use the tenant-scoped publication-intent API and the provider console with an authorized operator to compare channel, account, approved artifact hash, Greenlight ID/fence and provider request evidence.
+4. If the provider created the post, reconcile the existing intent with the observed provider post ID. Store only the bounded receipt and a SHA-256 of the operator note.
+5. If absence is conclusively proven, leave the original intent immutable and follow an approved remediation procedure; never reset it to `pending` or silently issue a second publication.
+6. Close the alert only after every `unknown` intent in the alert window is reconciled or assigned an accountable incident owner.
+
 ## Communications and closure
 
 External customer, campaign, legal or public communications require human approval. Record root cause, containment, recovery, residual risk and follow-up owner. An alert exercise is not an incident drill until a human operator receives and acts on the alert in an authorized environment.

@@ -131,6 +131,40 @@ class ObservabilityTests(unittest.TestCase):
         self.assertNotIn("tenant-alpha", rendered)
         self.assertNotIn("runs:create", rendered)
 
+    def test_social_publication_metrics_are_bounded_and_content_free(self):
+        metrics = RuntimeMetrics()
+        for outcome in (
+            "succeeded",
+            "replayed",
+            "blocked",
+            "rejected",
+            "unknown",
+            "reconciled",
+        ):
+            metrics.social_publication(outcome)
+        with self.assertRaisesRegex(
+            ValueError, "unsupported social publication outcome"
+        ):
+            metrics.social_publication("tenant-alpha:Approved campaign copy")
+
+        rendered = metrics.render()
+        for outcome in (
+            "succeeded",
+            "replayed",
+            "blocked",
+            "rejected",
+            "unknown",
+            "reconciled",
+        ):
+            self.assertIn(
+                'agency_social_publications_total{{outcome="{}"}} 1'.format(
+                    outcome
+                ),
+                rendered,
+            )
+        self.assertNotIn("tenant-alpha", rendered)
+        self.assertNotIn("Approved campaign copy", rendered)
+
     def test_audit_ledger_is_transactional_tenant_scoped_and_durable(self):
         with self.client() as client:
             created = client.post(

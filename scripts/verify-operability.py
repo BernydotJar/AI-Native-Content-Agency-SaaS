@@ -32,6 +32,7 @@ METRIC_REFERENCES = {
         "backend/agency_runtime/observability.py"
     ),
     "agency_security_denials_total": "backend/agency_runtime/observability.py",
+    "agency_social_publications_total": "backend/agency_runtime/observability.py",
     "agency_backup_last_success_timestamp_seconds": (
         "scripts/manage-runtime-backup.py"
     ),

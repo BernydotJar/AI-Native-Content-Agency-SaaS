@@ -17,7 +17,8 @@
     "verify:social-browser": "node scripts/verify-social-output-browser.mjs",
     "generate:social-key": "python3 scripts/generate-social-encryption-key.py --env-file .env.local",
     "verify:social-oauth-browser": "node scripts/verify-social-oauth-browser.mjs",
-    "verify:async-run-browser": "node scripts/verify-async-run-browser.mjs"
+    "verify:async-run-browser": "node scripts/verify-async-run-browser.mjs",
+    "verify:social-publication-browser": "node scripts/verify-social-publication-browser.mjs"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",

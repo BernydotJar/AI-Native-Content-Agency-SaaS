@@ -94,6 +94,7 @@ runtime_auth_tenant_api_keys_key = "tenant-api-keys.json"
 runtime_auth_identity_credentials_key = "identity-credentials.json"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
+social_publication_enabled         = false
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -193,6 +194,8 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
+assert 'runtime.social.publicationEnabled' in serialized
+assert 'false' in serialized.lower()
 assert "local-x-secret-not-for-external-use" not in serialized
 assert "local-instagram-secret-not-for-external-use" not in serialized
 changes = plan.get("resource_changes", [])
@@ -277,7 +280,9 @@ for name, key in {
 assert environment["AGENCY_X_REDIRECT_URI"]["value"].endswith("/social-channels/x/oauth/callback")
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].endswith("/social-channels/instagram/oauth/callback")
 assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alpha"
+assert environment["AGENCY_SOCIAL_PUBLICATION_ENABLED"]["value"] == "false"
 print("identity_rbac_configuration=pass")
+print("social_publication_default_disabled=pass")
 print("social_channel_secret_refs=pass")
 PY
 
@@ -309,6 +314,7 @@ runtime_auth_tenant_api_keys_key = ""
 runtime_auth_identity_credentials_key = "identity-credentials.json"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
+social_publication_enabled         = false
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -336,6 +342,8 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
+assert 'runtime.social.publicationEnabled' in serialized
+assert 'false' in serialized.lower()
 assert "postgresql://runtime:local-validation-only" not in serialized
 for forbidden in ("x-user-access-token-value", "instagram-access-token-value", "social-encryption-key-value"):
     assert forbidden not in serialized

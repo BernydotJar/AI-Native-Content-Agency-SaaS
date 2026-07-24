@@ -159,6 +159,8 @@ export interface RuntimeSocialChannel {
   connection_state: "not_connected" | "connected";
   oauth_start_available: boolean;
   oauth_runtime_configured: boolean;
+  publication_runtime_configured: boolean;
+  publication_execution_enabled: boolean;
   publishing_available: boolean;
   external_effects_enabled: boolean;
   credential_location: "server_environment";
@@ -170,6 +172,23 @@ export interface RuntimeSocialChannel {
   supported_content: string[];
   requires_media: boolean;
   connected_account: RuntimeSocialConnectedAccount | null;
+}
+
+export interface RuntimeSocialPublication {
+  intent_id: string;
+  channel_id: "x" | "instagram";
+  account_id: string;
+  run_id: string;
+  artifact_id: string;
+  artifact_hash: string;
+  greenlight_id: string;
+  greenlight_fencing_token: number;
+  status: "pending" | "succeeded" | "unknown" | "failed" | "revoked";
+  execution_fencing_token: number;
+  provider_container_id: string | null;
+  provider_post_id: string | null;
+  receipt: Record<string, unknown>;
+  replayed: boolean;
 }
 
 export interface RuntimeAuditEvent {
@@ -233,6 +252,16 @@ export interface RuntimeApi {
     channelId: RuntimeSocialChannel["channel_id"],
     csrfToken: string,
   ): Promise<void>;
+  publishSocial(
+    runId: string,
+    channelId: RuntimeSocialChannel["channel_id"],
+    artifactId: string,
+    mediaArtifactId: string | null,
+    greenlightId: string,
+    greenlightFencingToken: number,
+    csrfToken: string,
+    idempotencyKey: string,
+  ): Promise<RuntimeSocialPublication>;
   revokeSession(csrfToken: string): Promise<void>;
 }
 
@@ -394,6 +423,34 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         {
           method: "DELETE",
           headers: { "X-CSRF-Token": csrfToken },
+        },
+      );
+    },
+    publishSocial(
+      runId,
+      channelId,
+      artifactId,
+      mediaArtifactId,
+      greenlightId,
+      greenlightFencingToken,
+      csrfToken,
+      idempotencyKey,
+    ) {
+      return requestJson<RuntimeSocialPublication>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}/social-publications/${encodeURIComponent(channelId)}`,
+        {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            artifact_id: artifactId,
+            media_artifact_id: mediaArtifactId,
+            greenlight_id: greenlightId,
+            greenlight_fencing_token: greenlightFencingToken,
+          }),
         },
       );
     },

@@ -229,6 +229,12 @@ variable "helm_timeout_seconds" {
   }
 }
 
+variable "social_publication_enabled" {
+  description = "Explicitly enables governed external social publication. Keep false until provider terms, account authorization and release gates are approved."
+  type        = bool
+  default     = false
+}
+
 variable "social_existing_secret" {
   description = "Optional pre-provisioned Kubernetes Secret containing X and Instagram app credentials. Secret values never enter Terraform state."
   type        = string

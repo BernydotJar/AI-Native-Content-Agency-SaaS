@@ -33,23 +33,23 @@
   "required_disclosures": [
     {
       "path": "README.md",
-      "text": "No existe evidencia de deployment GCP/staging/producción"
+      "text": "No existe evidencia de deployment GCP/staging/producci\u00f3n"
     },
     {
       "path": "README.md",
-      "text": "ningún endpoint publica contenido, renderiza media ni gasta presupuesto"
+      "text": "La publicaci\u00f3n social est\u00e1 deshabilitada por defecto; s\u00f3lo puede ejecutarse con flag server-side, cuenta conectada, Greenlight exacto e intent durable."
     },
     {
       "path": "src/App.tsx",
-      "text": "Runtime determinista local; no publica contenido ni ejecuta gasto externo."
+      "text": "Los efectos externos requieren autoridad durable y Greenlight exacto."
     },
     {
       "path": "backend/agency_runtime/api.py",
-      "text": "No endpoint"
+      "text": "Social publication is disabled by default"
     },
     {
       "path": "README.md",
-      "text": "No representa aprobación legal, de privacidad ni regulatoria"
+      "text": "No representa aprobaci\u00f3n legal, de privacidad ni regulatoria"
     }
   ],
   "schema_version": "agency-public-claims-policy.v1",

@@ -74,6 +74,8 @@ class DurableIdempotencyTests(unittest.TestCase):
             ("/api/v1/runs/{run_id}/greenlight/approve", "post"),
             ("/api/v1/runs/{run_id}/greenlight/reject", "post"),
             ("/api/v1/runs/{run_id}/greenlight/revoke", "post"),
+            ("/api/v1/runs/{run_id}/social-publications/{channel_id}", "post"),
+            ("/api/v1/social-publications/{intent_id}/reconcile", "post"),
         )
         for path, method_name in governed:
             with self.subTest(path=path):

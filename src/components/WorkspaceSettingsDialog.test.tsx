@@ -15,6 +15,8 @@ const DISCONNECTED: RuntimeSocialChannel = {
   connection_state: "not_connected",
   oauth_start_available: true,
   oauth_runtime_configured: true,
+  publication_runtime_configured: true,
+  publication_execution_enabled: false,
   publishing_available: false,
   external_effects_enabled: false,
   credential_location: "server_environment",
