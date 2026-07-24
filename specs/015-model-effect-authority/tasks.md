@@ -9,4 +9,4 @@
 - [x] Add idempotent reconciliation, revocation and audit repair.
 - [x] Add MockTransport/socket-guard package evidence.
 - [ ] Complete exact-head PostgreSQL/package/infrastructure/supply-chain gates in CI after push; local rerun intentionally stopped by operator instruction.
-- [ ] Record producer/critic/verifier review against the technical commit.
+- [x] Record producer/critic/verifier review against the technical commit.
