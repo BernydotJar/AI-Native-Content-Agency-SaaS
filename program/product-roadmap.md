@@ -68,3 +68,24 @@ truthful baseline
 - authorized cloud target and object storage;
 - human accessibility/privacy/legal/campaign review;
 - one authorized sandbox post before any production enablement.
+
+## 2026-07-25 — Governed media and verified effects
+
+### INC-022 — review
+
+- immutable JPEG Media Vault in SQLite/PostgreSQL schema v5;
+- server-verified dimensions/bytes/hash, alt text and rights identity;
+- opaque expiring/revocable public delivery;
+- upload/remove workflow before Greenlight;
+- Instagram container polling and independent post verification;
+- durable receipt history and safe permalink UI;
+- fail-closed local/Helm/Terraform configuration.
+
+### Next gated work
+
+- exact-head CI and independent review;
+- keyring-based signing-key rotation;
+- post-publication provider deletion/reconciliation;
+- authorized production object storage and retention policy;
+- carousel/reel child-level exact-once protocols;
+- one separately authorized sandbox publication.

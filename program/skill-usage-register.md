@@ -43,8 +43,8 @@
   invoked_at: 2026-07-25
   inputs: Instagram media dimensions, accessibility, preview and publication readiness
   generated_outputs: INC-022 JPEG 4:5 media-vault contract and verified-publication acceptance criteria
-  validations: pending TDD implementation
-  result: IN_PROGRESS
+  validations: Media Vault/API/publication/frontend/locked-wheel gates PASS
+  result: PASS
   limitations: single IMAGE only; carousel/reel deferred; no real publication authorized
 
 - task_id: INC-022

@@ -1,6 +1,6 @@
 # INC-022 — Governed Publication Media and Verified Instagram Receipt
 
-Status: approved
+Status: review
 Owner: Orchestrator
 Date: 2026-07-25
 
@@ -135,3 +135,13 @@ The receipt must contain hashes and provider metadata, never raw caption, tokens
 - one separately authorized sandbox post;
 - production object-storage/retention/privacy review;
 - merge, deployment and release.
+
+
+## Review hardening decisions
+
+- Public capabilities cache for at most 300 seconds and are never marked immutable, so revocation propagates within a bounded window.
+- Operators may revoke media before Greenlight; the durable URL becomes unavailable and the artifact is removed idempotently.
+- After Greenlight, media revocation is blocked until the approval is revoked; no silent provider deletion is implied.
+- Publication revalidates durable bytes, SHA-256, MIME, expiry and revocation before any provider HTTP.
+- A provider-returned ID is not product success. Success requires container `FINISHED` plus independent read-after-write verification.
+- Signing-key rotation must retain the previous key operationally through the maximum capability TTL and active retry window; a keyring migration remains a distinct production operation.

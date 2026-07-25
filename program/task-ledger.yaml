@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-021-campaign-intelligence",
+  "branch": "agent/inc-022-governed-media-verification",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1332,25 +1332,31 @@
     {
       "task_id": "INC-022",
       "workstream_id": "WS-08",
-      "status": "pending",
-      "role": "Media Engineer / Distributed Systems Engineer / Security Reviewer",
-      "objective": "Create governed publication_media and independently verify Instagram publication receipts after provider processing.",
-      "context": "Instagram account connection and exact-once publication intent exist, but the product still produces only media_plan and the current receipt does not prove a visible post through an independent read-after-write verification.",
+      "status": "review",
+      "role": "Media Engineer / Backend Engineer / Data Engineer / Security Reviewer / Privacy Reviewer / Red Team / Independent Verifier",
+      "objective": "Create immutable governed JPEG media, pre-Greenlight revocation, container processing and durable read-after-write verified Instagram receipts.",
+      "context": "Implementation commit 798d68dab228d0445c3d31bb5c4ce6ad73da93f1 adds a SQLite/PostgreSQL Media Vault, schema v5, Pillow-verified JPEG ingestion, HMAC capability URLs, UI upload/revocation, Instagram container polling, media verification and durable history. No real provider effect was executed.",
       "authoritative_inputs": [
-        "INC-020 publication authority",
-        "INC-021 campaign intelligence",
-        "official Instagram media container and media retrieval contracts"
+        "specs/022-governed-media-verification/spec.md",
+        "skills/platform-instagram.md",
+        "official Meta Instagram API Content Publishing and media reference contracts",
+        "INC-020 exact-once publication authority",
+        "INC-021 campaign intelligence and political kill switch"
       ],
       "dependencies": [
         "INC-020",
         "INC-021"
       ],
       "allowed_paths": [
+        ".env.example",
         "backend/agency_runtime/**",
         "backend/tests/**",
+        "backend/requirements*.in",
+        "backend/requirements*.lock",
+        "backend/setup.cfg",
         "src/**",
+        "infra/**",
         "scripts/**",
-        "docs/**",
         "program/**",
         "specs/022-governed-media-verification/**"
       ],
@@ -1359,40 +1365,53 @@
         ".env.local"
       ],
       "prohibited_paths": [
-        "real publication without explicit authorization",
-        "unverified external media URL",
-        "automatic retry of unknown effects",
-        "cloud spend"
+        "real provider publication",
+        "cloud resource creation or spend",
+        "carousel/reel publication",
+        "automatic retry after unknown effect",
+        "secret disclosure",
+        "protected branch mutation"
       ],
-      "write_lock": "unclaimed",
+      "write_lock": "released after implementation commit",
       "expected_outputs": [
-        "publication_media contract",
-        "safe media delivery",
+        "immutable JPEG Media Vault",
+        "opaque expiring public capability",
+        "pre-Greenlight revocation",
+        "publication_media artifact",
         "container status polling",
-        "read-after-write verification",
-        "permalink/verified receipt",
-        "reconciliation UI"
+        "read-after-write verified receipt",
+        "durable publication history and safe permalink UI"
       ],
       "acceptance_criteria": [
-        "media bytes/hash/URL are bound to Greenlight",
-        "container reaches FINISHED before publish",
-        "provider post is independently read and bound to the exact effect",
-        "unknown outcomes remain blocked",
-        "all effects default disabled"
+        "invalid MIME/bytes/dimensions/rights/alt text fail closed",
+        "bytes/hash/idempotency survive SQLite restart and PostgreSQL replicas",
+        "public capability is opaque, tenant-free, expiring and revocable",
+        "expired/revoked media blocks before provider HTTP",
+        "container FINISHED is required before media_publish",
+        "provider/read mismatch becomes unknown and blocks replay",
+        "verified receipt persists permalink/timestamp/account/caption/media hashes without raw content",
+        "frontend upload/revoke/history preserve Greenlight and publication gates",
+        "all effects remain disabled by default"
       ],
       "validation_commands": [
-        "TDD focused media/publication families",
-        "locked backend suite",
-        "frontend tests/build",
-        "package/CI exact-head"
+        "./scripts/verify-python-locks.sh => PASS (277 tests; 0 PostgreSQL-only skips locally)",
+        "npm test => PASS (0 tests)",
+        "npm run lint => PASS, zero warnings/errors",
+        "npm run build => PASS",
+        "focused Media Vault/publication/schema/backup/local-runner families => PASS",
+        "git diff --check and secret scan => PASS"
       ],
       "human_gates": [
-        "media rights confirmation",
-        "provider terms/privacy review",
-        "one explicitly authorized sandbox post",
-        "production enablement"
+        "media rights/consent",
+        "human accessibility review",
+        "jurisdiction/campaign/legal approval",
+        "explicit general and political publication enablement",
+        "one separately authorized sandbox post",
+        "cloud object-storage/retention review",
+        "merge/deploy/release"
       ],
-      "publication_state": "NOT_STARTED"
+      "publication_state": "LOCAL_DETERMINISTIC_GATES_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED",
+      "implementation_commit": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1"
     }
   ],
   "updated_at": "2026-07-25",
@@ -1599,8 +1618,13 @@
         "specs/**"
       ],
       "artifacts": [
+        "backend/agency_runtime/publication_media.py",
+        "backend/agency_runtime/publication_media_postgres.py",
+        "backend/agency_runtime/publication_media_store.py",
         "program/reports/inc-021-review.md",
-        "specs/021-campaign-intelligence/spec.md"
+        "program/reports/inc-022-review.md",
+        "specs/021-campaign-intelligence/spec.md",
+        "specs/022-governed-media-verification/spec.md"
       ],
       "dependencies": [],
       "evals": [
@@ -1618,12 +1642,19 @@
       ],
       "risks": [
         "R-034",
-        "R-035"
+        "R-035",
+        "R-036",
+        "R-037",
+        "R-038"
       ],
       "status": "in_progress",
       "validation": [
         "./scripts/verify-python-locks.sh",
-        "exact-head integration CI"
+        "exact-head PostgreSQL/OCI/Helm/Terraform/supply-chain CI",
+        "exact-head integration CI",
+        "npm run build",
+        "npm run lint",
+        "npm test"
       ],
       "write_locks": []
     },

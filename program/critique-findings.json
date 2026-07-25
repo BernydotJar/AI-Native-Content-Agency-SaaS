@@ -367,9 +367,41 @@
       "owner": "INC-022",
       "description": "Instagram has no governed publication_media generator/delivery contract and the receipt lacks independent post read-after-write verification.",
       "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition."
+    },
+    {
+      "id": "F-047",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Media plans existed without immutable provider-fetchable bytes or Greenlight hash binding.",
+      "evidence": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1 adds decoded JPEG Media Vault, artifact binding, upload/revoke UI and durable stores."
+    },
+    {
+      "id": "F-048",
+      "severity": "CRITICAL",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Instagram media ID was treated as success without container completion or independent read verification.",
+      "evidence": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1 requires FINISHED and verifies ID/account/caption hash/type/permalink/timestamp; mismatch is unknown."
+    },
+    {
+      "id": "F-049",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Public immutable caching conflicted with media-rights revocation.",
+      "evidence": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1 removes immutable, caps max-age at 300 and supports pre-Greenlight revocation."
+    },
+    {
+      "id": "F-050",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "owner": "future media operations",
+      "description": "Post-publication provider deletion and independent HMAC keyring rotation are not implemented.",
+      "evidence": "OI-016/OI-017 and publication-media runbook define exact resume conditions; release remains denied."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
+  "source_commit": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1",
   "updated_at": "2026-07-25"
 }

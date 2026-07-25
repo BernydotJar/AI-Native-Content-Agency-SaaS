@@ -91,3 +91,32 @@ Authenticated operator/approver
 Evidence verification and legal approval are not trusted from arbitrary client text. A request that marks either approved must be authenticated with `greenlight:decide`; the server replaces client-supplied reviewer identities with the authenticated subject. Political publication remains blocked unless both general social authority and the separate political authority are enabled.
 
 INC-021 deliberately stops at `media_plan`. INC-022 owns the object/media boundary and post-publication read-after-write verification. No current architecture claim treats a provider-returned ID alone as proof of a publicly visible post.
+
+## Governed publication media and verified Instagram effect — 2026-07-25
+
+```text
+Authenticated admin
+  -> raw JPEG + UTF-8 alt + rights confirmation
+  -> bounded full image decode
+  -> server SHA-256
+  -> durable Media Vault (SQLite/PostgreSQL)
+       -> immutable bytes
+       -> tenant/run/channel binding
+       -> opaque token digest
+       -> expiry/revocation
+  -> publication_media artifact
+  -> Greenlight artifact/hash envelope
+  -> pre-effect durable byte/hash/expiry/revocation check
+  -> exact-once publication intent
+  -> POST /{account}/media
+  -> persist container_id
+  -> GET /{container}?fields=status_code,status until FINISHED
+  -> POST /{account}/media_publish
+  -> GET /{media}?fields=id,caption,media_type,permalink,timestamp,username
+  -> compare identity/account/caption/media contract
+  -> durable verified receipt + history
+```
+
+The public media URL is an opaque bounded capability required because Meta downloads media server-to-server. It does not encode tenant/run/account identity. Origin responses cache for at most 300 seconds and never claim immutability, preserving a bounded revocation path.
+
+A provider-returned media ID is insufficient for success. Any ambiguity after container creation or `media_publish` produces `unknown`; exact replay is blocked until reconciliation. Verified success requires a second provider read matching the intended post.

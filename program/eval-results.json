@@ -636,9 +636,44 @@
       "command": "GitHub Actions production-readiness run 30149528848",
       "observed": "8/8 jobs SUCCESS at exact head 25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain",
       "result": "PASS"
+    },
+    {
+      "id": "INC022-MEDIA-VALIDATION",
+      "scope": "JPEG bytes, dimensions, accessibility and rights",
+      "command": "publication media unit/API tests",
+      "observed": "valid full decode/hash pass; wrong MIME/truncation/aspect/size/rights/alt fail closed",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-CAPABILITY-SECURITY",
+      "scope": "opaque public delivery, expiry, cache and revocation",
+      "command": "Media Vault store/API/red-team tests",
+      "observed": "tenant-free digest lookup; random/expired/revoked 404; ETag exact; cache max-age 300; pre-Greenlight revoke idempotent",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-VERIFIED-EFFECT",
+      "scope": "container processing, exact-once publication and independent verification",
+      "command": "social publication unit and vertical API tests",
+      "observed": "FINISHED->publish->GET verified receipt; ERROR no publish; exhaustion/mismatch unknown; replay performs zero second effect",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-DURABLE-HISTORY",
+      "scope": "receipt recovery after reload",
+      "command": "publication history API/client/UI tests",
+      "observed": "tenant/run-scoped succeeded receipt returns verified permalink; unsafe/unverified hosts never link",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-PG-INFRA-EXACT-HEAD",
+      "scope": "PostgreSQL schema v5, OCI, Helm, Terraform and supply chain",
+      "command": "GitHub Actions exact-head jobs",
+      "observed": "Not run remotely yet",
+      "result": "PENDING"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
+  "source_commit": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1",
   "updated_at": "2026-07-25"
 }
