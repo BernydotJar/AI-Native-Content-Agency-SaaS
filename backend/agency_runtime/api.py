@@ -58,6 +58,7 @@ from .postgres import (
 )
 from .providers import ProviderRegistry
 from .publication_media import (
+    MAX_PUBLICATION_MEDIA_BYTES,
     PublicationMediaValidationError,
     ValidatedPublicationMedia,
     validate_publication_media,
@@ -211,6 +212,17 @@ class RequestBodyLimitMiddleware:
             )
             await response(scope, receive, send)
             return
+        path = str(scope.get("path", ""))
+        media_upload = (
+            str(scope.get("method", "GET")).upper() == "POST"
+            and re.fullmatch(
+                r"/api/v1/runs/[^/]+/publication-media/instagram", path
+            )
+            is not None
+        )
+        request_limit = (
+            MAX_PUBLICATION_MEDIA_BYTES if media_upload else self.max_bytes
+        )
         content_length = (
             content_length_values[0] if content_length_values else None
         )
@@ -242,7 +254,7 @@ class RequestBodyLimitMiddleware:
                 )
                 await response(scope, receive, send)
                 return
-            if declared_length > self.max_bytes:
+            if declared_length > request_limit:
                 response = JSONResponse(
                     status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     content=_error_body(
@@ -277,7 +289,7 @@ class RequestBodyLimitMiddleware:
             body = message.get("body", b"")
             if isinstance(body, (bytes, bytearray)):
                 received += len(body)
-                if received > self.max_bytes:
+                if received > request_limit:
                     response = JSONResponse(
                         status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         content=_error_body(
@@ -363,6 +375,11 @@ class SocialPublicationRequest(BaseModel):
     media_artifact_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
     greenlight_id: str = Field(min_length=1, max_length=256)
     greenlight_fencing_token: int = Field(ge=0)
+
+
+class PublicationMediaRevocationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=1, max_length=512)
 
 
 class SocialPublicationReconcileRequest(BaseModel):
@@ -1373,8 +1390,29 @@ class RuntimeService:
                 raise GreenlightError("media artifact channel does not match")
             raw_url = media.payload.get("media_url")
             raw_hash = media.payload.get("sha256")
-            if not isinstance(raw_url, str) or not isinstance(raw_hash, str):
+            raw_media_id = media.payload.get("media_id")
+            if (
+                not isinstance(raw_url, str)
+                or not isinstance(raw_hash, str)
+                or not isinstance(raw_media_id, str)
+            ):
                 raise GreenlightError("publication media contract is invalid")
+            if self.media_store is None:
+                raise GreenlightError("publication media store is unavailable")
+            durable_media = self.media_store.get(tenant_id, raw_media_id)
+            if (
+                durable_media is None
+                or durable_media.run_id != run_id
+                or durable_media.channel_id != "instagram"
+                or durable_media.revoked_at is not None
+                or datetime.fromisoformat(durable_media.expires_at)
+                <= datetime.fromisoformat(utc_now())
+                or durable_media.sha256 != raw_hash
+            ):
+                raise GreenlightError("publication media is expired, revoked or mismatched")
+            durable_content = self.media_store.get_content(tenant_id, raw_media_id)
+            if hashlib.sha256(durable_content).hexdigest() != raw_hash:
+                raise GreenlightError("publication media bytes do not match Greenlight")
             media_url = raw_url
             media_hash = raw_hash
 
@@ -2246,12 +2284,19 @@ def create_app(
                 response.headers["Permissions-Policy"] = (
                     "camera=(), microphone=(), geolocation=()"
                 )
-                response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-                if request.url.path.startswith("/api/") or request.url.path in {
-                    "/healthz",
-                    "/readyz",
-                    "/metrics",
-                }:
+                is_public_media = request.url.path.startswith(
+                    "/api/v1/publication-media/public/"
+                )
+                if not is_public_media:
+                    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+                if (
+                    not is_public_media
+                    and (request.url.path.startswith("/api/") or request.url.path in {
+                        "/healthz",
+                        "/readyz",
+                        "/metrics",
+                    })
+                ):
                     response.headers["Cache-Control"] = "no-store"
                     response.headers["Pragma"] = "no-cache"
 

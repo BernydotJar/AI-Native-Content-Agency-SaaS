@@ -16,6 +16,7 @@ import type {
   RuntimePlatform,
   RuntimeRun,
   RuntimeSocialChannel,
+  RuntimeSocialPublication,
 } from "../lib/runtimeApi";
 import { PublicationConfirmationDialog } from "./PublicationConfirmationDialog";
 
@@ -26,6 +27,7 @@ interface CampaignOutputPanelProps {
   publicationBusy?: RuntimeSocialChannel["channel_id"] | null;
   publicationError?: string;
   publicationNotice?: string;
+  publications?: readonly RuntimeSocialPublication[];
   mediaAttachmentBusy?: boolean;
   mediaAttachmentError?: string;
   mediaAttachmentNotice?: string;
@@ -203,6 +205,31 @@ function publicationLabel(
   return "Listo para publicar";
 }
 
+function verifiedInstagramPermalink(
+  publications: readonly RuntimeSocialPublication[],
+): string {
+  for (const publication of [...publications].reverse()) {
+    if (publication.channel_id !== "instagram" || publication.status !== "succeeded") continue;
+    if (publication.receipt.verification_status !== "verified") continue;
+    const candidate = publication.receipt.permalink;
+    if (typeof candidate !== "string" || candidate.length > 2048) continue;
+    try {
+      const url = new URL(candidate);
+      const host = url.hostname.toLowerCase();
+      if (
+        url.protocol === "https:"
+        && (host === "instagram.com" || host.endsWith(".instagram.com"))
+        && !url.username
+        && !url.password
+        && !url.hash
+      ) return url.toString();
+    } catch {
+      // Ignore malformed durable receipts; never promote them to verified UI.
+    }
+  }
+  return "";
+}
+
 function StepIcon({ state }: { state: ReadinessStep["state"] }) {
   if (state === "complete") {
     return <CheckCircle2 size={13} className="text-emerald-300" aria-hidden="true" />;
@@ -289,6 +316,7 @@ export function CampaignOutputPanel({
   publicationBusy = null,
   publicationError = "",
   publicationNotice = "",
+  publications = [],
   mediaAttachmentBusy = false,
   mediaAttachmentError = "",
   mediaAttachmentNotice = "",
@@ -307,6 +335,7 @@ export function CampaignOutputPanel({
   const [localMediaError, setLocalMediaError] = useState("");
   const drafts = useMemo(() => draftsFromRun(run), [run]);
   const evidenceCount = new Set(run?.artifacts.flatMap((artifact) => artifact.evidence_ids) ?? []).size;
+  const verifiedPermalink = useMemo(() => verifiedInstagramPermalink(publications), [publications]);
   const channelMap = useMemo(
     () => new Map(socialChannels.map((channel) => [channel.channel_id, channel])),
     [socialChannels],
@@ -605,6 +634,20 @@ export function CampaignOutputPanel({
             </p>
           )}
           {copyError && <p role="alert" className="mt-4 text-xs text-red-200">{copyError}</p>}
+          {verifiedPermalink && (
+            <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-3">
+              <p className="text-xs font-bold text-emerald-100">Instagram publicó y verificó el post.</p>
+              <p className="mt-1 text-[10px] text-emerald-200/80">Receipt durable recuperado.</p>
+              <a
+                href={verifiedPermalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-emerald-300/30 px-4 text-xs font-bold text-emerald-100"
+              >
+                Abrir publicación verificada en Instagram
+              </a>
+            </div>
+          )}
           <details className="mt-5 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-zinc-300">
               <span className="inline-flex items-center gap-2"><ShieldCheck size={14} className="text-[var(--primary-color)]" aria-hidden="true" /> Contexto y evidencia</span>

@@ -932,9 +932,16 @@ class PostgresRuntimeDatabase:
                 elif relation_type == "table":
                     columns = connection.execute(
                         """
-                        SELECT column_name
-                        FROM information_schema.columns
-                        WHERE table_schema = %s AND table_name = %s
+                        SELECT attribute.attname AS column_name
+                        FROM pg_catalog.pg_attribute AS attribute
+                        JOIN pg_catalog.pg_class AS relation
+                          ON relation.oid = attribute.attrelid
+                        JOIN pg_catalog.pg_namespace AS namespace
+                          ON namespace.oid = relation.relnamespace
+                        WHERE namespace.nspname = %s
+                          AND relation.relname = %s
+                          AND attribute.attnum > 0
+                          AND NOT attribute.attisdropped
                         """,
                         ("public", name),
                     ).fetchall()

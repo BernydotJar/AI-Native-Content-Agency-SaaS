@@ -403,6 +403,7 @@ try:
             "social_oauth_states": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "social_connections": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "social_publication_intents": {"SELECT", "INSERT", "UPDATE"},
+            "publication_media_objects": {"SELECT", "INSERT", "UPDATE"},
             "model_effect_intents": {"SELECT", "INSERT", "UPDATE"},
         }
         all_table_privileges = {

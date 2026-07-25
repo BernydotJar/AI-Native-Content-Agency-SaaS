@@ -16,6 +16,7 @@ import type {
   RuntimeProviderGatewayStatus,
   RuntimeRun,
   RuntimeSocialChannel,
+  RuntimeSocialPublication,
 } from "./lib/runtimeApi";
 import {
   DEFAULT_THEME_ID,
@@ -99,6 +100,7 @@ export default function App() {
   const [publicationBusy, setPublicationBusy] = useState<RuntimeSocialChannel["channel_id"] | null>(null);
   const [publicationError, setPublicationError] = useState("");
   const [publicationNotice, setPublicationNotice] = useState("");
+  const [publicationHistory, setPublicationHistory] = useState<RuntimeSocialPublication[]>([]);
   const [mediaAttachmentBusy, setMediaAttachmentBusy] = useState(false);
   const [mediaAttachmentError, setMediaAttachmentError] = useState("");
   const [mediaAttachmentNotice, setMediaAttachmentNotice] = useState("");
@@ -113,6 +115,7 @@ export default function App() {
   const selectedState = selectedNodeId ? nodeStates[selectedNodeId] : null;
   const activeStep = Object.entries(nodeStates).find(([, state]) => state.status === "running")?.[0] ?? "";
   const selectedProvider = providerGateway.selected_provider || providers.find((provider) => provider.configured)?.provider_id || "";
+  const activeRunId = run?.run_id ?? "";
 
   useEffect(() => {
     applyTheme(themeId);
@@ -161,6 +164,24 @@ export default function App() {
   useEffect(() => {
     void refreshFabric();
   }, [refreshFabric]);
+
+  useEffect(() => {
+    if (!session || !activeRunId) {
+      setPublicationHistory([]);
+      return;
+    }
+    let cancelled = false;
+    void runtimeApi.socialPublications(activeRunId)
+      .then((items) => {
+        if (!cancelled) setPublicationHistory(items);
+      })
+      .catch(() => {
+        if (!cancelled) setPublicationHistory([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRunId, session]);
 
   useEffect(() => {
     if (!session) return;
@@ -246,6 +267,37 @@ export default function App() {
     }
   };
 
+  const revokePublicationMedia = async (
+    channelId: RuntimeSocialChannel["channel_id"],
+    mediaId: string,
+    reason: string,
+    idempotencyKey: string,
+  ) => {
+    if (!session || session.role !== "admin" || !run || channelId !== "instagram") {
+      throw new Error("Se requiere una sesión admin y media de Instagram activa.");
+    }
+    setMediaAttachmentBusy(true);
+    setMediaAttachmentError("");
+    setMediaAttachmentNotice("");
+    try {
+      const updated = await runtimeApi.revokePublicationMedia(
+        run.run_id,
+        mediaId,
+        reason,
+        session.csrf_token,
+        idempotencyKey,
+      );
+      setRun(updated);
+      setMediaAttachmentNotice("La media fue retirada y su capability pública quedó revocada.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo retirar la media.";
+      setMediaAttachmentError(message);
+      throw error;
+    } finally {
+      setMediaAttachmentBusy(false);
+    }
+  };
+
   const publishSocialArtifact = async (
     channelId: RuntimeSocialChannel["channel_id"],
     artifactId: string,
@@ -273,6 +325,10 @@ export default function App() {
       setPublicationNotice(
         `${label} confirmó la publicación ${result.provider_post_id ?? result.intent_id}. Receipt durable registrado.`,
       );
+      setPublicationHistory((current) => [
+        ...current.filter((item) => item.intent_id !== result.intent_id),
+        result,
+      ]);
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -406,7 +462,13 @@ export default function App() {
               publicationBusy={publicationBusy}
               publicationError={publicationError}
               publicationNotice={publicationNotice}
+              publications={publicationHistory}
+              mediaAttachmentBusy={mediaAttachmentBusy}
+              mediaAttachmentError={mediaAttachmentError}
+              mediaAttachmentNotice={mediaAttachmentNotice}
               onOpenSettings={() => setSettingsOpen(true)}
+              onAttachMedia={attachPublicationMedia}
+              onRevokeMedia={revokePublicationMedia}
               onPublish={publishSocialArtifact}
             />
           </div>

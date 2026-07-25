@@ -111,7 +111,7 @@ describe("CampaignOutputPanel", () => {
     expect(screen.getByText(/Una señal puede convertirse en acción/i)).toBeInTheDocument();
     expect(screen.getByText(/Vista previa de Instagram/i)).toBeInTheDocument();
     expect(screen.getByText(/Asset visual pendiente/i)).toBeInTheDocument();
-    expect(screen.getByText(/Instagram exige imagen, reel o carrusel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Instagram exige imagen; adjunta un JPEG 4:5/i)).toBeInTheDocument();
     expect(screen.getByRole("list", { name: /Estado de publicación para Instagram/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Requiere Greenlight/i)).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy((buttons: HTMLElement[]) =>
@@ -252,6 +252,37 @@ describe("CampaignOutputPanel", () => {
     expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy((buttons: HTMLElement[]) =>
       buttons.every((button) => button.hasAttribute("disabled")),
     );
+  });
+
+  it("restores only a verified Instagram permalink from durable receipts", () => {
+    render(
+      <CampaignOutputPanel
+        run={RUN}
+        socialChannels={SOCIAL_CHANNELS}
+        publications={[{
+          intent_id: "intent-verified-001",
+          channel_id: "instagram",
+          account_id: "ig-account-001",
+          run_id: RUN.run_id,
+          artifact_id: "copy-001",
+          artifact_hash: "a".repeat(64),
+          greenlight_id: "greenlight-001",
+          greenlight_fencing_token: 1,
+          status: "succeeded",
+          execution_fencing_token: 1,
+          provider_container_id: "container-001",
+          provider_post_id: "post-001",
+          receipt: {
+            verification_status: "verified",
+            permalink: "https://www.instagram.com/p/post-001/",
+          },
+          replayed: false,
+        }]}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: /Abrir publicación verificada en Instagram/i }),
+    ).toHaveAttribute("href", "https://www.instagram.com/p/post-001/");
   });
 
   it("shows a bounded empty state before a run exists", () => {

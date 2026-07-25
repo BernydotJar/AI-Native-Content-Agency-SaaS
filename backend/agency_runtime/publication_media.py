@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from PIL import Image, UnidentifiedImageError
 
 
-_MAX_MEDIA_BYTES = 8 * 1024 * 1024
+MAX_PUBLICATION_MEDIA_BYTES = 8 * 1024 * 1024
 _MIN_DIMENSION = 320
 _MAX_DIMENSION = 1440
 _EXPECTED_CONTENT_TYPE = "image/jpeg"
@@ -41,7 +41,7 @@ def validate_publication_media(
     normalized_type = content_type.split(";", 1)[0].strip().lower()
     if normalized_type != _EXPECTED_CONTENT_TYPE:
         raise PublicationMediaValidationError("publication media must be image/jpeg")
-    if not content or len(content) > _MAX_MEDIA_BYTES:
+    if not content or len(content) > MAX_PUBLICATION_MEDIA_BYTES:
         raise PublicationMediaValidationError("publication media byte size is invalid")
 
     try:
