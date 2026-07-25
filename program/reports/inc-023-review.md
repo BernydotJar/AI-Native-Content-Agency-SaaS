@@ -105,3 +105,7 @@ Remote exact-head evidence:
 ## Decision
 
 INC-023 is `done` at increment level: implementation and exact-head CI passed. All external effects remain disabled. A neutral sandbox post still requires a separate accountable approval of the exact account, copy, media hash, time window and rollback owner; automated validation is not legal authorization.
+
+## Merge receipt
+
+PR #15 was merged normally after final exact-head run `30174197636` passed all eight jobs. Merge commit: `ca7e8c97dc31b0461832d72232213ccc5963f0af`. This closes INC-023 at increment level; it does not authorize a live political post or a production release.
