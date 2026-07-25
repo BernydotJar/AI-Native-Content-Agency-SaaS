@@ -33,7 +33,7 @@ SUPPORT_FILES = (
     "program/release-plan.md",
     "program/critique-findings.json",
 )
-DIRECT_PYTHON = ("cryptography", "fastapi", "httpx", "pg8000", "uvicorn")
+DIRECT_PYTHON = ("cryptography", "fastapi", "httpx", "pillow", "pg8000", "uvicorn")
 REQUIRED_BLOCKERS = {"F-004", "F-007", "F-008", "F-010", "F-011"}
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -236,6 +236,7 @@ def validate_inventory(root: Path, data: Mapping[str, Any]) -> int:
         "cryptography": "Apache-2.0",
         "fastapi": "MIT",
         "httpx": "BSD-3-Clause",
+        "pillow": "MIT-CMU",
         "pg8000": "BSD-3-Clause",
         "uvicorn": "BSD-3-Clause",
     }
@@ -258,7 +259,7 @@ def validate_inventory(root: Path, data: Mapping[str, Any]) -> int:
     approved_licenses = set(
         sequence(data.get("approved_component_licenses"), "approved_component_licenses")
     )
-    if approved_licenses != {"Apache-2.0", "BSD-3-Clause", "ISC", "MIT", "OFL-1.1"}:
+    if approved_licenses != {"Apache-2.0", "BSD-3-Clause", "ISC", "MIT", "MIT-CMU", "OFL-1.1"}:
         raise ComplianceValidationError("approved component license set is invalid")
     direct_licenses = {str(item.get("license", "")) for item in npm + python}
     if not direct_licenses or not direct_licenses.issubset(approved_licenses):

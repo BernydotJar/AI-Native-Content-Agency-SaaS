@@ -132,3 +132,31 @@ Category: legal / campaign authorization / external effect / human decision
 Commit `6ebbd634bd32408db0a7678289b0f906cda014c0` adds server-bound evidence and legal-review authority plus the independent `AGENCY_POLITICAL_PUBLICATION_ENABLED=false` kill switch. Deterministic tests prove that general social publication enablement does not enable political effects and performs zero provider calls.
 
 Exact resume condition: exact-head CI; accountable jurisdiction-specific legal review; verified candidate/campaign authority; provider policy/account review; approved content and media; explicit enablement and one separately authorized sandbox post. Production remains a distinct release decision.
+
+## OI-014 — Governed publication media and verified Instagram receipt
+
+Status: resolved locally by INC-022; exact-head CI pending.
+
+The implementation now owns immutable JPEG bytes, SHA-256, rights/alt metadata, opaque public delivery, container polling and read-after-write verification. It remains `review` until remote PostgreSQL/schema v5, package, Helm/Terraform and supply-chain gates pass.
+
+## OI-016 — Post-publication rights withdrawal and provider deletion
+
+Category: privacy / legal / external effect / reconciliation
+
+INC-022 supports revocation before Greenlight and blocks expired/revoked media before provider HTTP. It does not silently delete an already published Instagram post because deletion is a separate external effect requiring account authority, state inspection and an explicit human decision.
+
+Exact resume condition: specify provider deletion protocol, exact-once intent/receipt, legal retention requirements, UI confirmation, reconciliation and a separately authorized sandbox deletion exercise.
+
+## OI-017 — Independent public-media signing-key rotation
+
+Category: cryptography / operability
+
+The current HMAC key is externalized and never stored in media rows, but deterministic replay of active bindings expects the generating key. The runbook requires retaining the previous key through maximum TTL and retry window.
+
+Exact resume condition: implement an active-key ID plus keyring, migrate durable bindings, test mixed-key replicas and prove rotation/rollback before enabling unattended production rotation.
+
+## OI-018 — Authorized real sandbox publication
+
+Category: human gate / provider / external effect
+
+All provider paths are exercised with bounded transports; no real post has been created. A live sandbox exercise must name the account, exact copy/media hashes, time window, publication flags, expected permalink/receipt and rollback/deletion authority.

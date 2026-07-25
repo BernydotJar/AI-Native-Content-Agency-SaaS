@@ -5,6 +5,7 @@
     "BSD-3-Clause",
     "ISC",
     "MIT",
+    "MIT-CMU",
     "OFL-1.1"
   ],
   "base_images": [
@@ -28,7 +29,7 @@
     },
     {
       "path": "artifacts/supply-chain/license-policy.json",
-      "sha256": "f27836f7a7ff4f1aac6ec22380064aea08fda28cd91d79ab6d5a6d5df6639a1a"
+      "sha256": "a73b802f2a51de6660f6df8e155a6c4e65a6960cf0864a801b9fc5c7ea09c551"
     },
     {
       "path": "backend/agency_runtime/integration_reviews/video_use.json",
@@ -36,11 +37,11 @@
     },
     {
       "path": "backend/requirements.lock",
-      "sha256": "b72c1788e79a2af973938ff5089fb745a348e8f5fbf8257adf8911c6337638da"
+      "sha256": "93ba1784a41eb1eee012cca44ac9504eee3aa3cabc92f024bf0852d2ad31d2cb"
     },
     {
       "path": "backend/setup.cfg",
-      "sha256": "eb67def546cb09d25b8a723c873d451a9783a7d12711531cd004f05af746ac38"
+      "sha256": "dd5168a5d3a53923bd8e0494ca23fcd59e5b488573f6e70e3957bbe72edd1c77"
     },
     {
       "path": "package-lock.json",
@@ -238,6 +239,12 @@
       "name": "httpx",
       "scope": "runtime",
       "version": "0.28.1"
+    },
+    {
+      "license": "MIT-CMU",
+      "name": "pillow",
+      "scope": "runtime",
+      "version": "12.3.0"
     },
     {
       "license": "BSD-3-Clause",

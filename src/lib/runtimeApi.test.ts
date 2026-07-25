@@ -425,4 +425,52 @@ describe("runtime API client", () => {
       }),
     );
   });
+
+  it("uploads governed publication media as raw bytes with UTF-8 alt text", async () => {
+    const responseRun = {
+      run_id: "run-media-001",
+      tenant_id: "tenant-alpha",
+      status: "awaiting_greenlight",
+      agent_states: {},
+      artifacts: [],
+      greenlight: null,
+      sandbox: true,
+      external_side_effects_enabled: false,
+    };
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(responseRun, 201));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], "media.jpg", {
+      type: "image/jpeg",
+    });
+
+    await api.attachPublicationMedia(
+      "run-media-001",
+      "instagram",
+      file,
+      "Descripción accesible de la imagen.",
+      true,
+      "csrf-media-001",
+      "media-upload-idempotency-001",
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/v1/runs/run-media-001/publication-media/instagram");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(file);
+    expect(init.credentials).toBe("include");
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Content-Type"]).toBe("image/jpeg");
+    expect(headers["X-CSRF-Token"]).toBe("csrf-media-001");
+    expect(headers["Idempotency-Key"]).toBe("media-upload-idempotency-001");
+    expect(headers["X-Media-Rights-Confirmed"]).toBe("true");
+    const encoded = headers["X-Media-Alt-Text-Base64"];
+    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(
+      Math.ceil(encoded.length / 4) * 4,
+      "=",
+    );
+    const bytes = Uint8Array.from(globalThis.atob(padded), (character) => character.charCodeAt(0));
+    expect(new TextDecoder().decode(bytes)).toBe("Descripción accesible de la imagen.");
+  });
+
 });

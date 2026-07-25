@@ -184,6 +184,25 @@ if [[ "$MODE" == "check" ]]; then
   printf 'python_version=%s\n' "$PYTHON_VERSION"
   printf 'identity_source=%s\n' "$([[ -n "$GENERATED_LOCAL_KEY" ]] && printf ephemeral || printf environment)"
   printf 'session_cookie_secure=%s\n' "$AGENCY_SESSION_COOKIE_SECURE"
+  public_media_base_url="${AGENCY_PUBLIC_MEDIA_BASE_URL:-}"
+  public_media_signing_key="${AGENCY_PUBLIC_MEDIA_SIGNING_KEY:-}"
+  public_media_ttl="${AGENCY_PUBLIC_MEDIA_TTL_SECONDS:-86400}"
+  if { [ -n "$public_media_base_url" ] && [ -z "$public_media_signing_key" ]; } || \
+     { [ -z "$public_media_base_url" ] && [ -n "$public_media_signing_key" ]; }; then
+    fail "AGENCY_PUBLIC_MEDIA_BASE_URL and AGENCY_PUBLIC_MEDIA_SIGNING_KEY must be configured together"
+  fi
+  case "$public_media_ttl" in
+    ''|*[!0-9]*) fail "AGENCY_PUBLIC_MEDIA_TTL_SECONDS must be an integer" ;;
+  esac
+  if [ "$public_media_ttl" -lt 900 ] || [ "$public_media_ttl" -gt 604800 ]; then
+    fail "AGENCY_PUBLIC_MEDIA_TTL_SECONDS must be between 900 and 604800"
+  fi
+  if [ -n "$public_media_base_url" ]; then
+    printf 'public_media_configured=true\n'
+  else
+    printf 'public_media_configured=false\n'
+  fi
+  printf 'public_media_ttl_seconds=%s\n' "$public_media_ttl"
   printf 'session_cookie_samesite=%s\n' "$AGENCY_SESSION_COOKIE_SAMESITE"
   printf 'build_lock_strategy=primary_then_hash_locked_compatibility\n'
   printf 'external_provider_calls=not_started\n'

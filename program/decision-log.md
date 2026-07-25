@@ -216,3 +216,14 @@ Status: accepted at exact remote head `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1`
 Decision: mark INC-021 `done` after local deterministic gates and GitHub Actions run `30149528848` passed all eight exact-head jobs. Keep PR #13 draft, keep `DENY_RELEASE` and `DENY_APPLY`, and keep all political/social external effects disabled.
 
 Consequence: the next safe executable task is INC-022 for governed media and read-after-write publication verification. Increment completion does not constitute legal approval, candidate authorization, deployment or permission to publish.
+
+## D-020 — Provider IDs are not sufficient evidence of publication
+
+Date: 2026-07-25
+Status: accepted locally; exact-head CI pending
+
+Decision: Instagram publication is successful only after the media container reaches `FINISHED`, `media_publish` returns an ID, and an independent media read matches the intended account, caption hash, media type, permalink and timestamp. Any ambiguity after an external mutation is durable `unknown`, not retryable success or failure.
+
+Media supplied to the provider must come from the product-owned Media Vault: decoded JPEG bytes, server SHA-256, rights/alt metadata, tenant/run binding, opaque capability, expiry and revocation. External mutable image URLs are not accepted as Greenlight evidence.
+
+Consequence: the system can truthfully show a durable verified permalink after reload. Real publication, provider deletion, signing-key rotation and production object storage remain separate human/release gates.

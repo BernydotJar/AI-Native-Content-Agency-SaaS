@@ -121,7 +121,7 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
             )
         )
 
-    def authority(self, handler, *, enabled=True, store=None):
+    def authority(self, handler, *, enabled=True, store=None, **options):
         authority = SocialPublicationAuthority(
             store=store or self.publication_store,
             connection_store=self.connection_store,
@@ -133,6 +133,7 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
             clock=lambda: NOW,
             nonce_factory=lambda: "publication-nonce-001",
             timestamp_factory=lambda: 1784838600,
+            **options,
         )
         self.authorities.append(authority)
         return authority
@@ -250,16 +251,19 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         self.assertEqual(blocked.exception.status, "unknown")
         self.assertEqual(len(calls), 1)
 
-    def test_instagram_persists_container_before_media_publish_receipt(self):
+    def test_instagram_waits_for_container_and_verifies_published_media(self):
         calls = []
+        sleeps = []
+        status_reads = 0
 
         def handler(request):
+            nonlocal status_reads
             calls.append(request)
             self.assertEqual(
                 request.headers["Authorization"],
                 "Bearer {}".format(IG_ACCESS_TOKEN),
             )
-            if request.url.path.endswith("/media"):
+            if request.method == "POST" and request.url.path.endswith("/media"):
                 body = request.content.decode("utf-8")
                 self.assertIn("image_url=", body)
                 self.assertIn("caption=Approved+campaign+copy", body)
@@ -268,23 +272,145 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                     headers={"x-fb-trace-id": "ig-container-request"},
                     json={"id": "ig-container-001"},
                 )
-            if request.url.path.endswith("/media_publish"):
+            if request.method == "GET" and request.url.path.endswith("/ig-container-001"):
+                self.assertEqual(request.url.params["fields"], "status_code,status")
+                status_reads += 1
+                return httpx.Response(
+                    200,
+                    json={
+                        "status_code": "IN_PROGRESS" if status_reads == 1 else "FINISHED",
+                        "status": "processing" if status_reads == 1 else "published",
+                    },
+                )
+            if request.method == "POST" and request.url.path.endswith("/media_publish"):
                 self.assertIn("creation_id=ig-container-001", request.content.decode())
                 return httpx.Response(
                     200,
                     headers={"x-fb-trace-id": "ig-publish-request"},
                     json={"id": "ig-post-001"},
                 )
+            if request.method == "GET" and request.url.path.endswith("/ig-post-001"):
+                self.assertEqual(
+                    request.url.params["fields"],
+                    "id,caption,media_type,permalink,timestamp,username",
+                )
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "ig-post-001",
+                        "caption": "Approved campaign copy",
+                        "media_type": "IMAGE",
+                        "permalink": "https://www.instagram.com/p/ig-post-001/",
+                        "timestamp": "2026-07-23T20:31:00+00:00",
+                        "username": "connected.instagram",
+                    },
+                )
             raise AssertionError("unexpected Instagram request {}".format(request.url))
 
-        authority = self.authority(handler)
+        authority = self.authority(
+            handler,
+            instagram_container_poll_attempts=3,
+            instagram_container_poll_interval_seconds=0.01,
+            sleep=lambda seconds: sleeps.append(seconds),
+        )
         result = authority.execute(command("instagram"))
         self.assertEqual(result.provider_container_id, "ig-container-001")
         self.assertEqual(result.provider_post_id, "ig-post-001")
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 5)
+        self.assertEqual(sleeps, [0.01])
+        self.assertEqual(result.receipt["verification_status"], "verified")
+        self.assertEqual(
+            result.receipt["permalink"],
+            "https://www.instagram.com/p/ig-post-001/",
+        )
+        self.assertEqual(result.receipt["username"], "connected.instagram")
+        self.assertEqual(
+            result.receipt["caption_sha256"], digest("Approved campaign copy")
+        )
+        self.assertEqual(result.receipt["media_sha256"], digest("governed-media"))
+        serialized = json.dumps(result.public_dict(), sort_keys=True)
+        self.assertNotIn("Approved campaign copy", serialized)
         raw = self.path.read_bytes()
         self.assertNotIn(MEDIA_URL.encode(), raw)
         self.assertNotIn(IG_ACCESS_TOKEN.encode(), raw)
+
+    def test_instagram_container_terminal_error_fails_without_publish(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST" and request.url.path.endswith("/media"):
+                return httpx.Response(200, json={"id": "ig-container-error"})
+            if request.method == "GET" and request.url.path.endswith("/ig-container-error"):
+                return httpx.Response(
+                    200, json={"status_code": "ERROR", "status": "invalid media"}
+                )
+            raise AssertionError("media_publish must not be called")
+
+        authority = self.authority(handler, sleep=lambda seconds: None)
+        with self.assertRaises(SocialPublicationProviderRejectedError):
+            authority.execute(command("instagram"))
+        self.assertEqual(len(calls), 2)
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(stored.status, "failed")
+
+    def test_instagram_poll_exhaustion_is_unknown_and_blocks_retry(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST" and request.url.path.endswith("/media"):
+                return httpx.Response(200, json={"id": "ig-container-slow"})
+            if request.method == "GET" and request.url.path.endswith("/ig-container-slow"):
+                return httpx.Response(200, json={"status_code": "IN_PROGRESS"})
+            raise AssertionError("media_publish must not be called")
+
+        authority = self.authority(
+            handler,
+            instagram_container_poll_attempts=2,
+            instagram_container_poll_interval_seconds=0,
+            sleep=lambda seconds: None,
+        )
+        with self.assertRaises(SocialPublicationUnknownError):
+            authority.execute(command("instagram"))
+        self.assertEqual(len(calls), 3)
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(stored.status, "unknown")
+        with self.assertRaises(SocialPublicationBlockedError):
+            authority.execute(command("instagram"))
+        self.assertEqual(len(calls), 3)
+
+    def test_instagram_read_after_write_mismatch_is_unknown(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST" and request.url.path.endswith("/media"):
+                return httpx.Response(200, json={"id": "ig-container-mismatch"})
+            if request.method == "GET" and request.url.path.endswith("/ig-container-mismatch"):
+                return httpx.Response(200, json={"status_code": "FINISHED"})
+            if request.method == "POST" and request.url.path.endswith("/media_publish"):
+                return httpx.Response(200, json={"id": "ig-post-mismatch"})
+            if request.method == "GET" and request.url.path.endswith("/ig-post-mismatch"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "ig-post-mismatch",
+                        "caption": "Different provider caption",
+                        "media_type": "IMAGE",
+                        "permalink": "https://www.instagram.com/p/ig-post-mismatch/",
+                        "timestamp": "2026-07-23T20:31:00+00:00",
+                        "username": "connected.instagram",
+                    },
+                )
+            raise AssertionError("unexpected request")
+
+        authority = self.authority(handler, sleep=lambda seconds: None)
+        with self.assertRaises(SocialPublicationUnknownError):
+            authority.execute(command("instagram"))
+        self.assertEqual(len(calls), 4)
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(stored.status, "unknown")
 
     def test_persistence_failure_after_provider_success_blocks_replay_as_pending(self):
         failing_store = FailingCompleteStore(self.path, clock=lambda: NOW)

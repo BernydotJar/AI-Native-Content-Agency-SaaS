@@ -65,3 +65,22 @@ A green build never authorizes political publication. Any release candidate cont
 - one sandbox post is separately authorized and reconciled before production.
 
 Current decision remains `DENY_RELEASE`; the political publication flag remains false.
+
+## Governed media and verified publication release gate
+
+A social publication release candidate must prove:
+
+- image bytes are decoded, bounded, persisted and hash-bound before Greenlight;
+- rights and accessibility metadata are recorded by an authenticated operator and reviewed by humans;
+- public capability origin is HTTPS, opaque, expiring, revocable and configured from an external Secret;
+- PostgreSQL schema v5 is shared across replicas and included in backup/restore evidence;
+- expired, revoked or byte-inconsistent media blocks before provider HTTP;
+- Instagram container reaches `FINISHED` before `media_publish`;
+- read-after-write verification matches account, ID, caption hash, media type, permalink and timestamp;
+- unknown outcomes cannot retry automatically;
+- durable receipt/history is available after reload;
+- post-publication rights withdrawal/deletion has an explicit procedure;
+- general and political publication flags are separately authorized;
+- one sandbox publication is explicitly approved and reconciled before production.
+
+Current decision remains `DENY_RELEASE`; no provider effect is authorized by a green build.

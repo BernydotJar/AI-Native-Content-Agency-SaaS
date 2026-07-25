@@ -111,7 +111,7 @@ describe("CampaignOutputPanel", () => {
     expect(screen.getByText(/Una señal puede convertirse en acción/i)).toBeInTheDocument();
     expect(screen.getByText(/Vista previa de Instagram/i)).toBeInTheDocument();
     expect(screen.getByText(/Asset visual pendiente/i)).toBeInTheDocument();
-    expect(screen.getByText(/Instagram exige imagen, reel o carrusel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Instagram exige imagen; adjunta un JPEG 4:5/i)).toBeInTheDocument();
     expect(screen.getByRole("list", { name: /Estado de publicación para Instagram/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Requiere Greenlight/i)).toHaveLength(2);
     expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy((buttons: HTMLElement[]) =>
@@ -254,8 +254,125 @@ describe("CampaignOutputPanel", () => {
     );
   });
 
+  it("restores only a verified Instagram permalink from durable receipts", () => {
+    render(
+      <CampaignOutputPanel
+        run={RUN}
+        socialChannels={SOCIAL_CHANNELS}
+        publications={[{
+          intent_id: "intent-verified-001",
+          channel_id: "instagram",
+          account_id: "ig-account-001",
+          run_id: RUN.run_id,
+          artifact_id: "copy-001",
+          artifact_hash: "a".repeat(64),
+          greenlight_id: "greenlight-001",
+          greenlight_fencing_token: 1,
+          status: "succeeded",
+          execution_fencing_token: 1,
+          provider_container_id: "container-001",
+          provider_post_id: "post-001",
+          receipt: {
+            verification_status: "verified",
+            permalink: "https://www.instagram.com/p/post-001/",
+          },
+          replayed: false,
+        }]}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: /Abrir publicación verificada en Instagram/i }),
+    ).toHaveAttribute("href", "https://www.instagram.com/p/post-001/");
+  });
+
   it("shows a bounded empty state before a run exists", () => {
     render(<CampaignOutputPanel run={null} />);
     expect(screen.getByText(/Todavía no hay posts/i)).toBeInTheDocument();
   });
+
+  it("requires JPEG, alt text and rights before attaching Instagram media", async () => {
+    const onAttachMedia = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CampaignOutputPanel
+        run={RUN}
+        socialChannels={SOCIAL_CHANNELS}
+        publicationAllowed
+        onAttachMedia={onAttachMedia}
+      />,
+    );
+
+    const upload = screen.getByRole("button", { name: /Adjuntar imagen/i });
+    expect(upload).toBeDisabled();
+    const file = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], "campaign.jpg", {
+      type: "image/jpeg",
+    });
+    fireEvent.change(screen.getByLabelText(/Imagen JPEG/i), {
+      target: { files: [file] },
+    });
+    fireEvent.change(screen.getByLabelText(/Texto alternativo/i), {
+      target: { value: "Tarjeta accesible de la propuesta." },
+    });
+    expect(upload).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(/Confirmo que tengo derechos/i));
+    expect(upload).toBeEnabled();
+    fireEvent.click(upload);
+
+    await waitFor(() => expect(onAttachMedia).toHaveBeenCalledTimes(1));
+    expect(onAttachMedia).toHaveBeenCalledWith(
+      "instagram",
+      file,
+      "Tarjeta accesible de la propuesta.",
+      true,
+      expect.stringMatching(/^media:instagram:/),
+    );
+  });
+
+  it("renders governed Instagram media with its approved alt text", () => {
+    const runWithMedia: RuntimeRun = {
+      ...RUN,
+      artifacts: [
+        ...RUN.artifacts,
+        {
+          artifact_id: "publication-media-001",
+          kind: "publication_media",
+          title: "Governed Instagram publication image",
+          payload: {
+            channel: "instagram",
+            media_id: "media-001",
+            media_url: "https://media.example.test/api/v1/publication-media/public/opaque-token",
+            content_type: "image/jpeg",
+            byte_size: 12345,
+            sha256: "a".repeat(64),
+            width: 1080,
+            height: 1350,
+            alt_text: "Carrusel accesible sobre una propuesta municipal.",
+            rights_status: "confirmed",
+            rights_attested_by: "media-admin",
+            expires_at: "2026-07-26T08:00:00+00:00",
+          },
+          evidence_ids: [],
+        },
+      ],
+    };
+
+    render(
+      <CampaignOutputPanel
+        run={runWithMedia}
+        socialChannels={SOCIAL_CHANNELS}
+        publicationAllowed
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", {
+        name: "Carrusel accesible sobre una propuesta municipal.",
+      }),
+    ).toHaveAttribute(
+      "src",
+      "https://media.example.test/api/v1/publication-media/public/opaque-token",
+    );
+    expect(screen.queryByRole("button", { name: /Adjuntar imagen/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Media gobernada/i)).toBeInTheDocument();
+  });
+
 });

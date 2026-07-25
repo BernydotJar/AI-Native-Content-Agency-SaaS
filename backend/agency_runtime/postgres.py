@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "4"
+POSTGRES_SCHEMA_VERSION = "5"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -51,6 +51,7 @@ POSTGRES_REQUIRED_TABLES = (
     "social_oauth_states",
     "social_connections",
     "social_publication_intents",
+    "publication_media_objects",
     "model_effect_intents",
 )
 POSTGRES_REQUIRED_SEQUENCES = ("audit_events_sequence_seq",)
@@ -168,6 +169,29 @@ POSTGRES_REQUIRED_COLUMNS = {
             "updated_at",
             "completed_at",
             "revoked_at",
+        }
+    ),
+    "publication_media_objects": frozenset(
+        {
+            "media_id",
+            "tenant_id",
+            "run_id",
+            "channel_id",
+            "content_type",
+            "byte_size",
+            "sha256",
+            "width",
+            "height",
+            "alt_text",
+            "rights_attested_by",
+            "public_token_digest",
+            "idempotency_digest",
+            "binding_digest",
+            "content",
+            "created_at",
+            "expires_at",
+            "revoked_at",
+            "revocation_reason",
         }
     ),
     "model_effect_intents": frozenset(
@@ -774,6 +798,42 @@ class PostgresRuntimeDatabase:
                 )
             """,
             """
+            CREATE TABLE IF NOT EXISTS public.publication_media_objects (
+                media_id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                channel_id TEXT NOT NULL CHECK (channel_id = 'instagram'),
+                content_type TEXT NOT NULL CHECK (content_type = 'image/jpeg'),
+                byte_size BIGINT NOT NULL CHECK (byte_size > 0 AND byte_size <= 8388608),
+                sha256 TEXT NOT NULL,
+                width INTEGER NOT NULL CHECK (width >= 320 AND width <= 1440),
+                height INTEGER NOT NULL CHECK (height >= 320 AND height <= 1440),
+                alt_text TEXT NOT NULL,
+                rights_attested_by TEXT NOT NULL,
+                public_token_digest TEXT NOT NULL UNIQUE,
+                idempotency_digest TEXT,
+                binding_digest TEXT,
+                content BYTEA NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                revoked_at TIMESTAMPTZ,
+                revocation_reason TEXT NOT NULL DEFAULT '',
+                UNIQUE (tenant_id, idempotency_digest),
+                UNIQUE (tenant_id, binding_digest),
+                UNIQUE (tenant_id, run_id, channel_id, sha256)
+            )
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_publication_media_tenant_run
+                ON public.publication_media_objects(tenant_id, run_id, created_at DESC)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_publication_media_public_lookup
+                ON public.publication_media_objects(
+                    public_token_digest, expires_at, revoked_at
+                )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS public.model_effect_intents (
                 effect_id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -838,7 +898,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value IN ('1', '2', '3')
+                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4')
                 """,
                 (SCHEMA_VERSION,),
             )
@@ -872,9 +932,16 @@ class PostgresRuntimeDatabase:
                 elif relation_type == "table":
                     columns = connection.execute(
                         """
-                        SELECT column_name
-                        FROM information_schema.columns
-                        WHERE table_schema = %s AND table_name = %s
+                        SELECT attribute.attname AS column_name
+                        FROM pg_catalog.pg_attribute AS attribute
+                        JOIN pg_catalog.pg_class AS relation
+                          ON relation.oid = attribute.attrelid
+                        JOIN pg_catalog.pg_namespace AS namespace
+                          ON namespace.oid = relation.relnamespace
+                        WHERE namespace.nspname = %s
+                          AND relation.relname = %s
+                          AND attribute.attnum > 0
+                          AND NOT attribute.attisdropped
                         """,
                         ("public", name),
                     ).fetchall()
