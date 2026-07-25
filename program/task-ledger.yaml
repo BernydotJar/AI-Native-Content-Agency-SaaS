@@ -1463,7 +1463,7 @@
         "credentials in Git or logs",
         "cloud apply or spend"
       ],
-      "write_lock": "active single-writer on agent/inc-023-political-compliance-mode",
+      "write_lock": "released after implementation checkpoint; evidence update only",
       "expected_outputs": [
         "independent political kill switches",
         "organic versus paid brief contract",
@@ -1499,7 +1499,8 @@
         "explicit short publication window and rollback owner",
         "merge/deployment/release"
       ],
-      "publication_state": "LOCAL_FREEZE_PASS_REMOTE_CI_PENDING_ALL_EFFECTS_DISABLED"
+      "publication_state": "LOCAL_FREEZE_PASS_REMOTE_CI_PENDING_ALL_EFFECTS_DISABLED",
+      "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6"
     }
   ],
   "updated_at": "2026-07-25",

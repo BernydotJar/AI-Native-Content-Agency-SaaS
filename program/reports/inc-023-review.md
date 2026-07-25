@@ -4,6 +4,8 @@ Date: 2026-07-25
 
 Increment: Political Compliance Mode
 
+Implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
+
 Review state: `CONDITIONAL_PASS_EXACT_HEAD_CI_PENDING`
 
 Global state: `DENY_RELEASE` / `DENY_APPLY`

@@ -6,8 +6,9 @@ Updated: 2026-07-25
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
 - Active branch: `agent/inc-023-political-compliance-mode`
-- Current committed checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
-- INC-023 implementation: present in the worktree; implementation commit and remote head pending
+- INC-023 specification checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
+- INC-023 implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
+- Remote branch, draft PR and exact-head CI: pending
 - Nested containers created: none; count remains zero
 - Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
 
@@ -63,4 +64,4 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Complete final local regression after the paid-creation gate, freeze and commit INC-023, publish the exact branch, open a draft PR against `agent/inc-022-governed-media-verification`, pass all eight exact-head CI jobs, repair any failure, complete a distinct review, then separately authorize and execute the neutral sandbox publication.
+Publish the exact implementation and evidence commits, open a draft PR against `agent/inc-022-governed-media-verification`, pass all eight exact-head CI jobs, repair any failure, complete a distinct review, then separately authorize and execute the neutral sandbox publication.
