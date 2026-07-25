@@ -1335,7 +1335,7 @@
       "status": "review",
       "role": "Media Engineer / Backend Engineer / Data Engineer / Security Reviewer / Privacy Reviewer / Red Team / Independent Verifier",
       "objective": "Create immutable governed JPEG media, pre-Greenlight revocation, container processing and durable read-after-write verified Instagram receipts.",
-      "context": "Implementation commit 798d68dab228d0445c3d31bb5c4ce6ad73da93f1 adds a SQLite/PostgreSQL Media Vault, schema v5, Pillow-verified JPEG ingestion, HMAC capability URLs, UI upload/revocation, Instagram container polling, media verification and durable history. No real provider effect was executed.",
+      "context": "Implementation commit 3d8ed72332d29b161a48c1201e627a9c016ec6ac adds a SQLite/PostgreSQL Media Vault, schema v5, Pillow-verified JPEG ingestion, HMAC capability URLs, UI upload/revocation, Instagram container polling, media verification and durable history. No real provider effect was executed.",
       "authoritative_inputs": [
         "specs/022-governed-media-verification/spec.md",
         "skills/platform-instagram.md",
@@ -1411,7 +1411,7 @@
         "merge/deploy/release"
       ],
       "publication_state": "LOCAL_DETERMINISTIC_GATES_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED",
-      "implementation_commit": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1"
+      "implementation_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac"
     }
   ],
   "updated_at": "2026-07-25",

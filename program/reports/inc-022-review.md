@@ -2,7 +2,7 @@
 
 Date: 2026-07-25  
 Branch: `agent/inc-022-governed-media-verification`  
-Implementation commit: `798d68dab228d0445c3d31bb5c4ce6ad73da93f1`  
+Implementation commit: `3d8ed72332d29b161a48c1201e627a9c016ec6ac`  
 Program state: `review`
 
 ## Producer

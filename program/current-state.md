@@ -6,7 +6,7 @@ Updated: 2026-07-25
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
 - Branch: `agent/inc-022-governed-media-verification`
-- INC-022 implementation commit: `798d68dab228d0445c3d31bb5c4ce6ad73da93f1`
+- INC-022 implementation commit: `3d8ed72332d29b161a48c1201e627a9c016ec6ac`
 - Exact verified parent: `ea306fdec61842557d7d8c84f9423347e08825ab`
 - Protected branches modified: no
 - Remote branch / PR for INC-022: pending
@@ -65,4 +65,4 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish `agent/inc-022-governed-media-verification` at exact commit `798d68dab228d0445c3d31bb5c4ce6ad73da93f1`, pass all exact-head CI jobs, repair any failure, complete a distinct accountable review, then mark INC-022 done. A real sandbox post requires a separate explicit authorization naming the account, content/media, timing and acceptance/rollback criteria.
+Publish `agent/inc-022-governed-media-verification` at exact commit `3d8ed72332d29b161a48c1201e627a9c016ec6ac`, pass all exact-head CI jobs, repair any failure, complete a distinct accountable review, then mark INC-022 done. A real sandbox post requires a separate explicit authorization naming the account, content/media, timing and acceptance/rollback criteria.
