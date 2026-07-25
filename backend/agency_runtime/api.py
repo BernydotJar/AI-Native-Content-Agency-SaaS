@@ -1520,8 +1520,10 @@ def create_app(
         if session_cookie_samesite is None
         else session_cookie_samesite.strip().lower()
     )
-    if cookie_samesite not in {"lax", "strict"}:
-        raise ValueError("session cookie SameSite must be lax or strict")
+    if cookie_samesite not in {"lax", "none", "strict"}:
+        raise ValueError("session cookie SameSite must be lax, none or strict")
+    if cookie_samesite == "none" and not cookie_secure:
+        raise ValueError("session cookie SameSite=None requires Secure=true")
     ttl_seconds = (
         int(os.environ.get("AGENCY_SESSION_TTL_SECONDS", "28800"))
         if session_ttl_seconds is None
@@ -1650,9 +1652,9 @@ def create_app(
             cipher=social_cipher,
             transport=social_oauth_transport,
         )
-        if cookie_samesite != "lax":
+        if cookie_samesite not in {"lax", "none"}:
             raise ValueError(
-                "social OAuth callbacks require AGENCY_SESSION_COOKIE_SAMESITE=lax"
+                "social OAuth callbacks require AGENCY_SESSION_COOKIE_SAMESITE=lax or none"
             )
         try:
             bootstrapped_social_connections = bootstrap_social_connections(
@@ -2041,12 +2043,14 @@ def create_app(
     ) -> PublicApiError:
         phase = getattr(error, "phase", "provider")
         reason = getattr(error, "reason", "invalid_response")
+        exception_type = getattr(error, "exception_type", "") or "none"
         API_LOGGER.warning(
-            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s",
+            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s exception_type=%s",
             _request_id(request),
             channel_id,
             phase,
             reason,
+            exception_type,
         )
         display = "X" if channel_id == "x" else "Instagram"
         phase_labels = {
@@ -2714,7 +2718,9 @@ def create_app(
     def complete_instagram_oauth(
         request: Request,
         code: str = Query(min_length=1, max_length=8192),
-        state_value: str = Query(alias="state", min_length=32, max_length=256),
+        state_value: Optional[str] = Query(
+            default=None, alias="state", min_length=32, max_length=256
+        ),
         principal: TenantPrincipal = Depends(require_social_callback_manager),
     ) -> RedirectResponse:
         if social_oauth_service is None:
@@ -2730,14 +2736,19 @@ def create_app(
                 state_value=state_value,
                 code=code,
             )
-        except SocialOAuthCallbackError as error:
-            raise PublicApiError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                code="social_oauth_callback_invalid",
-                detail="social authentication callback is invalid or expired",
-            ) from error
+        except SocialOAuthCallbackError:
+            return RedirectResponse(
+                url="/?social_channel=instagram&status=error&error=social_oauth_callback_invalid",
+                status_code=303,
+            )
         except SocialOAuthProviderError as error:
-            raise _social_provider_error(request, error, "instagram") from error
+            public_error = _social_provider_error(request, error, "instagram")
+            return RedirectResponse(
+                url="/?social_channel=instagram&status=error&error={}".format(
+                    public_error.code
+                ),
+                status_code=303,
+            )
         service.record_social_event(
             principal=principal,
             request_id=request.state.request_id,

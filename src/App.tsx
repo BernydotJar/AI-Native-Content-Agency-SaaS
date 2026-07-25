@@ -164,11 +164,26 @@ export default function App() {
     const query = new URLSearchParams(window.location.search);
     const channel = query.get("social_channel");
     const status = query.get("status");
-    if ((channel === "x" || channel === "instagram") && status === "connected") {
-      setSettingsOpen(true);
-      setSocialNotice(`${channel === "x" ? "X" : "Instagram"} quedó conectado correctamente.`);
-      void refreshFabric();
-      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    if (channel === "x" || channel === "instagram") {
+      if (status === "connected") {
+        setSettingsOpen(true);
+        setSocialNotice(`${channel === "x" ? "X" : "Instagram"} quedó conectado correctamente.`);
+        void refreshFabric();
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+        return;
+      }
+      if (status === "error") {
+        const errorCode = query.get("error");
+        const messages: Record<string, string> = {
+          social_oauth_callback_invalid: "La autorización expiró o ya fue utilizada. Inicia una conexión nueva.",
+          social_provider_rejected: "Instagram rechazó el intercambio. Revisa credenciales, callback y permisos de la app.",
+          social_provider_unreachable: "No se pudo completar la comunicación con Instagram. Intenta nuevamente.",
+          social_provider_response_invalid: "Instagram devolvió una respuesta OAuth que no pudo procesarse.",
+        };
+        setSettingsOpen(true);
+        setSocialActionError(messages[errorCode ?? ""] ?? "No se pudo completar la conexión social.");
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+      }
     }
   }, [refreshFabric, session]);
 
