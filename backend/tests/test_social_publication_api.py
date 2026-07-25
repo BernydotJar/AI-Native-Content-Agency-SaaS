@@ -14,6 +14,7 @@ from agency_runtime.social_publication_store import SocialPublicationIntent
 
 ADMIN_KEY = "publication-admin-key-material-2026"
 VIEWER_KEY = "publication-viewer-key-material-2026"
+POLITICAL_APPROVER_KEY = "publication-political-approver-key-2026"
 X_SECRET = "publication-x-consumer-secret-must-not-leak"
 X_ACCESS_TOKEN = "publication-x-access-token-must-not-leak"
 X_ACCESS_SECRET = "publication-x-access-secret-must-not-leak"
@@ -41,6 +42,14 @@ def identities():
             "api_key": VIEWER_KEY,
             "active": True,
         },
+        {
+            "tenant_id": "tenant-alpha",
+            "subject_id": "publication-political-approver",
+            "role": "admin",
+            "key_id": "publication-political-approver-v1",
+            "api_key": POLITICAL_APPROVER_KEY,
+            "active": True,
+        },
     ]
 
 
@@ -60,6 +69,7 @@ def environment(*, enabled=True, political_enabled=False):
         "AGENCY_POLITICAL_PUBLICATION_ENABLED": (
             "true" if political_enabled else "false"
         ),
+        "AGENCY_POLITICAL_CONTENT_ENABLED": "true",
         "AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID": "tenant-alpha",
         "AGENCY_X_USER_ACCESS_TOKEN": X_ACCESS_TOKEN,
         "AGENCY_X_USER_ACCESS_TOKEN_SECRET": X_ACCESS_SECRET,
@@ -193,9 +203,9 @@ class SocialPublicationApiTests(unittest.TestCase):
                 "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
                 json={"reviewer": "publication-admin", "note": "editorial approved"},
                 headers={
-                    "X-CSRF-Token": csrf,
+                    "Authorization": "Bearer {}".format(POLITICAL_APPROVER_KEY),
                     "Idempotency-Key": "political-independent-greenlight-001",
-                },
+                }
             )
             self.assertEqual(approved.status_code, 200, approved.text)
             completed = approved.json()
@@ -541,6 +551,7 @@ class SocialPublicationApiTests(unittest.TestCase):
             content_hash=hashlib.sha256(b"content").hexdigest(),
             media_url_hash=None,
             media_hash=None,
+            confirmation_hash=None,
             greenlight_id="greenlight-test-001",
             greenlight_fencing_token=0,
             budget_cents=0,

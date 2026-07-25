@@ -37,6 +37,7 @@ def execution_run_from_document(document: Mapping[str, object]) -> ExecutionRun:
         ),
         campaign_goal=str(brief_data.get("campaign_goal", "awareness")),
         campaign_type=str(brief_data.get("campaign_type", "commercial")),
+        publication_mode=str(brief_data.get("publication_mode", "organic")),
         locale=str(brief_data.get("locale", "es-GT")),
         jurisdiction=str(brief_data.get("jurisdiction", "")),
         office=str(brief_data.get("office", "")),

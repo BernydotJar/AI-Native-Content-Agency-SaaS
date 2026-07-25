@@ -206,6 +206,11 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.social.politicalContentEnabled"
+    value = tostring(var.political_content_enabled)
+  }
+
+  set {
     name  = "runtime.social.publicationEnabled"
     value = tostring(var.social_publication_enabled)
   }
@@ -213,6 +218,11 @@ resource "helm_release" "app" {
   set {
     name  = "runtime.social.politicalPublicationEnabled"
     value = tostring(var.political_publication_enabled)
+  }
+
+  set {
+    name  = "runtime.social.politicalPaidMediaEnabled"
+    value = tostring(var.political_paid_media_enabled)
   }
 
   set {

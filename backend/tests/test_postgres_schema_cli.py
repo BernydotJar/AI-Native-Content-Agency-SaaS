@@ -95,7 +95,7 @@ class PostgreSQLSchemaCommandTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "pass")
         self.assertEqual(payload["mode"], "initialize")
-        self.assertEqual(payload["schema_version"], "5")
+        self.assertEqual(payload["schema_version"], "6")
         self.assertNotIn("secret", stdout.getvalue())
         self.assertNotIn("db.internal", stdout.getvalue())
 

@@ -5,64 +5,71 @@ Updated: 2026-07-25
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Branch: `agent/inc-022-governed-media-verification`
-- INC-022 implementation commit: `3d8ed72332d29b161a48c1201e627a9c016ec6ac`
-- Exact verified parent: `ea306fdec61842557d7d8c84f9423347e08825ab`
-- Protected branches modified: no
-- Remote branch / PR for INC-022: pending
-- Merge/release/deployment performed: no
+- Active branch: `agent/inc-023-political-compliance-mode`
+- INC-023 specification checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
+- INC-023 implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
+- Remote branch: `agent/inc-023-political-compliance-mode` at `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab`
+- Draft PR: [#15](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15)
+- Exact-head CI: 8/8 SUCCESS in run [30174006993](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993)
 - Nested containers created: none; count remains zero
-- Real Instagram/X publication, model call, cloud apply or spend: none
+- Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
 
-## Product evidence
+## Closed stacked increments
 
-- INC-021 campaign intelligence remains complete and exact-head verified.
-- INC-022 adds a bounded single-image Instagram workflow:
-  - Pillow-verified JPEG, exact 4:5, 320–1440 px, maximum 8 MiB;
-  - server-calculated SHA-256, UTF-8 alt text and authenticated rights attestation;
-  - immutable SQLite/PostgreSQL Media Vault with tenant isolation and idempotent replay;
-  - opaque HMAC capability URL; only its digest is stored for public lookup;
-  - public delivery with generic 404, ETag, max-age at most 300 seconds, expiry and revocation;
-  - operator upload and pre-Greenlight removal in the production UI;
-  - durable binding of exact media bytes into the Greenlight artifact envelope;
-  - pre-provider revalidation of byte hash, MIME, expiry and revocation;
-  - Instagram container polling until `FINISHED`;
-  - `media_publish` only after finished processing;
-  - independent GET of published media and verification of ID, account, caption hash, media type, permalink and timestamp;
-  - durable receipt/history and safe permalink recovery after reload;
-  - unknown outcomes remain blocked and require reconciliation.
+- PR #13, Campaign Intelligence, merged normally into `agent/inc-020-social-publication-authority` at merge commit `cce712e86b356cf9c4a2dca087f8af078101915e`.
+- PR #14, Publication Media and Verified Publication, merged normally into `agent/inc-021-campaign-intelligence` at merge commit `7522164240b8090fe70ec51525a6a247e4a558c8`.
+- PR #14 exact head `b5d63f65c52c886a1855f20aff8593ca398383ac` passed all eight `production-readiness` jobs in run `30164438593` before merge.
+- These stacked merges close the increments but do not merge the complete stack to protected `main`. Main still requires its own cumulative PR, current required checks and an eligible independent approval.
+
+## INC-023 implementation evidence
+
+The local implementation adds:
+
+- `publication_mode=organic|paid` with commercial default `organic`;
+- independent default-off switches for political content, general social publication, political publication and paid political planning;
+- server-side separation between legal/electoral reviewer and Greenlight approver;
+- `political_compliance_record` included in the approved Greenlight artifact envelope;
+- SHA-256 bindings for disclosure and claim/source/locator evidence;
+- schema v6 nullable `confirmation_hash` in SQLite/PostgreSQL exact-once publication intents;
+- exact final phrase `PUBLICAR POLITICA <run_id> <channel_id>` checked before intent reservation;
+- persistence of only the confirmation SHA-256, never the raw phrase;
+- paid political mode rejected by the organic publication endpoint before intent or provider HTTP;
+- typed political confirmation UI and paid-mode blocked state;
+- `.env`, Helm and Terraform switches that all default to false;
+- political publication runbook with neutral sandbox and rollback procedure.
+
+## Exact-head delivery receipt
+
+- PR #15 head `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab` passed `production-readiness` run `30174006993` with all eight jobs successful.
+- PostgreSQL schema v6, accessibility browser, OCI, Helm, Terraform and supply-chain gates passed.
+- The first supply-chain attempt was retried because Docker Hub timed out before project code ran; the retry completed successfully.
 
 ## Local verification receipt
 
-- Locked backend wheel: 277 tests PASS; 0 PostgreSQL-only tests SKIP locally because `AGENCY_TEST_DATABASE_URL` is absent.
-- Frontend suite: 0 tests PASS.
+- TDD RED captured before implementation.
+- Focused political backend: 8 tests PASS.
+- Broad backend compatibility: 75 tests PASS before the final paid-creation test was added.
+- Hash-locked installed wheel: 285 tests PASS, 25 PostgreSQL-only skips.
+- Frontend: 45 tests PASS.
 - Lint: 0 warnings, 0 errors.
 - Production build: PASS.
-- Focused Media Vault, publication, schema v5, backup and local-runner families: PASS.
-- Secret/diff/scope scans: PASS before implementation commit.
-- Nested Docker containers: zero.
+- Program validator: PASS with 87 requirements and 23 tasks.
+- Compliance validator: PASS and still returns `DENY_RELEASE`.
+- Backup/schema CLI/political operability family: 27 tests PASS before the final paid-creation test was added.
+- PostgreSQL executable gate could not run locally because `/usr/lib/postgresql/15/bin/postgres` is absent. No container or data mutation occurred; exact-head CI owns this gate.
+- Terraform, Helm and OpenTofu binaries are absent locally. Static configuration contracts pass; executable validation remains delegated to exact-head CI.
 
-## Truthful limitations
+## Safety and review decision
 
-- INC-022 exact SHA is not yet published or evaluated by remote CI.
-- PostgreSQL v5 multi-replica, OCI, Helm, Terraform and supply-chain exact-head gates remain pending.
-- No real Meta container or post was created; provider behavior is verified through bounded MockTransport contracts and official primary documentation.
-- Media deletion from an already published Instagram account is not automated by this increment. Post-Greenlight rights withdrawal requires revoking approval, assessing provider state and an explicit deletion/reconciliation workflow.
-- Signing-key rotation is operationally safe only when the previous key is retained through the maximum capability TTL and active retry window. A keyring migration remains future work before independent live rotation.
-- The local SQLite BLOB vault is suitable for demonstration; production scale requires an authorized durable object-storage/retention design while preserving the same byte/hash contract.
-- JPEG IMAGE only; carousel/reel child-level exact-once protocols are deferred.
-- Human media-rights, accessibility, privacy, legal, campaign and provider-policy reviews remain required.
-
-## Program decision
+- All external effects remain disabled by default.
+- Paid political advertising is not implemented and cannot use the organic endpoint.
+- Automated role-separated review does not constitute jurisdiction-specific legal advice, campaign authorization or provider-policy approval.
+- One neutral sandbox post on `@beesheep2` remains blocked only by the separate accountable review, exact account/content/media confirmation, bounded publication window and rollback owner. The software and exact-head CI gates are complete.
 
 Release recommendation: `DENY_RELEASE`
-Cloud recommendation: `DENY_APPLY`
 
-- INC-021: `done`
-- INC-022: `review`
-- Global release: `DENY_RELEASE`
-- Cloud apply: `DENY_APPLY`
+Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish `agent/inc-022-governed-media-verification` at exact commit `3d8ed72332d29b161a48c1201e627a9c016ec6ac`, pass all exact-head CI jobs, repair any failure, complete a distinct accountable review, then mark INC-022 done. A real sandbox post requires a separate explicit authorization naming the account, content/media, timing and acceptance/rollback criteria.
+Merge PR #15 after the final documentation-only checkpoint passes exact-head CI. Then separately authorize the exact neutral sandbox payload, media SHA-256, account, time window and rollback owner before enabling any publication switch.

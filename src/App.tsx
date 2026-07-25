@@ -302,6 +302,7 @@ export default function App() {
     channelId: RuntimeSocialChannel["channel_id"],
     artifactId: string,
     mediaArtifactId: string | null,
+    politicalConfirmation: string,
     idempotencyKey: string,
   ) => {
     if (!session || session.role !== "admin" || !run?.greenlight) {
@@ -318,6 +319,7 @@ export default function App() {
         mediaArtifactId,
         run.greenlight.greenlight_id,
         run.greenlight.fencing_token,
+        politicalConfirmation,
         session.csrf_token,
         idempotencyKey,
       );

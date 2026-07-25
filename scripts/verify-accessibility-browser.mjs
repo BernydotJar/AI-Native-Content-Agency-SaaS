@@ -108,7 +108,14 @@ async function waitForPreview(child, attempts = 80) {
   throw lastError ?? new Error(`Timed out waiting for the Vite preview at ${previewUrl}`);
 }
 
-async function waitForDevToolsPort(child, userDataDirectory, attempts = 120) {
+async function waitForDevToolsPort(
+  child,
+  userDataDirectory,
+  attempts = Number.parseInt(process.env.CHROMIUM_STARTUP_ATTEMPTS ?? "240", 10),
+) {
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 480) {
+    throw new Error("CHROMIUM_STARTUP_ATTEMPTS must be an integer between 1 and 480");
+  }
   const portFile = join(userDataDirectory, "DevToolsActivePort");
   let lastError;
   for (let attempt = 0; attempt < attempts; attempt += 1) {

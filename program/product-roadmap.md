@@ -89,3 +89,24 @@ truthful baseline
 - authorized production object storage and retention policy;
 - carousel/reel child-level exact-once protocols;
 - one separately authorized sandbox publication.
+
+## 2026-07-25 — Political compliance authority
+
+### INC-023 — review
+
+- independent default-off political content, publication and paid-planning switches;
+- explicit `publication_mode=organic|paid`;
+- authenticated legal/electoral reviewer separated from Greenlight approver;
+- `political_compliance_record` included in the approved envelope;
+- exact typed confirmation bound durably only by SHA-256;
+- organic endpoint rejects paid mode before intent/provider HTTP;
+- PostgreSQL schema v6 preserves prior media state and adds confirmation authority;
+- operator UI and neutral sandbox/rollback runbook.
+
+### Exact resume condition
+
+- freeze and commit the implementation;
+- publish an exact remote branch and draft PR;
+- pass workflow-lint, verify, python-locks, postgresql-shared-state, container, Helm, Terraform and supply-chain at the exact head;
+- complete a distinct accountable review;
+- separately authorize the exact `@beesheep2` account, copy, media, time window and rollback owner before any provider effect.

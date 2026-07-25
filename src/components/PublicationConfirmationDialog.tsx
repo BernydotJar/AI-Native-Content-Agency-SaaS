@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, LoaderCircle, Send, X } from "lucide-react";
 import type { RuntimeSocialChannel } from "../lib/runtimeApi";
 import { useModalDialog } from "../lib/useModalDialog";
@@ -8,10 +8,11 @@ interface PublicationConfirmationDialogProps {
   channel: RuntimeSocialChannel | null;
   artifactId: string;
   mediaArtifactId: string | null;
+  requiredPhrase: string;
   busy: boolean;
   error: string;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (phrase: string) => void;
 }
 
 export function PublicationConfirmationDialog({
@@ -19,6 +20,7 @@ export function PublicationConfirmationDialog({
   channel,
   artifactId,
   mediaArtifactId,
+  requiredPhrase,
   busy,
   error,
   onClose,
@@ -26,6 +28,10 @@ export function PublicationConfirmationDialog({
 }: PublicationConfirmationDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [typedPhrase, setTypedPhrase] = useState("");
+  useEffect(() => {
+    setTypedPhrase("");
+  }, [open, requiredPhrase]);
   useModalDialog({
     open,
     onClose: busy ? () => undefined : onClose,
@@ -97,6 +103,28 @@ export function PublicationConfirmationDialog({
           </div>
         </dl>
 
+        {requiredPhrase && (
+          <div className="mt-5 rounded-xl border border-amber-200/20 bg-amber-200/[0.04] p-4">
+            <p className="text-xs font-bold text-amber-100">Confirmación política obligatoria</p>
+            <p className="mt-2 text-[11px] leading-5 text-zinc-400">
+              Escribe exactamente la frase siguiente. El servidor conservará únicamente su SHA-256.
+            </p>
+            <code className="mt-3 block break-all rounded-lg bg-black/40 p-3 text-[10px] text-amber-100">
+              {requiredPhrase}
+            </code>
+            <label className="mt-3 block text-[11px] font-semibold text-zinc-300">
+              Frase de confirmación política
+              <input
+                value={typedPhrase}
+                onChange={(event) => setTypedPhrase(event.target.value)}
+                disabled={busy}
+                autoComplete="off"
+                className="form-control mt-2"
+              />
+            </label>
+          </div>
+        )}
+
         {error && (
           <p role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-300/[0.05] p-3 text-xs leading-5 text-red-100">
             {error}
@@ -114,8 +142,8 @@ export function PublicationConfirmationDialog({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={busy || !account}
+            onClick={() => onConfirm(typedPhrase)}
+            disabled={busy || !account || Boolean(requiredPhrase && typedPhrase !== requiredPhrase)}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-200 px-4 text-xs font-extrabold text-black disabled:opacity-35"
           >
             {busy ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> : <Send size={14} aria-hidden="true" />}

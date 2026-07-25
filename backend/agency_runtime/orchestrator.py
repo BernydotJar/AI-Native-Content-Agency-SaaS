@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import replace
 from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple
 
@@ -46,6 +47,10 @@ Clock = Callable[[], str]
 
 
 class GreenlightError(RuntimeError):
+    pass
+
+
+class PoliticalReviewerSeparationError(GreenlightError):
     pass
 
 
@@ -274,8 +279,63 @@ class AgencyOrchestrator:
             raise GreenlightError("Political critique must pass before Greenlight")
         if not reviewer or not reviewer.strip():
             raise GreenlightError("reviewer must not be empty")
+        normalized_reviewer = reviewer.strip()
+        if (
+            decision is GreenlightDecision.APPROVED
+            and run.brief.campaign_type == "political"
+            and run.brief.legal_reviewed_by.strip() == normalized_reviewer
+        ):
+            raise PoliticalReviewerSeparationError(
+                "political legal reviewer and Greenlight approver must be distinct"
+            )
 
         decided_at = self._clock()
+        if decision is GreenlightDecision.APPROVED and run.brief.campaign_type == "political":
+            claim_hashes = []
+            for claim in run.brief.evidence_claims:
+                contract = {
+                    "statement": str(claim.get("statement", "")).strip(),
+                    "source": str(claim.get("source", "")).strip(),
+                    "locator": str(claim.get("locator", "")).strip(),
+                    "verification_status": str(claim.get("verification_status", "unverified")),
+                    "reviewed_by": str(claim.get("reviewed_by", "")).strip(),
+                }
+                claim_hashes.append(
+                    {
+                        "claim_sha256": hashlib.sha256(
+                            canonical_json(contract).encode("utf-8")
+                        ).hexdigest(),
+                        "source_sha256": hashlib.sha256(
+                            contract["source"].encode("utf-8")
+                        ).hexdigest(),
+                        "locator_sha256": hashlib.sha256(
+                            contract["locator"].encode("utf-8")
+                        ).hexdigest(),
+                    }
+                )
+            payload = {
+                "jurisdiction": run.brief.jurisdiction.strip(),
+                "publication_mode": run.brief.publication_mode,
+                "disclosure_sha256": hashlib.sha256(
+                    run.brief.disclosure.strip().encode("utf-8")
+                ).hexdigest(),
+                "legal_reviewer": run.brief.legal_reviewed_by.strip(),
+                "greenlight_approver": normalized_reviewer,
+                "claim_source_hashes": claim_hashes,
+                "retention_state": "durable_until_governed_deletion",
+            }
+            run.add_artifact(
+                Artifact(
+                    artifact_id=stable_id(
+                        "political-compliance-record", run.run_id, payload, length=48
+                    ),
+                    kind="political_compliance_record",
+                    title="Political compliance approval record",
+                    created_by=AgentRole.RISK,
+                    payload=payload,
+                )
+            )
+
         approved_artifacts = tuple(run.artifacts)
         approved_ids = tuple(item.artifact_id for item in approved_artifacts)
         approved_hashes = tuple(
@@ -289,7 +349,7 @@ class AgencyOrchestrator:
             ),
             run_id=run_id,
             decision=decision,
-            reviewer=reviewer.strip(),
+            reviewer=normalized_reviewer,
             note=note.strip(),
             decided_at=decided_at,
             approved_artifact_ids=approved_ids,

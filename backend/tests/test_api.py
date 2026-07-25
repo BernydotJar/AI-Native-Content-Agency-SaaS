@@ -9,6 +9,7 @@ from agency_runtime.api import create_app
 
 ALPHA_KEY = "tenant-alpha-verification-key-2026"
 BETA_KEY = "tenant-beta-verification-key-2026"
+POLITICAL_APPROVER_KEY = "tenant-alpha-political-approver-key-2026"
 BRIEF = {
     "title": "Evidence-led launch",
     "objective": "Turn a campaign brief into a governed campaign package",
@@ -43,6 +44,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
                 static_dir=self.static_dir,
                 tenant_api_keys=self.keys if keys is None else keys,
                 session_cookie_secure=False,
+                social_environment={"AGENCY_POLITICAL_CONTENT_ENABLED": "true"},
             )
         )
 
@@ -325,7 +327,26 @@ class PoliticalCampaignApiTests(ApiVerticalSliceTests):
         self.assertEqual(approval.status_code, 409)
 
     def test_political_publication_has_a_separate_disabled_by_default_gate(self):
-        with self.client() as client:
+        approver_identity = [
+            {
+                "tenant_id": "tenant-alpha",
+                "subject_id": "political.approver@example.test",
+                "role": "admin",
+                "key_id": "political-approver-v1",
+                "api_key": POLITICAL_APPROVER_KEY,
+                "active": True,
+            }
+        ]
+        with TestClient(
+            create_app(
+                database_path=self.database,
+                static_dir=self.static_dir,
+                tenant_api_keys=self.keys,
+                identity_credentials=approver_identity,
+                session_cookie_secure=False,
+                social_environment={"AGENCY_POLITICAL_CONTENT_ENABLED": "true"},
+            )
+        ) as client:
             created = client.post(
                 "/api/v1/runs",
                 json={**self.POLITICAL_BRIEF, "title": "Publicación política bloqueada por default"},
@@ -336,7 +357,7 @@ class PoliticalCampaignApiTests(ApiVerticalSliceTests):
             approved = client.post(
                 "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
                 json={"reviewer": "approver", "note": "editorial approval only"},
-                headers=auth(ALPHA_KEY, "political-publish-approve-0001"),
+                headers=auth(POLITICAL_APPROVER_KEY, "political-publish-approve-0001"),
             )
             self.assertEqual(approved.status_code, 200, approved.text)
             completed = approved.json()
@@ -382,6 +403,7 @@ class PoliticalCampaignApiTests(ApiVerticalSliceTests):
                 tenant_api_keys={},
                 identity_credentials=identities,
                 session_cookie_secure=False,
+                social_environment={"AGENCY_POLITICAL_CONTENT_ENABLED": "true"},
             )
         ) as client:
             response = client.post(

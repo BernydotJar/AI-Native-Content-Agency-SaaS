@@ -49,6 +49,7 @@ interface CampaignOutputPanelProps {
     channelId: RuntimeSocialChannel["channel_id"],
     artifactId: string,
     mediaArtifactId: string | null,
+    politicalConfirmation: string,
     idempotencyKey: string,
   ) => Promise<void>;
 }
@@ -57,6 +58,7 @@ interface PendingPublication {
   channel: RuntimeSocialChannel;
   artifactId: string;
   mediaArtifactId: string | null;
+  requiredPhrase: string;
   idempotencyKey: string;
 }
 
@@ -191,6 +193,9 @@ function publicationLabel(
   publicationAllowed: boolean,
 ): string {
   if (["rejected", "revoked", "failed"].includes(run.status)) return "Publicación bloqueada";
+  if (run.brief?.campaign_type === "political" && run.brief.publication_mode === "paid") {
+    return "Requiere autoridad de anuncios";
+  }
   if (run.status === "awaiting_greenlight") return "Requiere Greenlight";
   if (!activeGreenlight(run, platform)) return "Canal no autorizado";
   if (channel?.requires_media && !publicationMediaArtifact(run, platform)) return "Falta asset visual";
@@ -353,11 +358,14 @@ export function CampaignOutputPanel({
       channel,
       artifactId: copyDeck.artifact_id,
       mediaArtifactId: media?.artifact_id ?? null,
+      requiredPhrase: run.brief?.campaign_type === "political"
+        ? `PUBLICAR POLITICA ${run.run_id} ${draft.platform}`
+        : "",
       idempotencyKey: `publish-${run.run_id}-${draft.platform}-${Date.now()}`,
     });
   };
 
-  const confirmPublication = async () => {
+  const confirmPublication = async (politicalConfirmation: string) => {
     if (!pendingPublication || !onPublish) return;
     setConfirming(true);
     try {
@@ -365,6 +373,7 @@ export function CampaignOutputPanel({
         pendingPublication.channel.channel_id,
         pendingPublication.artifactId,
         pendingPublication.mediaArtifactId,
+        politicalConfirmation,
         pendingPublication.idempotencyKey,
       );
       setPendingPublication(null);
@@ -669,10 +678,11 @@ export function CampaignOutputPanel({
         channel={pendingPublication?.channel ?? null}
         artifactId={pendingPublication?.artifactId ?? ""}
         mediaArtifactId={pendingPublication?.mediaArtifactId ?? null}
+        requiredPhrase={pendingPublication?.requiredPhrase ?? ""}
         busy={confirming || publicationBusy !== null}
         error={publicationError}
         onClose={() => setPendingPublication(null)}
-        onConfirm={() => void confirmPublication()}
+        onConfirm={(phrase) => void confirmPublication(phrase)}
       />
     </section>
   );

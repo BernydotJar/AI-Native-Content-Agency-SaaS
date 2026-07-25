@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-022-governed-media-verification",
+  "branch": "agent/inc-023-political-compliance-mode",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1332,7 +1332,7 @@
     {
       "task_id": "INC-022",
       "workstream_id": "WS-08",
-      "status": "review",
+      "status": "done",
       "role": "Media Engineer / Backend Engineer / Data Engineer / Security Reviewer / Privacy Reviewer / Red Team / Independent Verifier",
       "objective": "Create immutable governed JPEG media, pre-Greenlight revocation, container processing and durable read-after-write verified Instagram receipts.",
       "context": "Implementation commit 3d8ed72332d29b161a48c1201e627a9c016ec6ac adds a SQLite/PostgreSQL Media Vault, schema v5, Pillow-verified JPEG ingestion, HMAC capability URLs, UI upload/revocation, Instagram container polling, media verification and durable history. No real provider effect was executed.",
@@ -1372,7 +1372,7 @@
         "secret disclosure",
         "protected branch mutation"
       ],
-      "write_lock": "released after implementation commit",
+      "write_lock": "released after exact-head CI and merge",
       "expected_outputs": [
         "immutable JPEG Media Vault",
         "opaque expiring public capability",
@@ -1410,8 +1410,105 @@
         "cloud object-storage/retention review",
         "merge/deploy/release"
       ],
-      "publication_state": "LOCAL_DETERMINISTIC_GATES_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED",
-      "implementation_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac"
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_EXTERNAL_EFFECTS_DISABLED",
+      "implementation_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac",
+      "remote_head": "b5d63f65c52c886a1855f20aff8593ca398383ac",
+      "merge_commit": "7522164240b8090fe70ec51525a6a247e4a558c8",
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/14",
+      "exact_head_ci": {
+        "workflow": "production-readiness",
+        "run_id": "30164438593",
+        "jobs_passed": 8,
+        "jobs_failed": 0
+      }
+    },
+    {
+      "task_id": "INC-023",
+      "workstream_id": "WS-08",
+      "status": "done",
+      "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "objective": "Implement fail-closed political content, independent approval, organic-versus-paid boundaries and durable final confirmation authority.",
+      "context": "Implementation 2315ac3 plus CI repair e35fa74 adds durable political compliance authority. Exact-head CI run 30174006993 passed all eight jobs after one infrastructure-only Docker Hub retry. No provider or cloud effect was executed.",
+      "authoritative_inputs": [
+        "specs/023-political-compliance-mode/spec.md",
+        "docs/runbooks/political-publication.md",
+        "INC-021 campaign intelligence",
+        "INC-022 governed media and verified receipt",
+        "existing Greenlight and exact-once effect authority"
+      ],
+      "dependencies": [
+        "INC-021",
+        "INC-022"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "infra/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/023-political-compliance-mode/**"
+      ],
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "prohibited_paths": [
+        "real political publication before exact-head review",
+        "paid media through the organic endpoint",
+        "same-subject legal review and Greenlight approval",
+        "raw final confirmation in durable state",
+        "credentials in Git or logs",
+        "cloud apply or spend"
+      ],
+      "write_lock": "released after exact-head CI; documentation checkpoint only",
+      "expected_outputs": [
+        "independent political kill switches",
+        "organic versus paid brief contract",
+        "political compliance record inside Greenlight",
+        "reviewer separation",
+        "typed final confirmation with SHA-256 durable binding",
+        "schema v6 migration",
+        "operator UI and runbook"
+      ],
+      "acceptance_criteria": [
+        "political content creation is disabled by default",
+        "legal/electoral reviewer and Greenlight approver are distinct authenticated subjects",
+        "political compliance record is included in the approved artifact envelope",
+        "paid political mode never reaches the organic provider transport",
+        "wrong or missing final phrase creates no intent and no provider call",
+        "correct phrase is persisted only as SHA-256 in the exact-once binding",
+        "commercial flows remain backward compatible",
+        "all kill switches remain false by default across local, Helm and Terraform configuration"
+      ],
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh => 285 PASS, 25 PostgreSQL-only SKIP locally",
+        "npm test => 45 PASS",
+        "npm run lint => 0 warnings, 0 errors",
+        "npm run build => PASS",
+        "GitHub Actions 30174006993 => verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain and workflow-lint SUCCESS"
+      ],
+      "human_gates": [
+        "independent accountable review",
+        "jurisdiction-specific legal/campaign approval",
+        "authorized account ownership",
+        "exact neutral sandbox payload and timing",
+        "explicit short publication window and rollback owner",
+        "merge/deployment/release"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGE_PENDING_ALL_EFFECTS_DISABLED",
+      "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6",
+      "remote_head": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15",
+      "exact_head_ci": {
+        "workflow": "production-readiness",
+        "run_id": "30174006993",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993",
+        "jobs_passed": 8,
+        "jobs_failed": 0
+      }
     }
   ],
   "updated_at": "2026-07-25",
@@ -1633,7 +1730,7 @@
       ],
       "id": "WS-08",
       "name": "Integrations, Contracts and Sandbox Boundaries",
-      "next_ready_task": "INC-022",
+      "next_ready_task": "INC-023",
       "objective": "Implement bounded integration protocols and durable external-effect authority without uncontrolled side effects.",
       "owner": "orchestrator",
       "requirements": [

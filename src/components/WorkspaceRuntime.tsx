@@ -60,6 +60,7 @@ const DEFAULT_BRIEF: RuntimeBrief = {
   budget_cents: 0,
   campaign_goal: "participacion_informada",
   campaign_type: "commercial",
+  publication_mode: "organic",
   locale: "es-GT",
   jurisdiction: "",
   office: "",
@@ -587,6 +588,21 @@ export function WorkspaceRuntime({
           {(brief.campaign_type ?? "commercial") === "political" && (
             <fieldset className="mt-4 grid gap-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.03] p-4 sm:grid-cols-2">
               <legend className="px-2 text-xs font-bold text-amber-100">Contexto político verificable</legend>
+              <label className="text-xs font-semibold text-zinc-300 sm:col-span-2">
+                Modo de publicación política
+                <select
+                  value={brief.publication_mode ?? "organic"}
+                  onChange={(event) => updateBrief({ publication_mode: event.target.value as "organic" | "paid" })}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2"
+                >
+                  <option value="organic">Orgánica</option>
+                  <option value="paid">Pagada / pauta</option>
+                </select>
+                <span className="mt-2 block text-[10px] font-normal leading-4 text-amber-100/70">
+                  La pauta política requiere una autoridad de anuncios separada y nunca usa el endpoint orgánico.
+                </span>
+              </label>
               {([
                 ["jurisdiction", "Jurisdicción"],
                 ["office", "Cargo"],

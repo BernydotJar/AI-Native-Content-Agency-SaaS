@@ -209,7 +209,15 @@
         "INC-020",
         "INC-021"
       ],
-      "status": "review"
+      "status": "done"
+    },
+    {
+      "id": "INC-023",
+      "depends_on": [
+        "INC-021",
+        "INC-022"
+      ],
+      "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",
