@@ -82,7 +82,7 @@ Observed local gates:
 
 - focused political backend: PASS;
 - broad backend compatibility: PASS;
-- installed hash-locked wheel: 284 PASS, 25 PostgreSQL-only SKIP;
+- installed hash-locked wheel: 285 PASS, 25 PostgreSQL-only SKIP;
 - frontend: 45 PASS;
 - lint: zero warnings/errors;
 - production build: PASS;
@@ -92,15 +92,16 @@ Observed local gates:
 - diff check: PASS;
 - nested containers: zero.
 
-Not yet observed:
+Remote exact-head evidence:
 
-- PostgreSQL shared-state schema v6;
-- OCI image;
-- Helm executable validation;
-- Terraform executable validation;
-- supply-chain exact-head gate;
-- remote exact SHA and PR review.
+- PostgreSQL shared-state schema v6: PASS;
+- OCI image: PASS;
+- Helm: PASS;
+- Terraform: PASS;
+- supply chain: PASS after one Docker Hub infrastructure retry;
+- accessibility browser: PASS;
+- remote head `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab` and PR #15 verified.
 
 ## Decision
 
-The implementation is suitable for a feature-branch checkpoint and remote exact-head evaluation. INC-023 must remain `review`, all external effects must remain disabled, and no neutral sandbox post may execute until all eight CI jobs pass and a distinct accountable review accepts the exact implementation SHA.
+INC-023 is `done` at increment level: implementation and exact-head CI passed. All external effects remain disabled. A neutral sandbox post still requires a separate accountable approval of the exact account, copy, media hash, time window and rollback owner; automated validation is not legal authorization.

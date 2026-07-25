@@ -8,7 +8,9 @@ Updated: 2026-07-25
 - Active branch: `agent/inc-023-political-compliance-mode`
 - INC-023 specification checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
 - INC-023 implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
-- Remote branch, draft PR and exact-head CI: pending
+- Remote branch: `agent/inc-023-political-compliance-mode` at `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab`
+- Draft PR: [#15](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15)
+- Exact-head CI: 8/8 SUCCESS in run [30174006993](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993)
 - Nested containers created: none; count remains zero
 - Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
 
@@ -36,6 +38,12 @@ The local implementation adds:
 - `.env`, Helm and Terraform switches that all default to false;
 - political publication runbook with neutral sandbox and rollback procedure.
 
+## Exact-head delivery receipt
+
+- PR #15 head `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab` passed `production-readiness` run `30174006993` with all eight jobs successful.
+- PostgreSQL schema v6, accessibility browser, OCI, Helm, Terraform and supply-chain gates passed.
+- The first supply-chain attempt was retried because Docker Hub timed out before project code ran; the retry completed successfully.
+
 ## Local verification receipt
 
 - TDD RED captured before implementation.
@@ -56,7 +64,7 @@ The local implementation adds:
 - All external effects remain disabled by default.
 - Paid political advertising is not implemented and cannot use the organic endpoint.
 - Automated role-separated review does not constitute jurisdiction-specific legal advice, campaign authorization or provider-policy approval.
-- One neutral sandbox post on `@beesheep2` remains blocked until INC-023 has an implementation commit, draft PR, exact-head 8/8 CI, distinct code review, exact account/content/media confirmation and a bounded rollback window.
+- One neutral sandbox post on `@beesheep2` remains blocked only by the separate accountable review, exact account/content/media confirmation, bounded publication window and rollback owner. The software and exact-head CI gates are complete.
 
 Release recommendation: `DENY_RELEASE`
 
@@ -64,4 +72,4 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish the exact implementation and evidence commits, open a draft PR against `agent/inc-022-governed-media-verification`, pass all eight exact-head CI jobs, repair any failure, complete a distinct review, then separately authorize and execute the neutral sandbox publication.
+Merge PR #15 after the final documentation-only checkpoint passes exact-head CI. Then separately authorize the exact neutral sandbox payload, media SHA-256, account, time window and rollback owner before enabling any publication switch.

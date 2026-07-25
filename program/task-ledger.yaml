@@ -1425,10 +1425,10 @@
     {
       "task_id": "INC-023",
       "workstream_id": "WS-08",
-      "status": "review",
+      "status": "done",
       "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
       "objective": "Implement fail-closed political content, independent approval, organic-versus-paid boundaries and durable final confirmation authority.",
-      "context": "Local TDD implementation adds independent content/publication/paid switches, publication_mode, reviewer separation, political_compliance_record, schema v6 confirmation hashes and a typed final-confirmation UI. No provider or cloud effect was executed.",
+      "context": "Implementation 2315ac3 plus CI repair e35fa74 adds durable political compliance authority. Exact-head CI run 30174006993 passed all eight jobs after one infrastructure-only Docker Hub retry. No provider or cloud effect was executed.",
       "authoritative_inputs": [
         "specs/023-political-compliance-mode/spec.md",
         "docs/runbooks/political-publication.md",
@@ -1463,7 +1463,7 @@
         "credentials in Git or logs",
         "cloud apply or spend"
       ],
-      "write_lock": "released after implementation checkpoint; evidence update only",
+      "write_lock": "released after exact-head CI; documentation checkpoint only",
       "expected_outputs": [
         "independent political kill switches",
         "organic versus paid brief contract",
@@ -1484,12 +1484,11 @@
         "all kill switches remain false by default across local, Helm and Terraform configuration"
       ],
       "validation_commands": [
-        "./scripts/verify-python-locks.sh => 285 PASS, 25 PostgreSQL-only SKIP",
+        "./scripts/verify-python-locks.sh => 285 PASS, 25 PostgreSQL-only SKIP locally",
         "npm test => 45 PASS",
         "npm run lint => 0 warnings, 0 errors",
         "npm run build => PASS",
-        "program/compliance/backup/schema CLI/political operability/diff => PASS",
-        "PostgreSQL/OCI/Helm/Terraform/supply-chain exact-head gates pending"
+        "GitHub Actions 30174006993 => verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain and workflow-lint SUCCESS"
       ],
       "human_gates": [
         "independent accountable review",
@@ -1499,8 +1498,17 @@
         "explicit short publication window and rollback owner",
         "merge/deployment/release"
       ],
-      "publication_state": "LOCAL_FREEZE_PASS_REMOTE_CI_PENDING_ALL_EFFECTS_DISABLED",
-      "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6"
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGE_PENDING_ALL_EFFECTS_DISABLED",
+      "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6",
+      "remote_head": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15",
+      "exact_head_ci": {
+        "workflow": "production-readiness",
+        "run_id": "30174006993",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993",
+        "jobs_passed": 8,
+        "jobs_failed": 0
+      }
     }
   ],
   "updated_at": "2026-07-25",
