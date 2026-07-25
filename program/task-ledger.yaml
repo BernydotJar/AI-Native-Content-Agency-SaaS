@@ -1246,7 +1246,7 @@
     {
       "task_id": "INC-021",
       "workstream_id": "WS-05",
-      "status": "review",
+      "status": "done",
       "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
       "objective": "Replace generic mixed-language campaign fixtures with grounded political campaign intelligence and fail-closed publication gates.",
       "context": "Implementation commit 6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political briefs, claim provenance, server-bound fact/legal review, Spanish channel copy, accessible media plans, semantic critique, truthful revise state and a separate political publication kill switch. OAuth regression repair discovered by the full wheel gate is included.",
@@ -1318,7 +1318,16 @@
         "merge/deployment/release"
       ],
       "implementation_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
-      "publication_state": "LOCAL_DETERMINISTIC_GATES_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED"
+      "publication_state": "EXACT_REMOTE_CI_PASS_EXTERNAL_EFFECTS_DISABLED",
+      "remote_head": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/13",
+      "exact_head_ci": {
+        "workflow": "production-readiness",
+        "run_id": "30149528848",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30149528848",
+        "jobs_passed": 8,
+        "jobs_failed": 0
+      }
     },
     {
       "task_id": "INC-022",
@@ -1503,7 +1512,7 @@
       ],
       "id": "WS-05",
       "name": "Frontend and Production Console",
-      "next_ready_task": "INC-021",
+      "next_ready_task": "INC-017",
       "objective": "Unify critical journeys and backend authority.",
       "owner": "orchestrator",
       "requirements": [
@@ -1611,7 +1620,7 @@
         "R-034",
         "R-035"
       ],
-      "status": "review",
+      "status": "in_progress",
       "validation": [
         "./scripts/verify-python-locks.sh",
         "exact-head integration CI"

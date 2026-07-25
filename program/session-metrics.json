@@ -1,6 +1,6 @@
 {
   "active_branch": "agent/inc-021-campaign-intelligence",
-  "active_branch_remote": null,
+  "active_branch_remote": "agent/inc-021-campaign-intelligence",
   "backend_tests_passed_locked": 261,
   "backend_tests_passed_postgresql": 0,
   "backup_restore_tests_passed": 11,
@@ -15,7 +15,7 @@
   "current_worktree_tests_rerun": true,
   "date": "2026-07-25",
   "exact_commit_ci_jobs_failed": 0,
-  "exact_commit_ci_jobs_passed": 0,
+  "exact_commit_ci_jobs_passed": 8,
   "foundation_implementation_commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
   "frontend_tests_failed": 0,
   "frontend_tests_passed": 39,
@@ -39,12 +39,12 @@
   "inc019_supply_chain": "PASS_NO_PUBLICATION",
   "inc020_behavioral_gates": "LOCAL_PASS_EXACT_ONCE_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED",
   "inc020_supply_chain": "PASS_NO_PUBLICATION",
-  "last_exact_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
-  "local_commits_ahead_of_remote": 3,
+  "last_exact_commit": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
+  "local_commits_ahead_of_remote": 0,
   "program_state_tests_passed": 6,
-  "pushes_verified": 11,
-  "remote_head": null,
+  "pushes_verified": 12,
+  "remote_head": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
   "schema_version": "program-session-metrics.v1",
   "tool_calls_recorded": 0,
-  "inc021_behavioral_gates": "LOCAL_DETERMINISTIC_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED"
+  "inc021_behavioral_gates": "EXACT_REMOTE_CI_PASS_EXTERNAL_EFFECTS_DISABLED"
 }

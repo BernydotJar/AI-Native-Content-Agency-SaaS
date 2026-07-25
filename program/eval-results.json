@@ -633,12 +633,12 @@
     {
       "id": "INC021-INFRA-EXACT-HEAD",
       "scope": "PostgreSQL, OCI, Helm, Terraform and supply chain",
-      "command": "GitHub Actions exact-head jobs",
-      "observed": "Not run locally; branch publication pending",
-      "result": "PENDING"
+      "command": "GitHub Actions production-readiness run 30149528848",
+      "observed": "8/8 jobs SUCCESS at exact head 25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain",
+      "result": "PASS"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
+  "source_commit": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
   "updated_at": "2026-07-25"
 }

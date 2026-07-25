@@ -3,7 +3,7 @@
 Date: 2026-07-25  
 Branch: `agent/inc-021-campaign-intelligence`  
 Implementation commit: `6ebbd634bd32408db0a7678289b0f906cda014c0`  
-Program state: `review`
+Program state: `done`
 
 ## Producer
 
@@ -120,7 +120,7 @@ Not run locally:
 
 ## Release Gate
 
-Decision: `DENY_RELEASE`
+Decision: increment `done`; global `DENY_RELEASE`
 
 INC-021 is locally review-ready, not globally done. Exact resume condition:
 
@@ -129,3 +129,14 @@ INC-021 is locally review-ready, not globally done. Exact resume condition:
 3. complete distinct accountable review;
 4. keep all external effects disabled;
 5. proceed to INC-022 for governed media and read-after-write publication verification.
+
+
+## Exact-head remote verification
+
+- Source SHA: `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1`
+- Draft PR: https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/13
+- Workflow: `production-readiness`
+- Run: `30149528848` — https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30149528848
+- Result: 8/8 jobs `success`
+- Jobs: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain.
+- Merge/release/deployment: not performed.

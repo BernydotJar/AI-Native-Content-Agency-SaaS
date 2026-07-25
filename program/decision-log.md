@@ -207,3 +207,12 @@ A second, independent runtime flag `AGENCY_POLITICAL_PUBLICATION_ENABLED` remain
 Rationale: a source string, a connected social account or a Greenlight decision alone cannot prove factual, legal or campaign authority. Separating drafting, evidence review, legal review, Greenlight and effect enablement prevents accidental or self-attested political publication.
 
 Consequence: campaign intelligence can produce reviewable Spanish copy and an accessible non-rendered media plan. Real media, post verification, jurisdiction-specific review, candidate/campaign authorization and any external post remain separate gates under INC-022 and the release decision.
+
+## D-019 — INC-021 is complete at increment scope, not release scope
+
+Date: 2026-07-25
+Status: accepted at exact remote head `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1`
+
+Decision: mark INC-021 `done` after local deterministic gates and GitHub Actions run `30149528848` passed all eight exact-head jobs. Keep PR #13 draft, keep `DENY_RELEASE` and `DENY_APPLY`, and keep all political/social external effects disabled.
+
+Consequence: the next safe executable task is INC-022 for governed media and read-after-write publication verification. Increment completion does not constitute legal approval, candidate authorization, deployment or permission to publish.

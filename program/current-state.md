@@ -39,8 +39,9 @@ Updated: 2026-07-25
 
 ## Truthful limitations
 
-- The exact feature SHA has not yet been published or evaluated by remote CI.
-- PostgreSQL, OCI package, Helm/Terraform and supply-chain exact-head jobs remain delegated to CI.
+- Exact source SHA `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1` is published on `agent/inc-021-campaign-intelligence`.
+- Draft PR #13 remains open and unmerged.
+- GitHub Actions run `30149528848` passed all eight exact-head jobs, including PostgreSQL, OCI, Helm, Terraform and supply chain.
 - The local K3s/Terraform apply-destroy verifier was not run because it creates an auxiliary control plane and its pinned CLIs were not loaded.
 - Campaign claims are only as authentic as the accountable human/source review; the software does not make legal or factual determinations independently.
 - No `publication_media` artifact is generated yet.
@@ -52,11 +53,11 @@ Updated: 2026-07-25
 Release recommendation: `DENY_RELEASE`
 Cloud recommendation: `DENY_APPLY`
 
-- INC-021: `review`
+- INC-021: `done`
 - INC-022: `pending`, next ready task
 - Global release: `DENY_RELEASE`
 - Cloud apply: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish `agent/inc-021-campaign-intelligence` at the exact local SHA, pass exact-head CI, review/repair any failures, then implement INC-022: governed `publication_media`, safe HTTPS delivery, Instagram container processing, read-after-write verification, permalink/receipt reconciliation and UI states. External publication remains separately human-gated.
+Begin INC-022 from exact verified head `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1`: governed `publication_media`, safe HTTPS delivery, Instagram container processing, read-after-write verification, permalink/receipt reconciliation and UI states. External publication remains separately human-gated.

@@ -1,6 +1,6 @@
 # INC-021 — Campaign Intelligence and Political Content Integrity
 
-Status: review
+Status: done
 Owner: Orchestrator
 Date: 2026-07-25
 
