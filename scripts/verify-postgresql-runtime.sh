@@ -106,6 +106,7 @@ REVOKE ALL ON TABLE public.memories FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_oauth_states FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_connections FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_publication_intents FROM PUBLIC;
+REVOKE ALL ON TABLE public.publication_media_objects FROM PUBLIC;
 REVOKE ALL ON TABLE public.model_effect_intents FROM PUBLIC;
 REVOKE ALL ON SEQUENCE public.audit_events_sequence_seq FROM PUBLIC;
 
@@ -118,6 +119,7 @@ GRANT SELECT, INSERT ON TABLE public.memories TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_oauth_states TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_connections TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.social_publication_intents TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE ON TABLE public.publication_media_objects TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.model_effect_intents TO :"runtime_role";
 GRANT USAGE, SELECT ON SEQUENCE public.audit_events_sequence_seq TO :"runtime_role";
 
