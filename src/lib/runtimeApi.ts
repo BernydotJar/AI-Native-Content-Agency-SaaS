@@ -26,6 +26,7 @@ export interface RuntimeBrief {
   budget_cents: number;
   campaign_goal: string;
   campaign_type?: "commercial" | "political";
+  publication_mode?: "organic" | "paid";
   locale?: string;
   jurisdiction?: string;
   office?: string;
@@ -84,6 +85,7 @@ export interface RuntimeRunExecution {
 export interface RuntimeRun {
   run_id: string;
   tenant_id: string;
+  brief?: RuntimeBrief;
   status: "queued" | "running" | "awaiting_greenlight" | "completed" | "rejected" | "revoked" | "failed";
   agent_states: Record<string, RuntimeAgentState>;
   artifacts: RuntimeArtifact[];
@@ -297,6 +299,7 @@ export interface RuntimeApi {
     mediaArtifactId: string | null,
     greenlightId: string,
     greenlightFencingToken: number,
+    politicalConfirmation: string,
     csrfToken: string,
     idempotencyKey: string,
   ): Promise<RuntimeSocialPublication>;
@@ -566,6 +569,7 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
       mediaArtifactId,
       greenlightId,
       greenlightFencingToken,
+      politicalConfirmation,
       csrfToken,
       idempotencyKey,
     ) {
@@ -583,6 +587,7 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
             media_artifact_id: mediaArtifactId,
             greenlight_id: greenlightId,
             greenlight_fencing_token: greenlightFencingToken,
+            political_confirmation: politicalConfirmation,
           }),
         },
       );

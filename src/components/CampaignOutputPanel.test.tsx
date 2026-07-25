@@ -222,9 +222,158 @@ describe("CampaignOutputPanel", () => {
       "x",
       "copy-001",
       null,
+      "",
       expect.stringMatching(/^publish-run-output-001-x-/),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("requires the exact political phrase before publishing an organic post", async () => {
+    const completed: RuntimeRun = {
+      ...RUN,
+      brief: {
+        title: "Prueba política orgánica",
+        objective: "Verificar confirmación política",
+        audience: "ciudadanía",
+        platforms: ["x"],
+        budget_cents: 0,
+        campaign_goal: "technical_verification",
+        campaign_type: "political",
+        publication_mode: "organic",
+      },
+      status: "completed",
+      greenlight: {
+        greenlight_id: "greenlight-political-001",
+        decision: "approved",
+        reviewer: "independent.approver@example.test",
+        note: "Approved",
+        approved_artifact_ids: ["copy-001"],
+        approved_artifact_hashes: ["hash-001"],
+        authorized_channels: ["x"],
+        authorized_budget_cents: 0,
+        fencing_token: 2,
+        revoked_at: null,
+        revoked_by: "",
+        revocation_reason: "",
+      },
+    };
+    const connectedX: RuntimeSocialChannel = {
+      ...SOCIAL_CHANNELS[0],
+      configured: true,
+      configuration_state: "ready_for_authentication",
+      credentials_configured: true,
+      callback_configured: true,
+      callback_url: "https://agency.example/api/v1/social-channels/x/oauth/callback",
+      connection_state: "connected",
+      oauth_start_available: false,
+      oauth_runtime_configured: true,
+      publication_runtime_configured: true,
+      publication_execution_enabled: true,
+      publishing_available: true,
+      external_effects_enabled: true,
+      connected_account: {
+        account_id: "x-account-political",
+        account_username: "political_sandbox",
+        scopes: ["tweet.read", "tweet.write", "users.read"],
+        token_expires_at: null,
+        connected_at: "2026-07-25T18:00:00+00:00",
+        token_storage: "encrypted_server_side",
+      },
+    };
+    const onPublish = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CampaignOutputPanel
+        run={completed}
+        socialChannels={[connectedX]}
+        publicationAllowed
+        onPublish={onPublish}
+      />,
+    );
+
+    const politicalPublish = screen.getAllByRole("button", { name: /^Publicar$/i })
+      .find((button) => !button.hasAttribute("disabled"));
+    expect(politicalPublish).toBeDefined();
+    fireEvent.click(politicalPublish as HTMLButtonElement);
+    const requiredPhrase = `PUBLICAR POLITICA ${completed.run_id} x`;
+    expect(screen.getByText(requiredPhrase)).toBeInTheDocument();
+    const confirm = screen.getByRole("button", { name: /Confirmar publicación externa/i });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/Frase de confirmación política/i), {
+      target: { value: "PUBLICAR POLITICA incorrecta x" },
+    });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/Frase de confirmación política/i), {
+      target: { value: requiredPhrase },
+    });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(onPublish).toHaveBeenCalledWith(
+      "x",
+      "copy-001",
+      null,
+      requiredPhrase,
+      expect.stringMatching(/^publish-run-output-001-x-/),
+    ));
+  });
+
+  it("keeps paid political media outside the organic publication authority", () => {
+    const paid: RuntimeRun = {
+      ...RUN,
+      brief: {
+        title: "Pauta política",
+        objective: "Verify paid boundary",
+        audience: "ciudadanía",
+        platforms: ["x"],
+        budget_cents: 0,
+        campaign_goal: "technical_verification",
+        campaign_type: "political",
+        publication_mode: "paid",
+      },
+      status: "completed",
+      greenlight: {
+        greenlight_id: "greenlight-paid-001",
+        decision: "approved",
+        reviewer: "independent.approver@example.test",
+        note: "Approved",
+        approved_artifact_ids: ["copy-001"],
+        approved_artifact_hashes: ["hash-001"],
+        authorized_channels: ["x"],
+        authorized_budget_cents: 0,
+        fencing_token: 2,
+        revoked_at: null,
+        revoked_by: "",
+        revocation_reason: "",
+      },
+    };
+    const connectedX: RuntimeSocialChannel = {
+      ...SOCIAL_CHANNELS[0],
+      configured: true,
+      connection_state: "connected",
+      publication_runtime_configured: true,
+      publication_execution_enabled: true,
+      publishing_available: true,
+      connected_account: {
+        account_id: "x-account-paid",
+        account_username: "paid_sandbox",
+        scopes: ["tweet.read", "tweet.write", "users.read"],
+        token_expires_at: null,
+        connected_at: "2026-07-25T18:00:00+00:00",
+        token_storage: "encrypted_server_side",
+      },
+    };
+    render(
+      <CampaignOutputPanel
+        run={paid}
+        socialChannels={[connectedX]}
+        publicationAllowed
+        onPublish={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText("Requiere autoridad de anuncios")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /^Publicar$/i })).toSatisfy(
+      (buttons: HTMLElement[]) => buttons.every((button) => button.hasAttribute("disabled")),
+    );
   });
 
   it("shows missing rendered media after Greenlight instead of claiming Instagram is publishable", () => {

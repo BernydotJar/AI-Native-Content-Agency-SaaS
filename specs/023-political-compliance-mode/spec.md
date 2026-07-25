@@ -19,6 +19,14 @@ Make real political organic publication an explicit, auditable and independently
   - backend/agency_runtime/api.py
   - backend/agency_runtime/campaign_intelligence.py
   - backend/agency_runtime/orchestrator.py
+  - backend/agency_runtime/social_publication.py
+  - backend/agency_runtime/social_publication_store.py
+  - backend/agency_runtime/social_publication_postgres.py
+  - backend/agency_runtime/postgres.py
+  - backend/tests/test_social_publication_store.py
+  - backend/tests/test_social_publication_postgres.py
+  - backend/tests/test_postgres_schema_cli.py
+  - scripts/verify-postgresql-runtime.sh
   - backend/tests/test_political_compliance.py
   - backend/tests/test_campaign_intelligence.py
   - backend/tests/test_social_publication_api.py

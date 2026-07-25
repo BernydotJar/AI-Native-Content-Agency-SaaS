@@ -60,10 +60,14 @@ runtime:
       moonshot: ""
       llama: ""
   social:
+    # Political generation, publication and paid activation are independent kill switches.
+    politicalContentEnabled: false
     # External publication remains off until an operator explicitly enables the durable authority.
     publicationEnabled: false
-    # Separate kill switch: general publication never implicitly enables political content.
+    # General publication never implicitly enables political effects.
     politicalPublicationEnabled: false
+    # Paid political media requires a separate ads authority and stays off here.
+    politicalPaidMediaEnabled: false
     # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
     existingSecret: ""
     encryptionKeysJsonKey: "social-token-encryption-keys.json"

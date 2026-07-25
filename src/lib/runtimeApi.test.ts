@@ -379,6 +379,7 @@ describe("runtime API client", () => {
       null,
       "greenlight-001",
       0,
+      "PUBLICAR POLITICA run-001 x",
       "csrf-publication-001",
       "publication-command-001",
     )).resolves.toEqual(expect.objectContaining({ provider_post_id: "x-post-001" }));
@@ -401,6 +402,7 @@ describe("runtime API client", () => {
       media_artifact_id: null,
       greenlight_id: "greenlight-001",
       greenlight_fencing_token: 0,
+      political_confirmation: "PUBLICAR POLITICA run-001 x",
     });
     expect(JSON.stringify(body)).not.toMatch(/content|media_url|access_token/i);
   });

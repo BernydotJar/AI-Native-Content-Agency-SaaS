@@ -49,7 +49,11 @@ from .model_gateway import ModelGateway, ModelRequest
 from .integrations import IntegrationContractError, IntegrationRegistry
 from .models import AgentRole, Artifact, ExecutionRun, MissionBrief, Platform, RunStatus
 from .observability import RequestTimer, RuntimeMetrics, request_id_from_header, structured_http_log
-from .orchestrator import AgencyOrchestrator, GreenlightError
+from .orchestrator import (
+    AgencyOrchestrator,
+    GreenlightError,
+    PoliticalReviewerSeparationError,
+)
 from .postgres import (
     PostgresMemory,
     PostgresRunStore,
@@ -329,6 +333,7 @@ class BriefRequest(BaseModel):
     source_asset: str = Field(default="sandbox://brief/no-external-asset", max_length=2000)
     campaign_goal: str = Field(default="awareness", min_length=1, max_length=200)
     campaign_type: str = Field(default="commercial", pattern="^(commercial|political)$")
+    publication_mode: str = Field(default="organic", pattern="^(organic|paid)$")
     locale: str = Field(default="es-GT", min_length=2, max_length=32)
     jurisdiction: str = Field(default="", max_length=200)
     office: str = Field(default="", max_length=200)
@@ -375,6 +380,7 @@ class SocialPublicationRequest(BaseModel):
     media_artifact_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
     greenlight_id: str = Field(min_length=1, max_length=256)
     greenlight_fencing_token: int = Field(ge=0)
+    political_confirmation: str = Field(default="", max_length=512)
 
 
 class PublicationMediaRevocationRequest(BaseModel):
@@ -507,6 +513,7 @@ class RuntimeService:
             source_asset=request.source_asset,
             campaign_goal=request.campaign_goal,
             campaign_type=request.campaign_type,
+            publication_mode=request.publication_mode,
             locale=request.locale,
             jurisdiction=request.jurisdiction,
             office=request.office,
@@ -1305,6 +1312,7 @@ class RuntimeService:
         channel_id: str,
         request: SocialPublicationRequest,
         idempotency_key: str,
+        confirmation_hash: Optional[str] = None,
     ) -> SocialPublicationCommand:
         if channel_id not in {"x", "instagram"}:
             raise KeyError("social channel not found")
@@ -1416,6 +1424,39 @@ class RuntimeService:
             media_url = raw_url
             media_hash = raw_hash
 
+        if run.brief.campaign_type == "political":
+            compliance = next(
+                (item for item in run.artifacts if item.kind == "political_compliance_record"),
+                None,
+            )
+            if compliance is None:
+                raise GreenlightError("political compliance record is unavailable")
+            try:
+                compliance_index = greenlight.approved_artifact_ids.index(
+                    compliance.artifact_id
+                )
+            except ValueError as error:
+                raise GreenlightError(
+                    "political compliance record is not approved"
+                ) from error
+            actual_compliance_hash = stable_id(
+                "sha256", canonical_json(compliance), length=64
+            )
+            if (
+                actual_compliance_hash
+                != greenlight.approved_artifact_hashes[compliance_index]
+                or compliance.payload.get("jurisdiction") != run.brief.jurisdiction.strip()
+                or compliance.payload.get("publication_mode")
+                != run.brief.publication_mode
+                or compliance.payload.get("legal_reviewer")
+                != run.brief.legal_reviewed_by.strip()
+                or compliance.payload.get("greenlight_approver")
+                != greenlight.reviewer
+                or compliance.payload.get("retention_state")
+                != "durable_until_governed_deletion"
+            ):
+                raise GreenlightError("political compliance record is invalid")
+
         connection = self.social_store.get_connection(tenant_id, channel_id)
         if connection is None:
             raise GreenlightError("authorized social account is not connected")
@@ -1433,6 +1474,7 @@ class RuntimeService:
             greenlight_fencing_token=request.greenlight_fencing_token,
             budget_cents=0,
             idempotency_key=idempotency_key,
+            confirmation_hash=confirmation_hash,
         )
 
     def prepare_model_effect(
@@ -1748,6 +1790,7 @@ def _publication_document(intent: object) -> Dict[str, object]:
         "artifact_id": intent.artifact_id,
         "artifact_hash": intent.artifact_hash,
         "media_hash": intent.media_hash,
+        "confirmation_hash": intent.confirmation_hash,
         "greenlight_id": intent.greenlight_id,
         "greenlight_fencing_token": intent.greenlight_fencing_token,
         "status": intent.status,
@@ -2050,6 +2093,26 @@ def create_app(
         raise ValueError(
             "political publication requires AGENCY_SOCIAL_PUBLICATION_ENABLED=true"
         )
+    raw_political_content_enabled = str(
+        social_source.get("AGENCY_POLITICAL_CONTENT_ENABLED", "false")
+    ).strip().lower()
+    if raw_political_content_enabled not in {
+        "1", "true", "yes", "on", "0", "false", "no", "off"
+    }:
+        raise ValueError("AGENCY_POLITICAL_CONTENT_ENABLED must be boolean")
+    political_content_enabled = raw_political_content_enabled in {
+        "1", "true", "yes", "on"
+    }
+    raw_political_paid_enabled = str(
+        social_source.get("AGENCY_POLITICAL_PAID_MEDIA_ENABLED", "false")
+    ).strip().lower()
+    if raw_political_paid_enabled not in {
+        "1", "true", "yes", "on", "0", "false", "no", "off"
+    }:
+        raise ValueError("AGENCY_POLITICAL_PAID_MEDIA_ENABLED must be boolean")
+    political_paid_media_enabled = raw_political_paid_enabled in {
+        "1", "true", "yes", "on"
+    }
     social_cipher: Optional[SocialTokenCipher] = None
     if raw_social_keys or active_social_key:
         social_cipher = SocialTokenCipher.from_environment(
@@ -2169,7 +2232,9 @@ def create_app(
     app.state.social_channel_registry = social_channel_registry
     app.state.social_oauth_service = social_oauth_service
     app.state.social_publication_authority = social_publication_authority
+    app.state.political_content_enabled = political_content_enabled
     app.state.political_publication_enabled = political_publication_enabled
+    app.state.political_paid_media_enabled = political_paid_media_enabled
     app.state.public_media_base_url = media_base_url
     app.state.public_media_ttl_seconds = media_ttl_seconds
     app.state.public_media_configured = bool(media_base_url and media_signing_key)
@@ -3439,16 +3504,37 @@ def create_app(
             publication_run = service.get(principal.tenant_id, run_id)
         except KeyError as error:
             raise HTTPException(status_code=404, detail="resource not found") from error
-        if (
-            publication_run.brief.campaign_type == "political"
-            and not political_publication_enabled
-        ):
-            metrics.social_publication("blocked")
-            raise PublicApiError(
-                status_code=status.HTTP_409_CONFLICT,
-                code="political_publication_disabled",
-                detail="political publication requires a separate operator enablement",
+        confirmation_hash: Optional[str] = None
+        if publication_run.brief.campaign_type == "political":
+            if publication_run.brief.publication_mode == "paid":
+                metrics.social_publication("blocked")
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="paid_publication_requires_ads_authority",
+                    detail="paid political media requires a separate ads authority",
+                )
+            if not political_publication_enabled:
+                metrics.social_publication("blocked")
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="political_publication_disabled",
+                    detail="political publication requires a separate operator enablement",
+                )
+            expected_confirmation = "PUBLICAR POLITICA {} {}".format(
+                run_id, channel_id
             )
+            if not hmac.compare_digest(
+                publication_request.political_confirmation, expected_confirmation
+            ):
+                metrics.social_publication("blocked")
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="political_confirmation_invalid",
+                    detail="political publication confirmation is invalid",
+                )
+            confirmation_hash = hashlib.sha256(
+                expected_confirmation.encode("utf-8")
+            ).hexdigest()
         if (
             social_publication_authority is None
             or not social_publication_authority.enabled
@@ -3466,6 +3552,7 @@ def create_app(
                 channel_id=channel_id,
                 request=publication_request,
                 idempotency_key=idempotency_key,
+                confirmation_hash=confirmation_hash,
             )
             result = social_publication_authority.execute(command)
             if result.replayed:
@@ -3490,6 +3577,7 @@ def create_app(
                     "execution_fencing_token": result.execution_fencing_token,
                     "provider_post_id": result.provider_post_id,
                     "provider_container_id": result.provider_container_id,
+                    "confirmation_hash": confirmation_hash,
                 },
             )
             return result.public_dict()
@@ -3667,6 +3755,25 @@ def create_app(
         principal: TenantPrincipal = Depends(require_run_creator),
     ) -> Dict[str, object]:
         try:
+            if (
+                brief_request.campaign_type == "political"
+                and not political_content_enabled
+            ):
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="political_content_disabled",
+                    detail="political content creation requires explicit enablement",
+                )
+            if (
+                brief_request.campaign_type == "political"
+                and brief_request.publication_mode == "paid"
+                and not political_paid_media_enabled
+            ):
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="political_paid_media_disabled",
+                    detail="paid political planning requires explicit enablement",
+                )
             preferences = {
                 item.strip().lower()
                 for item in (prefer or "").split(",")
@@ -3780,6 +3887,12 @@ def create_app(
             ) from error
         except KeyError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+        except PoliticalReviewerSeparationError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="political_reviewer_separation_required",
+                detail="political legal and Greenlight reviewers must be distinct",
+            ) from error
         except GreenlightError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 

@@ -324,6 +324,12 @@ variable "model_names" {
   }
 }
 
+variable "political_content_enabled" {
+  description = "Explicitly enables political-content creation. It does not enable publication or paid activation."
+  type        = bool
+  default     = false
+}
+
 variable "social_publication_enabled" {
   description = "Explicitly enables governed external social publication. Keep false until provider terms, account authorization and release gates are approved."
   type        = bool
@@ -332,6 +338,12 @@ variable "social_publication_enabled" {
 
 variable "political_publication_enabled" {
   description = "Separately enables governed political publication. General social publication never implies this authority."
+  type        = bool
+  default     = false
+}
+
+variable "political_paid_media_enabled" {
+  description = "Explicit paid-political kill switch. The organic publication endpoint remains unable to execute paid media."
   type        = bool
   default     = false
 }

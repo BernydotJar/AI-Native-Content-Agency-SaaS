@@ -144,6 +144,10 @@ describe("WorkspaceRuntime", () => {
     await user.selectOptions(screen.getByLabelText(/Tipo de campaña/i), "political");
 
     expect(screen.getByRole("group", { name: /Contexto político verificable/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Modo de publicación política/i)).toHaveValue("organic");
+    await user.selectOptions(screen.getByLabelText(/Modo de publicación política/i), "paid");
+    expect(screen.getByLabelText(/Modo de publicación política/i)).toHaveValue("paid");
+    expect(screen.getByText(/autoridad de anuncios separada/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Jurisdicción/i)).toBeRequired();
     expect(screen.getByLabelText(/Afirmación respaldada/i)).toBeRequired();
     expect(screen.getByLabelText(/Revisión legal/i)).toHaveValue("pending");

@@ -41,6 +41,7 @@ class SocialPublicationIntent:
     content_hash: str
     media_url_hash: Optional[str]
     media_hash: Optional[str]
+    confirmation_hash: Optional[str]
     greenlight_id: str
     greenlight_fencing_token: int
     budget_cents: int
@@ -91,6 +92,7 @@ class SQLiteSocialPublicationStore:
                     content_hash TEXT NOT NULL,
                     media_url_hash TEXT,
                     media_hash TEXT,
+                    confirmation_hash TEXT,
                     greenlight_id TEXT NOT NULL,
                     greenlight_fencing_token INTEGER NOT NULL,
                     budget_cents INTEGER NOT NULL,
@@ -119,6 +121,17 @@ class SQLiteSocialPublicationStore:
                     );
                 """
             )
+            columns = {
+                str(row["name"])
+                for row in self._connection.execute(
+                    "PRAGMA table_info(social_publication_intents)"
+                ).fetchall()
+            }
+            if "confirmation_hash" not in columns:
+                self._connection.execute(
+                    "ALTER TABLE social_publication_intents "
+                    "ADD COLUMN confirmation_hash TEXT"
+                )
 
     def reserve(self, intent: SocialPublicationIntent) -> SocialPublicationReservation:
         validate_intent(intent, require_pending=True)
@@ -164,13 +177,14 @@ class SQLiteSocialPublicationStore:
                     INSERT INTO social_publication_intents(
                         intent_id, tenant_id, channel_id, account_id, run_id,
                         artifact_id, artifact_hash, content_hash, media_url_hash,
-                        media_hash, greenlight_id, greenlight_fencing_token,
-                        budget_cents, idempotency_digest, binding_digest, status,
+                        media_hash, confirmation_hash, greenlight_id,
+                        greenlight_fencing_token, budget_cents, idempotency_digest,
+                        binding_digest, status,
                         execution_fencing_token, provider_container_id,
                         provider_post_id, receipt_json, failure_reason, created_at,
                         updated_at, completed_at, revoked_at
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, ?, ?
                     )
                     """,
@@ -426,6 +440,7 @@ def intent_values(intent: SocialPublicationIntent) -> tuple[object, ...]:
         intent.content_hash,
         intent.media_url_hash,
         intent.media_hash,
+        intent.confirmation_hash,
         intent.greenlight_id,
         intent.greenlight_fencing_token,
         intent.budget_cents,
@@ -466,6 +481,11 @@ def intent_from_mapping(row: Mapping[str, object]) -> SocialPublicationIntent:
             None if row.get("media_url_hash") is None else str(row["media_url_hash"])
         ),
         media_hash=None if row.get("media_hash") is None else str(row["media_hash"]),
+        confirmation_hash=(
+            None
+            if row.get("confirmation_hash") is None
+            else str(row["confirmation_hash"])
+        ),
         greenlight_id=str(row["greenlight_id"]),
         greenlight_fencing_token=int(row["greenlight_fencing_token"]),
         budget_cents=int(row["budget_cents"]),
@@ -513,9 +533,11 @@ def validate_intent(intent: SocialPublicationIntent, *, require_pending: bool) -
     ):
         if not _SHA256.fullmatch(digest):
             raise ValueError("publication digest is invalid")
-    for optional in (intent.media_url_hash, intent.media_hash):
+    for optional in (
+        intent.media_url_hash, intent.media_hash, intent.confirmation_hash
+    ):
         if optional is not None and not _SHA256.fullmatch(optional):
-            raise ValueError("publication media digest is invalid")
+            raise ValueError("publication optional digest is invalid")
     if intent.greenlight_fencing_token < 0 or intent.budget_cents < 0:
         raise ValueError("publication authority values are invalid")
     if intent.status not in _STATUSES:

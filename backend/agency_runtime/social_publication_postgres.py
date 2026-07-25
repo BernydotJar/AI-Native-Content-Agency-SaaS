@@ -75,14 +75,15 @@ class PostgresSocialPublicationStore:
                 INSERT INTO public.social_publication_intents(
                     intent_id, tenant_id, channel_id, account_id, run_id,
                     artifact_id, artifact_hash, content_hash, media_url_hash,
-                    media_hash, greenlight_id, greenlight_fencing_token,
-                    budget_cents, idempotency_digest, binding_digest, status,
+                    media_hash, confirmation_hash, greenlight_id,
+                    greenlight_fencing_token, budget_cents, idempotency_digest,
+                    binding_digest, status,
                     execution_fencing_token, provider_container_id,
                     provider_post_id, receipt_json, failure_reason, created_at,
                     updated_at, completed_at, revoked_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     CAST(%s AS jsonb), %s, %s, %s, %s, %s
                 )
                 """,

@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "5"
+POSTGRES_SCHEMA_VERSION = "6"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -154,6 +154,7 @@ POSTGRES_REQUIRED_COLUMNS = {
             "content_hash",
             "media_url_hash",
             "media_hash",
+            "confirmation_hash",
             "greenlight_id",
             "greenlight_fencing_token",
             "budget_cents",
@@ -764,6 +765,7 @@ class PostgresRuntimeDatabase:
                 content_hash TEXT NOT NULL,
                 media_url_hash TEXT,
                 media_hash TEXT,
+                confirmation_hash TEXT,
                 greenlight_id TEXT NOT NULL,
                 greenlight_fencing_token BIGINT NOT NULL CHECK (greenlight_fencing_token >= 0),
                 budget_cents BIGINT NOT NULL CHECK (budget_cents >= 0),
@@ -782,6 +784,10 @@ class PostgresRuntimeDatabase:
                 UNIQUE (tenant_id, idempotency_digest),
                 UNIQUE (tenant_id, binding_digest)
             )
+            """,
+            """
+            ALTER TABLE public.social_publication_intents
+                ADD COLUMN IF NOT EXISTS confirmation_hash TEXT
             """,
             """
             CREATE UNIQUE INDEX IF NOT EXISTS uq_social_publication_binding
@@ -898,7 +904,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4')
+                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4', '5')
                 """,
                 (SCHEMA_VERSION,),
             )

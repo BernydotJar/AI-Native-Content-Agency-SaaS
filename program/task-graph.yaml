@@ -209,6 +209,14 @@
         "INC-020",
         "INC-021"
       ],
+      "status": "done"
+    },
+    {
+      "id": "INC-023",
+      "depends_on": [
+        "INC-021",
+        "INC-022"
+      ],
       "status": "review"
     }
   ],

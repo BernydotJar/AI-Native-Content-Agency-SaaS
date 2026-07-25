@@ -1006,7 +1006,7 @@ printf 'postgresql_backup_restore=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"
 printf 'driver=pg8000\n'
-printf 'schema_version=5\n'
+printf 'schema_version=6\n'
 printf 'wheel_install=pass\n'
 printf 'postgres_integration=pass\n'
 printf 'sqlite_migration=pass\n'

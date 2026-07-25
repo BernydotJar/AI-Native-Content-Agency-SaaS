@@ -71,6 +71,7 @@ class SocialPublicationCommand:
     greenlight_fencing_token: int
     budget_cents: int
     idempotency_key: str
+    confirmation_hash: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -628,6 +629,10 @@ def _validate_command(command: SocialPublicationCommand) -> SocialPublicationCom
         raise ValueError("artifact hash is invalid")
     if command.greenlight_fencing_token < 0 or command.budget_cents < 0:
         raise ValueError("publication authority is invalid")
+    if command.confirmation_hash is not None and not _is_sha256(
+        command.confirmation_hash
+    ):
+        raise ValueError("publication confirmation hash is invalid")
     if len(command.idempotency_key) < 8 or len(command.idempotency_key) > 200:
         raise ValueError("publication idempotency key is invalid")
     media_url = command.media_url
@@ -659,6 +664,7 @@ def _validate_command(command: SocialPublicationCommand) -> SocialPublicationCom
         content=content,
         media_url=media_url,
         media_hash=command.media_hash,
+        confirmation_hash=command.confirmation_hash,
         greenlight_id=command.greenlight_id,
         greenlight_fencing_token=command.greenlight_fencing_token,
         budget_cents=command.budget_cents,
@@ -688,6 +694,7 @@ def _build_intent(
         "greenlight_id": command.greenlight_id,
         "greenlight_fencing_token": command.greenlight_fencing_token,
         "budget_cents": command.budget_cents,
+        "confirmation_hash": command.confirmation_hash,
     }
     binding_digest = hashlib.sha256(
         canonical_json(binding).encode("utf-8")
@@ -712,6 +719,7 @@ def _build_intent(
         content_hash=content_hash,
         media_url_hash=media_url_hash,
         media_hash=command.media_hash,
+        confirmation_hash=command.confirmation_hash,
         greenlight_id=command.greenlight_id,
         greenlight_fencing_token=command.greenlight_fencing_token,
         budget_cents=command.budget_cents,

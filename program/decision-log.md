@@ -227,3 +227,15 @@ Decision: Instagram publication is successful only after the media container rea
 Media supplied to the provider must come from the product-owned Media Vault: decoded JPEG bytes, server SHA-256, rights/alt metadata, tenant/run binding, opaque capability, expiry and revocation. External mutable image URLs are not accepted as Greenlight evidence.
 
 Consequence: the system can truthfully show a durable verified permalink after reload. Real publication, provider deletion, signing-key rotation and production object storage remain separate human/release gates.
+
+## 2026-07-25 — Close stacked campaign/media increments before political compliance
+
+Decision: merge PR #13 and PR #14 normally into their stacked base branches after exact-head CI passed, preserving ancestry with merge commits rather than squash/rebase. PR #13 merged as `cce712e86b356cf9c4a2dca087f8af078101915e`; PR #14 merged as `7522164240b8090fe70ec51525a6a247e4a558c8` after run `30164438593` passed all eight jobs.
+
+Consequence: Campaign Intelligence, Publication Media and Verified Publication are closed as increments. The cumulative stack is still not on protected `main`; a later cumulative PR remains subject to current checks and independent approval.
+
+## 2026-07-25 — Separate political planning, approval and final effect authority
+
+Decision: INC-023 uses independent default-off switches for political content, general publication, political publication and paid planning. Political Greenlight requires a legal/electoral reviewer distinct from the Greenlight approver and includes a hashed compliance record. Organic publication requires the exact typed phrase `PUBLICAR POLITICA <run_id> <channel_id>` before intent reservation; only its SHA-256 is durable. Paid mode cannot use the organic endpoint.
+
+Consequence: local deterministic gates can prove authority separation and zero-provider fail-closed behavior, but cannot supply jurisdiction-specific legal approval or authorize a real post. Release and cloud apply remain denied.

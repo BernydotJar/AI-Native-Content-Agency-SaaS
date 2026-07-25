@@ -86,6 +86,7 @@ class MissionBrief:
     source_asset: str = "sandbox://brief/no-external-asset"
     campaign_goal: str = "awareness"
     campaign_type: str = "commercial"
+    publication_mode: str = "organic"
     locale: str = "es-GT"
     jurisdiction: str = ""
     office: str = ""
@@ -109,6 +110,8 @@ class MissionBrief:
             raise ValueError("budget_cents must not be negative")
         if self.campaign_type not in {"commercial", "political"}:
             raise ValueError("campaign_type must be commercial or political")
+        if self.publication_mode not in {"organic", "paid"}:
+            raise ValueError("publication_mode must be organic or paid")
         require_non_empty(self.locale, "locale")
         if self.legal_review_status not in {"pending", "approved"}:
             raise ValueError("legal_review_status must be pending or approved")

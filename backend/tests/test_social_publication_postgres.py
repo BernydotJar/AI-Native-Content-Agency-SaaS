@@ -74,6 +74,7 @@ class PostgresSocialPublicationStoreTests(unittest.TestCase):
             "content_hash": digest("content"),
             "media_url_hash": None,
             "media_hash": None,
+            "confirmation_hash": None,
             "greenlight_id": "greenlight-001",
             "greenlight_fencing_token": 0,
             "budget_cents": 0,

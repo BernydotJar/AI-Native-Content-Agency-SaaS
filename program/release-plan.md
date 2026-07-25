@@ -73,7 +73,7 @@ A social publication release candidate must prove:
 - image bytes are decoded, bounded, persisted and hash-bound before Greenlight;
 - rights and accessibility metadata are recorded by an authenticated operator and reviewed by humans;
 - public capability origin is HTTPS, opaque, expiring, revocable and configured from an external Secret;
-- PostgreSQL schema v5 is shared across replicas and included in backup/restore evidence;
+- PostgreSQL schema v6 is shared across replicas, migrates schema v5 safely and is included in backup/restore evidence;
 - expired, revoked or byte-inconsistent media blocks before provider HTTP;
 - Instagram container reaches `FINISHED` before `media_publish`;
 - read-after-write verification matches account, ID, caption hash, media type, permalink and timestamp;

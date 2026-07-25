@@ -225,10 +225,14 @@ spec:
                   key: {{ .Values.runtime.model.apiKeyKeys.llama | quote }}
                   optional: true
 {{- end }}
+            - name: AGENCY_POLITICAL_CONTENT_ENABLED
+              value: {{ .Values.runtime.social.politicalContentEnabled | quote }}
             - name: AGENCY_SOCIAL_PUBLICATION_ENABLED
               value: {{ .Values.runtime.social.publicationEnabled | quote }}
             - name: AGENCY_POLITICAL_PUBLICATION_ENABLED
               value: {{ .Values.runtime.social.politicalPublicationEnabled | quote }}
+            - name: AGENCY_POLITICAL_PAID_MEDIA_ENABLED
+              value: {{ .Values.runtime.social.politicalPaidMediaEnabled | quote }}
 {{- if .Values.runtime.social.existingSecret }}
             - name: AGENCY_X_CONSUMER_KEY
               valueFrom:
