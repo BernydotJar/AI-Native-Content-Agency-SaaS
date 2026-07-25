@@ -18,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth import (
@@ -284,6 +284,15 @@ class RequestBodyLimitMiddleware:
         await self.app(scope, replay_receive, send)
 
 
+class EvidenceClaimRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    statement: str = Field(min_length=1, max_length=2000)
+    source: str = Field(min_length=1, max_length=1000)
+    locator: str = Field(min_length=1, max_length=1000)
+    verification_status: str = Field(default="unverified", pattern="^(unverified|verified)$")
+    reviewed_by: str = Field(default="", max_length=300)
+
+
 class BriefRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=1, max_length=200)
@@ -293,6 +302,33 @@ class BriefRequest(BaseModel):
     budget_cents: int = Field(default=0, ge=0)
     source_asset: str = Field(default="sandbox://brief/no-external-asset", max_length=2000)
     campaign_goal: str = Field(default="awareness", min_length=1, max_length=200)
+    campaign_type: str = Field(default="commercial", pattern="^(commercial|political)$")
+    locale: str = Field(default="es-GT", min_length=2, max_length=32)
+    jurisdiction: str = Field(default="", max_length=200)
+    office: str = Field(default="", max_length=200)
+    candidate_name: str = Field(default="", max_length=300)
+    locality: str = Field(default="", max_length=300)
+    problem: str = Field(default="", max_length=4000)
+    proposal: str = Field(default="", max_length=4000)
+    desired_action: str = Field(default="", max_length=1000)
+    disclosure: str = Field(default="", max_length=1000)
+    legal_review_status: str = Field(default="pending", pattern="^(pending|approved)$")
+    legal_reviewed_by: str = Field(default="", max_length=300)
+    evidence_claims: List[EvidenceClaimRequest] = Field(default_factory=list, max_length=32)
+
+    @model_validator(mode="after")
+    def validate_political_context(self) -> "BriefRequest":
+        if self.campaign_type != "political":
+            return self
+        for field_name in (
+            "jurisdiction", "office", "candidate_name", "locality",
+            "problem", "proposal", "desired_action", "disclosure",
+        ):
+            if not str(getattr(self, field_name)).strip():
+                raise ValueError("political brief requires {}".format(field_name))
+        if not self.evidence_claims:
+            raise ValueError("political brief requires at least one evidence claim")
+        return self
 
 
 class GreenlightRequest(BaseModel):
@@ -435,6 +471,19 @@ class RuntimeService:
             budget_cents=request.budget_cents,
             source_asset=request.source_asset,
             campaign_goal=request.campaign_goal,
+            campaign_type=request.campaign_type,
+            locale=request.locale,
+            jurisdiction=request.jurisdiction,
+            office=request.office,
+            candidate_name=request.candidate_name,
+            locality=request.locality,
+            problem=request.problem,
+            proposal=request.proposal,
+            desired_action=request.desired_action,
+            disclosure=request.disclosure,
+            legal_review_status=request.legal_review_status,
+            legal_reviewed_by=request.legal_reviewed_by,
+            evidence_claims=tuple(item.model_dump() for item in request.evidence_claims),
         )
 
     def create_browser_session(
@@ -1000,6 +1049,15 @@ class RuntimeService:
             or not greenlight.active
         ):
             raise GreenlightError("Greenlight is not active")
+        if run.brief.campaign_type == "political":
+            risk_report = next(
+                (item for item in run.artifacts if item.kind == "risk_report"), None
+            )
+            if (
+                risk_report is None
+                or risk_report.payload.get("publication_eligible") is not True
+            ):
+                raise GreenlightError("political critique is not publication eligible")
         self.assert_greenlight_effect_authorized(
             tenant_id,
             run_id,
@@ -1520,8 +1578,10 @@ def create_app(
         if session_cookie_samesite is None
         else session_cookie_samesite.strip().lower()
     )
-    if cookie_samesite not in {"lax", "strict"}:
-        raise ValueError("session cookie SameSite must be lax or strict")
+    if cookie_samesite not in {"lax", "none", "strict"}:
+        raise ValueError("session cookie SameSite must be lax, none or strict")
+    if cookie_samesite == "none" and not cookie_secure:
+        raise ValueError("session cookie SameSite=None requires Secure=true")
     ttl_seconds = (
         int(os.environ.get("AGENCY_SESSION_TTL_SECONDS", "28800"))
         if session_ttl_seconds is None
@@ -1639,6 +1699,20 @@ def create_app(
     if raw_publication_enabled not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
         raise ValueError("AGENCY_SOCIAL_PUBLICATION_ENABLED must be boolean")
     publication_enabled = raw_publication_enabled in {"1", "true", "yes", "on"}
+    raw_political_publication_enabled = str(
+        social_source.get("AGENCY_POLITICAL_PUBLICATION_ENABLED", "false")
+    ).strip().lower()
+    if raw_political_publication_enabled not in {
+        "1", "true", "yes", "on", "0", "false", "no", "off"
+    }:
+        raise ValueError("AGENCY_POLITICAL_PUBLICATION_ENABLED must be boolean")
+    political_publication_enabled = raw_political_publication_enabled in {
+        "1", "true", "yes", "on"
+    }
+    if political_publication_enabled and not publication_enabled:
+        raise ValueError(
+            "political publication requires AGENCY_SOCIAL_PUBLICATION_ENABLED=true"
+        )
     social_cipher: Optional[SocialTokenCipher] = None
     if raw_social_keys or active_social_key:
         social_cipher = SocialTokenCipher.from_environment(
@@ -1650,9 +1724,9 @@ def create_app(
             cipher=social_cipher,
             transport=social_oauth_transport,
         )
-        if cookie_samesite != "lax":
+        if cookie_samesite not in {"lax", "none"}:
             raise ValueError(
-                "social OAuth callbacks require AGENCY_SESSION_COOKIE_SAMESITE=lax"
+                "social OAuth callbacks require AGENCY_SESSION_COOKIE_SAMESITE=lax or none"
             )
         try:
             bootstrapped_social_connections = bootstrap_social_connections(
@@ -1758,6 +1832,7 @@ def create_app(
     app.state.social_channel_registry = social_channel_registry
     app.state.social_oauth_service = social_oauth_service
     app.state.social_publication_authority = social_publication_authority
+    app.state.political_publication_enabled = political_publication_enabled
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -2041,12 +2116,14 @@ def create_app(
     ) -> PublicApiError:
         phase = getattr(error, "phase", "provider")
         reason = getattr(error, "reason", "invalid_response")
+        exception_type = getattr(error, "exception_type", "") or "none"
         API_LOGGER.warning(
-            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s",
+            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s exception_type=%s",
             _request_id(request),
             channel_id,
             phase,
             reason,
+            exception_type,
         )
         display = "X" if channel_id == "x" else "Instagram"
         phase_labels = {
@@ -2730,14 +2807,19 @@ def create_app(
                 state_value=state_value,
                 code=code,
             )
-        except SocialOAuthCallbackError as error:
-            raise PublicApiError(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                code="social_oauth_callback_invalid",
-                detail="social authentication callback is invalid or expired",
-            ) from error
+        except SocialOAuthCallbackError:
+            return RedirectResponse(
+                url="/?social_channel=instagram&status=error&error=social_oauth_callback_invalid",
+                status_code=303,
+            )
         except SocialOAuthProviderError as error:
-            raise _social_provider_error(request, error, "instagram") from error
+            public_error = _social_provider_error(request, error, "instagram")
+            return RedirectResponse(
+                url="/?social_channel=instagram&status=error&error={}".format(
+                    public_error.code
+                ),
+                status_code=303,
+            )
         service.record_social_event(
             principal=principal,
             request_id=request.state.request_id,
@@ -2817,6 +2899,20 @@ def create_app(
         ),
         principal: TenantPrincipal = Depends(require_social_publisher),
     ) -> Dict[str, object]:
+        try:
+            publication_run = service.get(principal.tenant_id, run_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        if (
+            publication_run.brief.campaign_type == "political"
+            and not political_publication_enabled
+        ):
+            metrics.social_publication("blocked")
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="political_publication_disabled",
+                detail="political publication requires a separate operator enablement",
+            )
         if (
             social_publication_authority is None
             or not social_publication_authority.enabled
@@ -3041,6 +3137,28 @@ def create_app(
                 if item.strip()
             }
             respond_async = "respond-async" in preferences
+            verified_claim_requested = any(
+                claim.verification_status == "verified"
+                for claim in brief_request.evidence_claims
+            )
+            legal_approval_requested = (
+                brief_request.legal_review_status == "approved"
+            )
+            if verified_claim_requested or legal_approval_requested:
+                _authorize(request, principal, "greenlight:decide")
+            brief_request = brief_request.model_copy(
+                update={
+                    "legal_reviewed_by": (
+                        principal.subject_id if legal_approval_requested else ""
+                    ),
+                    "evidence_claims": [
+                        claim.model_copy(update={"reviewed_by": principal.subject_id})
+                        if claim.verification_status == "verified"
+                        else claim.model_copy(update={"reviewed_by": ""})
+                        for claim in brief_request.evidence_claims
+                    ],
+                }
+            )
             result = service.start(
                 principal.tenant_id,
                 brief_request,

@@ -42,3 +42,29 @@ truthful baseline
   -> human merge gate
   -> human production gate
 ```
+
+## 2026-07-25 — Campaign intelligence delivery sequence
+
+### INC-021 — review
+
+- structured political brief and server-authoritative evidence/legal review;
+- Spanish channel copy and claim mapping;
+- accessible Instagram carousel plan;
+- Critique Agent fail-closed Greenlight gate;
+- separate political publication kill switch.
+
+### INC-022 — next ready
+
+- governed `publication_media` generation or ingestion;
+- HTTPS delivery and exact media hash;
+- media rights and alt-text metadata;
+- Instagram container processing/status polling;
+- independent post read-after-write verification;
+- verified permalink/receipt and reconciliation UI.
+
+### Later gated work
+
+- semantic prompt-injection and externally sourced evidence evals;
+- authorized cloud target and object storage;
+- human accessibility/privacy/legal/campaign review;
+- one authorized sandbox post before any production enablement.

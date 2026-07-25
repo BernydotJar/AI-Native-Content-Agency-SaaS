@@ -50,3 +50,18 @@ candidates, privacy UNKNOWNs, public copy and unresolved HIGH findings. Its
 current successful output is `DENY_RELEASE`; PASS means the denial/evidence is
 internally consistent, not that release is authorized. See
 [`docs/compliance/release-compliance-review.md`](../docs/compliance/release-compliance-review.md).
+
+## Political and campaign-content release gate
+
+A green build never authorizes political publication. Any release candidate containing political-campaign functionality must additionally prove:
+
+- evidence claims are source/locator bound and reviewed by an authenticated authorized subject;
+- jurisdiction-specific legal review is explicitly approved by an accountable human;
+- Critique Agent reports `publication_eligible=true` without unsupported promotional claims;
+- Greenlight is active and artifact/media hashes match;
+- `AGENCY_POLITICAL_PUBLICATION_ENABLED` is independently reviewed and explicitly enabled;
+- governed media and read-after-write provider verification are present;
+- provider/account/candidate/campaign authority is documented;
+- one sandbox post is separately authorized and reconciled before production.
+
+Current decision remains `DENY_RELEASE`; the political publication flag remains false.

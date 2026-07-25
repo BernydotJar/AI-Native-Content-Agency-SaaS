@@ -594,9 +594,51 @@
       "command": "not run",
       "observed": "No provider credential, real HTTP request, prompt transfer, token charge or production activation occurred.",
       "result": "NOT_RUN"
+    },
+    {
+      "id": "INC021-LOCKED-WHEEL",
+      "scope": "backend reproducibility and regression",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "261 PASS; 23 PostgreSQL-only SKIP; wheel install and pip check PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-POLITICAL-SEMANTIC",
+      "scope": "groundedness, citation mapping, missing evidence and legal gate",
+      "command": "focused political runtime/API tests",
+      "observed": "verified/legal-approved path PASS; missing evidence 422; unverified and legal-pending paths revise and deny Greenlight",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-RBAC-RED-TEAM",
+      "scope": "reviewer authority and political publication kill switch",
+      "command": "operator denial and general-on/political-off tests",
+      "observed": "self-attestation 403; political publication 409; provider calls 0",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-OAUTH-REGRESSION",
+      "scope": "OAuth state/session/transport repair",
+      "command": "focused OAuth service/API/store family",
+      "observed": "18 PASS; 2 PostgreSQL-only SKIP; state mandatory; wrong session calls provider 0",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-FRONTEND",
+      "scope": "campaign form and production bundle",
+      "command": "npm test && npm run lint && npm run build",
+      "observed": "39 PASS; lint 0 warnings/0 errors; build PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-INFRA-EXACT-HEAD",
+      "scope": "PostgreSQL, OCI, Helm, Terraform and supply chain",
+      "command": "GitHub Actions production-readiness run 30149528848",
+      "observed": "8/8 jobs SUCCESS at exact head 25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain",
+      "result": "PASS"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
-  "updated_at": "2026-07-24T22:09:46Z"
+  "source_commit": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
+  "updated_at": "2026-07-25"
 }

@@ -33,4 +33,5 @@ model_egress_allowed_hosts     = ""
 model_existing_secret          = ""
 
 # External social publication stays disabled until explicitly authorized.
-social_publication_enabled = false
+social_publication_enabled    = false
+political_publication_enabled = false

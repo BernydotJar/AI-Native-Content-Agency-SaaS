@@ -62,6 +62,8 @@ runtime:
   social:
     # External publication remains off until an operator explicitly enables the durable authority.
     publicationEnabled: false
+    # Separate kill switch: general publication never implicitly enables political content.
+    politicalPublicationEnabled: false
     # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
     existingSecret: ""
     encryptionKeysJsonKey: "social-token-encryption-keys.json"

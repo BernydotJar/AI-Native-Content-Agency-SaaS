@@ -241,8 +241,19 @@ class SocialOAuthApiTests(unittest.TestCase):
                     "/api/v1/social-channels/instagram/oauth/callback",
                     params={"state": state, "code": "instagram-code"},
                 )
-                self.assertEqual(wrong.status_code, 400)
+                self.assertEqual(wrong.status_code, 303)
+                self.assertEqual(
+                    wrong.headers["location"],
+                    "/?social_channel=instagram&status=error&error=social_oauth_callback_invalid",
+                )
                 self.assertEqual(len(calls), 0)
+
+            missing_state = owner.get(
+                "/api/v1/social-channels/instagram/oauth/callback",
+                params={"code": "instagram-code"},
+            )
+            self.assertEqual(missing_state.status_code, 422)
+            self.assertEqual(len(calls), 0)
 
             connected = owner.get(
                 "/api/v1/social-channels/instagram/oauth/callback",

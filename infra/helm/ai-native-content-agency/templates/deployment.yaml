@@ -227,6 +227,8 @@ spec:
 {{- end }}
             - name: AGENCY_SOCIAL_PUBLICATION_ENABLED
               value: {{ .Values.runtime.social.publicationEnabled | quote }}
+            - name: AGENCY_POLITICAL_PUBLICATION_ENABLED
+              value: {{ .Values.runtime.social.politicalPublicationEnabled | quote }}
 {{- if .Values.runtime.social.existingSecret }}
             - name: AGENCY_X_CONSUMER_KEY
               valueFrom:

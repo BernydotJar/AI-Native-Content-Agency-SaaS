@@ -194,3 +194,25 @@ Consequence: the five-provider gateway can be invoked explicitly through a gover
 command while both model flags remain false by default. Automatic per-station inference,
 real credentials, prompt transfer, egress, budget and production activation remain separate
 human and release gates.
+
+## D-018 — Political campaign content requires server-bound evidence and legal authority
+
+Date: 2026-07-25
+Status: accepted locally at `6ebbd634bd32408db0a7678289b0f906cda014c0`; exact-head CI and accountable human review pending
+
+Decision: a political campaign brief may be drafted without external effects, but it may not become publication-eligible unless every used claim is source/locator bound, marked verified by an authenticated subject with `greenlight:decide`, and the legal-review status is approved by the same server-authoritative identity boundary. Client-supplied reviewer names are never authority. Critique must expose `revise` truthfully when any gate fails.
+
+A second, independent runtime flag `AGENCY_POLITICAL_PUBLICATION_ENABLED` remains false by default. Enabling general social publication does not enable political publication.
+
+Rationale: a source string, a connected social account or a Greenlight decision alone cannot prove factual, legal or campaign authority. Separating drafting, evidence review, legal review, Greenlight and effect enablement prevents accidental or self-attested political publication.
+
+Consequence: campaign intelligence can produce reviewable Spanish copy and an accessible non-rendered media plan. Real media, post verification, jurisdiction-specific review, candidate/campaign authorization and any external post remain separate gates under INC-022 and the release decision.
+
+## D-019 — INC-021 is complete at increment scope, not release scope
+
+Date: 2026-07-25
+Status: accepted at exact remote head `25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1`
+
+Decision: mark INC-021 `done` after local deterministic gates and GitHub Actions run `30149528848` passed all eight exact-head jobs. Keep PR #13 draft, keep `DENY_RELEASE` and `DENY_APPLY`, and keep all political/social external effects disabled.
+
+Consequence: the next safe executable task is INC-022 for governed media and read-after-write publication verification. Increment completion does not constitute legal approval, candidate authorization, deployment or permission to publish.

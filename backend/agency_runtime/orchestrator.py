@@ -3,6 +3,14 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Callable, Dict, Mapping, Optional, Sequence, Tuple
 
+from .campaign_intelligence import (
+    claim_ledger,
+    copy_payload,
+    critique_payload,
+    growth_payload,
+    media_payload,
+    strategy_payload,
+)
 from .memory import MemoryStore, utc_now
 from .models import (
     AGENT_SEQUENCE,
@@ -142,20 +150,38 @@ class AgencyOrchestrator:
         if run.status is RunStatus.AWAITING_GREENLIGHT:
             return
         publisher = run.state_for(AgentRole.PUBLISHER)
-        publisher.update(
-            AgentStatus.WAITING_GREENLIGHT,
-            0,
-            "Risk passed; manual Greenlight is required before packaging.",
-        )
+        risk_report = run.artifact("risk_report")
+        critique_passed = risk_report.payload.get("passed") is True
+        publication_eligible = risk_report.payload.get("publication_eligible") is True
+        if not critique_passed or (
+            run.brief.campaign_type == "political" and not publication_eligible
+        ):
+            publisher.update(
+                AgentStatus.ATTENTION,
+                0,
+                "Critique requires revision; Greenlight and publication are blocked.",
+            )
+            event_action = "critique_revision_required"
+            event_status = AgentStatus.ATTENTION.value
+            event_detail = "The run is reviewable, but it cannot receive Greenlight."
+        else:
+            publisher.update(
+                AgentStatus.WAITING_GREENLIGHT,
+                0,
+                "Risk passed; manual Greenlight is required before packaging.",
+            )
+            event_action = "approval_gate"
+            event_status = AgentStatus.WAITING_GREENLIGHT.value
+            event_detail = "No packaging or publication has occurred."
         run.status = RunStatus.AWAITING_GREENLIGHT
         run.execution.state = "awaiting_greenlight"
         run.execution.next_station = AgentRole.PUBLISHER.value
         self._event(
             run,
             AgentRole.PUBLISHER,
-            "approval_gate",
-            AgentStatus.WAITING_GREENLIGHT.value,
-            "No packaging or publication has occurred.",
+            event_action,
+            event_status,
+            event_detail,
         )
 
     def approve(self, run_id: str, reviewer: str, note: str = "") -> ExecutionRun:
@@ -241,6 +267,11 @@ class AgencyOrchestrator:
         risk_report = run.artifact("risk_report")
         if risk_report.payload.get("passed") is not True:
             raise GreenlightError("Risk must pass before a Greenlight decision")
+        if (
+            run.brief.campaign_type == "political"
+            and risk_report.payload.get("publication_eligible") is not True
+        ):
+            raise GreenlightError("Political critique must pass before Greenlight")
         if not reviewer or not reviewer.strip():
             raise GreenlightError("reviewer must not be empty")
 
@@ -346,6 +377,14 @@ class AgencyOrchestrator:
                 "audience": brief.audience,
                 "platforms": [platform.value for platform in brief.platforms],
                 "budget_cents": brief.budget_cents,
+                "campaign_type": brief.campaign_type,
+                "locale": brief.locale,
+                "jurisdiction": brief.jurisdiction,
+                "office": brief.office,
+                "candidate_name": brief.candidate_name,
+                "locality": brief.locality,
+                "legal_review_status": brief.legal_review_status,
+                "legal_reviewed_by": brief.legal_reviewed_by,
                 "constraints": [
                     "sandbox adapters only",
                     "manual Greenlight before Publisher",
@@ -369,41 +408,32 @@ class AgencyOrchestrator:
                 purpose="audience language and category framing",
             )
         )
+        claims = claim_ledger(run.brief, run.run_id)
         artifact = self._complete_agent(
             run,
             AgentRole.RESEARCH,
             "research_dossier",
-            "Synthetic research dossier",
+            "Dossier de investigación y afirmaciones",
             {
                 "trends": to_primitive(trends.result),
                 "browser_observation": to_primitive(browser.result),
+                "claim_ledger": claims,
                 "scholar": {
-                    "reencuadre_cognitivo": (
-                        "La oportunidad no es producir más contenido, sino convertir "
-                        "evidencia en una decisión editorial verificable."
-                    ),
-                    "tension_del_trade_off": (
-                        "Mayor velocidad amplifica alcance, pero también amplifica "
-                        "afirmaciones débiles si la procedencia no acompaña cada señal."
-                    ),
-                    "resolucion_operativa": (
-                        "Priorizar una tesis sustentada, adaptar su expresión por canal "
-                        "y mantener Risk y Greenlight como límites obligatorios."
-                    ),
+                    "reencuadre_cognitivo": "Convertir una propuesta verificable en una decisión comprensible.",
+                    "tension_del_trade_off": "La claridad no puede simplificar una afirmación más allá de su fuente.",
+                    "resolucion_operativa": "Mapear claims, adaptar el canal y mantener Critique y Greenlight.",
                 },
                 "live_sources_contacted": False,
             },
             evidence=(trends.evidence, browser.evidence),
-            detail="Synthetic trend and browser fixtures consolidated.",
+            detail="Afirmaciones y fuentes consolidadas sin navegación externa.",
         )
         self._remember(
             run,
             AgentRole.RESEARCH,
-            "Research fixture found {} platform signals for {}.".format(
-                len(trends.result.signals), run.brief.audience
-            ),
-            confidence=0.72,
-            tags=("research", "trends", run.brief.campaign_goal),
+            "Research mapped {} claims for {}.".format(len(claims), run.brief.audience),
+            confidence=0.84 if claims else 0.72,
+            tags=("research", "claims", run.brief.campaign_goal),
             artifact=artifact,
             evidence=trends.evidence,
         )
@@ -415,31 +445,23 @@ class AgencyOrchestrator:
                 topic="idempotent approval-gated orchestration",
             )
         )
-        pillars = (
-            "Evidence: lead with a verifiable audience tension",
-            "Expression: adapt pacing to each platform",
-            "Action: keep one measurable call to action",
-        )
+        payload = strategy_payload(run.brief)
+        payload["platforms"] = [platform.value for platform in run.brief.platforms]
+        payload["documentation_guardrails"] = list(docs.result.recommendations)
         artifact = self._complete_agent(
             run,
             AgentRole.STRATEGIST,
             "channel_strategy",
-            "Channel strategy",
-            {
-                "pillars": list(pillars),
-                "platforms": [platform.value for platform in run.brief.platforms],
-                "documentation_guardrails": list(docs.result.recommendations),
-            },
+            "Arquitectura de mensaje por canal",
+            payload,
             evidence=(docs.evidence,),
-            detail="Three-pillar channel strategy prepared.",
+            detail="Estrategia basada en problema, propuesta, prueba y acción.",
         )
         self._remember(
             run,
             AgentRole.STRATEGIST,
-            "Strategy uses Evidence, Expression, and Action pillars for {}.".format(
-                run.brief.title
-            ),
-            confidence=0.83,
+            "Strategy prepared {} governed message pillars.".format(len(payload["pillars"])),
+            confidence=0.9 if run.brief.campaign_type == "political" else 0.83,
             tags=("strategy", "pillars"),
             artifact=artifact,
             evidence=docs.evidence,
@@ -454,58 +476,47 @@ class AgencyOrchestrator:
                 platforms=run.brief.platforms,
             )
         )
+        payload = growth_payload(run.brief, to_primitive(forecast.result))
         artifact = self._complete_agent(
             run,
             AgentRole.GROWTH,
             "growth_forecast",
-            "Synthetic growth forecast",
-            to_primitive(forecast.result),
+            "Plan de distribución orgánica" if run.brief.campaign_type == "political" else "Synthetic growth forecast",
+            payload,
             evidence=(forecast.evidence,),
-            detail="Forecast calculated without ad-account access or spend.",
+            detail="Métricas y guardrails definidos sin afirmar alcance electoral."
+            if run.brief.campaign_type == "political"
+            else "Forecast calculated without ad-account access or spend.",
         )
         self._remember(
             run,
             AgentRole.GROWTH,
-            "Synthetic forecast CAC is {} cents at a {} cent planning budget.".format(
-                forecast.result.estimated_cac_cents,
-                forecast.result.budget_cents,
-            ),
-            confidence=0.58,
-            tags=("growth", "forecast", "synthetic"),
+            "Growth plan remains synthetic and external spend is disabled.",
+            confidence=0.82 if run.brief.campaign_type == "political" else 0.58,
+            tags=("growth", "organic", "synthetic"),
             artifact=artifact,
             evidence=forecast.evidence,
         )
 
     def _run_writer(self, run: ExecutionRun) -> None:
-        variants = {
-            platform.value: {
-                "hook": "{} — made clear for {}.".format(
-                    run.brief.title, run.brief.audience
-                ),
-                "body": run.brief.objective,
-                "cta": "Conoce la propuesta y participa.",
-            }
-            for platform in run.brief.platforms
-        }
+        research = run.artifact("research_dossier")
+        payload = copy_payload(run.brief, research.payload.get("claim_ledger", []))
         artifact = self._complete_agent(
             run,
             AgentRole.WRITER,
             "copy_deck",
-            "Platform copy deck",
-            {
-                "variants": variants,
-                "claims_status": "draft_requires_human_review",
-            },
-            detail="Draft copy variants ready for human claim review.",
+            "Copy gobernado por plataforma",
+            payload,
+            detail="Variantes listas para crítica factual y revisión humana.",
         )
         self._remember(
             run,
             AgentRole.WRITER,
-            "Drafted {} platform copy variants; claims remain unapproved.".format(
-                len(variants)
+            "Drafted {} platform variants with explicit claim mapping.".format(
+                len(payload["variants"])
             ),
-            confidence=0.91,
-            tags=("copy", "draft"),
+            confidence=0.93,
+            tags=("copy", "draft", run.brief.locale),
             artifact=artifact,
         )
 
@@ -525,27 +536,25 @@ class AgencyOrchestrator:
                 target_duration_seconds=8,
             )
         )
+        payload = media_payload(
+            run.brief,
+            video=to_primitive(video.result),
+            image_to_video=to_primitive(motion.result),
+        )
         artifact = self._complete_agent(
             run,
             AgentRole.MEDIA,
             "media_plan",
-            "Sandbox media plan",
-            {
-                "video": to_primitive(video.result),
-                "image_to_video": to_primitive(motion.result),
-                "source_asset_read": False,
-                "media_rendered": False,
-            },
+            "Plan de medios accesible",
+            payload,
             evidence=(video.evidence, motion.evidence),
-            detail="Edit and storyboard plans created; rendering is disabled.",
+            detail="Plan editorial creado; no se renderizó ni publicó media.",
         )
         self._remember(
             run,
             AgentRole.MEDIA,
-            "Media planning produced two non-rendered sandbox plans for {}.".format(
-                primary_platform.value
-            ),
-            confidence=0.95,
+            "Media plan is accessible, non-rendered and publication-blocking.",
+            confidence=0.96,
             tags=("media", "plan", "sandbox"),
             artifact=artifact,
             evidence=video.evidence,
@@ -559,32 +568,31 @@ class AgencyOrchestrator:
                 question="Does the sandbox package preserve the Greenlight boundary?",
             )
         )
-        checks = (
-            "All configured adapters declare sandbox=true",
-            "Copy claims remain marked draft_requires_human_review",
-            "Media outputs declare rendered=false",
-            "Publisher has not run before Greenlight",
+        research = run.artifact("research_dossier")
+        writer = run.artifact("copy_deck")
+        payload = critique_payload(
+            run.brief,
+            claims=research.payload.get("claim_ledger", []),
+            variants=writer.payload.get("variants", {}),
         )
+        payload["codebase_inspection"] = to_primitive(inspection.result)
         artifact = self._complete_agent(
             run,
             AgentRole.RISK,
             "risk_report",
-            "Pre-Greenlight risk report",
-            {
-                "passed": True,
-                "checks": list(checks),
-                "codebase_inspection": to_primitive(inspection.result),
-                "human_greenlight_required": True,
-            },
+            "Crítica pre-Greenlight",
+            payload,
             evidence=(inspection.evidence,),
-            detail="Sandbox controls passed; human Greenlight is still required.",
+            detail="Crítica factual y de canal completada; Greenlight humano sigue siendo obligatorio.",
         )
         self._remember(
             run,
             AgentRole.RISK,
-            "Risk passed {} sandbox checks; Publisher remains gated.".format(len(checks)),
+            "Critique evaluated {} checks; publication_eligible={}.".format(
+                len(payload["checks"]), payload["publication_eligible"]
+            ),
             confidence=1.0,
-            tags=("risk", "greenlight", "audit"),
+            tags=("risk", "critique", "greenlight"),
             artifact=artifact,
             evidence=inspection.evidence,
         )

@@ -132,6 +132,25 @@ describe("WorkspaceRuntime", () => {
     await waitFor(() => expect(onRunChange).toHaveBeenLastCalledWith(RUN));
   });
 
+  it("reveals grounded political campaign fields and legal-review warning", async () => {
+    const user = userEvent.setup();
+    const runtime = api({ resumeSession: vi.fn().mockResolvedValue(SESSION) });
+    render(<WorkspaceRuntime api={runtime} />);
+
+    await screen.findByText(/operator@example.com/i);
+    await user.selectOptions(screen.getByLabelText(/Tipo de campaña/i), "political");
+
+    expect(screen.getByRole("group", { name: /Contexto político verificable/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Jurisdicción/i)).toBeRequired();
+    expect(screen.getByLabelText(/Afirmación respaldada/i)).toBeRequired();
+    expect(screen.getByLabelText(/Revisión legal/i)).toHaveValue("pending");
+    expect(screen.getByRole("option", { name: /Aprobada con autoridad/i })).toBeDisabled();
+    expect(screen.getByLabelText(/Estado de verificación/i)).toHaveValue("unverified");
+    expect(screen.getByRole("option", { name: /Verificada con autoridad/i })).toBeDisabled();
+    expect(screen.getByText(/Tu rol puede preparar la afirmación/i)).toBeInTheDocument();
+    expect(screen.getByText(/Adjuntar una fuente no la convierte/i)).toBeInTheDocument();
+  });
+
   it("polls a queued run until durable station execution reaches Greenlight", async () => {
     const user = userEvent.setup();
     const queued: RuntimeRun = {

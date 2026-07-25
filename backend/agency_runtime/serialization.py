@@ -36,6 +36,30 @@ def execution_run_from_document(document: Mapping[str, object]) -> ExecutionRun:
             brief_data.get("source_asset", "sandbox://brief/no-external-asset")
         ),
         campaign_goal=str(brief_data.get("campaign_goal", "awareness")),
+        campaign_type=str(brief_data.get("campaign_type", "commercial")),
+        locale=str(brief_data.get("locale", "es-GT")),
+        jurisdiction=str(brief_data.get("jurisdiction", "")),
+        office=str(brief_data.get("office", "")),
+        candidate_name=str(brief_data.get("candidate_name", "")),
+        locality=str(brief_data.get("locality", "")),
+        problem=str(brief_data.get("problem", "")),
+        proposal=str(brief_data.get("proposal", "")),
+        desired_action=str(brief_data.get("desired_action", "")),
+        disclosure=str(brief_data.get("disclosure", "")),
+        legal_review_status=str(brief_data.get("legal_review_status", "pending")),
+        legal_reviewed_by=str(brief_data.get("legal_reviewed_by", "")),
+        evidence_claims=tuple(
+            {
+                "statement": str(_mapping(item).get("statement", "")),
+                "source": str(_mapping(item).get("source", "")),
+                "locator": str(_mapping(item).get("locator", "")),
+                "verification_status": str(
+                    _mapping(item).get("verification_status", "unverified")
+                ),
+                "reviewed_by": str(_mapping(item).get("reviewed_by", "")),
+            }
+            for item in brief_data.get("evidence_claims", [])
+        ),
     )
 
     states_data = _mapping(document["agent_states"])

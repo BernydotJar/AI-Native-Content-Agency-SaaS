@@ -53,10 +53,12 @@ class SocialOAuthProviderError(SocialOAuthError):
         *,
         phase: str = "provider",
         reason: str = "invalid_response",
+        exception_type: str = "",
     ) -> None:
         super().__init__(message)
         self.phase = phase
         self.reason = reason
+        self.exception_type = exception_type
 
 
 class SocialOAuthCallbackError(SocialOAuthError):
@@ -129,7 +131,10 @@ class SocialOAuthService:
             timeout=httpx.Timeout(timeout_seconds),
             follow_redirects=False,
             trust_env=False,
-            headers={"User-Agent": "ai-native-content-agency/0.7"},
+            headers={
+                "User-Agent": "ai-native-content-agency/0.7",
+                "Accept-Encoding": "identity",
+            },
         )
 
     def close(self) -> None:
@@ -243,7 +248,9 @@ class SocialOAuthService:
             state.encrypted_payload,
             associated_data=_state_aad(state.tenant_id, state.channel_id, state.state_id),
         )
-        if not hmac.compare_digest(str(payload.get("state_value", "")), state_value):
+        if not hmac.compare_digest(
+            str(payload.get("state_value", "")), state_value
+        ):
             raise SocialOAuthCallbackError("Instagram OAuth state is invalid")
         config = self._registry.private_config("instagram")
         app_id, app_secret = config.credentials
@@ -258,6 +265,12 @@ class SocialOAuthService:
                 "redirect_uri": config.redirect_uri,
                 "code": code,
             },
+            headers={
+                "Accept": "application/json",
+                "Accept-Encoding": "identity",
+                "Connection": "close",
+            },
+            timeout=httpx.Timeout(60.0, connect=10.0),
         )
         token_payload = _json_object(response)
         access_token = _required_text(token_payload, "access_token")
@@ -400,6 +413,7 @@ class SocialOAuthService:
         )
         query = urlencode(
             {
+                "force_reauth": "true",
                 "client_id": app_id,
                 "redirect_uri": config.redirect_uri,
                 "scope": ",".join(self._registry.get("instagram").scopes),
@@ -456,28 +470,53 @@ class SocialOAuthService:
             with self._client.stream(method, url, **kwargs) as upstream:
                 chunks = []
                 total = 0
-                for chunk in upstream.iter_bytes():
-                    total += len(chunk)
-                    if total > _MAX_RESPONSE_BYTES:
-                        raise SocialOAuthProviderError(
-                            "social provider response is too large",
-                            phase=phase,
-                            reason="invalid_response",
-                        )
-                    chunks.append(chunk)
+                if upstream.is_stream_consumed:
+                    materialized = upstream.content
+                    total = len(materialized)
+                    chunks.append(materialized)
+                else:
+                    for chunk in upstream.iter_raw():
+                        total += len(chunk)
+                        if total > _MAX_RESPONSE_BYTES:
+                            raise SocialOAuthProviderError(
+                                "social provider response is too large",
+                                phase=phase,
+                                reason="invalid_response",
+                            )
+                        chunks.append(chunk)
+                if total > _MAX_RESPONSE_BYTES:
+                    raise SocialOAuthProviderError(
+                        "social provider response is too large",
+                        phase=phase,
+                        reason="invalid_response",
+                    )
+                safe_headers = {
+                    name: value
+                    for name, value in upstream.headers.items()
+                    if name.lower()
+                    not in {"content-encoding", "content-length", "transfer-encoding"}
+                }
                 response = httpx.Response(
                     status_code=upstream.status_code,
-                    headers=upstream.headers,
+                    headers=safe_headers,
                     content=b"".join(chunks),
                     request=upstream.request,
                 )
         except SocialOAuthProviderError:
             raise
+        except httpx.DecodingError as error:
+            raise SocialOAuthProviderError(
+                "social provider response decoding failed",
+                phase=phase,
+                reason="invalid_response",
+                exception_type=type(error).__name__,
+            ) from error
         except httpx.HTTPError as error:
             raise SocialOAuthProviderError(
                 "social provider request failed",
                 phase=phase,
                 reason="unreachable",
+                exception_type=type(error).__name__,
             ) from error
         if response.status_code < 200 or response.status_code >= 300:
             raise SocialOAuthProviderError(
