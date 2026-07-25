@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import logging
 import os
 import re
@@ -10,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -54,6 +57,17 @@ from .postgres import (
     normalize_postgres_schema_mode,
 )
 from .providers import ProviderRegistry
+from .publication_media import (
+    PublicationMediaValidationError,
+    ValidatedPublicationMedia,
+    validate_publication_media,
+)
+from .publication_media_postgres import PostgresPublicationMediaStore
+from .publication_media_store import (
+    PublicationMediaConflictError,
+    PublicationMediaRecord,
+    SQLitePublicationMediaStore,
+)
 from .run_worker import DurableRunWorker
 from .persistence import (
     AuditEvent,
@@ -426,6 +440,7 @@ class RuntimeService:
             self.social_store = PostgresSocialOAuthStore(self._postgres_database)
             self.publication_store = PostgresSocialPublicationStore(self._postgres_database)
             self.model_effect_store = PostgresModelEffectStore(self._postgres_database)
+            self.media_store = PostgresPublicationMediaStore(self._postgres_database)
             self.storage_backend = "postgresql"
             self.shared_state = True
         else:
@@ -433,6 +448,7 @@ class RuntimeService:
             self.social_store = SQLiteSocialOAuthStore(database_path)
             self.publication_store = SQLiteSocialPublicationStore(database_path)
             self.model_effect_store = SQLiteModelEffectStore(database_path)
+            self.media_store = SQLitePublicationMediaStore(database_path)
             self.storage_backend = "sqlite"
             self.shared_state = False
         self._tenant_runtimes: Dict[str, TenantRuntime] = {}
@@ -460,6 +476,8 @@ class RuntimeService:
         self.social_store.check()
         self.publication_store.check()
         self.model_effect_store.check()
+        if self.media_store is not None:
+            self.media_store.check()
 
     @staticmethod
     def _brief(request: BriefRequest) -> MissionBrief:
@@ -818,6 +836,238 @@ class RuntimeService:
     def get(self, tenant_id: str, run_id: str) -> ExecutionRun:
         with self._lock:
             return self.run_store.get(tenant_id, run_id)
+
+    def attach_publication_media(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        channel_id: str,
+        validated: ValidatedPublicationMedia,
+        content: bytes,
+        alt_text: str,
+        request_id: str,
+        actor: str,
+        subject_id: str,
+        idempotency_key: str,
+        public_base_url: str,
+        signing_key: str,
+        ttl_seconds: int,
+    ) -> CommandResult:
+        if self.media_store is None:
+            raise RuntimeError("publication media store is unavailable")
+        if channel_id != "instagram":
+            raise KeyError("publication media channel is not supported")
+        normalized_alt = alt_text.strip()
+        if not normalized_alt or len(normalized_alt.encode("utf-8")) > 2000:
+            raise PublicationMediaValidationError(
+                "publication media alt text is invalid"
+            )
+        operation = "publication_media.attached:{}".format(channel_id)
+        event_id = self._command_event_id(tenant_id, operation, idempotency_key)
+        request_payload = {
+            "channel_id": channel_id,
+            "sha256": validated.sha256,
+            "content_type": validated.content_type,
+            "byte_size": validated.byte_size,
+            "width": validated.width,
+            "height": validated.height,
+            "alt_text_sha256": hashlib.sha256(
+                normalized_alt.encode("utf-8")
+            ).hexdigest(),
+            "rights_attested_by": subject_id,
+        }
+        fingerprint = self._command_fingerprint(
+            operation, subject_id, run_id, request_payload
+        )
+        idempotency_digest = hashlib.sha256(
+            idempotency_key.encode("utf-8")
+        ).hexdigest()
+        binding_digest = hashlib.sha256(
+            canonical_json(
+                (
+                    tenant_id,
+                    run_id,
+                    channel_id,
+                    validated.sha256,
+                    validated.content_type,
+                    validated.width,
+                    validated.height,
+                    normalized_alt,
+                    subject_id,
+                )
+            ).encode("utf-8")
+        ).hexdigest()
+        lock_id = "publication-media:{}:{}:{}".format(
+            tenant_id, run_id, channel_id
+        )
+        with self._lock, self.run_store.command_lock(event_id), self.run_store.command_lock(lock_id):
+            replay = self._command_replay(
+                tenant_id, event_id, operation, fingerprint
+            )
+            if replay is not None:
+                return CommandResult(replay, True)
+            run = self.run_store.get(tenant_id, run_id)
+            if (
+                run.status is not RunStatus.AWAITING_GREENLIGHT
+                or run.greenlight is not None
+            ):
+                raise GreenlightError(
+                    "publication media can only be attached before Greenlight"
+                )
+            if Platform.INSTAGRAM not in run.brief.platforms:
+                raise GreenlightError(
+                    "run does not authorize Instagram publication media"
+                )
+
+            created_at = utc_now()
+            expires_at = (
+                datetime.fromisoformat(created_at)
+                + timedelta(seconds=ttl_seconds)
+            ).isoformat()
+            media_id = stable_id(
+                "publication-media",
+                tenant_id,
+                run_id,
+                channel_id,
+                binding_digest,
+                length=48,
+            )
+            token = _public_media_token(signing_key, media_id, expires_at)
+            token_digest = hashlib.sha256(token.encode("ascii")).hexdigest()
+            proposed = PublicationMediaRecord(
+                media_id=media_id,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                channel_id=channel_id,
+                content_type=validated.content_type,
+                byte_size=validated.byte_size,
+                sha256=validated.sha256,
+                width=validated.width,
+                height=validated.height,
+                alt_text=normalized_alt,
+                rights_attested_by=subject_id,
+                public_token_digest=token_digest,
+                idempotency_digest=idempotency_digest,
+                binding_digest=binding_digest,
+                created_at=created_at,
+                expires_at=expires_at,
+                revoked_at=None,
+            )
+            artifact_id = stable_id(
+                "artifact", tenant_id, run_id, proposed.media_id, length=32
+            )
+            existing = next(
+                (
+                    item
+                    for item in run.artifacts
+                    if item.kind == "publication_media"
+                    and item.payload.get("channel") == channel_id
+                ),
+                None,
+            )
+            if existing is not None and existing.artifact_id != artifact_id:
+                raise PublicationMediaConflictError(
+                    "run already contains different publication media"
+                )
+            reservation = self.media_store.reserve(proposed, content)
+            record = reservation.record
+            token = _public_media_token(
+                signing_key, record.media_id, record.expires_at
+            )
+            if (
+                hashlib.sha256(token.encode("ascii")).hexdigest()
+                != record.public_token_digest
+            ):
+                raise RuntimeError(
+                    "publication media durable token binding is invalid"
+                )
+            media_url = "{}/api/v1/publication-media/public/{}".format(
+                public_base_url, token
+            )
+            payload = {
+                "channel": channel_id,
+                "media_id": record.media_id,
+                "media_url": media_url,
+                "content_type": record.content_type,
+                "byte_size": record.byte_size,
+                "sha256": record.sha256,
+                "width": record.width,
+                "height": record.height,
+                "alt_text": record.alt_text,
+                "rights_status": "confirmed",
+                "rights_attested_by": record.rights_attested_by,
+                "expires_at": record.expires_at,
+            }
+            if existing is not None:
+                if (
+                    existing.artifact_id != artifact_id
+                    or canonical_json(existing.payload) != canonical_json(payload)
+                ):
+                    raise PublicationMediaConflictError(
+                        "run already contains different publication media"
+                    )
+            else:
+                run.add_artifact(
+                    Artifact(
+                        artifact_id=artifact_id,
+                        kind="publication_media",
+                        title="Governed Instagram publication image",
+                        created_by=AgentRole.MEDIA,
+                        payload=payload,
+                    )
+                )
+            audit = AuditWrite(
+                request_id=request_id,
+                action=operation,
+                resource_type="publication_media",
+                resource_id=record.media_id,
+                actor=actor,
+                payload={
+                    "run_id": run_id,
+                    "channel_id": channel_id,
+                    "artifact_id": artifact_id,
+                    "media_id": record.media_id,
+                    "sha256": record.sha256,
+                    "byte_size": record.byte_size,
+                    "width": record.width,
+                    "height": record.height,
+                    "alt_text_sha256": request_payload["alt_text_sha256"],
+                    "rights_attested_by": record.rights_attested_by,
+                    "expires_at": record.expires_at,
+                    "idempotency": self._command_payload(
+                        operation, fingerprint, run
+                    ),
+                },
+                event_id=event_id,
+            )
+            try:
+                stored = self.run_store.save(
+                    tenant_id,
+                    run,
+                    audit=audit,
+                    expected_status=RunStatus.AWAITING_GREENLIGHT.value,
+                )
+            except AuditEventConflictError:
+                replay = self._command_replay(
+                    tenant_id, event_id, operation, fingerprint
+                )
+                if replay is None:
+                    raise
+                return CommandResult(replay, True)
+            except Exception:
+                if reservation.created:
+                    try:
+                        self.media_store.revoke(
+                            tenant_id, record.media_id, "run_persistence_failed"
+                        )
+                    except Exception:
+                        API_LOGGER.exception(
+                            "publication_media_compensation_failed media_id=%s",
+                            record.media_id,
+                        )
+                raise
+            return CommandResult(stored, reservation.replayed)
 
     def approve(
         self,
@@ -1438,6 +1688,8 @@ class RuntimeService:
                 self.publication_store.close()
             if hasattr(self.model_effect_store, "close"):
                 self.model_effect_store.close()
+            if self.media_store is not None:
+                self.media_store.close()
             self.run_store.close()
 
 
@@ -1504,6 +1756,15 @@ def _actor(principal: TenantPrincipal) -> str:
     return "{}:{}".format(prefix, principal.subject_id)
 
 
+def _public_media_token(signing_key: str, media_id: str, expires_at: str) -> str:
+    digest = hmac.new(
+        signing_key.encode("utf-8"),
+        canonical_json(("publication-media", media_id, expires_at)).encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
 def _environment_bool(name: str, default: bool) -> bool:
     raw_value = os.environ.get(name)
     if raw_value is None:
@@ -1533,6 +1794,9 @@ def create_app(
     postgres_connect_timeout_seconds: Optional[float] = None,
     postgres_schema_mode: Optional[str] = None,
     max_request_body_bytes: Optional[int] = None,
+    public_media_base_url: Optional[str] = None,
+    public_media_signing_key: Optional[str] = None,
+    public_media_ttl_seconds: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
     model_transport: Optional[httpx.BaseTransport] = None,
     social_environment: Optional[Mapping[str, str]] = None,
@@ -1628,6 +1892,41 @@ def create_app(
                 _MAX_CONFIGURED_REQUEST_BODY_BYTES
             )
         )
+    media_base_url = (
+        public_media_base_url.strip()
+        if public_media_base_url is not None
+        else os.environ.get("AGENCY_PUBLIC_MEDIA_BASE_URL", "").strip()
+    )
+    media_signing_key = (
+        public_media_signing_key
+        if public_media_signing_key is not None
+        else os.environ.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEY", "")
+    )
+    media_ttl_seconds = (
+        int(os.environ.get("AGENCY_PUBLIC_MEDIA_TTL_SECONDS", "86400"))
+        if public_media_ttl_seconds is None
+        else public_media_ttl_seconds
+    )
+    if media_ttl_seconds < 900 or media_ttl_seconds > 604800:
+        raise ValueError("public media ttl must be between 900 and 604800 seconds")
+    if bool(media_base_url) != bool(media_signing_key):
+        raise ValueError(
+            "public media base URL and signing key must be configured together"
+        )
+    if media_base_url:
+        parsed_media_base = urlsplit(media_base_url)
+        loopback = parsed_media_base.hostname in {"127.0.0.1", "localhost", "::1"}
+        if (
+            parsed_media_base.scheme not in {"https", "http"}
+            or not parsed_media_base.netloc
+            or parsed_media_base.query
+            or parsed_media_base.fragment
+            or (parsed_media_base.scheme != "https" and not loopback)
+        ):
+            raise ValueError("public media base URL must be HTTPS or loopback HTTP")
+        if len(media_signing_key.encode("utf-8")) < 32:
+            raise ValueError("public media signing key must contain at least 32 bytes")
+        media_base_url = media_base_url.rstrip("/")
 
     if tenant_api_keys is not None or identity_credentials is not None:
         authenticator = TenantAuthenticator(
@@ -1833,6 +2132,9 @@ def create_app(
     app.state.social_oauth_service = social_oauth_service
     app.state.social_publication_authority = social_publication_authority
     app.state.political_publication_enabled = political_publication_enabled
+    app.state.public_media_base_url = media_base_url
+    app.state.public_media_ttl_seconds = media_ttl_seconds
+    app.state.public_media_configured = bool(media_base_url and media_signing_key)
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -2879,6 +3181,195 @@ def create_app(
             "connection_state": "not_connected",
             "disconnected": disconnected,
         }
+
+    @app.get(
+        "/api/v1/publication-media/public/{token}",
+        include_in_schema=False,
+    )
+    def read_publication_media(token: str) -> Response:
+        if service.media_store is None or len(token) < 32 or len(token) > 128:
+            raise HTTPException(status_code=404, detail="resource not found")
+        token_digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        try:
+            record, content = service.media_store.get_public(token_digest)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        expires = datetime.fromisoformat(record.expires_at)
+        now = datetime.fromisoformat(utc_now())
+        max_age = max(0, min(300, int((expires - now).total_seconds())))
+        return Response(
+            content=content,
+            media_type=record.content_type,
+            headers={
+                "Cache-Control": "public, max-age={}".format(max_age),
+                "ETag": '"{}"'.format(record.sha256),
+                "X-Content-Type-Options": "nosniff",
+                "Cross-Origin-Resource-Policy": "cross-origin",
+            },
+        )
+
+    @app.post(
+        "/api/v1/runs/{run_id}/publication-media/{channel_id}",
+        status_code=status.HTTP_201_CREATED,
+        tags=["publication-media"],
+    )
+    async def attach_publication_media(
+        run_id: str,
+        channel_id: str,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        alt_text_base64: str = Header(
+            alias="X-Media-Alt-Text-Base64", min_length=4, max_length=4000
+        ),
+        rights_confirmed: str = Header(
+            alias="X-Media-Rights-Confirmed", min_length=1, max_length=16
+        ),
+        principal: TenantPrincipal = Depends(require_social_publisher),
+    ) -> Dict[str, object]:
+        if not media_base_url or not media_signing_key:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="publication_media_unavailable",
+                detail="publication media delivery is not configured",
+            )
+        if rights_confirmed.strip().lower() not in {"1", "true", "yes", "on"}:
+            raise PublicApiError(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                code="publication_media_rights_required",
+                detail="publication media rights confirmation is required",
+            )
+        try:
+            padding = "=" * (-len(alt_text_base64) % 4)
+            alt_text = base64.urlsafe_b64decode(
+                (alt_text_base64 + padding).encode("ascii")
+            ).decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError, ValueError) as error:
+            raise PublicApiError(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                code="publication_media_alt_text_invalid",
+                detail="publication media alt text encoding is invalid",
+            ) from error
+        content = await request.body()
+        try:
+            validated = validate_publication_media(
+                content, request.headers.get("content-type", "")
+            )
+            result = service.attach_publication_media(
+                tenant_id=principal.tenant_id,
+                run_id=run_id,
+                channel_id=channel_id,
+                validated=validated,
+                content=content,
+                alt_text=alt_text,
+                request_id=request.state.request_id,
+                actor=_actor(principal),
+                subject_id=principal.subject_id,
+                idempotency_key=idempotency_key,
+                public_base_url=media_base_url,
+                signing_key=media_signing_key,
+                ttl_seconds=media_ttl_seconds,
+            )
+        except PublicationMediaValidationError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                code="publication_media_invalid",
+                detail="publication media is invalid",
+            ) from error
+        except PublicationMediaConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="publication_media_conflict",
+                detail="publication media conflicts with durable state",
+            ) from error
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
+        except GreenlightError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="publication_media_state_invalid",
+                detail="publication media cannot be attached in the current run state",
+            ) from error
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        except RuntimeError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="publication_media_unavailable",
+                detail="publication media storage is unavailable",
+            ) from error
+        if result.replayed:
+            response.status_code = status.HTTP_200_OK
+            response.headers["X-Command-Replayed"] = "true"
+        return _run_document(result.run, principal.tenant_id)
+
+    @app.delete(
+        "/api/v1/runs/{run_id}/publication-media/{media_id}",
+        tags=["publication-media"],
+    )
+    def revoke_publication_media(
+        run_id: str,
+        media_id: str,
+        revocation: PublicationMediaRevocationRequest,
+        request: Request,
+        response: Response,
+        idempotency_key: str = Header(
+            alias="Idempotency-Key",
+            min_length=8,
+            max_length=200,
+            pattern=_IDEMPOTENCY_KEY_PATTERN,
+        ),
+        principal: TenantPrincipal = Depends(require_social_publisher),
+    ) -> Dict[str, object]:
+        try:
+            result = service.revoke_publication_media(
+                tenant_id=principal.tenant_id,
+                run_id=run_id,
+                media_id=media_id,
+                reason=revocation.reason,
+                request_id=request.state.request_id,
+                actor=_actor(principal),
+                subject_id=principal.subject_id,
+                idempotency_key=idempotency_key,
+            )
+        except GreenlightError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="publication_media_revocation_blocked",
+                detail="publication media can only be revoked before Greenlight",
+            ) from error
+        except IdempotencyConflictError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="idempotency_conflict",
+                detail="idempotency key conflicts with a prior request",
+            ) from error
+        except (ValueError, PublicationMediaConflictError) as error:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="publication_media_revocation_failed",
+                detail="publication media could not be revoked",
+            ) from error
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="resource not found") from error
+        except RuntimeError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="publication_media_unavailable",
+                detail="publication media storage is unavailable",
+            ) from error
+        if result.replayed:
+            response.headers["X-Command-Replayed"] = "true"
+        return _run_document(result.run, principal.tenant_id)
 
     @app.post(
         "/api/v1/runs/{run_id}/social-publications/{channel_id}",

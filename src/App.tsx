@@ -99,6 +99,9 @@ export default function App() {
   const [publicationBusy, setPublicationBusy] = useState<RuntimeSocialChannel["channel_id"] | null>(null);
   const [publicationError, setPublicationError] = useState("");
   const [publicationNotice, setPublicationNotice] = useState("");
+  const [mediaAttachmentBusy, setMediaAttachmentBusy] = useState(false);
+  const [mediaAttachmentError, setMediaAttachmentError] = useState("");
+  const [mediaAttachmentNotice, setMediaAttachmentNotice] = useState("");
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
@@ -198,6 +201,48 @@ export default function App() {
     } catch (error) {
       setSocialActionError(error instanceof Error ? error.message : "No se pudo iniciar la autorización social.");
       setSocialActionChannel(null);
+    }
+  };
+
+  const attachPublicationMedia = async (
+    channelId: RuntimeSocialChannel["channel_id"],
+    file: File,
+    altText: string,
+    rightsConfirmed: boolean,
+    idempotencyKey: string,
+  ) => {
+    if (!session || session.role !== "admin" || !run) {
+      throw new Error("Se requiere una sesión admin y un run activo.");
+    }
+    setMediaAttachmentBusy(true);
+    setMediaAttachmentError("");
+    setMediaAttachmentNotice("");
+    try {
+      const updated = await runtimeApi.attachPublicationMedia(
+        run.run_id,
+        channelId,
+        file,
+        altText,
+        rightsConfirmed,
+        session.csrf_token,
+        idempotencyKey,
+      );
+      setRun(updated);
+      const media = updated.artifacts.find((artifact) =>
+        artifact.kind === "publication_media" && artifact.payload.channel === channelId
+      );
+      const digest = typeof media?.payload.sha256 === "string"
+        ? media.payload.sha256.slice(0, 12)
+        : "registrado";
+      setMediaAttachmentNotice(
+        `Media gobernada adjunta · SHA-256 ${digest}… · quedará incluida en Greenlight.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo adjuntar la media gobernada.";
+      setMediaAttachmentError(message);
+      throw error;
+    } finally {
+      setMediaAttachmentBusy(false);
     }
   };
 

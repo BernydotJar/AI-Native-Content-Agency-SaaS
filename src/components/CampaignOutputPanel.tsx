@@ -26,7 +26,23 @@ interface CampaignOutputPanelProps {
   publicationBusy?: RuntimeSocialChannel["channel_id"] | null;
   publicationError?: string;
   publicationNotice?: string;
+  mediaAttachmentBusy?: boolean;
+  mediaAttachmentError?: string;
+  mediaAttachmentNotice?: string;
   onOpenSettings?: () => void;
+  onAttachMedia?: (
+    channelId: RuntimeSocialChannel["channel_id"],
+    file: File,
+    altText: string,
+    rightsConfirmed: boolean,
+    idempotencyKey: string,
+  ) => Promise<void>;
+  onRevokeMedia?: (
+    channelId: RuntimeSocialChannel["channel_id"],
+    mediaId: string,
+    reason: string,
+    idempotencyKey: string,
+  ) => Promise<void>;
   onPublish?: (
     channelId: RuntimeSocialChannel["channel_id"],
     artifactId: string,
@@ -99,13 +115,6 @@ function publicationMediaArtifact(
     && typeof artifact.payload.media_url === "string"
     && typeof artifact.payload.sha256 === "string"
   );
-}
-
-function hasRenderedMedia(run: RuntimeRun): boolean {
-  return run.artifacts.some((artifact) => {
-    if (["rendered_media", "media_asset", "published_media"].includes(artifact.kind)) return true;
-    return artifact.kind === "media_plan" && artifact.payload.media_rendered === true;
-  });
 }
 
 function activeGreenlight(run: RuntimeRun, platform: RuntimePlatform): boolean {
@@ -206,7 +215,12 @@ function StepIcon({ state }: { state: ReadinessStep["state"] }) {
 
 function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }) {
   if (draft.platform === "instagram") {
-    const mediaReady = hasRenderedMedia(run);
+    const media = publicationMediaArtifact(run, draft.platform);
+    const mediaUrl = asText(media?.payload.media_url);
+    const altText = asText(media?.payload.alt_text);
+    const width = media?.payload.width;
+    const height = media?.payload.height;
+    const byteSize = media?.payload.byte_size;
     return (
       <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-950">
         <div className="flex items-center gap-2 border-b border-white/[0.07] px-4 py-3">
@@ -218,20 +232,37 @@ function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }
             <p className="font-mono text-[8px] uppercase tracking-[0.1em] text-zinc-600">Professional account</p>
           </div>
         </div>
-        <div className="grid aspect-square place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(217,70,239,0.16),transparent_42%),radial-gradient(circle_at_80%_75%,rgba(59,130,246,0.12),transparent_45%),#09090b] p-6 text-center">
-          {mediaReady ? (
-            <div>
-              <CheckCircle2 size={26} className="mx-auto text-emerald-300" aria-hidden="true" />
-              <p className="mt-3 text-xs font-bold text-zinc-100">Asset visual listo</p>
+        {media && mediaUrl && altText ? (
+          <div>
+            <img
+              src={mediaUrl}
+              alt={altText}
+              className="aspect-[4/5] w-full bg-zinc-950 object-cover"
+            />
+            <div className="border-t border-white/[0.07] px-4 py-3">
+              <p className="inline-flex items-center gap-2 text-[10px] font-bold text-emerald-200">
+                <CheckCircle2 size={13} aria-hidden="true" />
+                Media gobernada
+              </p>
+              <p className="mt-1 font-mono text-[9px] text-zinc-600">
+                {typeof width === "number" && typeof height === "number"
+                  ? `${width} × ${height}`
+                  : "dimensiones verificadas"}
+                {typeof byteSize === "number" ? ` · ${Math.ceil(byteSize / 1024)} KiB` : ""}
+              </p>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <div className="grid aspect-[4/5] place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(217,70,239,0.16),transparent_42%),radial-gradient(circle_at_80%_75%,rgba(59,130,246,0.12),transparent_45%),#09090b] p-6 text-center">
             <div>
               <Camera size={28} className="mx-auto text-zinc-600" aria-hidden="true" />
               <p className="mt-3 text-xs font-bold text-zinc-300">Asset visual pendiente</p>
-              <p className="mx-auto mt-1 max-w-52 text-[10px] leading-4 text-zinc-600">Instagram exige imagen, reel o carrusel antes de publicar.</p>
+              <p className="mx-auto mt-1 max-w-52 text-[10px] leading-4 text-zinc-600">
+                Instagram exige imagen; adjunta un JPEG 4:5 con texto alternativo y derechos confirmados antes de Greenlight.
+              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         <div className="space-y-2 p-4">
           {draft.hook && <p className="text-xs font-bold leading-5 text-zinc-100">{draft.hook}</p>}
           {draft.body && <p className="whitespace-pre-wrap text-[11px] leading-5 text-zinc-300">{draft.body}</p>}
@@ -258,13 +289,22 @@ export function CampaignOutputPanel({
   publicationBusy = null,
   publicationError = "",
   publicationNotice = "",
+  mediaAttachmentBusy = false,
+  mediaAttachmentError = "",
+  mediaAttachmentNotice = "",
   onOpenSettings,
+  onAttachMedia,
+  onRevokeMedia,
   onPublish,
 }: CampaignOutputPanelProps) {
   const [copied, setCopied] = useState<RuntimePlatform | null>(null);
   const [copyError, setCopyError] = useState("");
   const [pendingPublication, setPendingPublication] = useState<PendingPublication | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaAltText, setMediaAltText] = useState("");
+  const [mediaRightsConfirmed, setMediaRightsConfirmed] = useState(false);
+  const [localMediaError, setLocalMediaError] = useState("");
   const drafts = useMemo(() => draftsFromRun(run), [run]);
   const evidenceCount = new Set(run?.artifacts.flatMap((artifact) => artifact.evidence_ids) ?? []).size;
   const channelMap = useMemo(
@@ -301,6 +341,37 @@ export function CampaignOutputPanel({
       setPendingPublication(null);
     } finally {
       setConfirming(false);
+    }
+  };
+
+  const attachMedia = async (draft: ChannelDraft) => {
+    if (
+      !run
+      || draft.platform !== "instagram"
+      || !onAttachMedia
+      || !mediaFile
+      || !mediaAltText.trim()
+      || !mediaRightsConfirmed
+    ) return;
+    if (mediaFile.type !== "image/jpeg") {
+      setLocalMediaError("Selecciona un archivo JPEG válido.");
+      return;
+    }
+    setLocalMediaError("");
+    const idempotencyKey = `media:${draft.platform}:${run.run_id}:${Date.now()}`;
+    try {
+      await onAttachMedia(
+        "instagram",
+        mediaFile,
+        mediaAltText.trim(),
+        true,
+        idempotencyKey,
+      );
+      setMediaFile(null);
+      setMediaAltText("");
+      setMediaRightsConfirmed(false);
+    } catch {
+      // App owns the public error message and request-id handling.
     }
   };
 
@@ -366,6 +437,124 @@ export function CampaignOutputPanel({
                   <div className="mt-4">
                     <ChannelPreview draft={draft} run={run} />
                   </div>
+
+                  {draft.platform === "instagram"
+                    && !publicationMediaArtifact(run, draft.platform)
+                    && run.status === "awaiting_greenlight"
+                    && run.greenlight === null
+                    && onAttachMedia && (
+                    <form
+                      className="mt-4 space-y-3 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/[0.03] p-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void attachMedia(draft);
+                      }}
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-zinc-100">Adjunta media gobernada</p>
+                        <p className="mt-1 text-[10px] leading-4 text-zinc-500">
+                          JPEG 4:5, 320–1440 px, máximo 8 MiB. Los bytes y su SHA-256 quedarán ligados al Greenlight.
+                        </p>
+                      </div>
+                      <label className="block text-[11px] font-semibold text-zinc-300">
+                        Imagen JPEG
+                        <input
+                          type="file"
+                          accept="image/jpeg,.jpg,.jpeg"
+                          onChange={(event) => {
+                            const selected = event.target.files?.[0] ?? null;
+                            setMediaFile(selected);
+                            setLocalMediaError(
+                              selected && selected.type !== "image/jpeg"
+                                ? "Selecciona un archivo JPEG válido."
+                                : "",
+                            );
+                          }}
+                          disabled={mediaAttachmentBusy}
+                          className="mt-2 block w-full rounded-xl border border-white/[0.1] bg-black/30 px-3 py-2 text-[11px] text-zinc-300 file:mr-3 file:rounded-lg file:border-0 file:bg-white/[0.08] file:px-3 file:py-1.5 file:text-[10px] file:font-bold file:text-zinc-200"
+                        />
+                      </label>
+                      <label className="block text-[11px] font-semibold text-zinc-300">
+                        Texto alternativo
+                        <textarea
+                          value={mediaAltText}
+                          onChange={(event) => setMediaAltText(event.target.value)}
+                          disabled={mediaAttachmentBusy}
+                          maxLength={2000}
+                          rows={3}
+                          className="form-control mt-2 resize-y"
+                          placeholder="Describe la imagen para personas que usan lectores de pantalla."
+                        />
+                      </label>
+                      <label className="flex items-start gap-3 rounded-xl border border-white/[0.08] p-3 text-[11px] leading-5 text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={mediaRightsConfirmed}
+                          onChange={(event) => setMediaRightsConfirmed(event.target.checked)}
+                          disabled={mediaAttachmentBusy}
+                          className="mt-1"
+                        />
+                        <span>
+                          Confirmo que tengo derechos y consentimiento para usar esta imagen en la campaña.
+                        </span>
+                      </label>
+                      {(localMediaError || mediaAttachmentError) && (
+                        <p role="alert" className="text-[11px] text-red-200">
+                          {localMediaError || mediaAttachmentError}
+                        </p>
+                      )}
+                      {mediaAttachmentNotice && (
+                        <p role="status" className="text-[11px] text-emerald-200">
+                          {mediaAttachmentNotice}
+                        </p>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={
+                          mediaAttachmentBusy
+                          || !mediaFile
+                          || mediaFile.type !== "image/jpeg"
+                          || !mediaAltText.trim()
+                          || !mediaRightsConfirmed
+                        }
+                        className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-300/[0.08] px-4 text-xs font-bold text-fuchsia-100 disabled:cursor-not-allowed disabled:opacity-35"
+                      >
+                        <Camera size={14} aria-hidden="true" />
+                        {mediaAttachmentBusy ? "Adjuntando…" : "Adjuntar imagen"}
+                      </button>
+                    </form>
+                  )}
+
+                  {(() => {
+                    const governedMedia = publicationMediaArtifact(run, draft.platform);
+                    const mediaId = asText(governedMedia?.payload.media_id);
+                    if (
+                      draft.platform !== "instagram"
+                      || !governedMedia
+                      || !mediaId
+                      || run.status !== "awaiting_greenlight"
+                      || run.greenlight !== null
+                      || !onRevokeMedia
+                    ) return null;
+                    return (
+                      <button
+                        type="button"
+                        disabled={mediaAttachmentBusy}
+                        onClick={() => {
+                          void onRevokeMedia(
+                            "instagram",
+                            mediaId,
+                            "operator removed publication media before Greenlight",
+                            `media-revoke:instagram:${run.run_id}:${mediaId}`,
+                          );
+                        }}
+                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-red-300/25 px-4 text-xs font-bold text-red-100 disabled:cursor-not-allowed disabled:opacity-35"
+                      >
+                        <CircleDashed size={14} aria-hidden="true" />
+                        Retirar imagen
+                      </button>
+                    );
+                  })()}
 
                   <ol aria-label={`Estado de publicación para ${PLATFORM_LABELS[draft.platform]}`} className="mt-4 grid gap-2 sm:grid-cols-5">
                     {steps.map((step) => (

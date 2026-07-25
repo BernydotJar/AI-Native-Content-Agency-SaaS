@@ -7,6 +7,7 @@ import json
 import secrets
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Mapping, Optional
 from urllib.parse import parse_qs, quote, urlencode, urlsplit, urlunsplit
 
@@ -144,9 +145,19 @@ class SocialPublicationAuthority:
         nonce_factory: TokenFactory = lambda: secrets.token_urlsafe(18),
         timestamp_factory: TimestampFactory = lambda: int(time.time()),
         timeout_seconds: float = 20.0,
+        instagram_container_poll_attempts: int = 12,
+        instagram_container_poll_interval_seconds: float = 5.0,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if timeout_seconds < 1 or timeout_seconds > 120:
             raise ValueError("publication timeout must be between 1 and 120 seconds")
+        if instagram_container_poll_attempts < 1 or instagram_container_poll_attempts > 120:
+            raise ValueError("Instagram container poll attempts must be between 1 and 120")
+        if (
+            instagram_container_poll_interval_seconds < 0
+            or instagram_container_poll_interval_seconds > 60
+        ):
+            raise ValueError("Instagram container poll interval must be between 0 and 60 seconds")
         self._store = store
         self._connection_store = connection_store
         self._cipher = cipher
@@ -156,12 +167,20 @@ class SocialPublicationAuthority:
         self._clock = clock
         self._nonce_factory = nonce_factory
         self._timestamp_factory = timestamp_factory
+        self._instagram_container_poll_attempts = instagram_container_poll_attempts
+        self._instagram_container_poll_interval_seconds = (
+            instagram_container_poll_interval_seconds
+        )
+        self._sleep = sleep
         self._client = httpx.Client(
             transport=transport,
             timeout=httpx.Timeout(timeout_seconds),
             follow_redirects=False,
             trust_env=False,
-            headers={"User-Agent": "ai-native-content-agency/0.7"},
+            headers={
+                "User-Agent": "ai-native-content-agency/0.7",
+                "Accept-Encoding": "identity",
+            },
         )
 
     @property
@@ -219,7 +238,10 @@ class SocialPublicationAuthority:
                 completed = self._publish_x(validated, reservation.intent, tokens)
             else:
                 completed = self._publish_instagram(
-                    validated, reservation.intent, tokens
+                    validated,
+                    reservation.intent,
+                    tokens,
+                    expected_username=connection.account_username,
                 )
         except SocialPublicationProviderRejectedError:
             self._mark_failed(reservation.intent, "provider_rejected")
@@ -298,17 +320,22 @@ class SocialPublicationAuthority:
         command: SocialPublicationCommand,
         intent: SocialPublicationIntent,
         tokens: Mapping[str, object],
+        *,
+        expected_username: str,
     ) -> SocialPublicationIntent:
         access_token = _required_secret(tokens, "access_token")
         if command.media_url is None or command.media_hash is None:
             raise SocialPublicationUnavailableError(
                 "Instagram publication requires governed media"
             )
-        base = "{}/{}".format(_INSTAGRAM_GRAPH_BASE, quote(command.account_id, safe=""))
+        authorization = {"Authorization": "Bearer {}".format(access_token)}
+        account_base = "{}/{}".format(
+            _INSTAGRAM_GRAPH_BASE, quote(command.account_id, safe="")
+        )
         container_response = self._request(
             "POST",
-            base + "/media",
-            headers={"Authorization": "Bearer {}".format(access_token)},
+            account_base + "/media",
+            headers=authorization,
             data={"image_url": command.media_url, "caption": command.content},
         )
         container_payload = _json_object(container_response)
@@ -324,14 +351,38 @@ class SocialPublicationAuthority:
             raise SocialPublicationUnknownError(
                 "social publication outcome is unknown"
             ) from error
+
+        self._wait_for_instagram_container(
+            access_token=access_token,
+            container_id=container_id,
+        )
         publish_response = self._request(
             "POST",
-            base + "/media_publish",
-            headers={"Authorization": "Bearer {}".format(access_token)},
+            account_base + "/media_publish",
+            headers=authorization,
             data={"creation_id": container_id},
         )
         publish_payload = _json_object(publish_response)
         provider_post_id = _required_identifier(publish_payload, "id")
+
+        verification_response = self._request(
+            "GET",
+            "{}/{}".format(
+                _INSTAGRAM_GRAPH_BASE, quote(provider_post_id, safe="")
+            ),
+            headers=authorization,
+            params={
+                "fields": (
+                    "id,caption,media_type,permalink,timestamp,username"
+                )
+            },
+        )
+        verification = self._verify_instagram_media(
+            command=command,
+            provider_post_id=provider_post_id,
+            expected_username=expected_username,
+            response=verification_response,
+        )
         receipt = _receipt(
             provider="instagram",
             provider_post_id=provider_post_id,
@@ -339,6 +390,7 @@ class SocialPublicationAuthority:
             response=publish_response,
             intent=pending,
         )
+        receipt.update(verification)
         try:
             return self._store.complete(
                 pending.tenant_id,
@@ -352,21 +404,166 @@ class SocialPublicationAuthority:
                 "social publication outcome is unknown"
             ) from error
 
+    def _wait_for_instagram_container(
+        self, *, access_token: str, container_id: str
+    ) -> None:
+        authorization = {"Authorization": "Bearer {}".format(access_token)}
+        url = "{}/{}".format(
+            _INSTAGRAM_GRAPH_BASE, quote(container_id, safe="")
+        )
+        for attempt in range(self._instagram_container_poll_attempts):
+            response = self._request(
+                "GET",
+                url,
+                headers=authorization,
+                params={"fields": "status_code,status"},
+            )
+            payload = _json_object(response)
+            raw_status = payload.get("status_code")
+            if not isinstance(raw_status, str) or not raw_status.strip():
+                raise SocialPublicationUnknownError(
+                    "Instagram container status is invalid"
+                )
+            status_code = raw_status.strip().upper()
+            if status_code == "FINISHED":
+                return
+            if status_code in {"ERROR", "EXPIRED"}:
+                raise SocialPublicationProviderRejectedError(
+                    "Instagram rejected the media container"
+                )
+            if status_code != "IN_PROGRESS":
+                raise SocialPublicationUnknownError(
+                    "Instagram container status is unknown"
+                )
+            if attempt + 1 < self._instagram_container_poll_attempts:
+                self._sleep(self._instagram_container_poll_interval_seconds)
+        raise SocialPublicationUnknownError(
+            "Instagram container processing did not finish"
+        )
+
+    def _verify_instagram_media(
+        self,
+        *,
+        command: SocialPublicationCommand,
+        provider_post_id: str,
+        expected_username: str,
+        response: httpx.Response,
+    ) -> dict[str, object]:
+        payload = _json_object(response)
+        observed_id = _required_identifier(payload, "id")
+        caption = payload.get("caption")
+        media_type = payload.get("media_type")
+        permalink = payload.get("permalink")
+        published_at = payload.get("timestamp")
+        username = payload.get("username")
+        if observed_id != provider_post_id:
+            raise SocialPublicationUnknownError(
+                "Instagram media identity does not match"
+            )
+        if not isinstance(caption, str) or not hmac.compare_digest(
+            hashlib.sha256(caption.encode("utf-8")).hexdigest(),
+            hashlib.sha256(command.content.encode("utf-8")).hexdigest(),
+        ):
+            raise SocialPublicationUnknownError(
+                "Instagram media caption does not match"
+            )
+        if media_type != "IMAGE":
+            raise SocialPublicationUnknownError(
+                "Instagram media type does not match"
+            )
+        if not isinstance(username, str) or not hmac.compare_digest(
+            username, expected_username
+        ):
+            raise SocialPublicationUnknownError(
+                "Instagram media account does not match"
+            )
+        if not isinstance(permalink, str) or len(permalink) > 2048:
+            raise SocialPublicationUnknownError(
+                "Instagram media permalink is invalid"
+            )
+        parsed = urlsplit(permalink)
+        hostname = (parsed.hostname or "").lower()
+        if (
+            parsed.scheme != "https"
+            or not hostname
+            or not (
+                hostname == "instagram.com"
+                or hostname.endswith(".instagram.com")
+            )
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.fragment
+        ):
+            raise SocialPublicationUnknownError(
+                "Instagram media permalink is invalid"
+            )
+        if not isinstance(published_at, str) or len(published_at) > 128:
+            raise SocialPublicationUnknownError(
+                "Instagram media timestamp is invalid"
+            )
+        try:
+            parsed_timestamp = datetime.fromisoformat(
+                published_at.replace("Z", "+00:00")
+            )
+        except ValueError as error:
+            raise SocialPublicationUnknownError(
+                "Instagram media timestamp is invalid"
+            ) from error
+        if parsed_timestamp.tzinfo is None:
+            raise SocialPublicationUnknownError(
+                "Instagram media timestamp is invalid"
+            )
+        if command.media_hash is None:
+            raise SocialPublicationUnknownError(
+                "Instagram media hash is unavailable"
+            )
+        return {
+            "verification_status": "verified",
+            "verification_request_id": (
+                response.headers.get("x-request-id")
+                or response.headers.get("x-fb-trace-id")
+                or ""
+            )[:256],
+            "permalink": permalink,
+            "published_at": published_at,
+            "media_type": media_type,
+            "username": username,
+            "caption_sha256": hashlib.sha256(
+                command.content.encode("utf-8")
+            ).hexdigest(),
+            "media_sha256": command.media_hash,
+        }
+
     def _request(self, method: str, url: str, **kwargs: object) -> httpx.Response:
         try:
             with self._client.stream(method, url, **kwargs) as upstream:
                 chunks: list[bytes] = []
                 total = 0
-                for chunk in upstream.iter_bytes():
-                    total += len(chunk)
-                    if total > _MAX_RESPONSE_BYTES:
-                        raise SocialPublicationUnknownError(
-                            "social publication outcome is unknown"
-                        )
-                    chunks.append(chunk)
+                if upstream.is_stream_consumed:
+                    materialized = upstream.content
+                    total = len(materialized)
+                    chunks.append(materialized)
+                else:
+                    for chunk in upstream.iter_raw():
+                        total += len(chunk)
+                        if total > _MAX_RESPONSE_BYTES:
+                            raise SocialPublicationUnknownError(
+                                "social publication outcome is unknown"
+                            )
+                        chunks.append(chunk)
+                if total > _MAX_RESPONSE_BYTES:
+                    raise SocialPublicationUnknownError(
+                        "social publication outcome is unknown"
+                    )
+                safe_headers = {
+                    name: value
+                    for name, value in upstream.headers.items()
+                    if name.lower()
+                    not in {"content-encoding", "content-length", "transfer-encoding"}
+                }
                 response = httpx.Response(
                     status_code=upstream.status_code,
-                    headers=upstream.headers,
+                    headers=safe_headers,
                     content=b"".join(chunks),
                     request=upstream.request,
                 )

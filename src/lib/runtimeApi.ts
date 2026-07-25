@@ -265,6 +265,7 @@ export interface RuntimeApi {
   providerCatalog(): Promise<RuntimeProviderCatalog>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
   socialChannels(): Promise<RuntimeSocialChannel[]>;
+  socialPublications(runId: string): Promise<RuntimeSocialPublication[]>;
   startSocialOAuth(
     channelId: RuntimeSocialChannel["channel_id"],
     csrfToken: string,
@@ -273,6 +274,22 @@ export interface RuntimeApi {
     channelId: RuntimeSocialChannel["channel_id"],
     csrfToken: string,
   ): Promise<void>;
+  attachPublicationMedia(
+    runId: string,
+    channelId: RuntimeSocialChannel["channel_id"],
+    file: File,
+    altText: string,
+    rightsConfirmed: boolean,
+    csrfToken: string,
+    idempotencyKey: string,
+  ): Promise<RuntimeRun>;
+  revokePublicationMedia(
+    runId: string,
+    mediaId: string,
+    reason: string,
+    csrfToken: string,
+    idempotencyKey: string,
+  ): Promise<RuntimeRun>;
   publishSocial(
     runId: string,
     channelId: RuntimeSocialChannel["channel_id"],
@@ -287,6 +304,58 @@ export interface RuntimeApi {
 }
 
 type FetchLike = typeof fetch;
+
+function encodeBase64UrlUtf8(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return globalThis.btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+async function responseJson<T>(response: Response): Promise<T> {
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) {
+    const detail = typeof payload.detail === "string"
+      ? payload.detail
+      : `Runtime request failed with status ${response.status}`;
+    const code = typeof payload.code === "string" ? payload.code : "request_failed";
+    const requestId = response.headers.get("X-Request-ID")
+      ?? (typeof payload.request_id === "string" ? payload.request_id : "");
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfterHeader && /^\d+$/.test(retryAfterHeader)
+      ? Number.parseInt(retryAfterHeader, 10)
+      : 0;
+    throw new RuntimeApiError(
+      response.status,
+      detail,
+      requestId,
+      code,
+      retryAfterSeconds > 0 ? retryAfterSeconds : 0,
+    );
+  }
+  return payload as T;
+}
+
+async function requestBinaryJson<T>(
+  fetchImpl: FetchLike,
+  path: string,
+  body: BodyInit,
+  headers: Record<string, string>,
+): Promise<T> {
+  const response = await fetchImpl(path, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...headers,
+    },
+    body,
+  });
+  return responseJson<T>(response);
+}
 
 async function requestJson<T>(
   fetchImpl: FetchLike,
@@ -427,6 +496,13 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
       const payload = await requestJson<{ channels: RuntimeSocialChannel[] }>(fetchImpl, "/api/v1/social-channels");
       return payload.channels;
     },
+    async socialPublications(runId) {
+      const payload = await requestJson<{ publications: RuntimeSocialPublication[] }>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}/social-publications`,
+      );
+      return payload.publications;
+    },
     startSocialOAuth(channelId, csrfToken) {
       return requestJson<RuntimeSocialOAuthStart>(
         fetchImpl,
@@ -444,6 +520,42 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
         {
           method: "DELETE",
           headers: { "X-CSRF-Token": csrfToken },
+        },
+      );
+    },
+    attachPublicationMedia(
+      runId,
+      channelId,
+      file,
+      altText,
+      rightsConfirmed,
+      csrfToken,
+      idempotencyKey,
+    ) {
+      return requestBinaryJson<RuntimeRun>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}/publication-media/${encodeURIComponent(channelId)}`,
+        file,
+        {
+          "Content-Type": file.type || "image/jpeg",
+          "X-CSRF-Token": csrfToken,
+          "Idempotency-Key": idempotencyKey,
+          "X-Media-Alt-Text-Base64": encodeBase64UrlUtf8(altText),
+          "X-Media-Rights-Confirmed": rightsConfirmed ? "true" : "false",
+        },
+      );
+    },
+    revokePublicationMedia(runId, mediaId, reason, csrfToken, idempotencyKey) {
+      return requestJson<RuntimeRun>(
+        fetchImpl,
+        `/api/v1/runs/${encodeURIComponent(runId)}/publication-media/${encodeURIComponent(mediaId)}`,
+        {
+          method: "DELETE",
+          headers: {
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({ reason }),
         },
       );
     },
