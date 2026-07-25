@@ -1,6 +1,6 @@
 {
-  "active_branch": "agent/inc-023-political-compliance-mode",
-  "active_branch_remote": "agent/inc-023-political-compliance-mode",
+  "active_branch": "agent/inc-023-delivery-receipt",
+  "active_branch_remote": null,
   "backend_tests_passed_locked": 285,
   "backend_tests_passed_postgresql": 0,
   "backup_restore_tests_passed": 11,
@@ -8,7 +8,7 @@
   "baseline_ci_jobs_failed": 0,
   "baseline_ci_jobs_passed": 8,
   "baseline_commit": "b9e88fe91dd6db7894dcf5825ca63c2294f52377",
-  "checkpoint_parent": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+  "checkpoint_parent": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
   "commits_created": 33,
   "critical_findings_open": 0,
   "current_increment": "INC-023",
@@ -39,14 +39,14 @@
   "inc019_supply_chain": "PASS_NO_PUBLICATION",
   "inc020_behavioral_gates": "LOCAL_PASS_EXACT_ONCE_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED",
   "inc020_supply_chain": "PASS_NO_PUBLICATION",
-  "last_exact_commit": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+  "last_exact_commit": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
   "local_commits_ahead_of_remote": 0,
   "program_state_tests_passed": 6,
   "pushes_verified": 13,
-  "remote_head": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+  "remote_head": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
   "schema_version": "program-session-metrics.v1",
   "tool_calls_recorded": 0,
   "inc021_behavioral_gates": "EXACT_REMOTE_CI_PASS_EXTERNAL_EFFECTS_DISABLED",
   "inc022_behavioral_gates": "EXACT_REMOTE_CI_PASS_MERGED_EXTERNAL_EFFECTS_DISABLED",
-  "inc023_behavioral_gates": "EXACT_REMOTE_CI_PASS_MERGE_PENDING_ALL_EFFECTS_DISABLED"
+  "inc023_behavioral_gates": "EXACT_REMOTE_CI_PASS_MERGED_ALL_EFFECTS_DISABLED"
 }

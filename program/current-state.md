@@ -9,7 +9,7 @@ Updated: 2026-07-25
 - INC-023 specification checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
 - INC-023 implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
 - Remote branch: `agent/inc-023-political-compliance-mode` at `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab`
-- Draft PR: [#15](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15)
+- PR #15: merged normally at `ca7e8c97dc31b0461832d72232213ccc5963f0af`
 - Exact-head CI: 8/8 SUCCESS in run [30174006993](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993)
 - Nested containers created: none; count remains zero
 - Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
@@ -72,4 +72,14 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Merge PR #15 after the final documentation-only checkpoint passes exact-head CI. Then separately authorize the exact neutral sandbox payload, media SHA-256, account, time window and rollback owner before enabling any publication switch.
+PR #15 is merged. The next external gate is to separately authorize the exact neutral sandbox payload, media SHA-256, account, time window and rollback owner before enabling any publication switch.
+
+## INC-023 merge receipt
+
+- PR: `#15`
+- Verified head: `34968cb15726374adcfe072a9ca5cb3de47453f5`
+- Final exact-head workflow: `30174197636`, 8/8 SUCCESS
+- Merge commit: `ca7e8c97dc31b0461832d72232213ccc5963f0af`
+- Merge method: normal merge commit
+- External effects: disabled
+- Global release/cloud decisions: `DENY_RELEASE` / `DENY_APPLY`

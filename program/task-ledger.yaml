@@ -1498,7 +1498,7 @@
         "explicit short publication window and rollback owner",
         "merge/deployment/release"
       ],
-      "publication_state": "EXACT_REMOTE_CI_PASS_MERGE_PENDING_ALL_EFFECTS_DISABLED",
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_ALL_EFFECTS_DISABLED",
       "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6",
       "remote_head": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
       "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15",
@@ -1508,7 +1508,9 @@
         "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993",
         "jobs_passed": 8,
         "jobs_failed": 0
-      }
+      },
+      "merge_commit": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
+      "merged_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15"
     }
   ],
   "updated_at": "2026-07-25",
