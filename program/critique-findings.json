@@ -335,9 +335,41 @@
       "owner": "INC-020",
       "description": "The asynchronous worker acquired the durable run-store lock before resolving the tenant runtime while GET /runs acquired the service lock first, allowing a lock inversion after prior inline work.",
       "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; faulthandler reproduced the cycle at poll 14, runtime resolution moved before the durable lock, deterministic order test passes, the prior-inline plus async reproduction reaches Greenlight and the installed-image 14-checkpoint smoke passes."
+    },
+    {
+      "id": "F-043",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "Generic mixed-language campaign fixtures could be mistaken for production political content.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political context, Spanish channel variants, claim mapping and truthful review states; locked/backend/frontend gates pass."
+    },
+    {
+      "id": "F-044",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "A client could self-attest evidence or legal approval by supplying reviewer text.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 requires greenlight:decide and overwrites reviewer identity server-side; operator attempt returns 403."
+    },
+    {
+      "id": "F-045",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "General social publication enablement could accidentally authorize political effects.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds a separate default-off political authority in app/Helm/Terraform; red-team test records zero provider calls."
+    },
+    {
+      "id": "F-046",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "owner": "INC-022",
+      "description": "Instagram has no governed publication_media generator/delivery contract and the receipt lacks independent post read-after-write verification.",
+      "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition."
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
-  "updated_at": "2026-07-24T22:09:46Z"
+  "source_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
+  "updated_at": "2026-07-25"
 }

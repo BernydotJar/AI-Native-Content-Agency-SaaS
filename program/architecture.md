@@ -64,3 +64,30 @@ Agentless K3s does not prove pod scheduling. OCI smoke does not prove Kubernetes
 - no live alert routing, traces, soak/load evidence, or staging runtime observation;
 - no selected and authorized cloud target;
 - one backend-backed cinematic workspace remains; browser state is presentation, never execution authority.
+
+## Campaign intelligence and political authority boundary — 2026-07-25
+
+```text
+Authenticated operator/approver
+  -> structured Campaign Brief
+  -> Research claim ledger
+       -> source + locator
+       -> verification_status
+       -> server-bound reviewed_by
+  -> Strategy / Growth / Writer / Media
+  -> Critique Agent
+       -> evidence coverage
+       -> source/disclosure visibility
+       -> office relevance
+       -> legal review status
+       -> unsupported-promotion check
+  -> Human Greenlight
+  -> Social publication authority
+       -> general flag
+       -> independent political flag
+       -> exact artifact/media/account binding
+```
+
+Evidence verification and legal approval are not trusted from arbitrary client text. A request that marks either approved must be authenticated with `greenlight:decide`; the server replaces client-supplied reviewer identities with the authenticated subject. Political publication remains blocked unless both general social authority and the separate political authority are enabled.
+
+INC-021 deliberately stops at `media_plan`. INC-022 owns the object/media boundary and post-publication read-after-write verification. No current architecture claim treats a provider-returned ID alone as proof of a publicly visible post.

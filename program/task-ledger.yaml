@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-015-model-effect-authority-v2",
+  "branch": "agent/inc-021-campaign-intelligence",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1242,9 +1242,151 @@
       ],
       "implementation_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
       "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED"
+    },
+    {
+      "task_id": "INC-021",
+      "workstream_id": "WS-05",
+      "status": "review",
+      "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "objective": "Replace generic mixed-language campaign fixtures with grounded political campaign intelligence and fail-closed publication gates.",
+      "context": "Implementation commit 6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political briefs, claim provenance, server-bound fact/legal review, Spanish channel copy, accessible media plans, semantic critique, truthful revise state and a separate political publication kill switch. OAuth regression repair discovered by the full wheel gate is included.",
+      "authoritative_inputs": [
+        "specs/021-campaign-intelligence/spec.md",
+        "skills/hooks-copy.md",
+        "skills/platform-instagram.md",
+        "existing Greenlight/RBAC/effect-authority contracts"
+      ],
+      "dependencies": [
+        "INC-004",
+        "INC-019",
+        "INC-020"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "infra/**",
+        "program/**",
+        "specs/021-campaign-intelligence/**"
+      ],
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "prohibited_paths": [
+        "real political publication",
+        "real provider calls in tests",
+        "credentials in Git/logs",
+        "cloud apply or spend",
+        "protected branch mutation"
+      ],
+      "write_lock": "released after implementation commit",
+      "expected_outputs": [
+        "structured political brief",
+        "claim ledger",
+        "Spanish platform copy",
+        "accessible carousel plan",
+        "critique report",
+        "legal/evidence authority binding",
+        "separate political publication flag"
+      ],
+      "acceptance_criteria": [
+        "missing evidence is rejected",
+        "unverified evidence remains reviewable but cannot receive Greenlight",
+        "operator cannot self-attest evidence or legal approval",
+        "verified/legal-approved content maps every claim to source and reviewer",
+        "general social enablement does not enable political effects",
+        "OAuth state remains mandatory and cross-session callbacks never call the provider",
+        "locked backend and complete frontend gates pass"
+      ],
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh => 261 PASS, 23 PostgreSQL-only SKIP",
+        "npm test => 39 PASS",
+        "npm run lint => 0 warnings, 0 errors",
+        "npm run build => PASS",
+        "focused OAuth family => 18 PASS, 2 PostgreSQL-only SKIP",
+        "focused political/red-team families => PASS"
+      ],
+      "human_gates": [
+        "accountable jurisdiction-specific legal review",
+        "candidate/campaign authorization",
+        "real source authenticity review",
+        "political publication enablement",
+        "real external publication",
+        "merge/deployment/release"
+      ],
+      "implementation_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
+      "publication_state": "LOCAL_DETERMINISTIC_GATES_PASS_REMOTE_CI_PENDING_EXTERNAL_EFFECTS_DISABLED"
+    },
+    {
+      "task_id": "INC-022",
+      "workstream_id": "WS-08",
+      "status": "pending",
+      "role": "Media Engineer / Distributed Systems Engineer / Security Reviewer",
+      "objective": "Create governed publication_media and independently verify Instagram publication receipts after provider processing.",
+      "context": "Instagram account connection and exact-once publication intent exist, but the product still produces only media_plan and the current receipt does not prove a visible post through an independent read-after-write verification.",
+      "authoritative_inputs": [
+        "INC-020 publication authority",
+        "INC-021 campaign intelligence",
+        "official Instagram media container and media retrieval contracts"
+      ],
+      "dependencies": [
+        "INC-020",
+        "INC-021"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/022-governed-media-verification/**"
+      ],
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "prohibited_paths": [
+        "real publication without explicit authorization",
+        "unverified external media URL",
+        "automatic retry of unknown effects",
+        "cloud spend"
+      ],
+      "write_lock": "unclaimed",
+      "expected_outputs": [
+        "publication_media contract",
+        "safe media delivery",
+        "container status polling",
+        "read-after-write verification",
+        "permalink/verified receipt",
+        "reconciliation UI"
+      ],
+      "acceptance_criteria": [
+        "media bytes/hash/URL are bound to Greenlight",
+        "container reaches FINISHED before publish",
+        "provider post is independently read and bound to the exact effect",
+        "unknown outcomes remain blocked",
+        "all effects default disabled"
+      ],
+      "validation_commands": [
+        "TDD focused media/publication families",
+        "locked backend suite",
+        "frontend tests/build",
+        "package/CI exact-head"
+      ],
+      "human_gates": [
+        "media rights confirmation",
+        "provider terms/privacy review",
+        "one explicitly authorized sandbox post",
+        "production enablement"
+      ],
+      "publication_state": "NOT_STARTED"
     }
   ],
-  "updated_at": "2026-07-24T07:25:45Z",
+  "updated_at": "2026-07-25",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -1347,18 +1489,37 @@
         "program/**",
         "specs/**"
       ],
-      "artifacts": [],
+      "artifacts": [
+        "backend/agency_runtime/campaign_intelligence.py",
+        "program/reports/inc-021-review.md",
+        "specs/021-campaign-intelligence/spec.md"
+      ],
       "dependencies": [],
-      "evals": [],
+      "evals": [
+        "citation fidelity",
+        "groundedness",
+        "missing evidence",
+        "permission denial"
+      ],
       "id": "WS-05",
       "name": "Frontend and Production Console",
-      "next_ready_task": "INC-017",
+      "next_ready_task": "INC-021",
       "objective": "Unify critical journeys and backend authority.",
       "owner": "orchestrator",
-      "requirements": [],
-      "risks": [],
+      "requirements": [
+        "EVAL-006",
+        "PROD-006"
+      ],
+      "risks": [
+        "R-033"
+      ],
       "status": "review",
-      "validation": [],
+      "validation": [
+        "./scripts/verify-python-locks.sh",
+        "npm run build",
+        "npm run lint",
+        "npm test"
+      ],
       "write_locks": []
     },
     {
@@ -1428,18 +1589,33 @@
         "program/**",
         "specs/**"
       ],
-      "artifacts": [],
+      "artifacts": [
+        "program/reports/inc-021-review.md",
+        "specs/021-campaign-intelligence/spec.md"
+      ],
       "dependencies": [],
-      "evals": [],
+      "evals": [
+        "OAuth state/session binding",
+        "external-effect kill switch"
+      ],
       "id": "WS-08",
       "name": "Integrations, Contracts and Sandbox Boundaries",
-      "next_ready_task": "INC-015",
+      "next_ready_task": "INC-022",
       "objective": "Implement bounded integration protocols and durable external-effect authority without uncontrolled side effects.",
       "owner": "orchestrator",
-      "requirements": [],
-      "risks": [],
+      "requirements": [
+        "INT-004",
+        "SEC-014"
+      ],
+      "risks": [
+        "R-034",
+        "R-035"
+      ],
       "status": "review",
-      "validation": [],
+      "validation": [
+        "./scripts/verify-python-locks.sh",
+        "exact-head integration CI"
+      ],
       "write_locks": []
     },
     {

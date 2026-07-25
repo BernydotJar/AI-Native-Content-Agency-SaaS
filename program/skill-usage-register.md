@@ -8,3 +8,29 @@
 | 2026-07-22 | release compliance validator | reconcile locks/licenses/providers/privacy/claims/release authority | stdlib-only local code; no provider, legal service or new package; nine fail-closed mutation tests | PASS — `DENY_RELEASE` |
 | 2026-07-25 | `skills/hooks-copy.md` | INC-021 hook, evidence mapping and copy QA rules | Repository-owned text under project license; no installer, executable code, telemetry or external service | INVOKED — inputs mapped into spec/tests |
 | 2026-07-25 | `skills/platform-instagram.md` | INC-021 carousel, alt-text and channel QA rules | Repository-owned text under project license; no installer, executable code, telemetry or external service | INVOKED — inputs mapped into spec/tests |
+
+## Detailed invocation records
+
+- task_id: INC-021
+  skill: `skills/hooks-copy.md`
+  source: repository-owned skill file
+  version_or_commit: `6ebbd634bd32408db0a7678289b0f906cda014c0`
+  license: project repository license; no third-party asset copied
+  invoked_at: 2026-07-25
+  inputs: political brief contract, claim ledger, Spanish channel variants, critique requirements
+  generated_outputs: hook/body/CTA structure, source-visible copy, prohibited-promotion checks
+  validations: political runtime/API tests; full locked wheel; frontend tests/build
+  result: PASS
+  limitations: deterministic rules do not replace human fact, language, legal or campaign review
+
+- task_id: INC-021
+  skill: `skills/platform-instagram.md`
+  source: repository-owned skill file
+  version_or_commit: `6ebbd634bd32408db0a7678289b0f906cda014c0`
+  license: project repository license; no third-party asset copied
+  invoked_at: 2026-07-25
+  inputs: Instagram carousel requirements, dimensions, alt text, publication readiness
+  generated_outputs: non-rendered 1080x1350 carousel plan, slide purposes, alt text and rights-status gate
+  validations: political runtime tests; frontend output tests; full locked wheel
+  result: PASS
+  limitations: no rendered bytes, object storage, reachable media URL or real publication; INC-022 owns those controls

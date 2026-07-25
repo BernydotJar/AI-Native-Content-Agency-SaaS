@@ -1,6 +1,6 @@
 # INC-021 — Campaign Intelligence and Political Content Integrity
 
-Status: approved
+Status: review
 Owner: Orchestrator
 Date: 2026-07-25
 
@@ -11,7 +11,7 @@ The current writer is a deterministic English fixture and can create generic mix
 ## Scope
 
 ### task_id: INC-021
-### workstream_id: WS-13
+### workstream_id: WS-05
 ### role: Producer / Critic / Fixer / Independent Verifier
 ### objective
 
@@ -19,24 +19,32 @@ Produce a backward-compatible structured campaign brief and meaningful eight-sta
 
 ### allowed_paths
 
+- `.env.example`
 - `backend/agency_runtime/models.py`
 - `backend/agency_runtime/api.py`
 - `backend/agency_runtime/orchestrator.py`
 - `backend/agency_runtime/campaign_intelligence.py`
 - `backend/agency_runtime/serialization.py`
+- `backend/agency_runtime/social_oauth_service.py`
+- `backend/agency_runtime/social_oauth_store.py`
 - `backend/tests/test_runtime.py`
 - `backend/tests/test_api.py`
+- `backend/tests/test_social_oauth_api.py`
+- `backend/tests/test_social_publication_api.py`
 - `src/lib/runtimeApi.ts`
 - `src/components/WorkspaceRuntime.tsx`
 - `src/components/WorkspaceRuntime.test.tsx`
+- `scripts/verify-local-infrastructure.sh`
+- `scripts/verify-social-publication-browser.mjs`
+- `infra/**`
 - `program/**`
 - `specs/021-campaign-intelligence/**`
 
 ### read_only_paths
 
-- `backend/agency_runtime/social_oauth*`
-- `backend/agency_runtime/social_publication*`
+- `checkpoints/**`
 - `compliance/**`
+- `.env.local`
 
 ### prohibited_paths
 
@@ -63,9 +71,10 @@ Existing commercial briefs remain valid. A `campaign_type=political` brief addit
 - proposal;
 - desired_action;
 - disclosure;
-- one or more evidence claims containing statement, source and locator.
+- one or more evidence claims containing statement, source, locator and verification status;
+- an explicit legal-review status.
 
-The API rejects missing political context before run creation.
+Verified evidence and approved legal review require `greenlight:decide`; the server records the authenticated subject as reviewer and discards client-supplied reviewer identity. The API rejects missing political context before run creation.
 
 ## Required station outputs
 
@@ -90,16 +99,18 @@ The API rejects missing political context before run creation.
 
 - Political brief missing evidence returns HTTP 422.
 - Valid political brief produces seven pre-Greenlight artifacts and Spanish copy.
-- Every writer claim maps to a claim ledger ID.
-- Risk report is explicit and publication eligible only when all required checks pass.
+- Every writer claim maps to a verified claim ledger ID.
+- An operator cannot self-attest evidence or legal approval.
+- Risk report is explicit and publication eligible only when evidence and legal review gates pass.
+- General social publication enablement does not enable political effects.
 - Existing commercial API tests remain compatible.
 - Serialization preserves new fields across restart.
 - Frontend can create a structured political brief without exposing secrets.
 
 ## Validation commands
 
-- `python -m unittest backend.tests.test_runtime -v`
-- `python -m unittest backend.tests.test_api -v`
+- `./scripts/verify-python-locks.sh`
+- `PYTHONPATH=backend /tmp/ai-native-content-agency-runtime/bin/python -m unittest backend.tests.test_api.PoliticalCampaignApiTests -v`
 - `npm test -- --run src/components/WorkspaceRuntime.test.tsx`
 - `npm run lint`
 - `npm run build`

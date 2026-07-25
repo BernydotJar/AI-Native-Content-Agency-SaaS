@@ -116,3 +116,19 @@ Exact resume condition: publish the branch and pass exact-head CI; approve curre
 terms/privacy/account scope; register exact callbacks; authorize one sandbox post per
 channel; record and reconcile provider receipts. Production enablement remains a separate
 release decision.
+
+## OI-014 — Governed publication media and verified Instagram receipt
+
+Category: product / media / distributed systems / external effect
+
+INC-021 produces an accessible non-rendered media plan, but Instagram still requires an approved `publication_media` artifact containing governed bytes, a reachable HTTPS URL and exact SHA-256. The current INC-020 receipt stores provider/container IDs but does not independently read the resulting media, verify the exact account/caption binding or persist a permalink.
+
+Exact resume condition: complete INC-022 with bounded media ingestion/rendering, rights and accessibility metadata, content/hash binding to Greenlight, container status polling, `media_publish`, read-after-write verification, durable verified receipt and unknown-state reconciliation. One real sandbox post requires separate explicit authorization.
+
+## OI-015 — Political publication authority remains intentionally denied
+
+Category: legal / campaign authorization / external effect / human decision
+
+Commit `6ebbd634bd32408db0a7678289b0f906cda014c0` adds server-bound evidence and legal-review authority plus the independent `AGENCY_POLITICAL_PUBLICATION_ENABLED=false` kill switch. Deterministic tests prove that general social publication enablement does not enable political effects and performs zero provider calls.
+
+Exact resume condition: exact-head CI; accountable jurisdiction-specific legal review; verified candidate/campaign authority; provider policy/account review; approved content and media; explicit enablement and one separately authorized sandbox post. Production remains a distinct release decision.
