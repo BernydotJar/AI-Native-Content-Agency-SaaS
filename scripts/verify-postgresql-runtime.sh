@@ -452,7 +452,7 @@ AGENCY_DATABASE_URL="$DATABASE_URL" \
 SCHEMA_INCOMPATIBLE_STATUS=$?
 set -e
 "$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
-  --command "UPDATE public.runtime_schema_meta SET value = '5' WHERE key = 'schema_version'" \
+  --command "UPDATE public.runtime_schema_meta SET value = '6' WHERE key = 'schema_version'" \
   >/dev/null
 if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
   printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
@@ -854,7 +854,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "5":
+        if schema is None or schema["value"] != "6":
             raise SystemExit("unexpected schema version: {}".format(schema))
 finally:
     runtime.close()
@@ -990,7 +990,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "5":
+        if schema is None or schema["value"] != "6":
             raise SystemExit("unexpected restored schema version: {}".format(schema))
         restored_run = connection.execute(
             "SELECT tenant_id, status FROM runtime_runs LIMIT 1"
