@@ -330,6 +330,12 @@ variable "social_publication_enabled" {
   default     = false
 }
 
+variable "political_publication_enabled" {
+  description = "Separately enables governed political publication. General social publication never implies this authority."
+  type        = bool
+  default     = false
+}
+
 variable "social_existing_secret" {
   description = "Optional pre-provisioned Kubernetes Secret containing X and Instagram app credentials. Secret values never enter Terraform state."
   type        = string

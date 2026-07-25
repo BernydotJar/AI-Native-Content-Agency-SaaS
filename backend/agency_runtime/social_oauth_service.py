@@ -227,27 +227,19 @@ class SocialOAuthService:
         *,
         tenant_id: str,
         session_id: str,
-        state_value: Optional[str],
+        state_value: str,
         code: str,
     ) -> SocialConnectionResult:
-        if not code:
+        if not state_value or not code:
             raise SocialOAuthCallbackError("Instagram OAuth callback is incomplete")
         try:
-            if state_value:
-                state = self._store.consume_state(
-                    tenant_id=tenant_id,
-                    session_id=session_id,
-                    channel_id="instagram",
-                    state_digest=_sha256(state_value),
-                    provider_token_digest=None,
-                )
-            else:
-                state = self._store.consume_pending_state(
-                    tenant_id=tenant_id,
-                    session_id=session_id,
-                    channel_id="instagram",
-                    provider_token_digest=None,
-                )
+            state = self._store.consume_state(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                channel_id="instagram",
+                state_digest=_sha256(state_value),
+                provider_token_digest=None,
+            )
         except SocialOAuthStateUnavailableError as error:
             raise SocialOAuthCallbackError(
                 "Instagram OAuth callback is invalid or expired"
@@ -256,7 +248,7 @@ class SocialOAuthService:
             state.encrypted_payload,
             associated_data=_state_aad(state.tenant_id, state.channel_id, state.state_id),
         )
-        if state_value and not hmac.compare_digest(
+        if not hmac.compare_digest(
             str(payload.get("state_value", "")), state_value
         ):
             raise SocialOAuthCallbackError("Instagram OAuth state is invalid")
@@ -478,15 +470,26 @@ class SocialOAuthService:
             with self._client.stream(method, url, **kwargs) as upstream:
                 chunks = []
                 total = 0
-                for chunk in upstream.iter_raw():
-                    total += len(chunk)
-                    if total > _MAX_RESPONSE_BYTES:
-                        raise SocialOAuthProviderError(
-                            "social provider response is too large",
-                            phase=phase,
-                            reason="invalid_response",
-                        )
-                    chunks.append(chunk)
+                if upstream.is_stream_consumed:
+                    materialized = upstream.content
+                    total = len(materialized)
+                    chunks.append(materialized)
+                else:
+                    for chunk in upstream.iter_raw():
+                        total += len(chunk)
+                        if total > _MAX_RESPONSE_BYTES:
+                            raise SocialOAuthProviderError(
+                                "social provider response is too large",
+                                phase=phase,
+                                reason="invalid_response",
+                            )
+                        chunks.append(chunk)
+                if total > _MAX_RESPONSE_BYTES:
+                    raise SocialOAuthProviderError(
+                        "social provider response is too large",
+                        phase=phase,
+                        reason="invalid_response",
+                    )
                 safe_headers = {
                     name: value
                     for name, value in upstream.headers.items()

@@ -76,7 +76,11 @@ class Cdp {
       if (message.id) {
         const pending = this.pending.get(message.id); if (!pending) return;
         this.pending.delete(message.id);
-        message.error ? pending.reject(new Error(message.error.message)) : pending.resolve(message.result);
+        if (message.error) {
+          pending.reject(new Error(message.error.message));
+        } else {
+          pending.resolve(message.result);
+        }
       } else {
         const listeners = this.events.get(message.method) ?? [];
         this.events.delete(message.method);

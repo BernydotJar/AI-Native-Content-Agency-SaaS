@@ -10,6 +10,14 @@ export interface BrowserRuntimeSession {
   expires_at: string;
 }
 
+export interface RuntimeEvidenceClaim {
+  statement: string;
+  source: string;
+  locator: string;
+  verification_status?: "unverified" | "verified";
+  reviewed_by?: string;
+}
+
 export interface RuntimeBrief {
   title: string;
   objective: string;
@@ -17,6 +25,19 @@ export interface RuntimeBrief {
   platforms: RuntimePlatform[];
   budget_cents: number;
   campaign_goal: string;
+  campaign_type?: "commercial" | "political";
+  locale?: string;
+  jurisdiction?: string;
+  office?: string;
+  candidate_name?: string;
+  locality?: string;
+  problem?: string;
+  proposal?: string;
+  desired_action?: string;
+  disclosure?: string;
+  legal_review_status?: "pending" | "approved";
+  legal_reviewed_by?: string;
+  evidence_claims?: RuntimeEvidenceClaim[];
 }
 
 export interface RuntimeArtifact {

@@ -85,6 +85,19 @@ class MissionBrief:
     budget_cents: int = 0
     source_asset: str = "sandbox://brief/no-external-asset"
     campaign_goal: str = "awareness"
+    campaign_type: str = "commercial"
+    locale: str = "es-GT"
+    jurisdiction: str = ""
+    office: str = ""
+    candidate_name: str = ""
+    locality: str = ""
+    problem: str = ""
+    proposal: str = ""
+    desired_action: str = ""
+    disclosure: str = ""
+    legal_review_status: str = "pending"
+    legal_reviewed_by: str = ""
+    evidence_claims: Tuple[Mapping[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         require_non_empty(self.title, "title")
@@ -94,6 +107,40 @@ class MissionBrief:
             raise ValueError("platforms must contain at least one platform")
         if self.budget_cents < 0:
             raise ValueError("budget_cents must not be negative")
+        if self.campaign_type not in {"commercial", "political"}:
+            raise ValueError("campaign_type must be commercial or political")
+        require_non_empty(self.locale, "locale")
+        if self.legal_review_status not in {"pending", "approved"}:
+            raise ValueError("legal_review_status must be pending or approved")
+        if self.legal_review_status == "approved" and not self.legal_reviewed_by.strip():
+            raise ValueError("approved legal review requires legal_reviewed_by")
+        for claim in self.evidence_claims:
+            if not isinstance(claim, Mapping):
+                raise ValueError("evidence claims must be mappings")
+            for field_name in ("statement", "source", "locator"):
+                value = claim.get(field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError("evidence claim {} must not be empty".format(field_name))
+            verification_status = str(claim.get("verification_status", "unverified"))
+            if verification_status not in {"unverified", "verified"}:
+                raise ValueError("evidence claim verification_status is invalid")
+            if verification_status == "verified" and not str(claim.get("reviewed_by", "")).strip():
+                raise ValueError("verified evidence claims require reviewed_by")
+        if self.campaign_type == "political":
+            required = {
+                "jurisdiction": self.jurisdiction,
+                "office": self.office,
+                "candidate_name": self.candidate_name,
+                "locality": self.locality,
+                "problem": self.problem,
+                "proposal": self.proposal,
+                "desired_action": self.desired_action,
+                "disclosure": self.disclosure,
+            }
+            for field_name, value in required.items():
+                require_non_empty(value, field_name)
+            if not self.evidence_claims:
+                raise ValueError("political briefs require at least one evidence claim")
 
 
 @dataclass(frozen=True)

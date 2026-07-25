@@ -42,6 +42,7 @@ class ApiVerticalSliceTests(unittest.TestCase):
                 database_path=self.database,
                 static_dir=self.static_dir,
                 tenant_api_keys=self.keys if keys is None else keys,
+                session_cookie_secure=False,
             )
         )
 
@@ -232,6 +233,194 @@ class ApiVerticalSliceTests(unittest.TestCase):
                 ).status_code,
                 409,
             )
+
+
+class PoliticalCampaignApiTests(ApiVerticalSliceTests):
+    POLITICAL_BRIEF = {
+        "title": "Transparencia municipal verificable",
+        "objective": "Explicar una propuesta de rendición de cuentas",
+        "audience": "vecinas y vecinos del municipio",
+        "platforms": ["instagram", "x"],
+        "campaign_type": "political",
+        "locale": "es-GT",
+        "jurisdiction": "Guatemala",
+        "office": "alcalde",
+        "candidate_name": "Candidatura de prueba",
+        "locality": "Municipio de prueba",
+        "problem": "La ciudadanía no encuentra la información presupuestaria en un solo lugar",
+        "proposal": "Publicar mensualmente avances, contratos y ejecución presupuestaria",
+        "desired_action": "Consulta el plan completo y envía tus preguntas",
+        "disclosure": "Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+        "legal_review_status": "approved",
+        "legal_reviewed_by": "claimed-legal-reviewer",
+        "evidence_claims": [
+            {
+                "statement": "La propuesta contempla publicación mensual de avances y ejecución presupuestaria.",
+                "source": "Plan municipal de prueba 2027-2031",
+                "locator": "páginas 12-14",
+                "verification_status": "verified",
+                "reviewed_by": "human-fact-reviewer",
+            }
+        ],
+    }
+
+    def test_political_brief_without_evidence_is_rejected(self):
+        with self.client() as client:
+            response = client.post(
+                "/api/v1/runs",
+                json={**self.POLITICAL_BRIEF, "evidence_claims": []},
+                headers=auth(ALPHA_KEY, "political-missing-evidence-0001"),
+            )
+        self.assertEqual(response.status_code, 422)
+
+    def test_political_brief_round_trip_and_artifacts(self):
+        with self.client() as client:
+            response = client.post(
+                "/api/v1/runs",
+                json=self.POLITICAL_BRIEF,
+                headers=auth(ALPHA_KEY, "political-grounded-run-0001"),
+            )
+            self.assertEqual(response.status_code, 201, response.text)
+            run = response.json()
+            self.assertEqual(run["brief"]["campaign_type"], "political")
+            server_reviewer = run["brief"]["evidence_claims"][0]["reviewed_by"]
+            self.assertTrue(server_reviewer)
+            self.assertNotEqual(server_reviewer, "human-fact-reviewer")
+            self.assertEqual(run["brief"]["legal_review_status"], "approved")
+            self.assertEqual(run["brief"]["legal_reviewed_by"], server_reviewer)
+            self.assertNotEqual(run["brief"]["legal_reviewed_by"], "claimed-legal-reviewer")
+            writer = next(item for item in run["artifacts"] if item["kind"] == "copy_deck")
+            risk = next(item for item in run["artifacts"] if item["kind"] == "risk_report")
+            self.assertNotIn("made clear", str(writer).lower())
+            self.assertTrue(risk["payload"]["publication_eligible"])
+            restored = client.get(
+                "/api/v1/runs/{}".format(run["run_id"]), headers=auth(ALPHA_KEY)
+            )
+            self.assertEqual(restored.json()["brief"]["candidate_name"], "Candidatura de prueba")
+
+
+    def test_pending_legal_review_is_reviewable_but_not_greenlight_eligible(self):
+        pending = {
+            **self.POLITICAL_BRIEF,
+            "title": "Campaña pendiente de revisión legal",
+            "legal_review_status": "pending",
+            "legal_reviewed_by": "untrusted-client-value",
+        }
+        with self.client() as client:
+            created = client.post(
+                "/api/v1/runs",
+                json=pending,
+                headers=auth(ALPHA_KEY, "political-legal-pending-0001"),
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            run = created.json()
+            self.assertEqual(run["brief"]["legal_reviewed_by"], "")
+            risk = next(item for item in run["artifacts"] if item["kind"] == "risk_report")
+            self.assertFalse(risk["payload"]["publication_eligible"])
+            approval = client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
+                json={"reviewer": "approver", "note": "legal review missing"},
+                headers=auth(ALPHA_KEY, "political-legal-pending-approve-0001"),
+            )
+        self.assertEqual(approval.status_code, 409)
+
+    def test_political_publication_has_a_separate_disabled_by_default_gate(self):
+        with self.client() as client:
+            created = client.post(
+                "/api/v1/runs",
+                json={**self.POLITICAL_BRIEF, "title": "Publicación política bloqueada por default"},
+                headers=auth(ALPHA_KEY, "political-publish-create-0001"),
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            run = created.json()
+            approved = client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
+                json={"reviewer": "approver", "note": "editorial approval only"},
+                headers=auth(ALPHA_KEY, "political-publish-approve-0001"),
+            )
+            self.assertEqual(approved.status_code, 200, approved.text)
+            completed = approved.json()
+            copy_artifact = next(
+                item for item in completed["artifacts"] if item["kind"] == "copy_deck"
+            )
+            session = client.post(
+                "/api/v1/sessions", json={"api_key": ALPHA_KEY}
+            )
+            self.assertEqual(session.status_code, 201, session.text)
+            response = client.post(
+                "/api/v1/runs/{}/social-publications/instagram".format(run["run_id"]),
+                json={
+                    "artifact_id": copy_artifact["artifact_id"],
+                    "media_artifact_id": None,
+                    "greenlight_id": completed["greenlight"]["greenlight_id"],
+                    "greenlight_fencing_token": completed["greenlight"]["fencing_token"],
+                },
+                headers={
+                    "X-CSRF-Token": session.json()["csrf_token"],
+                    "Idempotency-Key": "political-publish-effect-0001",
+                },
+            )
+        self.assertEqual(response.status_code, 409, response.text)
+        self.assertEqual(response.json()["code"], "political_publication_disabled")
+
+    def test_operator_cannot_self_attest_verified_evidence(self):
+        operator_key = "political-operator-key-material-2026"
+        identities = [
+            {
+                "tenant_id": "tenant-alpha",
+                "subject_id": "operator@example.com",
+                "role": "operator",
+                "key_id": "operator-v1",
+                "api_key": operator_key,
+                "active": True,
+            }
+        ]
+        with TestClient(
+            create_app(
+                database_path=str(Path(self.temp.name) / "operator-runtime.sqlite3"),
+                static_dir=self.static_dir,
+                tenant_api_keys={},
+                identity_credentials=identities,
+                session_cookie_secure=False,
+            )
+        ) as client:
+            response = client.post(
+                "/api/v1/runs",
+                json=self.POLITICAL_BRIEF,
+                headers=auth(operator_key, "political-operator-attest-0001"),
+            )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "authorization_denied")
+
+    def test_unverified_claim_is_reviewable_but_cannot_receive_greenlight(self):
+        unverified = {
+            **self.POLITICAL_BRIEF,
+            "title": "Campaña política pendiente de verificación",
+            "evidence_claims": [
+                {
+                    **self.POLITICAL_BRIEF["evidence_claims"][0],
+                    "verification_status": "unverified",
+                    "reviewed_by": "",
+                }
+            ],
+        }
+        with self.client() as client:
+            created = client.post(
+                "/api/v1/runs",
+                json=unverified,
+                headers=auth(ALPHA_KEY, "political-unverified-run-0001"),
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            run = created.json()
+            risk = next(item for item in run["artifacts"] if item["kind"] == "risk_report")
+            self.assertFalse(risk["payload"]["publication_eligible"])
+            self.assertEqual(risk["payload"]["decision"], "revise")
+            approval = client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
+                json={"reviewer": "approver", "note": "must remain blocked"},
+                headers=auth(ALPHA_KEY, "political-unverified-approve-0001"),
+            )
+            self.assertEqual(approval.status_code, 409)
 
 
 if __name__ == "__main__":

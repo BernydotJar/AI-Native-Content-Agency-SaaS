@@ -53,12 +53,25 @@ const PLATFORM_OPTIONS: Array<{ id: RuntimePlatform; label: string }> = [
 ];
 
 const DEFAULT_BRIEF: RuntimeBrief = {
-  title: "Evidence-led campaign",
-  objective: "Create a governed campaign package with explicit evidence and approval",
-  audience: "growth and brand leaders",
+  title: "Campaña verificable",
+  objective: "Explicar una propuesta con evidencia y aprobación humana",
+  audience: "audiencia definida por el operador",
   platforms: ["x", "instagram"],
   budget_cents: 0,
-  campaign_goal: "qualified_demand",
+  campaign_goal: "participacion_informada",
+  campaign_type: "commercial",
+  locale: "es-GT",
+  jurisdiction: "",
+  office: "",
+  candidate_name: "",
+  locality: "",
+  problem: "",
+  proposal: "",
+  desired_action: "",
+  disclosure: "",
+  legal_review_status: "pending",
+  legal_reviewed_by: "",
+  evidence_claims: [],
 };
 
 const ROLE_CAPABILITIES: Record<
@@ -229,15 +242,18 @@ export function WorkspaceRuntime({
     onEntitlementsChange(identity.entitlements);
   }, [api, onEntitlementsChange]);
 
+  const activeRunId = run?.run_id ?? "";
+  const activeRunStatus = run?.status ?? "";
+
   useEffect(() => {
-    if (!session || !run || !["queued", "running"].includes(run.status)) return;
+    if (!session || !activeRunId || !["queued", "running"].includes(activeRunStatus)) return;
     let active = true;
     let polling = false;
     const refreshRun = async () => {
       if (polling) return;
       polling = true;
       try {
-        const refreshed = await api.getRun(run.run_id);
+        const refreshed = await api.getRun(activeRunId);
         if (!active) return;
         setRun(refreshed);
         if (!["queued", "running"].includes(refreshed.status)) {
@@ -254,7 +270,7 @@ export function WorkspaceRuntime({
       active = false;
       window.clearInterval(timer);
     };
-  }, [api, handleFailure, refreshWorkspace, run?.run_id, run?.status, session]);
+  }, [activeRunId, activeRunStatus, api, handleFailure, refreshWorkspace, session]);
 
   useEffect(() => {
     let active = true;
@@ -331,6 +347,19 @@ export function WorkspaceRuntime({
   const updateBrief = (patch: Partial<RuntimeBrief>) => {
     clearCommandKey("run:create");
     setBrief((current) => ({ ...current, ...patch }));
+  };
+
+  const updateEvidenceClaim = (
+    field: "statement" | "source" | "locator" | "verification_status",
+    value: string,
+  ) => {
+    const current = brief.evidence_claims?.[0] ?? {
+      statement: "",
+      source: "",
+      locator: "",
+      verification_status: "unverified" as const,
+    };
+    updateBrief({ evidence_claims: [{ ...current, [field]: value }] });
   };
 
   const togglePlatform = (platform: RuntimePlatform) => {
@@ -503,6 +532,28 @@ export function WorkspaceRuntime({
         <form onSubmit={launchRun} className="border-b border-white/[0.07] p-5 xl:border-b-0 xl:border-r">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
             <label className="text-xs font-semibold text-zinc-300">
+              Tipo de campaña
+              <select
+                value={brief.campaign_type ?? "commercial"}
+                onChange={(event) => updateBrief({ campaign_type: event.target.value as "commercial" | "political" })}
+                disabled={!session || !canCreate}
+                className="form-control mt-2"
+              >
+                <option value="commercial">Marca / comercial</option>
+                <option value="political">Política / electoral</option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-zinc-300">
+              Idioma y región
+              <input
+                value={brief.locale ?? "es-GT"}
+                onChange={(event) => updateBrief({ locale: event.target.value })}
+                disabled={!session || !canCreate}
+                className="form-control mt-2"
+                required
+              />
+            </label>
+            <label className="text-xs font-semibold text-zinc-300">
               Título de campaña
               <input
                 value={brief.title}
@@ -533,6 +584,99 @@ export function WorkspaceRuntime({
               required
             />
           </label>
+          {(brief.campaign_type ?? "commercial") === "political" && (
+            <fieldset className="mt-4 grid gap-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.03] p-4 sm:grid-cols-2">
+              <legend className="px-2 text-xs font-bold text-amber-100">Contexto político verificable</legend>
+              {([
+                ["jurisdiction", "Jurisdicción"],
+                ["office", "Cargo"],
+                ["candidate_name", "Candidato o candidatura"],
+                ["locality", "Territorio"],
+                ["problem", "Problema público"],
+                ["proposal", "Propuesta concreta"],
+                ["desired_action", "Acción ciudadana"],
+                ["disclosure", "Disclosure"],
+              ] as const).map(([field, label]) => (
+                <label key={field} className="text-xs font-semibold text-zinc-300">
+                  {label}
+                  <textarea
+                    value={String(brief[field] ?? "")}
+                    onChange={(event) => updateBrief({ [field]: event.target.value })}
+                    disabled={!session || !canCreate}
+                    className="form-control mt-2 min-h-20 resize-y"
+                    required
+                  />
+                </label>
+              ))}
+              <label className="text-xs font-semibold text-zinc-300 sm:col-span-2">
+                Afirmación respaldada
+                <textarea
+                  value={brief.evidence_claims?.[0]?.statement ?? ""}
+                  onChange={(event) => updateEvidenceClaim("statement", event.target.value)}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2 min-h-20 resize-y"
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold text-zinc-300">
+                Fuente
+                <input
+                  value={brief.evidence_claims?.[0]?.source ?? ""}
+                  onChange={(event) => updateEvidenceClaim("source", event.target.value)}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2"
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold text-zinc-300">
+                Página, sección o locator
+                <input
+                  value={brief.evidence_claims?.[0]?.locator ?? ""}
+                  onChange={(event) => updateEvidenceClaim("locator", event.target.value)}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2"
+                  required
+                />
+              </label>
+              <label className="text-xs font-semibold text-zinc-300">
+                Revisión legal
+                <select
+                  value={brief.legal_review_status ?? "pending"}
+                  onChange={(event) => updateBrief({ legal_review_status: event.target.value as "pending" | "approved" })}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2"
+                >
+                  <option value="pending">Pendiente</option>
+                  <option value="approved" disabled={!canDecide}>Aprobada con autoridad</option>
+                </select>
+              </label>
+              <div className="rounded-xl border border-white/[0.08] p-3 text-[11px] leading-5 text-zinc-400">
+                {canDecide
+                  ? "Si apruebas la revisión legal, el servidor registra tu identidad autenticada."
+                  : "Tu rol no puede aprobar la revisión legal."}
+              </div>
+              <label className="text-xs font-semibold text-zinc-300">
+                Estado de verificación
+                <select
+                  value={brief.evidence_claims?.[0]?.verification_status ?? "unverified"}
+                  onChange={(event) => updateEvidenceClaim("verification_status", event.target.value)}
+                  disabled={!session || !canCreate}
+                  className="form-control mt-2"
+                >
+                  <option value="unverified">Pendiente de verificación</option>
+                  <option value="verified" disabled={!canDecide}>Verificada con autoridad de aprobación</option>
+                </select>
+              </label>
+              <div className="rounded-xl border border-white/[0.08] p-3 text-[11px] leading-5 text-zinc-400">
+                {canDecide
+                  ? "Al marcarla verificada, el servidor registra tu identidad autenticada como revisor."
+                  : "Tu rol puede preparar la afirmación, pero no marcarla como verificada."}
+              </div>
+              <p className="text-[11px] leading-5 text-amber-100/70 sm:col-span-2">
+                Adjuntar una fuente no la convierte en evidencia verificada. El sistema no infiere cumplimiento legal.
+              </p>
+            </fieldset>
+          )}
           <fieldset className="mt-4" disabled={!session || !canCreate}>
             <legend className="text-xs font-semibold text-zinc-300">Canales de entrega</legend>
             <div className="mt-2 flex flex-wrap gap-2">

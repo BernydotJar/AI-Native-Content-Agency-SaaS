@@ -44,7 +44,7 @@ def identities():
     ]
 
 
-def environment(*, enabled=True):
+def environment(*, enabled=True, political_enabled=False):
     return {
         "AGENCY_X_CONSUMER_KEY": "publication-x-consumer-key",
         "AGENCY_X_CONSUMER_SECRET": X_SECRET,
@@ -57,6 +57,9 @@ def environment(*, enabled=True):
         ),
         "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID": "social-v1",
         "AGENCY_SOCIAL_PUBLICATION_ENABLED": "true" if enabled else "false",
+        "AGENCY_POLITICAL_PUBLICATION_ENABLED": (
+            "true" if political_enabled else "false"
+        ),
         "AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID": "tenant-alpha",
         "AGENCY_X_USER_ACCESS_TOKEN": X_ACCESS_TOKEN,
         "AGENCY_X_USER_ACCESS_TOKEN_SECRET": X_ACCESS_SECRET,
@@ -93,7 +96,7 @@ class SocialPublicationApiTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def app(self, handler, *, enabled=True):
+    def app(self, handler, *, enabled=True, political_enabled=False):
         no_oauth_http = lambda request: (_ for _ in ()).throw(
             AssertionError("OAuth HTTP is not expected")
         )
@@ -101,7 +104,9 @@ class SocialPublicationApiTests(unittest.TestCase):
             database_path=str(self.database),
             identity_credentials=identities(),
             session_cookie_secure=False,
-            social_environment=environment(enabled=enabled),
+            social_environment=environment(
+                enabled=enabled, political_enabled=political_enabled
+            ),
             social_oauth_transport=httpx.MockTransport(no_oauth_http),
             social_publication_transport=httpx.MockTransport(handler),
         )
@@ -139,6 +144,75 @@ class SocialPublicationApiTests(unittest.TestCase):
             "greenlight_id": run["greenlight"]["greenlight_id"],
             "greenlight_fencing_token": run["greenlight"]["fencing_token"],
         }
+
+    def test_general_publication_enablement_does_not_enable_political_effects(self):
+        calls = []
+        political_brief = {
+            "title": "Political effect must remain separately gated",
+            "objective": "Verify independent political publication authority",
+            "audience": "citizens",
+            "platforms": ["x"],
+            "campaign_type": "political",
+            "locale": "es-GT",
+            "jurisdiction": "Guatemala",
+            "office": "diputado",
+            "candidate_name": "Candidatura de prueba",
+            "locality": "Distrito de prueba",
+            "problem": "Información legislativa dispersa",
+            "proposal": "Publicar un informe mensual de iniciativas y votaciones",
+            "desired_action": "Consulta el plan y envía tus preguntas",
+            "disclosure": "Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            "legal_review_status": "approved",
+            "evidence_claims": [
+                {
+                    "statement": "La propuesta incluye un informe mensual.",
+                    "source": "Plan legislativo de prueba",
+                    "locator": "sección 4",
+                    "verification_status": "verified",
+                }
+            ],
+        }
+        app = self.app(
+            lambda request: calls.append(request),
+            enabled=True,
+            political_enabled=False,
+        )
+        with TestClient(app) as client:
+            csrf = open_session(client)
+            created = client.post(
+                "/api/v1/runs",
+                json=political_brief,
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "political-independent-run-001",
+                },
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            run = created.json()
+            approved = client.post(
+                "/api/v1/runs/{}/greenlight/approve".format(run["run_id"]),
+                json={"reviewer": "publication-admin", "note": "editorial approved"},
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "political-independent-greenlight-001",
+                },
+            )
+            self.assertEqual(approved.status_code, 200, approved.text)
+            completed = approved.json()
+            copy_deck = next(
+                item for item in completed["artifacts"] if item["kind"] == "copy_deck"
+            )
+            response = client.post(
+                "/api/v1/runs/{}/social-publications/x".format(run["run_id"]),
+                json=self.publication_body(completed, copy_deck),
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "political-independent-effect-001",
+                },
+            )
+        self.assertEqual(response.status_code, 409, response.text)
+        self.assertEqual(response.json()["code"], "political_publication_disabled")
+        self.assertEqual(calls, [])
 
     def test_x_publication_is_exact_once_and_server_derives_approved_copy(self):
         calls = []

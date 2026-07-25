@@ -100,6 +100,7 @@ model_existing_secret            = "ai-native-content-agency-model"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
 social_publication_enabled         = false
+political_publication_enabled      = false
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -208,6 +209,7 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
 assert 'runtime.social.publicationEnabled' in serialized
+assert 'runtime.social.politicalPublicationEnabled' in serialized
 assert 'runtime.model.executionEnabled' in serialized
 assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'false' in serialized.lower()
@@ -359,6 +361,7 @@ model_existing_secret            = "ai-native-content-agency-model"
 social_existing_secret           = "ai-native-content-agency-social"
 social_bootstrap_tenant_id        = "tenant-alpha"
 social_publication_enabled         = false
+political_publication_enabled      = false
 x_consumer_key_secret_key        = "x-consumer-key"
 x_consumer_secret_secret_key     = "x-consumer-secret"
 x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels/x/oauth/callback"
@@ -387,6 +390,7 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     plan = json.load(handle)
 serialized = json.dumps(plan, sort_keys=True)
 assert 'runtime.social.publicationEnabled' in serialized
+assert 'runtime.social.politicalPublicationEnabled' in serialized
 assert 'runtime.model.executionEnabled' in serialized
 assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'false' in serialized.lower()

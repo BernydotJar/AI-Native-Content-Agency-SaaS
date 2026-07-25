@@ -189,56 +189,6 @@ class SQLiteSocialOAuthStore:
                 )
             return _state_from_mapping({**dict(row), "consumed_at": consumed_at})
 
-    def consume_pending_state(
-        self,
-        *,
-        tenant_id: str,
-        session_id: str,
-        channel_id: str,
-        provider_token_digest: Optional[str],
-    ) -> SocialOAuthStateRecord:
-        _validate_pending_lookup(
-            tenant_id, session_id, channel_id, provider_token_digest
-        )
-        consumed_at = self._clock()
-        with self._lock, self._connection:
-            rows = self._connection.execute(
-                """
-                SELECT * FROM social_oauth_states
-                WHERE tenant_id = ? AND session_id = ? AND channel_id = ?
-                  AND ((provider_token_digest IS NULL AND ? IS NULL)
-                       OR provider_token_digest = ?)
-                  AND consumed_at IS NULL AND expires_at > ?
-                ORDER BY created_at DESC
-                LIMIT 2
-                """,
-                (
-                    tenant_id,
-                    session_id,
-                    channel_id,
-                    provider_token_digest,
-                    provider_token_digest,
-                    consumed_at,
-                ),
-            ).fetchall()
-            if len(rows) != 1:
-                raise SocialOAuthStateUnavailableError(
-                    "social OAuth pending state is unavailable or ambiguous"
-                )
-            row = rows[0]
-            cursor = self._connection.execute(
-                """
-                UPDATE social_oauth_states SET consumed_at = ?
-                WHERE state_id = ? AND consumed_at IS NULL
-                """,
-                (consumed_at, row["state_id"]),
-            )
-            if cursor.rowcount != 1:
-                raise SocialOAuthStateUnavailableError(
-                    "social OAuth pending state is unavailable"
-                )
-            return _state_from_mapping({**dict(row), "consumed_at": consumed_at})
-
     def upsert_connection(self, record: SocialConnectionRecord) -> None:
         _validate_connection(record)
         with self._lock, self._connection:
@@ -421,22 +371,6 @@ def _validate_lookup(
         raise ValueError("provider token digest is invalid")
 
 
-def _validate_pending_lookup(
-    tenant_id: str,
-    session_id: str,
-    channel_id: str,
-    provider_token_digest: Optional[str],
-) -> None:
-    if not _IDENTIFIER.fullmatch(tenant_id) or not _IDENTIFIER.fullmatch(session_id):
-        raise ValueError("social OAuth identity is invalid")
-    if not _CHANNEL.fullmatch(channel_id):
-        raise ValueError("social OAuth pending lookup is invalid")
-    if provider_token_digest is not None and not _SHA256.fullmatch(
-        provider_token_digest
-    ):
-        raise ValueError("provider token digest is invalid")
-
-
 def _validate_tenant_channel(tenant_id: str, channel_id: str) -> None:
     if not _IDENTIFIER.fullmatch(tenant_id) or not _CHANNEL.fullmatch(channel_id):
         raise ValueError("social connection identity is invalid")
@@ -572,61 +506,6 @@ class PostgresSocialOAuthStore:
             ).fetchone()
         if row is None:
             raise SocialOAuthStateUnavailableError("social OAuth state is unavailable")
-        return _state_from_mapping(row)
-
-    def consume_pending_state(
-        self,
-        *,
-        tenant_id: str,
-        session_id: str,
-        channel_id: str,
-        provider_token_digest: Optional[str],
-    ) -> SocialOAuthStateRecord:
-        _validate_pending_lookup(
-            tenant_id, session_id, channel_id, provider_token_digest
-        )
-        consumed_at = self._clock()
-        with self._database.pool.connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT state_id
-                FROM public.social_oauth_states
-                WHERE tenant_id = %s AND session_id = %s AND channel_id = %s
-                  AND ((provider_token_digest IS NULL AND %s::text IS NULL)
-                       OR provider_token_digest = %s::text)
-                  AND consumed_at IS NULL AND expires_at > %s
-                ORDER BY created_at DESC
-                LIMIT 2
-                FOR UPDATE
-                """,
-                (
-                    tenant_id,
-                    session_id,
-                    channel_id,
-                    provider_token_digest,
-                    provider_token_digest,
-                    consumed_at,
-                ),
-            ).fetchall()
-            if len(rows) != 1:
-                raise SocialOAuthStateUnavailableError(
-                    "social OAuth pending state is unavailable or ambiguous"
-                )
-            row = connection.execute(
-                """
-                UPDATE public.social_oauth_states
-                SET consumed_at = %s
-                WHERE state_id = %s AND consumed_at IS NULL
-                RETURNING state_id, tenant_id, session_id, channel_id,
-                          state_digest, provider_token_digest, encrypted_payload,
-                          key_id, created_at, expires_at, consumed_at
-                """,
-                (consumed_at, rows[0]["state_id"]),
-            ).fetchone()
-        if row is None:
-            raise SocialOAuthStateUnavailableError(
-                "social OAuth pending state is unavailable"
-            )
         return _state_from_mapping(row)
 
     def upsert_connection(self, record: SocialConnectionRecord) -> None:
