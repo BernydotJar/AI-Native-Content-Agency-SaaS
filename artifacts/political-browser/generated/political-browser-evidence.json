@@ -1,0 +1,103 @@
+{
+  "runId": "run-6f3d9aff8787aa25",
+  "legalReviewer": "legal.reviewer@browser.test",
+  "greenlightApprover": "greenlight.approver@browser.test",
+  "reviewerSeparation": true,
+  "complianceRecordIncludedInGreenlight": true,
+  "wrongPhraseBlocked": true,
+  "providerCallsBeforeConfirmation": 0,
+  "providerCallsAfterConfirmation": 1,
+  "durableIntentCount": 1,
+  "durableStatus": "succeeded",
+  "rawConfirmationPersisted": false,
+  "providerTransport": "mock_only",
+  "copyVariant": {
+    "body": "Candidatura técnica de prueba propone: Publicar un tablero mensual verificable\n\nFuente: Documento técnico de prueba (Sección 1).\n\nPrueba técnica; no corresponde a una campaña electoral.",
+    "candidate": "Candidatura técnica de prueba",
+    "claim_map": [
+      "claim-47358e5e93d8d5bb0beae646"
+    ],
+    "cta": "Consultar la metodología y enviar observaciones",
+    "hook": "¿Cómo puede el Municipio de prueba rendir cuentas con información clara?",
+    "language": "es-GT",
+    "office": "alcalde"
+  },
+  "critique": {
+    "decision": "pass",
+    "publicationEligible": true,
+    "checks": [
+      {
+        "name": "sandbox_only",
+        "passed": true
+      },
+      {
+        "name": "human_greenlight_required",
+        "passed": true
+      },
+      {
+        "name": "publisher_not_run",
+        "passed": true
+      },
+      {
+        "name": "media_not_rendered",
+        "passed": true
+      },
+      {
+        "name": "language_consistency",
+        "passed": true
+      },
+      {
+        "name": "office_message_alignment",
+        "passed": true
+      },
+      {
+        "name": "evidence_verified",
+        "passed": true
+      },
+      {
+        "name": "evidence_coverage",
+        "passed": true
+      },
+      {
+        "name": "source_visibility",
+        "passed": true
+      },
+      {
+        "name": "office_relevance",
+        "passed": true
+      },
+      {
+        "name": "disclosure_present",
+        "passed": true
+      },
+      {
+        "name": "legal_review_approved",
+        "passed": true
+      },
+      {
+        "name": "unsupported_promotion_absent",
+        "passed": true
+      },
+      {
+        "name": "legal_review_gate_present",
+        "passed": true
+      }
+    ],
+    "limitations": [
+      "language_consistency validates the declared locale and deterministic copy rules; it is not full linguistic review",
+      "source visibility does not independently prove source authenticity",
+      "jurisdiction-specific legal review remains an external human gate"
+    ]
+  },
+  "artifactKinds": [
+    "mission_charter",
+    "research_dossier",
+    "channel_strategy",
+    "growth_forecast",
+    "copy_deck",
+    "media_plan",
+    "risk_report",
+    "political_compliance_record",
+    "campaign_package"
+  ]
+}

@@ -434,6 +434,20 @@ describe("CampaignOutputPanel", () => {
     ).toHaveAttribute("href", "https://www.instagram.com/p/post-001/");
   });
 
+  it("shows progress instead of a false Writer error while the run is still executing", () => {
+    const running = {
+      ...RUN,
+      status: "running" as const,
+      artifacts: RUN.artifacts.filter((artifact) => artifact.kind !== "copy_deck"),
+      greenlight: null,
+    };
+
+    render(<CampaignOutputPanel run={running} socialChannels={[]} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/copy todavía se está generando/i);
+    expect(screen.queryByText(/Writer no produjo un copy deck/i)).not.toBeInTheDocument();
+  });
+
   it("shows a bounded empty state before a run exists", () => {
     render(<CampaignOutputPanel run={null} />);
     expect(screen.getByText(/Todavía no hay posts/i)).toBeInTheDocument();
