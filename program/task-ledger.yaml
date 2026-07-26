@@ -1574,6 +1574,8 @@
         "deployment/release"
       ],
       "implementation_commit": "4d0bc7472c6b4d9d2719f5275028f35de4341463",
+      "merge_commit": "0b43be4f9b46d5ff7b272efca961d07db3a97433",
+      "merged_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/17",
       "objective": "Browser-observe the complete political authority journey, repair reproducible UX defects and enforce office-specific political messaging without real provider effects.",
       "prohibited_paths": [
         "real provider publication",
@@ -1581,7 +1583,7 @@
         "cloud apply or paid-media spend",
         "force push or protected-branch mutation"
       ],
-      "publication_state": "EXACT_REMOTE_CI_PASS_EXTERNAL_EFFECTS_DISABLED",
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         ".env.local",
         ".local/**"

@@ -99,3 +99,13 @@ INC-024 is suitable for a feature-branch checkpoint and remote exact-head evalua
 - OCI, Helm, Terraform, supply chain, workflow lint and Python locks: PASS.
 
 INC-024 is `done` at increment level. External social/political effects remain disabled and no live provider call occurred.
+
+## Merge receipt
+
+- PR: `#17`
+- Verified head: `ca10003d5337715ffb880a38651b7317cfa23055`
+- Final exact-head workflow: `30188788859`, 8/8 SUCCESS
+- Merge commit: `0b43be4f9b46d5ff7b272efca961d07db3a97433`
+- Merge method: normal merge commit
+- External effects: disabled
+- Global decisions: `DENY_RELEASE` / `DENY_APPLY`
