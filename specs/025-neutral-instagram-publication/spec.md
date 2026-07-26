@@ -44,3 +44,9 @@ The investigation found that the publication client differed from Meta's current
 Provider messages, response bodies, tokens, captions and media capability URLs are not logged. A later attempt must use a new operation, run and idempotency binding; the failed intent is never retried.
 
 The second governed attempt used the versioned multipart contract and a distinct run, but Meta again rejected before a container ID was recorded. Its switches were closed automatically and no post exists. Because the runtime restart replaced the transient log, INC-025 now persists the bounded safe rejection tuple in the durable intent failure reason before any further attempt.
+
+## Token health blocker
+
+Attempt `004` preserved the safe provider tuple `instagram_container_create / HTTP 401 / code 190 / OAuthException` and no container or post ID. Two separate read-only identity probes, one against the unversioned profile route and one against the pinned Graph version, returned the same `401 / 190` result. This proves the stored Instagram User access token is invalid or expired rather than a media, caption or publish-parameter defect.
+
+No further publication attempt is permitted until a fresh interactive OAuth flow succeeds. The callback must exchange the authorization-code token for a long-lived Instagram User token, persist its expiry, verify the profile with that long-lived token and force the UI back to `not_connected` when Meta later returns code `190`.
