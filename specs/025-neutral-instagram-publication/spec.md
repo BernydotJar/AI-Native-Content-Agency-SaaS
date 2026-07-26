@@ -42,3 +42,5 @@ The investigation found that the publication client differed from Meta's current
 - captures only safe structured rejection metadata: phase, HTTP status, provider code, subcode and error type.
 
 Provider messages, response bodies, tokens, captions and media capability URLs are not logged. A later attempt must use a new operation, run and idempotency binding; the failed intent is never retried.
+
+The second governed attempt used the versioned multipart contract and a distinct run, but Meta again rejected before a container ID was recorded. Its switches were closed automatically and no post exists. Because the runtime restart replaced the transient log, INC-025 now persists the bounded safe rejection tuple in the durable intent failure reason before any further attempt.

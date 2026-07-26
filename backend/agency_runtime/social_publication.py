@@ -273,8 +273,11 @@ class SocialPublicationAuthority:
                     tokens,
                     expected_username=connection.account_username,
                 )
-        except SocialPublicationProviderRejectedError:
-            self._mark_failed(reservation.intent, "provider_rejected")
+        except SocialPublicationProviderRejectedError as error:
+            self._mark_failed(
+                reservation.intent,
+                _provider_rejection_failure_reason(error),
+            )
             raise
         except SocialPublicationUnknownError:
             self._mark_unknown(reservation.intent, "provider_outcome_unknown")
@@ -689,6 +692,20 @@ def _safe_diagnostic_token(
     if any(character not in allowed for character in rendered):
         return fallback
     return rendered
+
+
+def _provider_rejection_failure_reason(
+    error: SocialPublicationProviderRejectedError,
+) -> str:
+    parts = [
+        "provider_rejected",
+        error.phase or "provider",
+        str(error.status_code or 0),
+        error.provider_code or "none",
+        error.provider_subcode or "none",
+        error.error_type or "none",
+    ]
+    return ":".join(parts)[:128]
 
 
 def _provider_rejection_metadata(response: httpx.Response) -> dict[str, str]:

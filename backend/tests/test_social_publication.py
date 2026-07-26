@@ -233,6 +233,10 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         self.assertNotIn(X_ACCESS_TOKEN, str(rejected.exception))
         stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
         self.assertEqual(stored.status, "failed")
+        self.assertEqual(
+            stored.failure_reason,
+            "provider_rejected:x_post_create:400:none:none:none",
+        )
         with self.assertRaises(SocialPublicationBlockedError) as blocked:
             authority.execute(command())
         self.assertEqual(blocked.exception.status, "failed")
@@ -267,6 +271,11 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         self.assertEqual(error.provider_code, "100")
         self.assertEqual(error.provider_subcode, "2207052")
         self.assertEqual(error.error_type, "OAuthException")
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(
+            stored.failure_reason,
+            "provider_rejected:instagram_container_create:400:100:2207052:OAuthException",
+        )
         serialized = repr(error.__dict__)
         self.assertNotIn(leaked_message, serialized)
         self.assertNotIn(IG_ACCESS_TOKEN, serialized)

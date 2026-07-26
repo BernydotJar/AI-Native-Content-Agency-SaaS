@@ -1,6 +1,6 @@
 {
   "schema": "neutral-instagram-publication.v1",
-  "phase": "approved_ready_for_execution",
+  "phase": "provider_rejected_no_post",
   "operation_id": "inc025-neutral-instagram-003",
   "prepared_at": "2026-07-26T05:52:02+00:00",
   "execute_before": "2026-07-26T06:22:02+00:00",
@@ -49,7 +49,8 @@
     "raw_value_persisted": false
   },
   "provider_effects": {
-    "attempted": 0,
+    "attempted": 1,
     "completed": 0
-  }
+  },
+  "attempt_receipt_file": "attempt-receipt.json"
 }
