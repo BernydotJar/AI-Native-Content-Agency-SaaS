@@ -162,7 +162,7 @@ class SocialOAuthServiceTests(unittest.TestCase):
                     },
                 )
             if request.url.path == "/access_token":
-                self.assertEqual(request.method, "POST")
+                self.assertEqual(request.method, "GET")
                 self.assertEqual(request.content, b"")
                 self.assertEqual(
                     request.headers["Authorization"],
@@ -223,6 +223,110 @@ class SocialOAuthServiceTests(unittest.TestCase):
         raw = self.path.read_bytes()
         self.assertNotIn(b"instagram-short-token", raw)
         self.assertNotIn(b"instagram-long-token", raw)
+
+    def test_instagram_initial_long_lived_token_skips_extension_request(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.url.host == "api.instagram.com":
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "already-long-token",
+                        "user_id": 89,
+                        "expires_in": 5_184_000,
+                    },
+                )
+            if request.url.path == "/v24.0/me":
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer already-long-token",
+                )
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "89",
+                        "username": "long.professional",
+                        "account_type": "BUSINESS",
+                    },
+                )
+            raise AssertionError("extension request must be skipped")
+
+        state = "instagram-state-value-000000000000000000000011"
+        service = self.service(handler, states=(state,))
+        service.start(
+            tenant_id="tenant-alpha",
+            session_id="session-alpha",
+            channel_id="instagram",
+        )
+        connected = service.complete_instagram(
+            tenant_id="tenant-alpha",
+            session_id="session-alpha",
+            state_value=state,
+            code="code-already-long-lived",
+        )
+        self.assertEqual(connected.account_username, "long.professional")
+        self.assertEqual(connected.token_expires_at, "2026-09-21T07:00:00+00:00")
+        self.assertEqual(len(calls), 2)
+        raw = self.path.read_bytes()
+        self.assertNotIn(b"already-long-token", raw)
+
+    def test_instagram_unsupported_long_lived_exchange_uses_bounded_short_token(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.url.host == "api.instagram.com":
+                return httpx.Response(
+                    200,
+                    json={"access_token": "bounded-short-token", "user_id": 88},
+                )
+            if request.url.path == "/access_token":
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "type": "IGApiException",
+                            "code": 100,
+                            "message": "must not be surfaced",
+                        }
+                    },
+                )
+            if request.url.path == "/v24.0/me":
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer bounded-short-token",
+                )
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "88",
+                        "username": "bounded.professional",
+                        "account_type": "BUSINESS",
+                    },
+                )
+            raise AssertionError("unexpected request {}".format(request.url))
+
+        state = "instagram-state-value-000000000000000000000010"
+        service = self.service(handler, states=(state,))
+        service.start(
+            tenant_id="tenant-alpha",
+            session_id="session-alpha",
+            channel_id="instagram",
+        )
+        connected = service.complete_instagram(
+            tenant_id="tenant-alpha",
+            session_id="session-alpha",
+            state_value=state,
+            code="code-unsupported-long-lived",
+        )
+        self.assertEqual(connected.account_username, "bounded.professional")
+        self.assertEqual(connected.token_expires_at, "2026-07-23T07:55:00+00:00")
+        self.assertEqual(len(calls), 3)
+        raw = self.path.read_bytes()
+        self.assertNotIn(b"bounded-short-token", raw)
+        self.assertNotIn(b"must not be surfaced", raw)
 
     def test_instagram_long_lived_exchange_is_required_before_connection(self):
         calls = []

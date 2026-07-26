@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import secrets
 import time
 from dataclasses import dataclass
@@ -29,6 +30,9 @@ TokenFactory = Callable[[], str]
 TimestampFactory = Callable[[], int]
 _MAX_RESPONSE_BYTES = 1024 * 1024
 _STATE_TTL_SECONDS = 600
+_SHORT_LIVED_FALLBACK_TTL_SECONDS = 3300
+_LONG_LIVED_TOKEN_MIN_SECONDS = 86400
+OAUTH_LOGGER = logging.getLogger("agency_runtime.social_oauth")
 _X_REQUEST_TOKEN_URL = "https://api.x.com/oauth/request_token"
 _X_AUTHORIZE_URL = "https://api.x.com/oauth/authorize"
 _X_ACCESS_TOKEN_URL = "https://api.x.com/oauth/access_token"
@@ -290,25 +294,47 @@ class SocialOAuthService:
         token_payload = _json_object(response)
         short_lived_access_token = _required_text(token_payload, "access_token")
         token_user_id = _optional_text(token_payload, "user_id")
-        long_lived_response = self._bounded_request(
-            "POST",
-            _INSTAGRAM_LONG_LIVED_TOKEN_URL,
-            phase="instagram_long_lived_token_exchange",
-            params={
-                "grant_type": "ig_exchange_token",
-                "client_secret": app_secret,
-            },
-            headers={
-                "Accept": "application/json",
-                "Accept-Encoding": "identity",
-                "Authorization": "Bearer {}".format(short_lived_access_token),
-                "Connection": "close",
-            },
-            timeout=httpx.Timeout(60.0, connect=10.0),
-        )
-        long_lived_payload = _json_object(long_lived_response)
-        access_token = _required_text(long_lived_payload, "access_token")
-        expires_in = _required_token_lifetime(long_lived_payload)
+        initial_expires_in = _optional_token_lifetime(token_payload)
+        if initial_expires_in is not None and initial_expires_in >= _LONG_LIVED_TOKEN_MIN_SECONDS:
+            access_token = short_lived_access_token
+            expires_in = initial_expires_in
+        else:
+            try:
+                long_lived_response = self._bounded_request(
+                    "GET",
+                    _INSTAGRAM_LONG_LIVED_TOKEN_URL,
+                    phase="instagram_long_lived_token_exchange",
+                    params={
+                        "grant_type": "ig_exchange_token",
+                        "client_secret": app_secret,
+                    },
+                    headers={
+                        "Accept": "application/json",
+                        "Accept-Encoding": "identity",
+                        "Authorization": "Bearer {}".format(short_lived_access_token),
+                        "Connection": "close",
+                    },
+                    timeout=httpx.Timeout(60.0, connect=10.0),
+                )
+            except SocialOAuthProviderError as error:
+                if not _is_unsupported_instagram_long_lived_exchange(error):
+                    raise
+                access_token = short_lived_access_token
+                expires_in = min(
+                    initial_expires_in or _SHORT_LIVED_FALLBACK_TTL_SECONDS,
+                    _SHORT_LIVED_FALLBACK_TTL_SECONDS,
+                )
+                OAUTH_LOGGER.warning(
+                    "instagram_oauth_short_lived_fallback lifetime_seconds=%s provider_status=%s provider_code=%s provider_error_type=%s",
+                    expires_in,
+                    error.status_code or 0,
+                    error.provider_code or "none",
+                    error.provider_error_type or "none",
+                )
+            else:
+                long_lived_payload = _json_object(long_lived_response)
+                access_token = _required_text(long_lived_payload, "access_token")
+                expires_in = _required_token_lifetime(long_lived_payload)
         profile_response = self._bounded_request(
             "GET",
             "{}/me".format(self._instagram_graph_base),
@@ -683,6 +709,29 @@ def _normalize_graph_api_version(value: str) -> str:
     ):
         raise ValueError("Instagram Graph API version must use the vN.N format")
     return normalized
+
+
+def _optional_token_lifetime(payload: Mapping[str, object]) -> Optional[int]:
+    value = payload.get("expires_in")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SocialOAuthProviderError("social provider response is invalid")
+    if value < 60 or value > 10_000_000:
+        raise SocialOAuthProviderError("social provider response is invalid")
+    return value
+
+
+def _is_unsupported_instagram_long_lived_exchange(
+    error: SocialOAuthProviderError,
+) -> bool:
+    return (
+        error.phase == "instagram_long_lived_token_exchange"
+        and error.reason == "rejected"
+        and error.status_code == 400
+        and error.provider_code == "100"
+        and error.provider_error_type == "IGApiException"
+    )
 
 
 def _required_token_lifetime(payload: Mapping[str, object]) -> int:

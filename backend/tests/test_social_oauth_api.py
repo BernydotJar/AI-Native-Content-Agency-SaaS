@@ -214,7 +214,7 @@ class SocialOAuthApiTests(unittest.TestCase):
                     },
                 )
             if request.url.path == "/access_token":
-                self.assertEqual(request.method, "POST")
+                self.assertEqual(request.method, "GET")
                 self.assertEqual(request.content, b"")
                 self.assertEqual(
                     request.headers["Authorization"],
@@ -304,6 +304,87 @@ class SocialOAuthApiTests(unittest.TestCase):
             self.assertNotIn(b"instagram-short-token", raw)
             self.assertNotIn(b"instagram-long-token", raw)
 
+    def test_instagram_unsupported_long_lived_exchange_connects_with_bounded_token(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.url.host == "api.instagram.com":
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "bounded-short-token",
+                        "user_id": 321,
+                    },
+                )
+            if request.url.path == "/access_token":
+                self.assertEqual(request.method, "GET")
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer bounded-short-token",
+                )
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "type": "IGApiException",
+                            "code": 100,
+                            "message": "must never reach the browser",
+                        }
+                    },
+                )
+            if request.url.path == "/v24.0/me":
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer bounded-short-token",
+                )
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "321",
+                        "username": "bounded.instagram",
+                        "account_type": "BUSINESS",
+                    },
+                )
+            raise AssertionError("unexpected request {}".format(request.url))
+
+        app = self.app(handler)
+        with TestClient(app, follow_redirects=False) as client:
+            csrf = open_session(client, ADMIN_KEY)
+            start = client.post(
+                "/api/v1/social-channels/instagram/oauth/start",
+                headers={"X-CSRF-Token": csrf},
+            )
+            state = parse_qs(urlsplit(start.json()["authorization_url"]).query)["state"][0]
+            callback = client.get(
+                "/api/v1/social-channels/instagram/oauth/callback",
+                params={"state": state, "code": "instagram-code"},
+            )
+            self.assertEqual(callback.status_code, 303)
+            self.assertEqual(
+                callback.headers["location"],
+                "/?social_channel=instagram&status=connected",
+            )
+            channel = client.get(
+                "/api/v1/social-channels/instagram"
+            ).json()["channel"]
+            self.assertEqual(channel["connection_state"], "connected")
+            self.assertEqual(
+                channel["connected_account"]["account_username"],
+                "bounded.instagram",
+            )
+            connected_at = datetime.fromisoformat(
+                channel["connected_account"]["connected_at"]
+            )
+            expires_at = datetime.fromisoformat(
+                channel["connected_account"]["token_expires_at"]
+            )
+            self.assertEqual((expires_at - connected_at).total_seconds(), 3300)
+            self.assertEqual(len(calls), 3)
+            raw = self.database.read_bytes()
+            self.assertNotIn(b"bounded-short-token", raw)
+            self.assertNotIn(b"must never reach the browser", raw)
+
     def test_instagram_long_lived_rejection_returns_phase_specific_redirect(self):
         calls = []
 
@@ -318,7 +399,7 @@ class SocialOAuthApiTests(unittest.TestCase):
                     },
                 )
             if request.url.path == "/access_token":
-                self.assertEqual(request.method, "POST")
+                self.assertEqual(request.method, "GET")
                 self.assertEqual(
                     request.headers["Authorization"],
                     "Bearer instagram-short-token",
