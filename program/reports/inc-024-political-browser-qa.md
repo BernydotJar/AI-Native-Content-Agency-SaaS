@@ -87,3 +87,15 @@ Not yet observed on this SHA:
 ## Decision
 
 INC-024 is suitable for a feature-branch checkpoint and remote exact-head evaluation. It remains `review`. External publication and the global release remain denied.
+
+## Exact-head CI receipt
+
+- Head: `eb4481c89bab440daa25b11e49799a47a276b194`
+- Workflow: `production-readiness`
+- Run: `30188644229`
+- Result: 8/8 SUCCESS
+- Installed-wheel political browser: PASS
+- PostgreSQL shared-state: PASS after one Docker Hub service-image retry; the first attempt timed out before checkout or project code.
+- OCI, Helm, Terraform, supply chain, workflow lint and Python locks: PASS.
+
+INC-024 is `done` at increment level. External social/political effects remain disabled and no live provider call occurred.
