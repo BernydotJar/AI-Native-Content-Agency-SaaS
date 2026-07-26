@@ -34,7 +34,8 @@ _X_AUTHORIZE_URL = "https://api.x.com/oauth/authorize"
 _X_ACCESS_TOKEN_URL = "https://api.x.com/oauth/access_token"
 _INSTAGRAM_AUTHORIZE_URL = "https://www.instagram.com/oauth/authorize"
 _INSTAGRAM_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
-_INSTAGRAM_PROFILE_URL = "https://graph.instagram.com/me"
+_INSTAGRAM_GRAPH_ROOT = "https://graph.instagram.com"
+_INSTAGRAM_LONG_LIVED_TOKEN_URL = "https://graph.instagram.com/access_token"
 _PROFESSIONAL_ACCOUNT_TYPES = frozenset({"BUSINESS", "CREATOR", "MEDIA_CREATOR"})
 
 
@@ -116,9 +117,13 @@ class SocialOAuthService:
         oauth_nonce_factory: TokenFactory = lambda: secrets.token_urlsafe(18),
         timestamp_factory: TimestampFactory = lambda: int(time.time()),
         timeout_seconds: float = 20.0,
+        instagram_graph_api_version: str = "v24.0",
     ) -> None:
         if timeout_seconds < 1 or timeout_seconds > 120:
             raise ValueError("social OAuth timeout must be between 1 and 120 seconds")
+        normalized_graph_version = _normalize_graph_api_version(
+            instagram_graph_api_version
+        )
         self._registry = registry
         self._store = store
         self._cipher = cipher
@@ -126,6 +131,10 @@ class SocialOAuthService:
         self._token_factory = token_factory
         self._oauth_nonce_factory = oauth_nonce_factory
         self._timestamp_factory = timestamp_factory
+        self._instagram_graph_base = "{}/{}".format(
+            _INSTAGRAM_GRAPH_ROOT,
+            normalized_graph_version,
+        )
         self._client = httpx.Client(
             transport=transport,
             timeout=httpx.Timeout(timeout_seconds),
@@ -273,11 +282,31 @@ class SocialOAuthService:
             timeout=httpx.Timeout(60.0, connect=10.0),
         )
         token_payload = _json_object(response)
-        access_token = _required_text(token_payload, "access_token")
+        short_lived_access_token = _required_text(token_payload, "access_token")
         token_user_id = _optional_text(token_payload, "user_id")
+        long_lived_response = self._bounded_request(
+            "POST",
+            _INSTAGRAM_LONG_LIVED_TOKEN_URL,
+            phase="instagram_long_lived_token_exchange",
+            data={
+                "grant_type": "ig_exchange_token",
+                "client_secret": app_secret,
+                "access_token": short_lived_access_token,
+            },
+            headers={
+                "Accept": "application/json",
+                "Accept-Encoding": "identity",
+                "Connection": "close",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout=httpx.Timeout(60.0, connect=10.0),
+        )
+        long_lived_payload = _json_object(long_lived_response)
+        access_token = _required_text(long_lived_payload, "access_token")
+        expires_in = _required_token_lifetime(long_lived_payload)
         profile_response = self._bounded_request(
             "GET",
-            _INSTAGRAM_PROFILE_URL,
+            "{}/me".format(self._instagram_graph_base),
             phase="instagram_profile",
             params={"fields": "id,username,account_type,user_id"},
             headers={"Authorization": "Bearer {}".format(access_token)},
@@ -290,14 +319,9 @@ class SocialOAuthService:
             raise SocialOAuthCallbackError(
                 "Instagram account must be Professional (Business or Creator)"
             )
-        expires_in = token_payload.get("expires_in")
-        expires_at = None
-        if expires_in is not None:
-            if not isinstance(expires_in, int) or expires_in < 60 or expires_in > 10_000_000:
-                raise SocialOAuthProviderError("Instagram token response is invalid")
-            expires_at = (
-                _as_datetime(self._clock()) + timedelta(seconds=expires_in)
-            ).isoformat()
+        expires_at = (
+            _as_datetime(self._clock()) + timedelta(seconds=expires_in)
+        ).isoformat()
         now = self._clock()
         encrypted = self._cipher.encrypt(
             {"access_token": access_token},
@@ -609,6 +633,35 @@ def _state_aad(tenant_id: str, channel_id: str, state_id: str) -> str:
 
 def _connection_aad(tenant_id: str, channel_id: str) -> str:
     return "{}:{}:connection".format(tenant_id, channel_id)
+
+
+def _normalize_graph_api_version(value: str) -> str:
+    normalized = value.strip().lower()
+    parts = normalized.removeprefix("v").split(".")
+    if (
+        not normalized.startswith("v")
+        or len(parts) != 2
+        or not all(part.isdigit() for part in parts)
+        or len(normalized) > 16
+    ):
+        raise ValueError("Instagram Graph API version must use the vN.N format")
+    return normalized
+
+
+def _required_token_lifetime(payload: Mapping[str, object]) -> int:
+    value = payload.get("expires_in")
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or value < 86_400
+        or value > 10_000_000
+    ):
+        raise SocialOAuthProviderError(
+            "Instagram long-lived token response is invalid",
+            phase="instagram_long_lived_token_exchange",
+            reason="invalid_response",
+        )
+    return value
 
 
 def _as_datetime(value: str) -> datetime:

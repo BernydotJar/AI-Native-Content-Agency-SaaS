@@ -49,7 +49,22 @@ class SocialPublicationBlockedError(SocialPublicationError):
 
 
 class SocialPublicationProviderRejectedError(SocialPublicationError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        phase: str = "provider",
+        status_code: int = 0,
+        provider_code: str = "",
+        provider_subcode: str = "",
+        error_type: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.phase = _safe_diagnostic_token(phase, fallback="provider", max_length=64)
+        self.status_code = status_code if 100 <= status_code <= 599 else 0
+        self.provider_code = _safe_numeric_code(provider_code)
+        self.provider_subcode = _safe_numeric_code(provider_subcode)
+        self.error_type = _safe_diagnostic_token(error_type, fallback="", max_length=128)
 
 
 class SocialPublicationUnknownError(SocialPublicationError):
@@ -148,6 +163,7 @@ class SocialPublicationAuthority:
         timeout_seconds: float = 20.0,
         instagram_container_poll_attempts: int = 12,
         instagram_container_poll_interval_seconds: float = 5.0,
+        instagram_graph_api_version: str = "v24.0",
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if timeout_seconds < 1 or timeout_seconds > 120:
@@ -159,6 +175,15 @@ class SocialPublicationAuthority:
             or instagram_container_poll_interval_seconds > 60
         ):
             raise ValueError("Instagram container poll interval must be between 0 and 60 seconds")
+        normalized_graph_version = instagram_graph_api_version.strip().lower()
+        version_parts = normalized_graph_version.removeprefix("v").split(".")
+        if (
+            not normalized_graph_version.startswith("v")
+            or len(version_parts) != 2
+            or not all(part.isdigit() for part in version_parts)
+            or len(normalized_graph_version) > 16
+        ):
+            raise ValueError("Instagram Graph API version must use the vN.N format")
         self._store = store
         self._connection_store = connection_store
         self._cipher = cipher
@@ -171,6 +196,10 @@ class SocialPublicationAuthority:
         self._instagram_container_poll_attempts = instagram_container_poll_attempts
         self._instagram_container_poll_interval_seconds = (
             instagram_container_poll_interval_seconds
+        )
+        self._instagram_graph_base = "{}/{}".format(
+            _INSTAGRAM_GRAPH_BASE,
+            normalized_graph_version,
         )
         self._sleep = sleep
         self._client = httpx.Client(
@@ -203,6 +232,10 @@ class SocialPublicationAuthority:
         if connection is None or connection.account_id != validated.account_id:
             raise SocialPublicationUnavailableError(
                 "authorized social account is not connected"
+            )
+        if _connection_token_expired(connection.token_expires_at, self._clock()):
+            raise SocialPublicationUnavailableError(
+                "connected social credential is expired"
             )
         if validated.channel_id == "x" and (
             not self._x_consumer_key or not self._x_consumer_secret
@@ -244,8 +277,11 @@ class SocialPublicationAuthority:
                     tokens,
                     expected_username=connection.account_username,
                 )
-        except SocialPublicationProviderRejectedError:
-            self._mark_failed(reservation.intent, "provider_rejected")
+        except SocialPublicationProviderRejectedError as error:
+            self._mark_failed(
+                reservation.intent,
+                _provider_rejection_failure_reason(error),
+            )
             raise
         except SocialPublicationUnknownError:
             self._mark_unknown(reservation.intent, "provider_outcome_unknown")
@@ -287,6 +323,7 @@ class SocialPublicationAuthority:
         response = self._request(
             "POST",
             _X_CREATE_POST_URL,
+            phase="x_post_create",
             headers={"Authorization": authorization},
             json={"text": command.content},
         )
@@ -331,13 +368,17 @@ class SocialPublicationAuthority:
             )
         authorization = {"Authorization": "Bearer {}".format(access_token)}
         account_base = "{}/{}".format(
-            _INSTAGRAM_GRAPH_BASE, quote(command.account_id, safe="")
+            self._instagram_graph_base, quote(command.account_id, safe="")
         )
         container_response = self._request(
             "POST",
             account_base + "/media",
+            phase="instagram_container_create",
             headers=authorization,
-            data={"image_url": command.media_url, "caption": command.content},
+            files={
+                "image_url": (None, command.media_url),
+                "caption": (None, command.content),
+            },
         )
         container_payload = _json_object(container_response)
         container_id = _required_identifier(container_payload, "id")
@@ -360,8 +401,9 @@ class SocialPublicationAuthority:
         publish_response = self._request(
             "POST",
             account_base + "/media_publish",
+            phase="instagram_media_publish",
             headers=authorization,
-            data={"creation_id": container_id},
+            params={"creation_id": container_id},
         )
         publish_payload = _json_object(publish_response)
         provider_post_id = _required_identifier(publish_payload, "id")
@@ -369,8 +411,9 @@ class SocialPublicationAuthority:
         verification_response = self._request(
             "GET",
             "{}/{}".format(
-                _INSTAGRAM_GRAPH_BASE, quote(provider_post_id, safe="")
+                self._instagram_graph_base, quote(provider_post_id, safe="")
             ),
+            phase="instagram_media_verify",
             headers=authorization,
             params={
                 "fields": (
@@ -410,12 +453,13 @@ class SocialPublicationAuthority:
     ) -> None:
         authorization = {"Authorization": "Bearer {}".format(access_token)}
         url = "{}/{}".format(
-            _INSTAGRAM_GRAPH_BASE, quote(container_id, safe="")
+            self._instagram_graph_base, quote(container_id, safe="")
         )
         for attempt in range(self._instagram_container_poll_attempts):
             response = self._request(
                 "GET",
                 url,
+                phase="instagram_container_status",
                 headers=authorization,
                 params={"fields": "status_code,status"},
             )
@@ -430,7 +474,10 @@ class SocialPublicationAuthority:
                 return
             if status_code in {"ERROR", "EXPIRED"}:
                 raise SocialPublicationProviderRejectedError(
-                    "Instagram rejected the media container"
+                    "Instagram rejected the media container",
+                    phase="instagram_container_status",
+                    status_code=response.status_code,
+                    error_type="container_error",
                 )
             if status_code != "IN_PROGRESS":
                 raise SocialPublicationUnknownError(
@@ -535,7 +582,14 @@ class SocialPublicationAuthority:
             "media_sha256": command.media_hash,
         }
 
-    def _request(self, method: str, url: str, **kwargs: object) -> httpx.Response:
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        phase: str,
+        **kwargs: object,
+    ) -> httpx.Response:
         try:
             with self._client.stream(method, url, **kwargs) as upstream:
                 chunks: list[bytes] = []
@@ -575,8 +629,14 @@ class SocialPublicationAuthority:
                 "social publication outcome is unknown"
             ) from error
         if 400 <= response.status_code < 500:
+            metadata = _provider_rejection_metadata(response)
             raise SocialPublicationProviderRejectedError(
-                "social provider rejected publication"
+                "social provider rejected publication",
+                phase=phase,
+                status_code=response.status_code,
+                provider_code=metadata["provider_code"],
+                provider_subcode=metadata["provider_subcode"],
+                error_type=metadata["error_type"],
             )
         if response.status_code < 200 or response.status_code >= 300:
             raise SocialPublicationUnknownError(
@@ -607,6 +667,88 @@ class SocialPublicationAuthority:
             )
         except SocialPublicationStateError:
             pass
+
+
+def _safe_numeric_code(value: object) -> str:
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, int):
+        rendered = str(value)
+    elif isinstance(value, str):
+        rendered = value.strip()
+    else:
+        return ""
+    return rendered if rendered.isdigit() and len(rendered) <= 32 else ""
+
+
+def _safe_diagnostic_token(
+    value: object,
+    *,
+    fallback: str,
+    max_length: int,
+) -> str:
+    if not isinstance(value, str):
+        return fallback
+    rendered = value.strip()
+    if not rendered or len(rendered) > max_length:
+        return fallback
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    if any(character not in allowed for character in rendered):
+        return fallback
+    return rendered
+
+
+def _connection_token_expired(
+    token_expires_at: Optional[str],
+    now: str,
+) -> bool:
+    if token_expires_at is None:
+        return False
+    try:
+        expires = datetime.fromisoformat(token_expires_at)
+        current = datetime.fromisoformat(now)
+    except ValueError:
+        return True
+    if expires.tzinfo is None or current.tzinfo is None:
+        return True
+    return expires <= current
+
+
+def _provider_rejection_failure_reason(
+    error: SocialPublicationProviderRejectedError,
+) -> str:
+    parts = [
+        "provider_rejected",
+        error.phase or "provider",
+        str(error.status_code or 0),
+        error.provider_code or "none",
+        error.provider_subcode or "none",
+        error.error_type or "none",
+    ]
+    return ":".join(parts)[:128]
+
+
+def _provider_rejection_metadata(response: httpx.Response) -> dict[str, str]:
+    provider_code = ""
+    provider_subcode = ""
+    error_type = ""
+    try:
+        payload = response.json()
+    except (json.JSONDecodeError, ValueError):
+        payload = None
+    if isinstance(payload, Mapping):
+        error = payload.get("error")
+        if isinstance(error, Mapping):
+            provider_code = _safe_numeric_code(error.get("code"))
+            provider_subcode = _safe_numeric_code(error.get("error_subcode"))
+            error_type = _safe_diagnostic_token(
+                error.get("type"), fallback="", max_length=128
+            )
+    return {
+        "provider_code": provider_code,
+        "provider_subcode": provider_subcode,
+        "error_type": error_type,
+    }
 
 
 def _validate_command(command: SocialPublicationCommand) -> SocialPublicationCommand:

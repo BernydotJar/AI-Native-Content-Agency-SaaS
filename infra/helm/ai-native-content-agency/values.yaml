@@ -82,6 +82,7 @@ runtime:
       accountUsernameKey: "x-account-username"
       redirectUri: ""
     instagram:
+      apiVersion: "v24.0"
       appIdKey: "instagram-app-id"
       appSecretKey: "instagram-app-secret"
       accessTokenKey: "instagram-access-token"

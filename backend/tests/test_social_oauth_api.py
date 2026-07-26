@@ -1,5 +1,6 @@
 import base64
 import json
+from datetime import datetime
 import tempfile
 import unittest
 from pathlib import Path
@@ -208,12 +209,28 @@ class SocialOAuthApiTests(unittest.TestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "access_token": "instagram-user-token",
+                        "access_token": "instagram-short-token",
                         "user_id": 123,
-                        "expires_in": 3600,
                     },
                 )
-            if request.url.host == "graph.instagram.com":
+            if request.url.path == "/access_token":
+                self.assertEqual(request.method, "POST")
+                body = request.content.decode("utf-8")
+                self.assertIn("grant_type=ig_exchange_token", body)
+                self.assertIn("access_token=instagram-short-token", body)
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "instagram-long-token",
+                        "token_type": "bearer",
+                        "expires_in": 5_184_000,
+                    },
+                )
+            if request.url.path == "/v24.0/me":
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer instagram-long-token",
+                )
                 return httpx.Response(
                     200,
                     json={
@@ -268,7 +285,18 @@ class SocialOAuthApiTests(unittest.TestCase):
                 channel["connected_account"]["account_username"],
                 "connected.instagram",
             )
-            self.assertEqual(len(calls), 2)
+            connected_at = datetime.fromisoformat(
+                channel["connected_account"]["connected_at"]
+            )
+            expires_at = datetime.fromisoformat(
+                channel["connected_account"]["token_expires_at"]
+            )
+            self.assertGreater((expires_at - connected_at).total_seconds(), 5_000_000)
+            self.assertLessEqual((expires_at - connected_at).total_seconds(), 5_184_000)
+            self.assertEqual(len(calls), 3)
+            raw = self.database.read_bytes()
+            self.assertNotIn(b"instagram-short-token", raw)
+            self.assertNotIn(b"instagram-long-token", raw)
 
     def test_x_rejection_returns_actionable_sanitized_phase(self):
         def rejected(request):
@@ -308,6 +336,32 @@ class SocialOAuthApiTests(unittest.TestCase):
             self.assertEqual(denied.status_code, 400)
             self.assertEqual(denied.json()["code"], "browser_session_required")
 
+
+    def test_expired_instagram_bootstrap_is_present_but_requires_new_oauth(self):
+        bootstrap = environment()
+        bootstrap.update(
+            {
+                "AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID": "tenant-alpha",
+                "AGENCY_INSTAGRAM_ACCESS_TOKEN": "expired-instagram-token",
+                "AGENCY_INSTAGRAM_ACCOUNT_ID": "ig-expired-001",
+                "AGENCY_INSTAGRAM_ACCOUNT_USERNAME": "expired.instagram",
+                "AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT": "2020-01-01T00:00:00+00:00",
+            }
+        )
+        no_http = lambda request: (_ for _ in ()).throw(
+            AssertionError("no provider HTTP")
+        )
+        with TestClient(self.app(no_http, bootstrap)) as client:
+            open_session(client, ADMIN_KEY)
+            channel = client.get(
+                "/api/v1/social-channels/instagram"
+            ).json()["channel"]
+            self.assertEqual(channel["connection_state"], "not_connected")
+            self.assertIsNone(channel["connected_account"])
+            self.assertTrue(channel["oauth_start_available"])
+            self.assertFalse(channel["publishing_available"])
+            self.assertFalse(channel["external_effects_enabled"])
+        self.assertNotIn(b"expired-instagram-token", self.database.read_bytes())
 
     def test_server_side_token_bootstrap_connects_both_channels_without_http(self):
         bootstrap = environment()

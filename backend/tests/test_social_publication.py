@@ -102,7 +102,15 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         self.connection_store.close()
         self.temp.cleanup()
 
-    def _connect(self, channel, account_id, username, tokens):
+    def _connect(
+        self,
+        channel,
+        account_id,
+        username,
+        tokens,
+        *,
+        token_expires_at=None,
+    ):
         encrypted = self.cipher.encrypt(
             tokens,
             associated_data="tenant-alpha:{}:connection".format(channel),
@@ -115,7 +123,7 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                 account_username=username,
                 encrypted_tokens=encrypted,
                 scopes=("publish",),
-                token_expires_at=None,
+                token_expires_at=token_expires_at,
                 connected_at=NOW,
                 updated_at=NOW,
             )
@@ -224,15 +232,63 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
             )
 
         authority = self.authority(handler)
-        with self.assertRaises(SocialPublicationProviderRejectedError):
+        with self.assertRaises(SocialPublicationProviderRejectedError) as rejected:
             authority.execute(command())
+        self.assertEqual(rejected.exception.phase, "x_post_create")
+        self.assertEqual(rejected.exception.status_code, 400)
+        self.assertEqual(rejected.exception.provider_code, "")
+        self.assertNotIn(X_CONSUMER_SECRET, str(rejected.exception))
+        self.assertNotIn(X_ACCESS_TOKEN, str(rejected.exception))
         stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
         self.assertEqual(stored.status, "failed")
+        self.assertEqual(
+            stored.failure_reason,
+            "provider_rejected:x_post_create:400:none:none:none",
+        )
         with self.assertRaises(SocialPublicationBlockedError) as blocked:
             authority.execute(command())
         self.assertEqual(blocked.exception.status, "failed")
         self.assertEqual(len(calls), 1)
         self.assertNotIn(X_CONSUMER_SECRET, str(blocked.exception))
+
+
+    def test_instagram_rejection_exposes_only_safe_structured_diagnostics(self):
+        leaked_message = "token={} media={}".format(IG_ACCESS_TOKEN, MEDIA_URL)
+
+        def handler(request):
+            self.assertTrue(request.url.path.endswith("/media"))
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": leaked_message,
+                        "type": "OAuthException",
+                        "code": 100,
+                        "error_subcode": 2207052,
+                        "fbtrace_id": "trace-must-not-be-copied",
+                    }
+                },
+            )
+
+        authority = self.authority(handler)
+        with self.assertRaises(SocialPublicationProviderRejectedError) as rejected:
+            authority.execute(command("instagram"))
+        error = rejected.exception
+        self.assertEqual(error.phase, "instagram_container_create")
+        self.assertEqual(error.status_code, 400)
+        self.assertEqual(error.provider_code, "100")
+        self.assertEqual(error.provider_subcode, "2207052")
+        self.assertEqual(error.error_type, "OAuthException")
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(
+            stored.failure_reason,
+            "provider_rejected:instagram_container_create:400:100:2207052:OAuthException",
+        )
+        serialized = repr(error.__dict__)
+        self.assertNotIn(leaked_message, serialized)
+        self.assertNotIn(IG_ACCESS_TOKEN, serialized)
+        self.assertNotIn(MEDIA_URL, serialized)
+        self.assertNotIn("trace-must-not-be-copied", serialized)
 
     def test_ambiguous_provider_failure_is_unknown_and_blocks_retry(self):
         calls = []
@@ -263,10 +319,14 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                 request.headers["Authorization"],
                 "Bearer {}".format(IG_ACCESS_TOKEN),
             )
+            self.assertTrue(request.url.path.startswith("/v24.0/"))
             if request.method == "POST" and request.url.path.endswith("/media"):
                 body = request.content.decode("utf-8")
-                self.assertIn("image_url=", body)
-                self.assertIn("caption=Approved+campaign+copy", body)
+                self.assertIn('name="image_url"', body)
+                self.assertIn(MEDIA_URL, body)
+                self.assertIn('name="caption"', body)
+                self.assertIn("Approved campaign copy", body)
+                self.assertTrue(request.headers["Content-Type"].startswith("multipart/form-data;"))
                 return httpx.Response(
                     200,
                     headers={"x-fb-trace-id": "ig-container-request"},
@@ -283,7 +343,8 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                     },
                 )
             if request.method == "POST" and request.url.path.endswith("/media_publish"):
-                self.assertIn("creation_id=ig-container-001", request.content.decode())
+                self.assertEqual(request.url.params["creation_id"], "ig-container-001")
+                self.assertEqual(request.content, b"")
                 return httpx.Response(
                     200,
                     headers={"x-fb-trace-id": "ig-publish-request"},
@@ -348,8 +409,11 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
             raise AssertionError("media_publish must not be called")
 
         authority = self.authority(handler, sleep=lambda seconds: None)
-        with self.assertRaises(SocialPublicationProviderRejectedError):
+        with self.assertRaises(SocialPublicationProviderRejectedError) as rejected:
             authority.execute(command("instagram"))
+        self.assertEqual(rejected.exception.phase, "instagram_container_status")
+        self.assertEqual(rejected.exception.status_code, 200)
+        self.assertEqual(rejected.exception.error_type, "container_error")
         self.assertEqual(len(calls), 2)
         stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
         self.assertEqual(stored.status, "failed")
@@ -428,6 +492,51 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
             authority.execute(command())
         self.assertIn(blocked.exception.status, {"pending", "unknown"})
         self.assertEqual(len(calls), 1)
+
+    def test_instagram_graph_api_version_is_explicit_and_validated(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST" and request.url.path.endswith("/media"):
+                self.assertTrue(request.url.path.startswith("/v25.0/"))
+                return httpx.Response(400, json={"error": {"code": 100}})
+            raise AssertionError("unexpected request")
+
+        authority = self.authority(
+            handler,
+            instagram_graph_api_version="v25.0",
+        )
+        with self.assertRaises(SocialPublicationProviderRejectedError):
+            authority.execute(command("instagram"))
+        self.assertEqual(len(calls), 1)
+
+        with self.assertRaisesRegex(ValueError, "vN.N"):
+            self.authority(
+                lambda request: httpx.Response(200),
+                instagram_graph_api_version="latest",
+            )
+
+    def test_expired_connection_blocks_before_intent_and_provider_http(self):
+        self._connect(
+            "instagram",
+            "account-instagram",
+            "connected.instagram",
+            {"access_token": IG_ACCESS_TOKEN},
+            token_expires_at="2026-07-22T23:59:59+00:00",
+        )
+        calls = []
+        authority = self.authority(lambda request: calls.append(request))
+        with self.assertRaisesRegex(
+            SocialPublicationUnavailableError,
+            "credential is expired",
+        ):
+            authority.execute(command("instagram"))
+        self.assertEqual(calls, [])
+        self.assertEqual(
+            self.publication_store.list_for_run("tenant-alpha", "run-001"),
+            (),
+        )
 
     def test_wrong_connected_account_and_missing_x_app_credentials_fail_before_intent(self):
         authority = self.authority(

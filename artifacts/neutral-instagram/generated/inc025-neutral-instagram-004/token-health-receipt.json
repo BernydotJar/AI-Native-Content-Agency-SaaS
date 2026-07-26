@@ -1,0 +1,35 @@
+{
+  "schema": "neutral-instagram-token-health.v1",
+  "observed_at": "2026-07-26T05:58:00+00:00",
+  "account": {
+    "channel_id": "instagram",
+    "account_id": "27525095797156898",
+    "account_username": "beesheep2"
+  },
+  "probes": [
+    {
+      "endpoint_class": "graph_instagram_me_unversioned",
+      "method": "GET",
+      "status_code": 401,
+      "provider_code": "190",
+      "provider_subcode": "0",
+      "error_type": "OAuthException",
+      "identity_verified": false
+    },
+    {
+      "endpoint_class": "graph_instagram_me_v24",
+      "method": "GET",
+      "status_code": 401,
+      "provider_code": "190",
+      "provider_subcode": "0",
+      "error_type": "OAuthException",
+      "identity_verified": false
+    }
+  ],
+  "diagnosis": "stored_instagram_user_credential_invalid_or_expired",
+  "provider_effect_attempted": false,
+  "token_persisted_in_receipt": false,
+  "request_url_persisted_in_receipt": false,
+  "provider_error_body_persisted": false,
+  "next_required_gate": "fresh_interactive_instagram_oauth_after_long_lived_credential_exchange_fix"
+}
