@@ -204,7 +204,10 @@ export default function App() {
         const errorCode = query.get("error");
         const messages: Record<string, string> = {
           social_oauth_callback_invalid: "La autorización expiró o ya fue utilizada. Inicia una conexión nueva.",
-          social_provider_rejected: "Instagram rechazó el intercambio. Revisa credenciales, callback y permisos de la app.",
+          instagram_code_exchange_rejected: "Instagram rechazó el código de autorización. Inicia una conexión nueva y confirma que la callback coincida exactamente.",
+          instagram_long_lived_exchange_rejected: "Instagram rechazó la extensión de la autorización. Inicia una conexión nueva; CampaignOS no guardó la credencial corta.",
+          instagram_profile_validation_rejected: "Instagram rechazó la validación del perfil profesional. Confirma que la cuenta sea Business o Creator y vuelve a conectar.",
+          social_provider_rejected: "Instagram rechazó el flujo OAuth. Revisa credenciales, callback y permisos de la app.",
           social_provider_unreachable: "No se pudo completar la comunicación con Instagram. Intenta nuevamente.",
           social_provider_response_invalid: "Instagram devolvió una respuesta OAuth que no pudo procesarse.",
         };

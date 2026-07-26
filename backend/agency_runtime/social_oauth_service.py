@@ -55,11 +55,17 @@ class SocialOAuthProviderError(SocialOAuthError):
         phase: str = "provider",
         reason: str = "invalid_response",
         exception_type: str = "",
+        status_code: Optional[int] = None,
+        provider_code: str = "",
+        provider_error_type: str = "",
     ) -> None:
         super().__init__(message)
         self.phase = phase
         self.reason = reason
         self.exception_type = exception_type
+        self.status_code = status_code
+        self.provider_code = provider_code
+        self.provider_error_type = provider_error_type
 
 
 class SocialOAuthCallbackError(SocialOAuthError):
@@ -288,16 +294,15 @@ class SocialOAuthService:
             "POST",
             _INSTAGRAM_LONG_LIVED_TOKEN_URL,
             phase="instagram_long_lived_token_exchange",
-            data={
+            params={
                 "grant_type": "ig_exchange_token",
                 "client_secret": app_secret,
-                "access_token": short_lived_access_token,
             },
             headers={
                 "Accept": "application/json",
                 "Accept-Encoding": "identity",
+                "Authorization": "Bearer {}".format(short_lived_access_token),
                 "Connection": "close",
-                "Content-Type": "application/x-www-form-urlencoded",
             },
             timeout=httpx.Timeout(60.0, connect=10.0),
         )
@@ -543,12 +548,44 @@ class SocialOAuthService:
                 exception_type=type(error).__name__,
             ) from error
         if response.status_code < 200 or response.status_code >= 300:
+            provider_code, provider_error_type = _safe_provider_error_metadata(response)
             raise SocialOAuthProviderError(
                 "social provider rejected the request",
                 phase=phase,
                 reason="rejected",
+                status_code=response.status_code,
+                provider_code=provider_code,
+                provider_error_type=provider_error_type,
             )
         return response
+
+
+def _safe_provider_error_metadata(response: httpx.Response) -> Tuple[str, str]:
+    try:
+        payload = response.json()
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        return "", ""
+    if not isinstance(payload, Mapping):
+        return "", ""
+    error = payload.get("error")
+    if not isinstance(error, Mapping):
+        return "", ""
+    return (
+        _safe_provider_metadata_value(error.get("code"), digits_only=True),
+        _safe_provider_metadata_value(error.get("type"), digits_only=False),
+    )
+
+
+def _safe_provider_metadata_value(value: object, *, digits_only: bool) -> str:
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return ""
+    rendered = str(value).strip()
+    if not rendered or len(rendered) > 64:
+        return ""
+    if digits_only:
+        return rendered if rendered.isdigit() else ""
+    normalized = rendered.replace("_", "").replace("-", "")
+    return rendered if normalized.isalnum() else ""
 
 
 def _oauth1_signature(
