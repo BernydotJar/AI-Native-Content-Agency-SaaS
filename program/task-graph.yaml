@@ -20,21 +20,21 @@
       "retry_count": 0
     },
     {
-      "id": "BLK-SANDBOX-PUSH-001",
+      "affected_workstreams": [
+        "WS-12"
+      ],
+      "attempted_resolutions": [
+        "official git_push action on exact clean checkpoint",
+        "prior ownership normalization and git fsck"
+      ],
       "category": [
         "infrastructure",
         "tooling",
         "permission"
       ],
-      "affected_workstreams": [
-        "WS-12"
-      ],
       "evidence": "Cloud_Sandbox_MCP.git_push for agent/inc-020-social-publication-authority@50b55f3 failed before Git while starting Docker; NAT chain creation failed because iptables access was denied.",
-      "attempted_resolutions": [
-        "official git_push action on exact clean checkpoint",
-        "prior ownership normalization and git fsck"
-      ],
       "exact_resume_condition": "Cloud Sandbox push wrapper executes Git without requiring privileged Docker NAT setup, or the user publishes the exact local branch from an authenticated checkout.",
+      "id": "BLK-SANDBOX-PUSH-001",
       "independent_work_remaining": true,
       "retry_count": 1
     }
@@ -139,87 +139,96 @@
       "status": "done"
     },
     {
-      "id": "INC-014",
       "depends_on": [
         "INC-004",
         "INC-013"
       ],
+      "id": "INC-014",
       "status": "done"
     },
     {
-      "id": "INC-015",
       "depends_on": [
         "INC-004",
         "INC-014"
       ],
+      "id": "INC-015",
       "status": "pending"
     },
     {
-      "id": "INC-016",
       "depends_on": [
         "INC-013"
       ],
+      "id": "INC-016",
       "status": "done"
     },
     {
-      "id": "INC-017",
       "depends_on": [
         "INC-004",
         "INC-016"
       ],
+      "id": "INC-017",
       "status": "review"
     },
     {
-      "id": "INC-018",
       "depends_on": [
         "INC-004",
         "INC-017"
       ],
+      "id": "INC-018",
       "status": "review"
     },
     {
-      "id": "INC-019",
       "depends_on": [
         "INC-003",
         "INC-012",
         "INC-017"
       ],
+      "id": "INC-019",
       "status": "review"
     },
     {
-      "id": "INC-020",
       "depends_on": [
         "INC-004",
         "INC-019"
       ],
+      "id": "INC-020",
       "status": "review"
     },
     {
-      "id": "INC-021",
       "depends_on": [
         "INC-004",
         "INC-019",
         "INC-020"
       ],
+      "id": "INC-021",
       "status": "done"
     },
     {
-      "id": "INC-022",
       "depends_on": [
         "INC-020",
         "INC-021"
       ],
+      "id": "INC-022",
       "status": "done"
     },
     {
-      "id": "INC-023",
       "depends_on": [
         "INC-021",
         "INC-022"
       ],
+      "id": "INC-023",
+      "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-021",
+        "INC-022",
+        "INC-023"
+      ],
+      "id": "INC-024",
       "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-25"
+  "updated_at": "2026-07-26"
 }

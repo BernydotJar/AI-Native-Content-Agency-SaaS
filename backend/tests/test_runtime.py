@@ -214,6 +214,62 @@ class PoliticalCampaignIntelligenceTests(unittest.TestCase):
                 evidence_claims=(),
             )
 
+    def _office_specific_brief(self, office: str, locality: str) -> MissionBrief:
+        return MissionBrief(
+            title="Mensaje específico por cargo",
+            objective="Explicar una propuesta verificable según las competencias del cargo",
+            audience="ciudadanía del territorio",
+            platforms=(Platform.INSTAGRAM,),
+            campaign_type="political",
+            locale="es-GT",
+            jurisdiction="Guatemala",
+            office=office,
+            candidate_name="Candidatura de prueba",
+            locality=locality,
+            problem="La ciudadanía necesita información pública verificable",
+            proposal="Publicar avances, decisiones y resultados verificables",
+            desired_action="Consulta la propuesta y envía observaciones",
+            disclosure="Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            legal_review_status="approved",
+            legal_reviewed_by="legal-reviewer",
+            evidence_claims=(
+                {
+                    "statement": "La propuesta contempla publicación periódica de información verificable.",
+                    "source": "Plan de prueba 2027-2031",
+                    "locator": "sección 2",
+                    "verification_status": "verified",
+                    "reviewed_by": "fact-reviewer",
+                },
+            ),
+        )
+
+    def test_writer_and_critique_are_office_specific_for_mayor_and_deputy(self):
+        expectations = (
+            ("alcalde", "Municipio de prueba", "municipio"),
+            ("diputado", "Distrito de prueba", "legislativa"),
+        )
+        for office, locality, expected_term in expectations:
+            with self.subTest(office=office):
+                run = self.orchestrator.start(
+                    self._office_specific_brief(office, locality)
+                )
+                writer = next(
+                    item for item in run.artifacts if item.kind == "copy_deck"
+                )
+                risk = next(
+                    item for item in run.artifacts if item.kind == "risk_report"
+                )
+                hook = writer.payload["variants"]["instagram"]["hook"].lower()
+                self.assertIn(expected_term, hook)
+                if office == "alcalde":
+                    self.assertNotIn("municipio de municipio", hook)
+                alignment = next(
+                    item for item in risk.payload["checks"]
+                    if item["name"] == "office_message_alignment"
+                )
+                self.assertTrue(alignment["passed"])
+                self.assertTrue(risk.payload["publication_eligible"])
+
     def test_eight_station_political_run_is_spanish_grounded_and_critique_gated(self):
         brief = MissionBrief(
             title="Transparencia municipal verificable",

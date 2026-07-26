@@ -102,14 +102,25 @@ def copy_payload(
             brief.disclosure.strip(),
         )
         variants = {}
+        office = brief.office.strip().lower()
         for platform in brief.platforms:
-            if brief.office.strip().lower() == "alcalde":
-                hook = "¿Cómo puede {} rendir cuentas con información clara?".format(
-                    brief.locality
+            if office == "alcalde":
+                locality = brief.locality.strip()
+                municipal_subject = (
+                    "el {}".format(locality)
+                    if locality.lower().startswith("municipio")
+                    else "el municipio de {}".format(locality)
                 )
+                hook = (
+                    "¿Cómo puede {} rendir cuentas con información clara?"
+                ).format(municipal_subject)
+            elif office == "diputado":
+                hook = (
+                    "Una propuesta legislativa verificable para representar y fiscalizar en {}."
+                ).format(brief.locality)
             else:
-                hook = "Una propuesta verificable para representar a {}.".format(
-                    brief.locality
+                hook = "Una propuesta verificable para {} en {}.".format(
+                    brief.office.strip(), brief.locality
                 )
             variants[platform.value] = {
                 "hook": hook,
@@ -245,10 +256,32 @@ def critique_payload(
             for variant in variants.values()
             if isinstance(variant, Mapping)
         )
+        office = brief.office.strip().lower()
+        if office == "alcalde":
+            office_message_alignment = any(
+                term in rendered_text for term in ("municipio", "municipal")
+            )
+        elif office == "diputado":
+            office_message_alignment = any(
+                term in rendered_text
+                for term in (
+                    "legislativa",
+                    "legislativo",
+                    "congreso",
+                    "fiscalizar",
+                    "fiscalización",
+                )
+            )
+        else:
+            office_message_alignment = office in rendered_text
         political_checks = [
             {
                 "name": "language_consistency",
                 "passed": brief.locale.lower().startswith("es"),
+            },
+            {
+                "name": "office_message_alignment",
+                "passed": office_message_alignment,
             },
             {
                 "name": "evidence_verified",

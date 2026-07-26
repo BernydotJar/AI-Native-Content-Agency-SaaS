@@ -449,9 +449,15 @@ export function CampaignOutputPanel({
           </div>
         </div>
       ) : drafts.length === 0 ? (
-        <div role="status" className="m-5 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] p-5 text-xs leading-6 text-amber-100">
-          Writer no produjo un copy deck utilizable para esta ejecución.
-        </div>
+        ["queued", "running"].includes(run.status) ? (
+          <div role="status" className="m-5 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-5 text-xs leading-6 text-sky-100">
+            El copy todavía se está generando. El panel se actualizará cuando Writer complete su estación.
+          </div>
+        ) : (
+          <div role="alert" className="m-5 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] p-5 text-xs leading-6 text-amber-100">
+            Writer no produjo un copy deck utilizable para esta ejecución.
+          </div>
+        )
       ) : (
         <div className="p-5">
           <div className="grid gap-5 xl:grid-cols-2">

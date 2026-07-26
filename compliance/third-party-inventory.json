@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "70d2a573ff9b1d957f26560866cdc9fa1a211e6378530f41698c3ac267fa1fff"
+      "sha256": "8fee6f1d81bdcd4c4b747dd6e9e25c6554cd0dfaa64a7a32840b23899bdec9e1"
     },
     {
       "path": "artifacts/supply-chain/base-images.json",
@@ -49,7 +49,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "886ed8749497f7c7d59408d39ee3deb5d12ad60698c57897dcb67c274167580d"
+      "sha256": "389874b1f33779ea6de59da1f0a0f2f52317cb582dbc73ea3dbc2980b313c39e"
     }
   ],
   "external_candidates": [

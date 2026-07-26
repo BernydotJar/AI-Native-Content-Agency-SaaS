@@ -68,6 +68,18 @@ jobs:
       - run: python -m pip install --no-deps /tmp/agency-wheels/*.whl
       - run: python -m pip check
       - run: python -m unittest discover -s backend/tests -v
+      - name: Verify political authority browser contracts
+        run: |
+          BROWSER_BIN="$(command -v chromium || command -v google-chrome || command -v google-chrome-stable)"
+          test -n "$BROWSER_BIN"
+          CHROMIUM_BIN="$BROWSER_BIN" POLITICAL_BROWSER_PYTHON=python POLITICAL_BROWSER_USE_INSTALLED=1 npm run verify:political-browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: political-browser-evidence
+          path: artifacts/political-browser/generated
+          if-no-files-found: error
+          retention-days: 30
 
   postgresql-shared-state:
     runs-on: ubuntu-latest

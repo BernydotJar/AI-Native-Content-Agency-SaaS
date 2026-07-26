@@ -129,6 +129,31 @@ function noticeFromError(error: unknown, canReload = false): OperatorNotice {
         canReload,
       };
     case 409:
+      if (error.code === "political_reviewer_separation_required") {
+        return {
+          title: "Aprobación independiente requerida",
+          detail: "La revisión legal y el Greenlight deben ser realizados por identidades diferentes. Abre esta ejecución con otro aprobador.",
+          kind: "warning",
+          requestId,
+          canReload: false,
+        };
+      }
+      if (error.code === "political_content_disabled") {
+        return {
+          title: "Contenido político deshabilitado",
+          detail: "El operador debe habilitar explícitamente la creación de contenido político antes de iniciar esta misión.",
+          kind: "warning",
+          requestId,
+        };
+      }
+      if (error.code === "political_paid_media_disabled") {
+        return {
+          title: "Planificación de pauta política deshabilitada",
+          detail: "La pauta requiere un switch independiente y una autoridad de anuncios separada del flujo orgánico.",
+          kind: "warning",
+          requestId,
+        };
+      }
       return {
         title: "El estado de la ejecución cambió",
         detail: "Recarga la ejecución antes de aplicar otra decisión.",

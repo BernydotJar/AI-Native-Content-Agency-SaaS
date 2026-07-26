@@ -6,6 +6,7 @@ import type {
   RuntimeApi,
   RuntimeRun,
 } from "../lib/runtimeApi";
+import { RuntimeApiError } from "../lib/runtimeApi";
 import { WorkspaceRuntime } from "./WorkspaceRuntime";
 
 const SESSION: BrowserRuntimeSession = {
@@ -16,6 +17,12 @@ const SESSION: BrowserRuntimeSession = {
   entitlements: [],
   csrf_token: "csrf-value",
   expires_at: "2026-07-22T20:00:00+00:00",
+};
+
+const ADMIN_SESSION: BrowserRuntimeSession = {
+  ...SESSION,
+  subject_id: "legal.reviewer@example.com",
+  role: "admin",
 };
 
 const RUN: RuntimeRun = {
@@ -156,6 +163,30 @@ describe("WorkspaceRuntime", () => {
     expect(screen.getByRole("option", { name: /Verificada con autoridad/i })).toBeDisabled();
     expect(screen.getByText(/Tu rol puede preparar la afirmación/i)).toBeInTheDocument();
     expect(screen.getByText(/Adjuntar una fuente no la convierte/i)).toBeInTheDocument();
+  });
+
+  it("explains that political legal review and Greenlight require different identities", async () => {
+    const user = userEvent.setup();
+    const runtime = api({
+      resumeSession: vi.fn().mockResolvedValue(ADMIN_SESSION),
+      approveRun: vi.fn().mockRejectedValue(
+        new RuntimeApiError(
+          409,
+          "political reviewer separation required",
+          "request-political-separation-001",
+          "political_reviewer_separation_required",
+        ),
+      ),
+    });
+    render(<WorkspaceRuntime api={runtime} />);
+
+    await screen.findByText(/legal\.reviewer@example\.com/i);
+    await user.click(screen.getByRole("button", { name: /Ejecutar campaña/i }));
+    await user.click(await screen.findByRole("button", { name: /Approve artefactos/i }));
+
+    expect(await screen.findByText(/Aprobación independiente requerida/i)).toBeInTheDocument();
+    expect(screen.getByText(/identidades diferentes/i)).toBeInTheDocument();
+    expect(screen.getByText(/otro aprobador/i)).toBeInTheDocument();
   });
 
   it("polls a queued run until durable station execution reaches Greenlight", async () => {
