@@ -229,14 +229,15 @@ def create_browser_session(base_url: str, identity: Identity) -> BrowserSession:
     return BrowserSession(cookie=cookie, csrf_token=csrf_token, subject_id=identity.subject_id)
 
 
-def build_neutral_brief() -> dict[str, Any]:
+def build_neutral_brief(operation_id: str = "neutral-template") -> dict[str, Any]:
+    require(bool(_OPERATION_PATTERN.fullmatch(operation_id)), "operation ID is invalid")
     return {
-        "title": "Prueba técnica neutral de publicación",
+        "title": "Prueba técnica neutral de publicación {}".format(operation_id),
         "objective": "Verificar el flujo gobernado de aprobación, media y confirmación",
         "audience": "equipo técnico de la cuenta de laboratorio",
         "platforms": [CHANNEL_ID],
         "budget_cents": 0,
-        "source_asset": "sandbox://inc-025/neutral-publication-card.jpg",
+        "source_asset": "sandbox://inc-025/{}/neutral-publication-card.jpg".format(operation_id),
         "campaign_goal": "technical_verification",
         "campaign_type": "political",
         "publication_mode": "organic",
@@ -261,8 +262,8 @@ def build_neutral_brief() -> dict[str, Any]:
     }
 
 
-def expected_caption() -> str:
-    brief = build_neutral_brief()
+def expected_caption(operation_id: str = "neutral-template") -> str:
+    brief = build_neutral_brief(operation_id)
     hook = "Una propuesta verificable para {} en {}.".format(brief["office"], brief["locality"])
     body = "{} propone: {}\n\nFuente: {} ({}).\n\n{}".format(
         brief["candidate_name"], brief["proposal"], brief["evidence_claims"][0]["source"],
@@ -489,7 +490,7 @@ def prepare(args: argparse.Namespace) -> int:
         "POST",
         "/api/v1/runs",
         legal,
-        json_body=build_neutral_brief(),
+        json_body=build_neutral_brief(args.operation_id),
         headers={
             "Idempotency-Key": f"{args.operation_id}-run",
             "Prefer": "respond-async",
@@ -599,7 +600,10 @@ def prepare(args: argparse.Namespace) -> int:
         if str(variant.get(field, "")).strip()
     )
     require(
-        hmac.compare_digest(caption.encode("utf-8"), expected_caption().encode("utf-8")),
+        hmac.compare_digest(
+            caption.encode("utf-8"),
+            expected_caption(args.operation_id).encode("utf-8"),
+        ),
         "generated neutral caption differs from the approved template",
     )
     require(

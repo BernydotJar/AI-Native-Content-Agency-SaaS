@@ -1,0 +1,55 @@
+{
+  "schema": "neutral-instagram-publication.v1",
+  "phase": "approved_ready_for_execution",
+  "operation_id": "inc025-neutral-instagram-003",
+  "prepared_at": "2026-07-26T05:52:02+00:00",
+  "execute_before": "2026-07-26T06:22:02+00:00",
+  "window_minutes": 30,
+  "rollback_owner": "Eduardo Sacahui",
+  "tenant_id": "local-tenant",
+  "account": {
+    "channel_id": "instagram",
+    "account_id": "27525095797156898",
+    "account_username": "beesheep2"
+  },
+  "review": {
+    "legal_reviewer": "legal.reviewer@local.test",
+    "greenlight_approver": "greenlight.approver@local.test",
+    "subjects_distinct": true
+  },
+  "run": {
+    "run_id": "run-b8eb666c36d63454",
+    "status": "completed",
+    "copy_artifact_id": "art-4acdb9d4d745a81e",
+    "media_artifact_id": "artifact-860c7661759c2c40eb09abaab5cfeabc",
+    "compliance_artifact_id": "political-compliance-record-fb5c76d4357775493b5dd202adbeee7f0ebfb83a367957aa",
+    "greenlight_id": "greenlight-a27cad3734c6c3fc",
+    "greenlight_fencing_token": 1
+  },
+  "copy": {
+    "caption": "Una propuesta verificable para prueba técnica no electoral en cuenta de laboratorio @beesheep2.\n\nSistema de verificación propone: Verificar el flujo de aprobación, media y confirmación sin contenido electoral ni pauta\n\nFuente: Runbook interno de publicación neutral (docs/runbooks/political-publication.md, sección Neutral sandbox sequence).\n\nPrueba técnica de publicación. No corresponde a una campaña electoral.\n\nNo se requiere ninguna acción",
+    "caption_sha256": "be237c368962c6d180929a7a8489459c31f561565ecb7e8e854dc16684909803",
+    "neutral_disclosure_present": true,
+    "no_action_cta_present": true
+  },
+  "media": {
+    "file": "neutral-instagram-card.jpg",
+    "sha256": "e542083bf71fbf335539896dc5df79eb1d7eb24319c827948a21809ccf8286f5",
+    "byte_size": 90528,
+    "width": 1080,
+    "height": 1350,
+    "alt_text": "Tarjeta gráfica de prueba técnica con el texto Publicación neutral, verificación de flujo gobernado, sin pauta y sin llamado electoral.",
+    "rights_attested_by": "legal.reviewer@local.test",
+    "public_fetch_verified": true,
+    "capability_url_persisted_in_receipt": false
+  },
+  "confirmation": {
+    "format": "PUBLICAR POLITICA <run_id> instagram",
+    "sha256": "6add460f0b5b1de3689d33f8074c3a8cd46ef0ea588d5a3a82c7a61e3dff0571",
+    "raw_value_persisted": false
+  },
+  "provider_effects": {
+    "attempted": 0,
+    "completed": 0
+  }
+}
