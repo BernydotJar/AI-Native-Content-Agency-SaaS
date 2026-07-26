@@ -29,3 +29,16 @@ Execute exactly one neutral, organic Instagram image publication on the authoriz
 8. A safe receipt records permalink, timestamp, provider IDs and hashes.
 9. Both publication switches return to false immediately after execution.
 10. Program state keeps `DENY_RELEASE` and `DENY_APPLY`; one sandbox post is not production authorization.
+
+## First controlled attempt and transport correction
+
+The first controlled attempt reserved one exact-once intent and was rejected before a provider container ID was recorded. No provider post ID or verified receipt exists. Both publication switches were closed automatically and the failed intent remains immutable.
+
+The investigation found that the publication client differed from Meta's current Instagram Login contract in three ways. INC-025 now:
+
+- pins `AGENCY_INSTAGRAM_GRAPH_API_VERSION=v24.0`;
+- creates image containers with `multipart/form-data` fields for `image_url` and `caption`;
+- supplies `creation_id` as the `media_publish` request parameter;
+- captures only safe structured rejection metadata: phase, HTTP status, provider code, subcode and error type.
+
+Provider messages, response bodies, tokens, captions and media capability URLs are not logged. A later attempt must use a new operation, run and idempotency binding; the failed intent is never retried.

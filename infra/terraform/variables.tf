@@ -418,6 +418,17 @@ variable "instagram_app_secret_secret_key" {
   }
 }
 
+variable "instagram_graph_api_version" {
+  description = "Pinned Instagram Graph API version used for Instagram Login publication endpoints."
+  type        = string
+  default     = "v24.0"
+
+  validation {
+    condition     = can(regex("^v[0-9]+\\.[0-9]+$", var.instagram_graph_api_version))
+    error_message = "instagram_graph_api_version must use the vN.N format."
+  }
+}
+
 variable "instagram_redirect_uri" {
   description = "Registered Instagram Business Login callback URI. Leave empty until the app callback is configured."
   type        = string

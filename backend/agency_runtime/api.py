@@ -2073,6 +2073,9 @@ def create_app(
     active_social_key = str(
         social_source.get("AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID", "")
     ).strip()
+    instagram_graph_api_version = str(
+        social_source.get("AGENCY_INSTAGRAM_GRAPH_API_VERSION", "v24.0")
+    ).strip()
     raw_publication_enabled = str(
         social_source.get("AGENCY_SOCIAL_PUBLICATION_ENABLED", "false")
     ).strip().lower()
@@ -2187,6 +2190,7 @@ def create_app(
             x_consumer_secret=x_consumer_secret,
             enabled=publication_enabled,
             transport=social_publication_transport,
+            instagram_graph_api_version=instagram_graph_api_version,
         )
     metrics = RuntimeMetrics()
     run_worker = DurableRunWorker(
@@ -3597,6 +3601,18 @@ def create_app(
             ) from error
         except SocialPublicationProviderRejectedError as error:
             metrics.social_publication("rejected")
+            API_LOGGER.warning(
+                "social_publication_provider_rejected request_id=%s channel=%s "
+                "phase=%s status_code=%s provider_code=%s provider_subcode=%s "
+                "error_type=%s",
+                _request_id(request),
+                channel_id,
+                error.phase,
+                error.status_code or "none",
+                error.provider_code or "none",
+                error.provider_subcode or "none",
+                error.error_type or "none",
+            )
             raise PublicApiError(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 code="social_publication_rejected",

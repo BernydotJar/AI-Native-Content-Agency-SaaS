@@ -182,9 +182,12 @@ class PublicationMediaApiTests(unittest.TestCase):
                 "Bearer publication-instagram-token",
             )
             if request.method == "POST" and request.url.path.endswith("/media"):
-                body = parse_qs(request.content.decode("utf-8"))
-                published_caption = body["caption"][0]
-                self.assertTrue(body["image_url"][0].startswith("https://media.example.test/"))
+                self.assertTrue(request.url.path.startswith("/v24.0/"))
+                body = request.content.decode("utf-8")
+                self.assertTrue(request.headers["Content-Type"].startswith("multipart/form-data;"))
+                published_caption = body.split('name="caption"\r\n\r\n', 1)[1].split("\r\n--", 1)[0]
+                image_url = body.split('name="image_url"\r\n\r\n', 1)[1].split("\r\n--", 1)[0]
+                self.assertTrue(image_url.startswith("https://media.example.test/"))
                 return httpx.Response(200, json={"id": "ig-container-verified-api"})
             if request.method == "GET" and request.url.path.endswith("/ig-container-verified-api"):
                 return httpx.Response(200, json={"status_code": "FINISHED", "status": "ready"})

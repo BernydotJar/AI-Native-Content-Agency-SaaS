@@ -897,6 +897,89 @@ def execute(args: argparse.Namespace) -> int:
     return 0
 
 
+def inspect_attempt(args: argparse.Namespace) -> int:
+    env = load_environment(args.env_file)
+    identities = load_identities(env)
+    approver = identities[APPROVER_SUBJECT]
+    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+    require(isinstance(manifest, Mapping), "manifest must be a JSON object")
+    require(manifest.get("schema") == SCHEMA, "manifest schema is unsupported")
+    run = manifest.get("run")
+    account = manifest.get("account")
+    require(isinstance(run, Mapping) and isinstance(account, Mapping), "manifest contract is incomplete")
+    run_id = str(run.get("run_id", ""))
+    publications = api_request(
+        args.base_url,
+        "GET",
+        f"/api/v1/runs/{run_id}/social-publications",
+        approver,
+    ).body
+    items = publications.get("publications")
+    require(isinstance(items, list) and len(items) == 1, "expected exactly one durable publication intent")
+    durable = items[0]
+    require(isinstance(durable, Mapping), "durable publication intent is invalid")
+    status = str(durable.get("status", ""))
+    container_id = durable.get("provider_container_id")
+    post_id = durable.get("provider_post_id")
+    if status == "failed" and not container_id and not post_id:
+        phase = "provider_rejected_before_container_recorded"
+        manifest_phase = "provider_rejected_no_post"
+    elif status == "unknown":
+        phase = "provider_outcome_unknown"
+        manifest_phase = "provider_outcome_unknown"
+    elif status == "succeeded":
+        phase = "provider_verified_success"
+        manifest_phase = "published_verified"
+    else:
+        phase = "durable_{}".format(status or "unclassified")
+        manifest_phase = phase
+    receipt_path = args.manifest.parent / "attempt-receipt.json"
+    safe_receipt = {
+        "schema": SCHEMA,
+        "phase": phase,
+        "operation_id": manifest.get("operation_id"),
+        "observed_at": isoformat(utc_now()),
+        "account": account,
+        "run_id": run_id,
+        "intent_id": durable.get("intent_id"),
+        "status": status,
+        "failure_reason": durable.get("failure_reason"),
+        "provider_container_id": container_id,
+        "provider_post_id": post_id,
+        "confirmation_sha256": durable.get("confirmation_hash"),
+        "media_sha256": durable.get("media_hash"),
+        "publication_switches_closed": (
+            not env_bool(env, "AGENCY_SOCIAL_PUBLICATION_ENABLED")
+            and not env_bool(env, "AGENCY_POLITICAL_PUBLICATION_ENABLED")
+        ),
+        "paid_media_enabled": env_bool(env, "AGENCY_POLITICAL_PAID_MEDIA_ENABLED"),
+        "raw_confirmation_persisted": False,
+        "capability_url_persisted": False,
+        "provider_error_body_persisted": False,
+    }
+    receipt_path.write_text(
+        json.dumps(safe_receipt, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    updated = dict(manifest)
+    updated["phase"] = manifest_phase
+    updated["provider_effects"] = {
+        "attempted": 1,
+        "completed": 1 if status == "succeeded" else 0,
+    }
+    updated["attempt_receipt_file"] = receipt_path.name
+    args.manifest.write_text(
+        json.dumps(updated, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"neutral_instagram_phase={manifest_phase}")
+    print(f"neutral_instagram_attempt_receipt={receipt_path}")
+    print(f"neutral_instagram_intent_status={status}")
+    print(f"neutral_instagram_provider_container_recorded={bool(container_id)}")
+    print(f"neutral_instagram_provider_post_recorded={bool(post_id)}")
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--env-file", type=Path, default=Path(".env.local"))
@@ -936,6 +1019,13 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     execute_parser.set_defaults(handler=execute)
+
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="record the current durable intent state without provider HTTP",
+    )
+    inspect_parser.add_argument("--manifest", type=Path, required=True)
+    inspect_parser.set_defaults(handler=inspect_attempt)
     return result
 
 

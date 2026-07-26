@@ -256,6 +256,11 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.social.instagram.apiVersion"
+    value = var.instagram_graph_api_version
+  }
+
+  set {
     name  = "runtime.social.instagram.redirectUri"
     value = var.instagram_redirect_uri
   }

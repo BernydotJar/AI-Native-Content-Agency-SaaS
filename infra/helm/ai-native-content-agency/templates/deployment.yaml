@@ -233,6 +233,8 @@ spec:
               value: {{ .Values.runtime.social.politicalPublicationEnabled | quote }}
             - name: AGENCY_POLITICAL_PAID_MEDIA_ENABLED
               value: {{ .Values.runtime.social.politicalPaidMediaEnabled | quote }}
+            - name: AGENCY_INSTAGRAM_GRAPH_API_VERSION
+              value: {{ .Values.runtime.social.instagram.apiVersion | quote }}
 {{- if .Values.runtime.social.existingSecret }}
             - name: AGENCY_X_CONSUMER_KEY
               valueFrom:
