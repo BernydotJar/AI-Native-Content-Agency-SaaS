@@ -1,70 +1,54 @@
 # Current Program State
 
-Updated: 2026-07-25
+Updated: 2026-07-26
 
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-023-political-compliance-mode`
-- INC-023 specification checkpoint: `628fb23a73b9ac3d1f34b7f3efffbe580a7f9f45`
-- INC-023 implementation commit: `2315ac32f63958b83f26754e95a88f18b65028a6`
-- Remote branch: `agent/inc-023-political-compliance-mode` at `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab`
-- PR #15: merged normally at `ca7e8c97dc31b0461832d72232213ccc5963f0af`
-- Exact-head CI: 8/8 SUCCESS in run [30174006993](https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993)
-- Nested containers created: none; count remains zero
+- Active branch: `agent/inc-024-political-browser-qa`
+- Base cumulative branch commit: `4226a97056cc4fdbba8d54338c7ff370322567aa`
+- INC-024 implementation commit: `4d0bc7472c6b4d9d2719f5275028f35de4341463`
+- Remote branch / draft PR / exact-head CI: pending
+- Worktree after implementation commit: documentation checkpoint in progress
+- Nested containers created: none
 - Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
 
-## Closed stacked increments
+## Closed political publication increments
 
-- PR #13, Campaign Intelligence, merged normally into `agent/inc-020-social-publication-authority` at merge commit `cce712e86b356cf9c4a2dca087f8af078101915e`.
-- PR #14, Publication Media and Verified Publication, merged normally into `agent/inc-021-campaign-intelligence` at merge commit `7522164240b8090fe70ec51525a6a247e4a558c8`.
-- PR #14 exact head `b5d63f65c52c886a1855f20aff8593ca398383ac` passed all eight `production-readiness` jobs in run `30164438593` before merge.
-- These stacked merges close the increments but do not merge the complete stack to protected `main`. Main still requires its own cumulative PR, current required checks and an eligible independent approval.
+- INC-021 Campaign Intelligence: done and merged through PR #13.
+- INC-022 Governed Media and Verified Publication: done and merged through PR #14.
+- INC-023 Political Compliance Mode: done and merged through PR #15; delivery receipt merged through PR #16.
+- Cumulative stacked base: `4226a97056cc4fdbba8d54338c7ff370322567aa`. The stack is still outside protected `main`.
 
-## INC-023 implementation evidence
+## INC-024 browser QA
 
-The local implementation adds:
+The implementation adds:
 
-- `publication_mode=organic|paid` with commercial default `organic`;
-- independent default-off switches for political content, general social publication, political publication and paid political planning;
-- server-side separation between legal/electoral reviewer and Greenlight approver;
-- `political_compliance_record` included in the approved Greenlight artifact envelope;
-- SHA-256 bindings for disclosure and claim/source/locator evidence;
-- schema v6 nullable `confirmation_hash` in SQLite/PostgreSQL exact-once publication intents;
-- exact final phrase `PUBLICAR POLITICA <run_id> <channel_id>` checked before intent reservation;
-- persistence of only the confirmation SHA-256, never the raw phrase;
-- paid political mode rejected by the organic publication endpoint before intent or provider HTTP;
-- typed political confirmation UI and paid-mode blocked state;
-- `.env`, Helm and Terraform switches that all default to false;
-- political publication runbook with neutral sandbox and rollback procedure.
+- a two-profile Chromium/CDP political journey;
+- a mock-only provider fixture with zero real egress;
+- screenshots and a machine-readable receipt;
+- actionable reviewer-separation errors;
+- truthful queued/running copy progress;
+- explicit mayoral municipal and deputy legislative messaging;
+- semantic `office_message_alignment`;
+- exact final-phrase and raw-confirmation persistence checks;
+- a CI step that runs against the installed wheel and uploads evidence.
 
-## Exact-head delivery receipt
+## Local verification
 
-- PR #15 head `e35fa74fa7704161ef81bf9dbe13cea7b761f5ab` passed `production-readiness` run `30174006993` with all eight jobs successful.
-- PostgreSQL schema v6, accessibility browser, OCI, Helm, Terraform and supply-chain gates passed.
-- The first supply-chain attempt was retried because Docker Hub timed out before project code ran; the retry completed successfully.
-
-## Local verification receipt
-
-- TDD RED captured before implementation.
-- Focused political backend: 8 tests PASS.
-- Broad backend compatibility: 75 tests PASS before the final paid-creation test was added.
-- Hash-locked installed wheel: 285 tests PASS, 25 PostgreSQL-only skips.
-- Frontend: 45 tests PASS.
-- Lint: 0 warnings, 0 errors.
+- Hash-locked installed wheel: 286 PASS, 25 PostgreSQL-only skips.
+- Frontend: 47 PASS.
+- Lint: zero warnings/errors.
 - Production build: PASS.
-- Program validator: PASS with 87 requirements and 23 tasks.
-- Compliance validator: PASS and still returns `DENY_RELEASE`.
-- Backup/schema CLI/political operability family: 27 tests PASS before the final paid-creation test was added.
-- PostgreSQL executable gate could not run locally because `/usr/lib/postgresql/15/bin/postgres` is absent. No container or data mutation occurred; exact-head CI owns this gate.
-- Terraform, Helm and OpenTofu binaries are absent locally. Static configuration contracts pass; executable validation remains delegated to exact-head CI.
+- Accessibility browser: PASS.
+- Existing social-publication browser: PASS.
+- New political browser: PASS in source and installed-wheel modes.
+- Actionlint, program, compliance, diff and secret scans: PASS.
+- Compliance decision remains `DENY_RELEASE`.
 
-## Safety and review decision
+## Safety boundary
 
-- All external effects remain disabled by default.
-- Paid political advertising is not implemented and cannot use the organic endpoint.
-- Automated role-separated review does not constitute jurisdiction-specific legal advice, campaign authorization or provider-policy approval.
-- One neutral sandbox post on `@beesheep2` remains blocked only by the separate accountable review, exact account/content/media confirmation, bounded publication window and rollback owner. The software and exact-head CI gates are complete.
+The live workstation remains configured with political content creation enabled for feedback while general social publication, political publication and political paid media remain disabled. Instagram `@beesheep2` remains connected, but INC-024 did not use it. The provider effect observed by the browser journey is an in-process `httpx.MockTransport` call only.
 
 Release recommendation: `DENY_RELEASE`
 
@@ -72,14 +56,4 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-PR #15 is merged. The next external gate is to separately authorize the exact neutral sandbox payload, media SHA-256, account, time window and rollback owner before enabling any publication switch.
-
-## INC-023 merge receipt
-
-- PR: `#15`
-- Verified head: `34968cb15726374adcfe072a9ca5cb3de47453f5`
-- Final exact-head workflow: `30174197636`, 8/8 SUCCESS
-- Merge commit: `ca7e8c97dc31b0461832d72232213ccc5963f0af`
-- Merge method: normal merge commit
-- External effects: disabled
-- Global release/cloud decisions: `DENY_RELEASE` / `DENY_APPLY`
+Publish the implementation and documentation commits, open a draft PR against `4226a97056cc4fdbba8d54338c7ff370322567aa`, pass all eight exact-head `production-readiness` jobs including the installed-wheel political browser gate, repair any failure, then perform accountable human screenshot/copy review. The neutral `@beesheep2` sandbox post remains a separately authorized external effect.

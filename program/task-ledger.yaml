@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-023-political-compliance-mode",
+  "branch": "agent/inc-024-political-browser-qa",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1511,9 +1511,92 @@
       },
       "merge_commit": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
       "merged_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15"
+    },
+    {
+      "task_id": "INC-024",
+      "workstream_id": "WS-10",
+      "status": "review",
+      "role": "Test Engineer / UX Reviewer / Critique Agent / Content Writer / Security Reviewer / Independent Verifier",
+      "objective": "Browser-observe the complete political authority journey, repair reproducible UX defects and enforce office-specific political messaging without real provider effects.",
+      "context": "Implementation commit 4d0bc7472c6b4d9d2719f5275028f35de4341463 adds a two-profile Chromium/CDP journey, mock-only provider fixture, CI evidence upload, actionable reviewer-separation UX, truthful asynchronous copy progress and office-specific mayor/deputy messaging with critique alignment.",
+      "authoritative_inputs": [
+        "specs/024-political-browser-qa/spec.md",
+        "INC-021 campaign intelligence",
+        "INC-022 verified publication",
+        "INC-023 political compliance authority",
+        "existing Chromium/CDP browser harnesses"
+      ],
+      "dependencies": [
+        "INC-021",
+        "INC-022",
+        "INC-023"
+      ],
+      "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        "artifacts/political-browser/**",
+        "backend/agency_runtime/campaign_intelligence.py",
+        "backend/tests/test_runtime.py",
+        "package.json",
+        "scripts/fixtures/political_browser_app.py",
+        "scripts/verify-political-browser.mjs",
+        "src/components/CampaignOutputPanel*",
+        "src/components/WorkspaceRuntime*",
+        "program/**",
+        "specs/024-political-browser-qa/**"
+      ],
+      "read_only_paths": [
+        ".env.local",
+        ".local/**"
+      ],
+      "prohibited_paths": [
+        "real provider publication",
+        "raw credentials or OAuth material in evidence",
+        "cloud apply or paid-media spend",
+        "force push or protected-branch mutation"
+      ],
+      "write_lock": "released after implementation commit; documentation checkpoint only",
+      "expected_outputs": [
+        "two-profile political browser journey",
+        "machine-readable browser receipt and screenshots",
+        "actionable reviewer-separation UX",
+        "truthful async Writer progress",
+        "office-specific mayor and deputy copy",
+        "office_message_alignment critique check",
+        "exact-head CI browser artifact"
+      ],
+      "acceptance_criteria": [
+        "same reviewer cannot approve Greenlight and receives an actionable message",
+        "independent browser profile approves the same durable run",
+        "wrong final phrase produces zero provider calls",
+        "exact phrase produces one mock effect and one durable receipt",
+        "raw final phrase is absent from SQLite and responses",
+        "queued/running state never reports a false Writer failure",
+        "mayor and deputy copy reflect municipal and legislative competencies",
+        "browser gate executes from the installed wheel in CI"
+      ],
+      "validation_commands": [
+        "npm test => 47 PASS",
+        "npm run lint => 0 warnings/errors",
+        "npm run build => PASS",
+        "npm run verify:accessibility-browser => PASS",
+        "npm run verify:social-publication-browser => PASS",
+        "npm run verify:political-browser => PASS source mode",
+        "POLITICAL_BROWSER_USE_INSTALLED=1 npm run verify:political-browser => PASS from installed wheel",
+        "./scripts/verify-python-locks.sh => 286 PASS, 25 PostgreSQL-only SKIP",
+        "exact-head eight-job CI => pending"
+      ],
+      "human_gates": [
+        "human review of screenshots and copy quality",
+        "jurisdiction-specific legal/campaign approval",
+        "exact neutral sandbox account/copy/media/window/rollback authorization",
+        "cumulative integration to protected main",
+        "deployment/release"
+      ],
+      "implementation_commit": "4d0bc7472c6b4d9d2719f5275028f35de4341463",
+      "publication_state": "LOCAL_BROWSER_AND_LOCKED_WHEEL_PASS_REMOTE_CI_PENDING_REAL_PROVIDER_DISABLED"
     }
   ],
-  "updated_at": "2026-07-25",
+  "updated_at": "2026-07-26",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -1789,18 +1872,34 @@
         "program/**",
         "specs/**"
       ],
-      "artifacts": [],
+      "artifacts": [
+        "scripts/verify-political-browser.mjs",
+        "artifacts/political-browser/generated",
+        "program/reports/inc-024-political-browser-qa.md",
+        "specs/024-political-browser-qa/spec.md"
+      ],
       "dependencies": [],
-      "evals": [],
+      "evals": [
+        "two isolated browser identities",
+        "political final-confirmation gate",
+        "office-message semantic alignment"
+      ],
       "id": "WS-10",
       "name": "Testing, Evals, Red Team and Quality",
-      "next_ready_task": "INC-010",
+      "next_ready_task": "INC-024",
       "objective": "Expand functional, semantic, adversarial and independent gates.",
       "owner": "orchestrator",
-      "requirements": [],
+      "requirements": [
+        "EVAL-007",
+        "PROD-008"
+      ],
       "risks": [],
-      "status": "pending",
-      "validation": [],
+      "status": "in_progress",
+      "validation": [
+        "npm run verify:political-browser",
+        "./scripts/verify-python-locks.sh",
+        "exact-head production-readiness CI"
+      ],
       "write_locks": []
     },
     {

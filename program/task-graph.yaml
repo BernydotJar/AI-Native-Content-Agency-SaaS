@@ -218,8 +218,17 @@
         "INC-022"
       ],
       "status": "done"
+    },
+    {
+      "id": "INC-024",
+      "depends_on": [
+        "INC-021",
+        "INC-022",
+        "INC-023"
+      ],
+      "status": "review"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-25"
+  "updated_at": "2026-07-26"
 }
