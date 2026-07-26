@@ -2534,12 +2534,18 @@ def create_app(
         phase = getattr(error, "phase", "provider")
         reason = getattr(error, "reason", "invalid_response")
         exception_type = getattr(error, "exception_type", "") or "none"
+        provider_status = getattr(error, "status_code", None) or 0
+        provider_code = getattr(error, "provider_code", "") or "none"
+        provider_error_type = getattr(error, "provider_error_type", "") or "none"
         API_LOGGER.warning(
-            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s exception_type=%s",
+            "social_oauth_provider_failure request_id=%s channel=%s phase=%s reason=%s status_code=%s provider_code=%s provider_error_type=%s exception_type=%s",
             _request_id(request),
             channel_id,
             phase,
             reason,
+            provider_status,
+            provider_code,
+            provider_error_type,
             exception_type,
         )
         display = "X" if channel_id == "x" else "Instagram"
@@ -2547,7 +2553,13 @@ def create_app(
             "x_request_token": "inicio OAuth",
             "x_access_token": "intercambio de token",
             "instagram_token_exchange": "intercambio de código",
+            "instagram_long_lived_token_exchange": "extensión de la autorización",
             "instagram_profile": "validación de cuenta profesional",
+        }
+        rejected_codes = {
+            "instagram_token_exchange": "instagram_code_exchange_rejected",
+            "instagram_long_lived_token_exchange": "instagram_long_lived_exchange_rejected",
+            "instagram_profile": "instagram_profile_validation_rejected",
         }
         phase_label = phase_labels.get(phase, "flujo OAuth")
         if reason == "unreachable":
@@ -2556,10 +2568,16 @@ def create_app(
             )
             code = "social_provider_unreachable"
         elif reason == "rejected":
-            detail = "{} rechazó {}; verifica callback exacta, credenciales y permisos de la app".format(
-                display, phase_label
-            )
-            code = "social_provider_rejected"
+            if channel_id == "x":
+                detail = "{} rechazó {}; verifica callback exacta, credenciales y permisos de la app".format(
+                    display, phase_label
+                )
+                code = "social_provider_rejected"
+            else:
+                detail = "{} rechazó {}; inicia una autorización nueva y verifica la configuración de la app".format(
+                    display, phase_label
+                )
+                code = rejected_codes.get(phase, "social_provider_rejected")
         else:
             detail = "{} devolvió una respuesta OAuth inválida durante {}".format(
                 display, phase_label

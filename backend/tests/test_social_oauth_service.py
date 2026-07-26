@@ -162,11 +162,16 @@ class SocialOAuthServiceTests(unittest.TestCase):
                     },
                 )
             if request.url.path == "/access_token":
-                body = request.content.decode("utf-8")
                 self.assertEqual(request.method, "POST")
-                self.assertIn("grant_type=ig_exchange_token", body)
-                self.assertIn("client_secret={}".format(IG_SECRET), body)
-                self.assertIn("access_token=instagram-short-token", body)
+                self.assertEqual(request.content, b"")
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer instagram-short-token",
+                )
+                query = parse_qs(request.url.query.decode("utf-8"))
+                self.assertEqual(query["grant_type"], ["ig_exchange_token"])
+                self.assertEqual(query["client_secret"], [IG_SECRET])
+                self.assertNotIn("access_token", query)
                 return httpx.Response(
                     200,
                     json={
@@ -260,6 +265,10 @@ class SocialOAuthServiceTests(unittest.TestCase):
             captured.exception.phase,
             "instagram_long_lived_token_exchange",
         )
+        self.assertEqual(captured.exception.status_code, 400)
+        self.assertEqual(captured.exception.provider_code, "190")
+        self.assertEqual(captured.exception.provider_error_type, "OAuthException")
+        self.assertNotIn("must not be surfaced", str(captured.exception))
         self.assertIsNone(service.connection("tenant-alpha", "instagram"))
         self.assertEqual(len(calls), 2)
         raw = self.path.read_bytes()

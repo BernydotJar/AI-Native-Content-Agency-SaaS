@@ -127,6 +127,7 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-theme-tier");
   document.documentElement.removeAttribute("style");
+  window.history.replaceState({}, "", "/");
   vi.restoreAllMocks();
 });
 
@@ -164,6 +165,24 @@ describe("product workspace shell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Cerrar diálogo de conexión/i }));
     expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+  });
+
+  it("explains when Instagram rejects the long-lived authorization exchange", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue(SESSION);
+    window.history.replaceState(
+      {},
+      "",
+      "/?social_channel=instagram&status=error&error=instagram_long_lived_exchange_rejected",
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByText(/Instagram rechazó la extensión de la autorización/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: /Administración del espacio/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows five server-derived providers after a secure session is restored", async () => {

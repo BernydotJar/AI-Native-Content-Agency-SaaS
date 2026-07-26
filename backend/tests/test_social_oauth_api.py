@@ -215,9 +215,15 @@ class SocialOAuthApiTests(unittest.TestCase):
                 )
             if request.url.path == "/access_token":
                 self.assertEqual(request.method, "POST")
-                body = request.content.decode("utf-8")
-                self.assertIn("grant_type=ig_exchange_token", body)
-                self.assertIn("access_token=instagram-short-token", body)
+                self.assertEqual(request.content, b"")
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer instagram-short-token",
+                )
+                query = parse_qs(request.url.query.decode("utf-8"))
+                self.assertEqual(query["grant_type"], ["ig_exchange_token"])
+                self.assertEqual(query["client_secret"], [IG_SECRET])
+                self.assertNotIn("access_token", query)
                 return httpx.Response(
                     200,
                     json={
@@ -297,6 +303,64 @@ class SocialOAuthApiTests(unittest.TestCase):
             raw = self.database.read_bytes()
             self.assertNotIn(b"instagram-short-token", raw)
             self.assertNotIn(b"instagram-long-token", raw)
+
+    def test_instagram_long_lived_rejection_returns_phase_specific_redirect(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.url.host == "api.instagram.com":
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "instagram-short-token",
+                        "user_id": 123,
+                    },
+                )
+            if request.url.path == "/access_token":
+                self.assertEqual(request.method, "POST")
+                self.assertEqual(
+                    request.headers["Authorization"],
+                    "Bearer instagram-short-token",
+                )
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "type": "OAuthException",
+                            "code": 190,
+                            "message": "must never reach the browser",
+                        }
+                    },
+                )
+            raise AssertionError("profile must not be called")
+
+        app = self.app(handler)
+        with TestClient(app, follow_redirects=False) as client:
+            csrf = open_session(client, ADMIN_KEY)
+            start = client.post(
+                "/api/v1/social-channels/instagram/oauth/start",
+                headers={"X-CSRF-Token": csrf},
+            )
+            state = parse_qs(urlsplit(start.json()["authorization_url"]).query)["state"][0]
+            callback = client.get(
+                "/api/v1/social-channels/instagram/oauth/callback",
+                params={"state": state, "code": "instagram-code"},
+            )
+            self.assertEqual(callback.status_code, 303)
+            self.assertEqual(
+                callback.headers["location"],
+                "/?social_channel=instagram&status=error&error=instagram_long_lived_exchange_rejected",
+            )
+            channel = client.get(
+                "/api/v1/social-channels/instagram"
+            ).json()["channel"]
+            self.assertEqual(channel["connection_state"], "not_connected")
+            self.assertIsNone(channel["connected_account"])
+            self.assertEqual(len(calls), 2)
+            serialized = json.dumps(channel)
+            self.assertNotIn("must never reach the browser", serialized)
+            self.assertNotIn("instagram-short-token", self.database.read_text(errors="ignore"))
 
     def test_x_rejection_returns_actionable_sanitized_phase(self):
         def rejected(request):
