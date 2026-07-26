@@ -272,6 +272,118 @@ class PublicationMediaApiTests(unittest.TestCase):
             self.assertEqual(replay.json()["provider_post_id"], "ig-post-verified-api")
         self.assertEqual(len(calls), 4)
 
+    def test_instagram_code_190_invalidates_connection_and_requires_reauthorization(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            self.assertTrue(request.url.path.endswith("/media"))
+            return httpx.Response(
+                401,
+                json={
+                    "error": {
+                        "message": "provider message must not be persisted",
+                        "type": "OAuthException",
+                        "code": 190,
+                        "error_subcode": 0,
+                    }
+                },
+            )
+
+        app = self.publication_app(handler)
+        raw = FIXTURE.read_bytes()
+        with TestClient(app) as client:
+            csrf = client.post(
+                "/api/v1/sessions",
+                json={"api_key": ADMIN_KEY},
+            ).json()["csrf_token"]
+            created = client.post(
+                "/api/v1/runs",
+                json=dict(BRIEF, title="Expired Instagram authorization"),
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "expired-authorization-run-0001",
+                },
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            run = created.json()
+            uploaded = client.post(
+                f"/api/v1/runs/{run['run_id']}/publication-media/instagram",
+                content=raw,
+                headers={
+                    "Content-Type": "image/jpeg",
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "expired-authorization-media-0001",
+                    "X-Media-Alt-Text-Base64": alt_header(
+                        "Tarjeta para probar una autorización expirada."
+                    ),
+                    "X-Media-Rights-Confirmed": "true",
+                },
+            )
+            self.assertEqual(uploaded.status_code, 201, uploaded.text)
+            approved = client.post(
+                f"/api/v1/runs/{run['run_id']}/greenlight/approve",
+                json={"reviewer": "media-admin", "note": "approved"},
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "expired-authorization-greenlight-0001",
+                },
+            )
+            self.assertEqual(approved.status_code, 200, approved.text)
+            completed = approved.json()
+            copy_deck = next(
+                item
+                for item in completed["artifacts"]
+                if item["kind"] == "copy_deck"
+            )
+            media = next(
+                item
+                for item in completed["artifacts"]
+                if item["kind"] == "publication_media"
+            )
+            response = client.post(
+                f"/api/v1/runs/{run['run_id']}/social-publications/instagram",
+                json={
+                    "artifact_id": copy_deck["artifact_id"],
+                    "media_artifact_id": media["artifact_id"],
+                    "greenlight_id": completed["greenlight"]["greenlight_id"],
+                    "greenlight_fencing_token": completed["greenlight"]["fencing_token"],
+                },
+                headers={
+                    "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "expired-authorization-publish-0001",
+                },
+            )
+            self.assertEqual(response.status_code, 409, response.text)
+            self.assertEqual(
+                response.json()["code"],
+                "social_connection_reauthorization_required",
+            )
+            channel = client.get(
+                "/api/v1/social-channels/instagram"
+            ).json()["channel"]
+            self.assertEqual(channel["connection_state"], "not_connected")
+            self.assertIsNone(channel["connected_account"])
+            self.assertTrue(channel["oauth_start_available"])
+            publications = client.get(
+                f"/api/v1/runs/{run['run_id']}/social-publications"
+            ).json()["publications"]
+            self.assertEqual(len(publications), 1)
+            self.assertEqual(publications[0]["status"], "failed")
+            self.assertEqual(
+                publications[0]["failure_reason"],
+                "provider_rejected:instagram_container_create:401:190:0:OAuthException",
+            )
+            audit = client.get("/api/v1/audit-events").json()["events"]
+            self.assertIn(
+                "social.reauthorization_required",
+                [event["action"] for event in audit],
+            )
+        self.assertEqual(len(calls), 1)
+        raw_database = self.database.read_bytes()
+        self.assertNotIn(b"provider message must not be persisted", raw_database)
+        self.assertNotIn(b"publication-instagram-token", raw_database)
+
     def test_media_route_allows_valid_body_over_global_limit_and_rejects_over_8_mib(self):
         image = Image.effect_noise((1080, 1350), 100).convert("RGB")
         output = io.BytesIO()

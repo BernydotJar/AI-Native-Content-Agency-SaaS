@@ -2126,6 +2126,7 @@ def create_app(
             store=service.social_store,
             cipher=social_cipher,
             transport=social_oauth_transport,
+            instagram_graph_api_version=instagram_graph_api_version,
         )
         if cookie_samesite not in {"lax", "none"}:
             raise ValueError(
@@ -2664,7 +2665,19 @@ def create_app(
         document = contract.public_dict()
         document["callback_url"] = private_config.redirect_uri
         record = service.social_store.get_connection(tenant_id, contract.channel_id)
-        connected = record is not None
+        token_current = True
+        if record is not None and record.token_expires_at is not None:
+            try:
+                expires_at = datetime.fromisoformat(record.token_expires_at)
+                current_time = datetime.fromisoformat(utc_now())
+                token_current = (
+                    expires_at.tzinfo is not None
+                    and current_time.tzinfo is not None
+                    and expires_at > current_time
+                )
+            except ValueError:
+                token_current = False
+        connected = record is not None and token_current
         document["connection_state"] = "connected" if connected else "not_connected"
         document["oauth_runtime_configured"] = social_oauth_service is not None
         document["oauth_start_available"] = bool(
@@ -2687,7 +2700,7 @@ def create_app(
         document["external_effects_enabled"] = publication_ready
         document["connected_account"] = (
             None
-            if record is None
+            if not connected
             else {
                 "account_id": record.account_id,
                 "account_username": record.account_username,
@@ -3613,6 +3626,40 @@ def create_app(
                 error.provider_subcode or "none",
                 error.error_type or "none",
             )
+            if channel_id == "instagram" and error.provider_code == "190":
+                connection = service.social_store.get_connection(
+                    principal.tenant_id,
+                    channel_id,
+                )
+                revoked_intents = 0
+                if connection is not None:
+                    revoked_intents = service.publication_store.revoke_unused(
+                        principal.tenant_id,
+                        channel_id=channel_id,
+                        account_id=connection.account_id,
+                        reason="provider_credential_invalidated",
+                    )
+                invalidated = service.social_store.delete_connection(
+                    principal.tenant_id,
+                    channel_id,
+                )
+                if invalidated:
+                    service.record_social_event(
+                        principal=principal,
+                        request_id=_request_id(request),
+                        action="social.reauthorization_required",
+                        channel_id=channel_id,
+                        payload={
+                            "provider_code": "190",
+                            "tokens_deleted": True,
+                            "pending_publication_intents_revoked": revoked_intents,
+                        },
+                    )
+                raise PublicApiError(
+                    status_code=status.HTTP_409_CONFLICT,
+                    code="social_connection_reauthorization_required",
+                    detail="Instagram connection must be authorized again",
+                ) from error
             raise PublicApiError(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 code="social_publication_rejected",

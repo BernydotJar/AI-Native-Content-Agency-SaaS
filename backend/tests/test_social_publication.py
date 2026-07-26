@@ -102,7 +102,15 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         self.connection_store.close()
         self.temp.cleanup()
 
-    def _connect(self, channel, account_id, username, tokens):
+    def _connect(
+        self,
+        channel,
+        account_id,
+        username,
+        tokens,
+        *,
+        token_expires_at=None,
+    ):
         encrypted = self.cipher.encrypt(
             tokens,
             associated_data="tenant-alpha:{}:connection".format(channel),
@@ -115,7 +123,7 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                 account_username=username,
                 encrypted_tokens=encrypted,
                 scopes=("publish",),
-                token_expires_at=None,
+                token_expires_at=token_expires_at,
                 connected_at=NOW,
                 updated_at=NOW,
             )
@@ -508,6 +516,27 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
                 lambda request: httpx.Response(200),
                 instagram_graph_api_version="latest",
             )
+
+    def test_expired_connection_blocks_before_intent_and_provider_http(self):
+        self._connect(
+            "instagram",
+            "account-instagram",
+            "connected.instagram",
+            {"access_token": IG_ACCESS_TOKEN},
+            token_expires_at="2026-07-22T23:59:59+00:00",
+        )
+        calls = []
+        authority = self.authority(lambda request: calls.append(request))
+        with self.assertRaisesRegex(
+            SocialPublicationUnavailableError,
+            "credential is expired",
+        ):
+            authority.execute(command("instagram"))
+        self.assertEqual(calls, [])
+        self.assertEqual(
+            self.publication_store.list_for_run("tenant-alpha", "run-001"),
+            (),
+        )
 
     def test_wrong_connected_account_and_missing_x_app_credentials_fail_before_intent(self):
         authority = self.authority(

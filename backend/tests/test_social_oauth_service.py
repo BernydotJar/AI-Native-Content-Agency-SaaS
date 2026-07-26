@@ -157,15 +157,28 @@ class SocialOAuthServiceTests(unittest.TestCase):
                 return httpx.Response(
                     200,
                     json={
-                        "access_token": "instagram-access-token",
+                        "access_token": "instagram-short-token",
                         "user_id": 987654,
-                        "expires_in": 3600,
                     },
                 )
-            if request.url.host == "graph.instagram.com":
+            if request.url.path == "/access_token":
+                body = request.content.decode("utf-8")
+                self.assertEqual(request.method, "POST")
+                self.assertIn("grant_type=ig_exchange_token", body)
+                self.assertIn("client_secret={}".format(IG_SECRET), body)
+                self.assertIn("access_token=instagram-short-token", body)
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "instagram-long-token",
+                        "token_type": "bearer",
+                        "expires_in": 5_184_000,
+                    },
+                )
+            if request.url.path == "/v24.0/me":
                 self.assertEqual(
                     request.headers["Authorization"],
-                    "Bearer instagram-access-token",
+                    "Bearer instagram-long-token",
                 )
                 return httpx.Response(
                     200,
@@ -197,11 +210,61 @@ class SocialOAuthServiceTests(unittest.TestCase):
         )
         self.assertEqual(connected.account_id, "987654")
         self.assertEqual(connected.account_username, "professional.account")
-        self.assertEqual(connected.token_expires_at, "2026-07-23T08:00:00+00:00")
-        self.assertEqual(len(requests), 2)
+        self.assertEqual(connected.token_expires_at, "2026-09-21T07:00:00+00:00")
+        self.assertEqual(len(requests), 3)
         stored = service.connection("tenant-alpha", "instagram")
         self.assertEqual(stored.account_username, "professional.account")
         self.assertIsNone(service.connection("tenant-beta", "instagram"))
+        raw = self.path.read_bytes()
+        self.assertNotIn(b"instagram-short-token", raw)
+        self.assertNotIn(b"instagram-long-token", raw)
+
+    def test_instagram_long_lived_exchange_is_required_before_connection(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.url.host == "api.instagram.com":
+                return httpx.Response(
+                    200,
+                    json={"access_token": "short-lived-only", "user_id": 77},
+                )
+            if request.url.path == "/access_token":
+                return httpx.Response(
+                    400,
+                    json={
+                        "error": {
+                            "type": "OAuthException",
+                            "code": 190,
+                            "message": "must not be surfaced",
+                        }
+                    },
+                )
+            raise AssertionError("profile must not be called")
+
+        state = "instagram-state-value-000000000000000000000009"
+        service = self.service(handler, states=(state,))
+        service.start(
+            tenant_id="tenant-alpha",
+            session_id="session-alpha",
+            channel_id="instagram",
+        )
+        with self.assertRaises(SocialOAuthProviderError) as captured:
+            service.complete_instagram(
+                tenant_id="tenant-alpha",
+                session_id="session-alpha",
+                state_value=state,
+                code="code-long-lived-rejected",
+            )
+        self.assertEqual(
+            captured.exception.phase,
+            "instagram_long_lived_token_exchange",
+        )
+        self.assertIsNone(service.connection("tenant-alpha", "instagram"))
+        self.assertEqual(len(calls), 2)
+        raw = self.path.read_bytes()
+        self.assertNotIn(b"short-lived-only", raw)
+        self.assertNotIn(b"must not be surfaced", raw)
 
     def test_instagram_consumer_account_is_rejected_and_callback_cannot_replay(self):
         calls = []
@@ -209,7 +272,19 @@ class SocialOAuthServiceTests(unittest.TestCase):
         def handler(request):
             calls.append(request)
             if request.url.host == "api.instagram.com":
-                return httpx.Response(200, json={"access_token": "ig-token", "user_id": 42})
+                return httpx.Response(
+                    200,
+                    json={"access_token": "ig-short-token", "user_id": 42},
+                )
+            if request.url.path == "/access_token":
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "ig-long-token",
+                        "token_type": "bearer",
+                        "expires_in": 5_184_000,
+                    },
+                )
             return httpx.Response(
                 200,
                 json={"id": "42", "username": "personal", "account_type": "PERSONAL"},
@@ -237,7 +312,7 @@ class SocialOAuthServiceTests(unittest.TestCase):
                 state_value=state,
                 code="code-personal",
             )
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
 
     def test_provider_failure_is_sanitized_and_never_retried(self):
         calls = []

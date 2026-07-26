@@ -233,6 +233,10 @@ class SocialPublicationAuthority:
             raise SocialPublicationUnavailableError(
                 "authorized social account is not connected"
             )
+        if _connection_token_expired(connection.token_expires_at, self._clock()):
+            raise SocialPublicationUnavailableError(
+                "connected social credential is expired"
+            )
         if validated.channel_id == "x" and (
             not self._x_consumer_key or not self._x_consumer_secret
         ):
@@ -692,6 +696,22 @@ def _safe_diagnostic_token(
     if any(character not in allowed for character in rendered):
         return fallback
     return rendered
+
+
+def _connection_token_expired(
+    token_expires_at: Optional[str],
+    now: str,
+) -> bool:
+    if token_expires_at is None:
+        return False
+    try:
+        expires = datetime.fromisoformat(token_expires_at)
+        current = datetime.fromisoformat(now)
+    except ValueError:
+        return True
+    if expires.tzinfo is None or current.tzinfo is None:
+        return True
+    return expires <= current
 
 
 def _provider_rejection_failure_reason(

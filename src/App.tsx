@@ -9,6 +9,10 @@ import { StationInspector } from "./components/StationInspector";
 import { WorkspaceRuntime } from "./components/WorkspaceRuntime";
 import { WorkspaceSettingsDialog } from "./components/WorkspaceSettingsDialog";
 import { runtimeApi } from "./lib/runtimeApi";
+import {
+  requiresSocialReconnect,
+  socialPublicationErrorMessage,
+} from "./lib/socialPublicationError";
 import type {
   BrowserRuntimeSession,
   RuntimeIntegrationSummary,
@@ -332,10 +336,13 @@ export default function App() {
         result,
       ]);
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "No se pudo determinar el resultado de la publicación.";
+      const message = socialPublicationErrorMessage(error);
       setPublicationError(message);
+      if (requiresSocialReconnect(error)) {
+        await refreshFabric();
+        setSettingsOpen(true);
+        setSocialActionError(message);
+      }
       throw error;
     } finally {
       setPublicationBusy(null);
