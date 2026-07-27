@@ -451,6 +451,25 @@ class SocialOAuthServiceTests(unittest.TestCase):
         self.assertNotIn(IG_SECRET, rendered)
         self.assertEqual(len(calls), 1)
 
+    def test_x_error_array_preserves_safe_code_without_provider_message(self):
+        def rejected(request):
+            return httpx.Response(
+                401,
+                headers={"Content-Type": "application/json"},
+                content=b'{"errors":[{"code":32,"message":"secret provider detail"}]}',
+            )
+
+        service = self.service(rejected)
+        with self.assertRaises(SocialOAuthProviderError) as captured:
+            service.start(
+                tenant_id="tenant-alpha", session_id="session-alpha", channel_id="x"
+            )
+        self.assertEqual(captured.exception.phase, "x_request_token")
+        self.assertEqual(captured.exception.status_code, 401)
+        self.assertEqual(captured.exception.provider_code, "32")
+        self.assertEqual(captured.exception.provider_error_type, "")
+        self.assertNotIn("secret provider detail", str(captured.exception))
+
     def test_disconnect_is_tenant_scoped(self):
         def handler(request):
             if request.url.path == "/oauth/request_token":

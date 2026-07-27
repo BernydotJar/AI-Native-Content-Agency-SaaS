@@ -594,12 +594,18 @@ def _safe_provider_error_metadata(response: httpx.Response) -> Tuple[str, str]:
     if not isinstance(payload, Mapping):
         return "", ""
     error = payload.get("error")
-    if not isinstance(error, Mapping):
-        return "", ""
-    return (
-        _safe_provider_metadata_value(error.get("code"), digits_only=True),
-        _safe_provider_metadata_value(error.get("type"), digits_only=False),
-    )
+    if isinstance(error, Mapping):
+        return (
+            _safe_provider_metadata_value(error.get("code"), digits_only=True),
+            _safe_provider_metadata_value(error.get("type"), digits_only=False),
+        )
+    errors = payload.get("errors")
+    if isinstance(errors, list) and len(errors) == 1 and isinstance(errors[0], Mapping):
+        return (
+            _safe_provider_metadata_value(errors[0].get("code"), digits_only=True),
+            _safe_provider_metadata_value(errors[0].get("type"), digits_only=False),
+        )
+    return "", ""
 
 
 def _safe_provider_metadata_value(value: object, *, digits_only: bool) -> str:

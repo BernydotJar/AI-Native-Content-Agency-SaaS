@@ -463,6 +463,38 @@ class SocialOAuthApiTests(unittest.TestCase):
             self.assertNotIn(X_SECRET, serialized)
             self.assertNotIn(IG_SECRET, serialized)
 
+    def test_x_code_32_returns_consumer_credentials_error(self):
+        def rejected(request):
+            body = json.dumps(
+                {
+                    "errors": [
+                        {
+                            "code": 32,
+                            "message": "Could not authenticate you. {}".format(X_SECRET),
+                        }
+                    ]
+                }
+            ).encode("utf-8")
+            return httpx.Response(
+                401,
+                headers={"Content-Type": "application/json"},
+                content=body,
+            )
+
+        with TestClient(self.app(rejected)) as client:
+            csrf = open_session(client, ADMIN_KEY)
+            response = client.post(
+                "/api/v1/social-channels/x/oauth/start",
+                headers={"X-CSRF-Token": csrf},
+            )
+            self.assertEqual(response.status_code, 502)
+            self.assertEqual(
+                response.json()["code"], "x_consumer_credentials_rejected"
+            )
+            self.assertIn("Consumer Key", response.json()["detail"])
+            self.assertIn("OAuth 1.0a", response.json()["detail"])
+            self.assertNotIn(X_SECRET, json.dumps(response.json()))
+
     def test_viewer_and_bearer_admin_cannot_start_browser_oauth(self):
         no_http = lambda request: (_ for _ in ()).throw(AssertionError("no HTTP"))
         with TestClient(self.app(no_http)) as viewer:
