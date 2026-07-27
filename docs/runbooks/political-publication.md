@@ -88,3 +88,29 @@ For a verified published post, disabling the local switch does not delete the pr
 - provider permalink/timestamp/account read-after-write evidence;
 - rollback owner and decision record;
 - jurisdiction-specific legal/campaign approval outside the software.
+
+## Verified neutral sandbox execution — 2026-07-27
+
+The governed neutral sequence completed successfully on the authorized laboratory account `@beesheep2`:
+
+```text
+operation_id: inc025-neutral-instagram-005
+account_id: 27525095797156898
+run_id: run-90534aa784e451aa
+provider_container_id: 18609504208033520
+provider_post_id: 18027585197670069
+verification_status: verified
+permalink: https://www.instagram.com/p/DbRpnHHoB7j/
+```
+
+Approved bindings:
+
+```text
+caption_sha256: be237c368962c6d180929a7a8489459c31f561565ecb7e8e854dc16684909803
+media_sha256: e542083bf71fbf335539896dc5df79eb1d7eb24319c827948a21809ccf8286f5
+media: JPEG 1080×1350
+```
+
+The effect used two distinct authenticated subjects, one exact-once durable intent and one read-after-write verified provider receipt. The raw political confirmation and public media capability URL were not persisted in the safe receipt. Both publication switches were closed automatically after the effect and paid media remained disabled.
+
+This receipt proves one bounded sandbox publication. It does not change the global `DENY_RELEASE` or `DENY_APPLY` decisions and does not authorize candidate content, additional posts or paid media.

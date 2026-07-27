@@ -50,3 +50,36 @@ The second governed attempt used the versioned multipart contract and a distinct
 Attempt `004` preserved the safe provider tuple `instagram_container_create / HTTP 401 / code 190 / OAuthException` and no container or post ID. Two separate read-only identity probes, one against the unversioned profile route and one against the pinned Graph version, returned the same `401 / 190` result. This proves the stored Instagram User access token is invalid or expired rather than a media, caption or publish-parameter defect.
 
 No further publication attempt is permitted until a fresh interactive OAuth flow succeeds. The callback must exchange the authorization-code token for a long-lived Instagram User token, persist its expiry, verify the profile with that long-lived token and force the UI back to `not_connected` when Meta later returns code `190`.
+
+## Final verified outcome
+
+INC-025 completed on 2026-07-27 with operation `inc025-neutral-instagram-005` after a fresh OAuth connection to the fixed account ID and username.
+
+The final execution satisfied all acceptance criteria:
+
+- exactly one new run and idempotency binding;
+- two distinct authenticated reviewers;
+- approved `political_compliance_record` in the Greenlight envelope;
+- immutable JPEG `1080×1350` with SHA-256 `e542083bf71fbf335539896dc5df79eb1d7eb24319c827948a21809ccf8286f5`;
+- caption SHA-256 `be237c368962c6d180929a7a8489459c31f561565ecb7e8e854dc16684909803`;
+- one provider container and one provider post;
+- provider read-after-write status `verified`;
+- account username `beesheep2` and account ID `27525095797156898` matched;
+- one durable intent with `status=succeeded`;
+- raw confirmation absent from durable state and safe receipts;
+- both publication switches returned to `false` through the bounded window cleanup.
+
+Safe receipt identifiers:
+
+```text
+run_id: run-90534aa784e451aa
+intent_id: social-publication-intent-a9f246300d21bd0aee790fb33755385ba14150023e3f4587
+provider_container_id: 18609504208033520
+provider_post_id: 18027585197670069
+permalink: https://www.instagram.com/p/DbRpnHHoB7j/
+published_at: 2026-07-27T00:13:11+0000
+```
+
+The OAuth recovery required a bounded compatibility path for the exact unsupported extension response `HTTP 400 / code 100 / IGApiException`. The initial Instagram User credential is accepted only after professional-profile validation, is encrypted server-side and is assigned a maximum local lifetime of 3,300 seconds. Code `190` and all other rejection tuples remain fail-closed.
+
+One sandbox success is evidence for the controlled integration path only. Release and cloud-apply recommendations remain denied pending the wider production program.
