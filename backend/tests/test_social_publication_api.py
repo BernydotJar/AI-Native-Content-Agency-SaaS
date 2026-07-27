@@ -18,6 +18,8 @@ POLITICAL_APPROVER_KEY = "publication-political-approver-key-2026"
 X_SECRET = "publication-x-consumer-secret-must-not-leak"
 X_ACCESS_TOKEN = "publication-x-access-token-must-not-leak"
 X_ACCESS_SECRET = "publication-x-access-secret-must-not-leak"
+X_API_POST_ID = "1800000000000000101"
+X_API_AUDIT_POST_ID = "1800000000000000102"
 
 
 def encryption_key() -> str:
@@ -226,17 +228,41 @@ class SocialPublicationApiTests(unittest.TestCase):
 
     def test_x_publication_is_exact_once_and_server_derives_approved_copy(self):
         calls = []
+        created_text = {}
 
         def handler(request):
             calls.append(request)
-            self.assertEqual(str(request.url), "https://api.x.com/2/tweets")
-            payload = json.loads(request.content)
-            self.assertIn("Exact-once social campaign 001", payload["text"])
-            self.assertNotIn("client supplied", payload["text"])
+            if request.method == "POST":
+                self.assertEqual(str(request.url), "https://api.x.com/2/tweets")
+                payload = json.loads(request.content)
+                self.assertIn("Exact-once social campaign 001", payload["text"])
+                self.assertNotIn("client supplied", payload["text"])
+                created_text["value"] = payload["text"]
+                return httpx.Response(
+                    201,
+                    headers={"x-request-id": "provider-create-request-001"},
+                    json={"data": {"id": X_API_POST_ID}},
+                )
+            self.assertEqual(request.method, "GET")
+            self.assertEqual(
+                request.url.path,
+                "/2/tweets/{}".format(X_API_POST_ID),
+            )
+            self.assertEqual(
+                request.url.params["tweet.fields"],
+                "author_id,created_at",
+            )
             return httpx.Response(
-                201,
-                headers={"x-request-id": "provider-request-001"},
-                json={"data": {"id": "x-post-001"}},
+                200,
+                headers={"x-request-id": "provider-verify-request-001"},
+                json={
+                    "data": {
+                        "id": X_API_POST_ID,
+                        "text": created_text["value"],
+                        "author_id": "x-account-001",
+                        "created_at": "2026-07-23T20:30:01Z",
+                    }
+                },
             )
 
         app = self.app(handler)
@@ -254,7 +280,7 @@ class SocialPublicationApiTests(unittest.TestCase):
                 },
             )
             self.assertEqual(first.status_code, 201, first.text)
-            self.assertEqual(first.json()["provider_post_id"], "x-post-001")
+            self.assertEqual(first.json()["provider_post_id"], X_API_POST_ID)
             self.assertFalse(first.json()["replayed"])
 
             replay = client.post(
@@ -268,7 +294,14 @@ class SocialPublicationApiTests(unittest.TestCase):
             self.assertEqual(replay.status_code, 200, replay.text)
             self.assertEqual(replay.headers["X-Command-Replayed"], "true")
             self.assertTrue(replay.json()["replayed"])
-            self.assertEqual(len(calls), 1)
+            self.assertEqual(len(calls), 2)
+            receipt = first.json()["receipt"]
+            self.assertEqual(receipt["verification_status"], "verified")
+            self.assertEqual(receipt["author_id"], "x-account-001")
+            self.assertEqual(
+                receipt["permalink"],
+                "https://x.com/publication_x/status/{}".format(X_API_POST_ID),
+            )
 
             listed = client.get(
                 "/api/v1/runs/{}/social-publications".format(run["run_id"])
@@ -294,17 +327,32 @@ class SocialPublicationApiTests(unittest.TestCase):
                 if item["action"] == "social.publication_succeeded"
             ]
             self.assertEqual(len(success), 1)
-            self.assertEqual(success[0]["payload"]["provider_post_id"], "x-post-001")
+            self.assertEqual(success[0]["payload"]["provider_post_id"], X_API_POST_ID)
 
     def test_replay_repairs_missing_success_audit_without_second_provider_call(self):
         calls = []
+        created_text = {}
 
         def handler(request):
             calls.append(request)
+            if request.method == "POST":
+                created_text["value"] = json.loads(request.content)["text"]
+                return httpx.Response(
+                    201,
+                    headers={"x-request-id": "provider-create-audit-repair"},
+                    json={"data": {"id": X_API_AUDIT_POST_ID}},
+                )
             return httpx.Response(
-                201,
-                headers={"x-request-id": "provider-request-audit-repair"},
-                json={"data": {"id": "x-post-audit-repair"}},
+                200,
+                headers={"x-request-id": "provider-verify-audit-repair"},
+                json={
+                    "data": {
+                        "id": X_API_AUDIT_POST_ID,
+                        "text": created_text["value"],
+                        "author_id": "x-account-001",
+                        "created_at": "2026-07-23T20:30:02Z",
+                    }
+                },
             )
 
         app = self.app(handler)
@@ -330,13 +378,13 @@ class SocialPublicationApiTests(unittest.TestCase):
 
             first = client.post(path, json=body, headers=headers)
             self.assertEqual(first.status_code, 500, first.text)
-            self.assertEqual(len(calls), 1)
+            self.assertEqual(len(calls), 2)
 
             replay = client.post(path, json=body, headers=headers)
             self.assertEqual(replay.status_code, 200, replay.text)
             self.assertEqual(replay.headers["X-Command-Replayed"], "true")
             self.assertTrue(replay.json()["replayed"])
-            self.assertEqual(len(calls), 1)
+            self.assertEqual(len(calls), 2)
             self.assertEqual(len(audit_attempts), 2)
 
             audit = client.get("/api/v1/audit-events").json()["events"]
@@ -349,7 +397,7 @@ class SocialPublicationApiTests(unittest.TestCase):
             self.assertEqual(len(success), 1)
             self.assertEqual(
                 success[0]["payload"]["provider_post_id"],
-                "x-post-audit-repair",
+                X_API_AUDIT_POST_ID,
             )
 
     def test_request_cannot_inject_copy_or_media_url(self):

@@ -28,6 +28,7 @@ Clock = Callable[[], str]
 TokenFactory = Callable[[], str]
 TimestampFactory = Callable[[], int]
 _X_CREATE_POST_URL = "https://api.x.com/2/tweets"
+_X_LOOKUP_POST_URL = "https://api.x.com/2/tweets/{post_id}"
 _INSTAGRAM_GRAPH_BASE = "https://graph.instagram.com"
 _MAX_RESPONSE_BYTES = 1024 * 1024
 _MAX_CONTENT_BYTES = 25_000
@@ -269,7 +270,12 @@ class SocialPublicationAuthority:
             ) from error
         try:
             if validated.channel_id == "x":
-                completed = self._publish_x(validated, reservation.intent, tokens)
+                completed = self._publish_x(
+                    validated,
+                    reservation.intent,
+                    tokens,
+                    expected_username=connection.account_username,
+                )
             else:
                 completed = self._publish_instagram(
                     validated,
@@ -293,14 +299,14 @@ class SocialPublicationAuthority:
             ) from error
         return SocialPublicationResult.from_intent(completed, replayed=False)
 
-    def _publish_x(
+    def _x_authorization(
         self,
-        command: SocialPublicationCommand,
-        intent: SocialPublicationIntent,
-        tokens: Mapping[str, object],
-    ) -> SocialPublicationIntent:
-        access_token = _required_secret(tokens, "access_token")
-        access_secret = _required_secret(tokens, "access_token_secret")
+        method: str,
+        url: str,
+        *,
+        access_token: str,
+        access_secret: str,
+    ) -> str:
         oauth = {
             "oauth_consumer_key": self._x_consumer_key,
             "oauth_nonce": self._nonce_factory(),
@@ -310,21 +316,38 @@ class SocialPublicationAuthority:
             "oauth_version": "1.0",
         }
         oauth["oauth_signature"] = _oauth1_signature(
-            "POST",
-            _X_CREATE_POST_URL,
+            method,
+            url,
             oauth,
             consumer_secret=self._x_consumer_secret,
             token_secret=access_secret,
         )
-        authorization = "OAuth " + ", ".join(
+        return "OAuth " + ", ".join(
             '{}="{}"'.format(_percent(name), _percent(value))
             for name, value in sorted(oauth.items())
+        )
+
+    def _publish_x(
+        self,
+        command: SocialPublicationCommand,
+        intent: SocialPublicationIntent,
+        tokens: Mapping[str, object],
+        *,
+        expected_username: str,
+    ) -> SocialPublicationIntent:
+        access_token = _required_secret(tokens, "access_token")
+        access_secret = _required_secret(tokens, "access_token_secret")
+        create_authorization = self._x_authorization(
+            "POST",
+            _X_CREATE_POST_URL,
+            access_token=access_token,
+            access_secret=access_secret,
         )
         response = self._request(
             "POST",
             _X_CREATE_POST_URL,
             phase="x_post_create",
-            headers={"Authorization": authorization},
+            headers={"Authorization": create_authorization},
             json={"text": command.content},
         )
         payload = _json_object(response)
@@ -333,12 +356,98 @@ class SocialPublicationAuthority:
             raise SocialPublicationUnknownError(
                 "social publication outcome is unknown"
             )
-        provider_post_id = _required_identifier(data, "id")
+        provider_post_id = _required_x_post_id(data, "id")
+        lookup_url = "{}?{}".format(
+            _X_LOOKUP_POST_URL.format(post_id=provider_post_id),
+            urlencode({"tweet.fields": "author_id,created_at"}),
+        )
+        verify_authorization = self._x_authorization(
+            "GET",
+            lookup_url,
+            access_token=access_token,
+            access_secret=access_secret,
+        )
+        verification_response = self._request(
+            "GET",
+            lookup_url,
+            phase="x_post_verify",
+            headers={"Authorization": verify_authorization},
+        )
+        verification_payload = _json_object(verification_response)
+        verification_data = verification_payload.get("data")
+        if not isinstance(verification_data, Mapping):
+            raise SocialPublicationUnknownError(
+                "social publication outcome is unknown"
+            )
+        verified_post_id = _required_x_post_id(verification_data, "id")
+        verified_text = verification_data.get("text")
+        author_id = _required_identifier(verification_data, "author_id")
+        published_at = verification_data.get("created_at")
+        if not hmac.compare_digest(provider_post_id, verified_post_id):
+            raise SocialPublicationUnknownError(
+                "X post identity does not match"
+            )
+        if not isinstance(verified_text, str) or not hmac.compare_digest(
+            verified_text.encode("utf-8"), command.content.encode("utf-8")
+        ):
+            raise SocialPublicationUnknownError(
+                "X post content does not match"
+            )
+        if not hmac.compare_digest(author_id, command.account_id):
+            raise SocialPublicationUnknownError(
+                "X post account does not match"
+            )
+        if not isinstance(published_at, str) or len(published_at) > 128:
+            raise SocialPublicationUnknownError(
+                "X post timestamp is invalid"
+            )
+        try:
+            parsed_timestamp = datetime.fromisoformat(
+                published_at.replace("Z", "+00:00")
+            )
+        except ValueError as error:
+            raise SocialPublicationUnknownError(
+                "X post timestamp is invalid"
+            ) from error
+        if parsed_timestamp.tzinfo is None:
+            raise SocialPublicationUnknownError(
+                "X post timestamp is invalid"
+            )
+        if (
+            not expected_username
+            or len(expected_username) > 64
+            or any(
+                character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+                for character in expected_username
+            )
+        ):
+            raise SocialPublicationUnknownError(
+                "X post username is invalid"
+            )
+        permalink = "https://x.com/{}/status/{}".format(
+            expected_username,
+            provider_post_id,
+        )
         receipt = _receipt(
             provider="x",
             provider_post_id=provider_post_id,
             response=response,
             intent=intent,
+        )
+        receipt.update(
+            {
+                "verification_status": "verified",
+                "verification_request_id": (
+                    verification_response.headers.get("x-request-id") or ""
+                )[:256],
+                "permalink": permalink,
+                "published_at": published_at,
+                "username": expected_username,
+                "author_id": author_id,
+                "content_sha256": hashlib.sha256(
+                    command.content.encode("utf-8")
+                ).hexdigest(),
+            }
         )
         try:
             return self._store.complete(
@@ -925,6 +1034,21 @@ def _json_object(response: httpx.Response) -> Mapping[str, object]:
             "social publication outcome is unknown"
         )
     return payload
+
+
+def _required_x_post_id(payload: Mapping[str, object], name: str) -> str:
+    value = payload.get(name)
+    if isinstance(value, int):
+        value = str(value)
+    if (
+        not isinstance(value, str)
+        or not value.isdigit()
+        or len(value) > 19
+    ):
+        raise SocialPublicationUnknownError(
+            "social publication outcome is unknown"
+        )
+    return value
 
 
 def _required_identifier(payload: Mapping[str, object], name: str) -> str:

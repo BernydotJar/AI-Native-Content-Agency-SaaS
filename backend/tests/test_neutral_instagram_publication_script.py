@@ -27,6 +27,25 @@ class NeutralInstagramPublicationScriptTests(unittest.TestCase):
         self.assertNotIn("vota", caption.lower())
         self.assertNotIn("apoya", caption.lower())
 
+
+    def test_repeatability_variant_has_distinct_neutral_copy_and_media(self):
+        baseline_caption = module.expected_caption(content_variant="baseline-v1")
+        repeat_caption = module.expected_caption(content_variant="repeatability-v2")
+        self.assertNotEqual(repeat_caption, baseline_caption)
+        self.assertIn("segunda verificación técnica no electoral", repeat_caption)
+        self.assertIn("No corresponde a una campaña electoral", repeat_caption)
+        self.assertIn("No se requiere ninguna acción", repeat_caption)
+        self.assertNotIn("vota", repeat_caption.lower())
+        self.assertNotIn("apoya", repeat_caption.lower())
+        with tempfile.TemporaryDirectory() as directory:
+            baseline = Path(directory) / "baseline.jpg"
+            repeat = Path(directory) / "repeat.jpg"
+            baseline_result = module.generate_neutral_media(baseline, "baseline-v1")
+            repeat_result = module.generate_neutral_media(repeat, "repeatability-v2")
+            self.assertNotEqual(repeat_result["sha256"], baseline_result["sha256"])
+            self.assertEqual(repeat_result["width"], 1080)
+            self.assertEqual(repeat_result["height"], 1350)
+
     def test_prepare_and_execute_flags_fail_closed(self):
         base = {
             "AGENCY_POLITICAL_CONTENT_ENABLED": "true",

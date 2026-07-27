@@ -31,6 +31,9 @@ X_CONSUMER_SECRET = "x-consumer-secret-must-not-leak"
 X_ACCESS_TOKEN = "x-access-token-must-not-leak"
 X_ACCESS_SECRET = "x-access-secret-must-not-leak"
 IG_ACCESS_TOKEN = "instagram-access-token-must-not-leak"
+X_POST_ID = "1800000000000000001"
+X_POST_BINDING_ID = "1800000000000000002"
+X_POST_UNCERTAIN_ID = "1800000000000000003"
 MEDIA_URL = "https://cdn.example.test/governed-media.jpg"
 
 
@@ -161,28 +164,56 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
 
         def handler(request):
             calls.append(request)
-            self.assertEqual(request.method, "POST")
-            self.assertEqual(str(request.url), "https://api.x.com/2/tweets")
             authorization = request.headers["Authorization"]
             self.assertTrue(authorization.startswith("OAuth "))
             self.assertNotIn(X_CONSUMER_SECRET, authorization)
             self.assertNotIn(X_ACCESS_SECRET, authorization)
-            self.assertEqual(json.loads(request.content), {"text": "Approved campaign copy"})
+            if request.method == "POST":
+                self.assertEqual(str(request.url), "https://api.x.com/2/tweets")
+                self.assertEqual(
+                    json.loads(request.content),
+                    {"text": "Approved campaign copy"},
+                )
+                return httpx.Response(
+                    201,
+                    headers={"x-request-id": "x-create-request-001"},
+                    json={"data": {"id": X_POST_ID}},
+                )
+            self.assertEqual(request.method, "GET")
+            self.assertEqual(request.url.path, "/2/tweets/{}".format(X_POST_ID))
+            self.assertEqual(request.url.params["tweet.fields"], "author_id,created_at")
             return httpx.Response(
-                201,
-                headers={"x-request-id": "x-request-001"},
-                json={"data": {"id": "x-post-001", "text": "ignored"}},
+                200,
+                headers={"x-request-id": "x-verify-request-001"},
+                json={
+                    "data": {
+                        "id": X_POST_ID,
+                        "text": "Approved campaign copy",
+                        "author_id": "account-x",
+                        "created_at": "2026-07-23T20:30:01Z",
+                    }
+                },
             )
 
         authority = self.authority(handler)
         first = authority.execute(command())
         self.assertEqual(first.status, "succeeded")
-        self.assertEqual(first.provider_post_id, "x-post-001")
+        self.assertEqual(first.provider_post_id, X_POST_ID)
         self.assertFalse(first.replayed)
+        self.assertEqual(first.receipt["verification_status"], "verified")
+        self.assertEqual(
+            first.receipt["permalink"],
+            "https://x.com/connected_x/status/{}".format(X_POST_ID),
+        )
+        self.assertEqual(first.receipt["author_id"], "account-x")
+        self.assertEqual(
+            first.receipt["content_sha256"],
+            digest("Approved campaign copy"),
+        )
         second = authority.execute(command())
         self.assertTrue(second.replayed)
-        self.assertEqual(second.provider_post_id, "x-post-001")
-        self.assertEqual(len(calls), 1)
+        self.assertEqual(second.provider_post_id, X_POST_ID)
+        self.assertEqual(len(calls), 2)
         serialized = json.dumps(second.public_dict(), sort_keys=True)
         for forbidden in (
             "Approved campaign copy",
@@ -192,12 +223,54 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, serialized)
 
+    def test_x_read_after_write_mismatch_is_unknown_and_blocks_retry(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST":
+                return httpx.Response(201, json={"data": {"id": X_POST_ID}})
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": X_POST_ID,
+                        "text": "Different provider text",
+                        "author_id": "account-x",
+                        "created_at": "2026-07-23T20:30:01Z",
+                    }
+                },
+            )
+
+        authority = self.authority(handler)
+        with self.assertRaises(SocialPublicationUnknownError):
+            authority.execute(command())
+        stored = self.publication_store.list_for_run("tenant-alpha", "run-001")[0]
+        self.assertEqual(stored.status, "unknown")
+        self.assertEqual(stored.provider_post_id, None)
+        with self.assertRaises(SocialPublicationBlockedError) as blocked:
+            authority.execute(command())
+        self.assertEqual(blocked.exception.status, "unknown")
+        self.assertEqual(len(calls), 2)
+
     def test_same_effect_with_different_idempotency_key_replays_without_second_post(self):
         calls = []
 
         def handler(request):
             calls.append(request)
-            return httpx.Response(201, json={"data": {"id": "x-post-binding-001"}})
+            if request.method == "POST":
+                return httpx.Response(201, json={"data": {"id": X_POST_BINDING_ID}})
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": X_POST_BINDING_ID,
+                        "text": "Approved campaign copy",
+                        "author_id": "account-x",
+                        "created_at": "2026-07-23T20:30:02Z",
+                    }
+                },
+            )
 
         authority = self.authority(handler)
         first = authority.execute(command())
@@ -206,18 +279,32 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         )
         self.assertEqual(first.intent_id, second.intent_id)
         self.assertTrue(second.replayed)
-        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(calls), 2)
 
     def test_same_idempotency_key_with_changed_content_conflicts_before_http(self):
         calls = []
-        authority = self.authority(
-            lambda request: calls.append(request)
-            or httpx.Response(201, json={"data": {"id": "post-001"}})
-        )
+
+        def handler(request):
+            calls.append(request)
+            if request.method == "POST":
+                return httpx.Response(201, json={"data": {"id": X_POST_BINDING_ID}})
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": X_POST_BINDING_ID,
+                        "text": "Approved campaign copy",
+                        "author_id": "account-x",
+                        "created_at": "2026-07-23T20:30:02Z",
+                    }
+                },
+            )
+
+        authority = self.authority(handler)
         authority.execute(command())
         with self.assertRaises(SocialPublicationConflictError):
             authority.execute(command(content="Changed approved copy"))
-        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(calls), 2)
 
     def test_known_rejection_is_failed_and_never_retried(self):
         calls = []
@@ -483,7 +570,19 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
 
         def handler(request):
             calls.append(request)
-            return httpx.Response(201, json={"data": {"id": "x-post-uncertain"}})
+            if request.method == "POST":
+                return httpx.Response(201, json={"data": {"id": X_POST_UNCERTAIN_ID}})
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": X_POST_UNCERTAIN_ID,
+                        "text": "Approved campaign copy",
+                        "author_id": "account-x",
+                        "created_at": "2026-07-23T20:30:03Z",
+                    }
+                },
+            )
 
         authority = self.authority(handler, store=failing_store)
         with self.assertRaises(SocialPublicationUnknownError):
@@ -491,7 +590,7 @@ class SocialPublicationAuthorityTests(unittest.TestCase):
         with self.assertRaises(SocialPublicationBlockedError) as blocked:
             authority.execute(command())
         self.assertIn(blocked.exception.status, {"pending", "unknown"})
-        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(calls), 2)
 
     def test_instagram_graph_api_version_is_explicit_and_validated(self):
         calls = []

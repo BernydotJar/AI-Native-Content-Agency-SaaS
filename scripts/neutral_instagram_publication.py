@@ -31,6 +31,60 @@ EXPECTED_WIDTH = 1080
 EXPECTED_HEIGHT = 1350
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 _OPERATION_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{7,79}$")
+_CONTENT_VARIANTS: dict[str, dict[str, str]] = {
+    "baseline-v1": {
+        "title": "Prueba técnica neutral de publicación",
+        "objective": "Verificar el flujo gobernado de aprobación, media y confirmación",
+        "office": "prueba técnica no electoral",
+        "candidate_name": "Sistema de verificación",
+        "problem": "Validar de extremo a extremo el control de una publicación orgánica neutral",
+        "proposal": "Verificar el flujo de aprobación, media y confirmación sin contenido electoral ni pauta",
+        "disclosure": "Prueba técnica de publicación. No corresponde a una campaña electoral.",
+        "evidence_statement": "La publicación verifica el flujo de aprobación, media y confirmación del sistema.",
+        "media_badge": "PRUEBA TÉCNICA",
+        "media_title": "Publicación\nneutral",
+        "media_subtitle": "Verificación de flujo gobernado",
+        "media_process": "Aprobación · Media · Confirmación",
+        "media_footer": "No corresponde a una campaña electoral",
+        "alt_text": (
+            "Tarjeta gráfica de prueba técnica con el texto Publicación neutral, "
+            "verificación de flujo gobernado, sin pauta y sin llamado electoral."
+        ),
+    },
+    "repeatability-v2": {
+        "title": "Segunda prueba técnica neutral de publicación",
+        "objective": (
+            "Confirmar la repetibilidad del flujo gobernado de aprobación, media, "
+            "publicación y verificación posterior"
+        ),
+        "office": "segunda verificación técnica no electoral",
+        "candidate_name": "CampaignOS",
+        "problem": (
+            "Confirmar que una segunda publicación orgánica neutral conserva los "
+            "mismos controles"
+        ),
+        "proposal": (
+            "Repetir el flujo de aprobación independiente, media gobernada, "
+            "publicación y verificación posterior sin contenido electoral ni pauta"
+        ),
+        "disclosure": (
+            "Segunda prueba técnica de publicación. No corresponde a una campaña electoral."
+        ),
+        "evidence_statement": (
+            "La publicación confirma la repetibilidad del flujo gobernado y su "
+            "verificación posterior."
+        ),
+        "media_badge": "SEGUNDA PRUEBA",
+        "media_title": "Flujo\nrepetible",
+        "media_subtitle": "Publicación y verificación posterior",
+        "media_process": "Aprobación · Media · Receipt",
+        "media_footer": "Prueba neutral · Sin campaña electoral",
+        "alt_text": (
+            "Tarjeta gráfica de segunda prueba técnica con el texto Flujo repetible, "
+            "publicación y verificación posterior, sin pauta y sin llamado electoral."
+        ),
+    },
+}
 
 
 class NeutralPublicationError(RuntimeError):
@@ -229,31 +283,43 @@ def create_browser_session(base_url: str, identity: Identity) -> BrowserSession:
     return BrowserSession(cookie=cookie, csrf_token=csrf_token, subject_id=identity.subject_id)
 
 
-def build_neutral_brief(operation_id: str = "neutral-template") -> dict[str, Any]:
+def neutral_variant(name: str) -> Mapping[str, str]:
+    variant = _CONTENT_VARIANTS.get(name)
+    require(variant is not None, "neutral content variant is unsupported")
+    return variant
+
+
+def build_neutral_brief(
+    operation_id: str = "neutral-template",
+    content_variant: str = "baseline-v1",
+) -> dict[str, Any]:
     require(bool(_OPERATION_PATTERN.fullmatch(operation_id)), "operation ID is invalid")
+    variant = neutral_variant(content_variant)
     return {
-        "title": "Prueba técnica neutral de publicación {}".format(operation_id),
-        "objective": "Verificar el flujo gobernado de aprobación, media y confirmación",
+        "title": "{} {}".format(variant["title"], operation_id),
+        "objective": variant["objective"],
         "audience": "equipo técnico de la cuenta de laboratorio",
         "platforms": [CHANNEL_ID],
         "budget_cents": 0,
-        "source_asset": "sandbox://inc-025/{}/neutral-publication-card.jpg".format(operation_id),
+        "source_asset": "sandbox://neutral-instagram/{}/{}/neutral-publication-card.jpg".format(
+            content_variant, operation_id
+        ),
         "campaign_goal": "technical_verification",
         "campaign_type": "political",
         "publication_mode": "organic",
         "locale": "es-GT",
         "jurisdiction": "Guatemala — prueba técnica sin campaña",
-        "office": "prueba técnica no electoral",
-        "candidate_name": "Sistema de verificación",
+        "office": variant["office"],
+        "candidate_name": variant["candidate_name"],
         "locality": "cuenta de laboratorio @beesheep2",
-        "problem": "Validar de extremo a extremo el control de una publicación orgánica neutral",
-        "proposal": "Verificar el flujo de aprobación, media y confirmación sin contenido electoral ni pauta",
+        "problem": variant["problem"],
+        "proposal": variant["proposal"],
         "desired_action": "No se requiere ninguna acción",
-        "disclosure": "Prueba técnica de publicación. No corresponde a una campaña electoral.",
+        "disclosure": variant["disclosure"],
         "legal_review_status": "approved",
         "legal_reviewed_by": "server-will-bind-authenticated-reviewer",
         "evidence_claims": [{
-            "statement": "La publicación verifica el flujo de aprobación, media y confirmación del sistema.",
+            "statement": variant["evidence_statement"],
             "source": "Runbook interno de publicación neutral",
             "locator": "docs/runbooks/political-publication.md, sección Neutral sandbox sequence",
             "verification_status": "verified",
@@ -262,8 +328,11 @@ def build_neutral_brief(operation_id: str = "neutral-template") -> dict[str, Any
     }
 
 
-def expected_caption(operation_id: str = "neutral-template") -> str:
-    brief = build_neutral_brief(operation_id)
+def expected_caption(
+    operation_id: str = "neutral-template",
+    content_variant: str = "baseline-v1",
+) -> str:
+    brief = build_neutral_brief(operation_id, content_variant)
     hook = "Una propuesta verificable para {} en {}.".format(brief["office"], brief["locality"])
     body = "{} propone: {}\n\nFuente: {} ({}).\n\n{}".format(
         brief["candidate_name"], brief["proposal"], brief["evidence_claims"][0]["source"],
@@ -307,7 +376,10 @@ def _draw_centered(
     return y + text_height
 
 
-def generate_neutral_media(path: Path) -> dict[str, Any]:
+def generate_neutral_media(
+    path: Path, content_variant: str = "baseline-v1"
+) -> dict[str, Any]:
+    variant = neutral_variant(content_variant)
     image = Image.new("RGB", (EXPECTED_WIDTH, EXPECTED_HEIGHT), (17, 22, 34))
     draw = ImageDraw.Draw(image)
     for y in range(EXPECTED_HEIGHT):
@@ -322,16 +394,16 @@ def generate_neutral_media(path: Path) -> dict[str, Any]:
     draw.rounded_rectangle(
         (176, 170, 904, 252), radius=34, fill=(12, 18, 28), outline=(103, 232, 249), width=2
     )
-    _draw_centered(draw, "PRUEBA TÉCNICA", 191, _font(34, bold=True), (155, 246, 255), EXPECTED_WIDTH)
-    y = _draw_centered(draw, "Publicación\nneutral", 365, _font(82, bold=True), (250, 252, 255), EXPECTED_WIDTH)
-    y = _draw_centered(draw, "Verificación de flujo gobernado", y + 72, _font(35), (201, 213, 228), EXPECTED_WIDTH)
+    _draw_centered(draw, variant["media_badge"], 191, _font(34, bold=True), (155, 246, 255), EXPECTED_WIDTH)
+    y = _draw_centered(draw, variant["media_title"], 365, _font(82, bold=True), (250, 252, 255), EXPECTED_WIDTH)
+    y = _draw_centered(draw, variant["media_subtitle"], y + 72, _font(35), (201, 213, 228), EXPECTED_WIDTH)
     draw.line((220, y + 72, 860, y + 72), fill=(103, 232, 249), width=3)
     y = _draw_centered(
-        draw, "Aprobación · Media · Confirmación", y + 130, _font(31, bold=True), (225, 232, 241), EXPECTED_WIDTH
+        draw, variant["media_process"], y + 130, _font(31, bold=True), (225, 232, 241), EXPECTED_WIDTH
     )
     y = _draw_centered(draw, "Sin pauta\nSin llamado electoral", y + 75, _font(34), (180, 195, 214), EXPECTED_WIDTH)
     _draw_centered(
-        draw, "No corresponde a una campaña electoral", 1110, _font(25), (155, 246, 255), EXPECTED_WIDTH
+        draw, variant["media_footer"], 1110, _font(25), (155, 246, 255), EXPECTED_WIDTH
     )
     image.info.clear()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -483,14 +555,14 @@ def prepare(args: argparse.Namespace) -> int:
     manifest_path = output_dir / "manifest.json"
     require(not manifest_path.exists(), "manifest already exists for this operation ID")
     media_path = output_dir / "neutral-instagram-card.jpg"
-    media = generate_neutral_media(media_path)
+    media = generate_neutral_media(media_path, args.content_variant)
 
     created = api_request(
         args.base_url,
         "POST",
         "/api/v1/runs",
         legal,
-        json_body=build_neutral_brief(args.operation_id),
+        json_body=build_neutral_brief(args.operation_id, args.content_variant),
         headers={
             "Idempotency-Key": f"{args.operation_id}-run",
             "Prefer": "respond-async",
@@ -511,10 +583,7 @@ def prepare(args: argparse.Namespace) -> int:
         "Critique did not mark the neutral run publication eligible",
     )
 
-    alt_text = (
-        "Tarjeta gráfica de prueba técnica con el texto Publicación neutral, "
-        "verificación de flujo gobernado, sin pauta y sin llamado electoral."
-    )
+    alt_text = neutral_variant(args.content_variant)["alt_text"]
     alt_header = base64.urlsafe_b64encode(alt_text.encode("utf-8")).decode(
         "ascii"
     ).rstrip("=")
@@ -602,7 +671,7 @@ def prepare(args: argparse.Namespace) -> int:
     require(
         hmac.compare_digest(
             caption.encode("utf-8"),
-            expected_caption(args.operation_id).encode("utf-8"),
+            expected_caption(args.operation_id, args.content_variant).encode("utf-8"),
         ),
         "generated neutral caption differs from the approved template",
     )
@@ -640,6 +709,7 @@ def prepare(args: argparse.Namespace) -> int:
         "schema": SCHEMA,
         "phase": "approved_ready_for_execution",
         "operation_id": args.operation_id,
+        "content_variant": args.content_variant,
         "prepared_at": isoformat(prepared_at),
         "execute_before": isoformat(expires_at),
         "window_minutes": args.window_minutes,
@@ -995,6 +1065,11 @@ def parser() -> argparse.ArgumentParser:
         help="prepare media, run and independent Greenlight with effects disabled",
     )
     prepare_parser.add_argument("--operation-id", required=True)
+    prepare_parser.add_argument(
+        "--content-variant",
+        choices=tuple(sorted(_CONTENT_VARIANTS)),
+        default="baseline-v1",
+    )
     prepare_parser.add_argument("--expected-account-username", required=True)
     prepare_parser.add_argument("--expected-account-id", required=True)
     prepare_parser.add_argument("--rollback-owner", required=True)
