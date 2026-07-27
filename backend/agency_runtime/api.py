@@ -2569,10 +2569,17 @@ def create_app(
             code = "social_provider_unreachable"
         elif reason == "rejected":
             if channel_id == "x":
-                detail = "{} rechazó {}; verifica callback exacta, credenciales y permisos de la app".format(
-                    display, phase_label
-                )
-                code = "social_provider_rejected"
+                if phase == "x_request_token" and provider_code == "32":
+                    detail = (
+                        "X no autenticó la Consumer Key y Consumer Key Secret. "
+                        "Confirma que sean el par OAuth 1.0a de la misma app, no Client ID/Secret OAuth 2.0, y vuelve a cargar el runtime."
+                    )
+                    code = "x_consumer_credentials_rejected"
+                else:
+                    detail = "{} rechazó {}; verifica callback exacta, credenciales y permisos de la app".format(
+                        display, phase_label
+                    )
+                    code = "social_provider_rejected"
             else:
                 detail = "{} rechazó {}; inicia una autorización nueva y verifica la configuración de la app".format(
                     display, phase_label

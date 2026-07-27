@@ -89,3 +89,22 @@ A mismatch, 5xx, timeout or malformed lookup becomes `unknown`. It is never retr
 ## Rollback and deletion
 
 Closing local switches does not delete a published Post. Provider deletion is a separate external effect requiring explicit account, Post ID, evidence-retention decision and operator approval. Unknown outcomes must be reconciled before any replacement Post.
+
+## Troubleshooting request-token rejection
+
+If X rejects `POST /oauth/request_token` with HTTP 401 and provider code `32`,
+the callback has not yet been reached. X could not authenticate the OAuth 1.0a
+signature.
+
+Verify all of the following before retrying:
+
+- use **API Key / Consumer Key** and **API Key Secret / Consumer Key Secret**;
+- do not use OAuth 2.0 Client ID or Client Secret;
+- both values belong to the same X Developer App;
+- neither credential was regenerated after it was stored;
+- no whitespace or truncation was introduced when writing `.env.local`;
+- run `./scripts/workspace-up.sh up` after replacing either value so the API
+  reloads its environment.
+
+CampaignOS preserves only the bounded numeric provider code and never stores or
+returns the provider response body, signature, key, secret or temporary token.
