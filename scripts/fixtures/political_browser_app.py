@@ -16,6 +16,8 @@ LEGAL_KEY = "browser-political-legal-key-material-2026"
 APPROVER_KEY = "browser-political-approver-key-material-2026"
 _LOCK = Lock()
 _PROVIDER_CALLS = 0
+_CREATED_TEXT = ""
+_X_POST_ID = "1800000000000000301"
 
 
 def _encryption_key() -> str:
@@ -23,20 +25,35 @@ def _encryption_key() -> str:
 
 
 def _handler(request: httpx.Request) -> httpx.Response:
-    global _PROVIDER_CALLS
-    if str(request.url) != "https://api.x.com/2/tweets":
-        raise AssertionError("unexpected provider request {}".format(request.url))
-    with _LOCK:
-        _PROVIDER_CALLS += 1
-        sequence = _PROVIDER_CALLS
-        Path(os.environ["AGENCY_FIXTURE_CALL_FILE"]).write_text(
-            str(sequence), encoding="utf-8"
+    global _PROVIDER_CALLS, _CREATED_TEXT
+    if request.method == "POST" and str(request.url) == "https://api.x.com/2/tweets":
+        payload = json.loads(request.content)
+        _CREATED_TEXT = str(payload["text"])
+        with _LOCK:
+            _PROVIDER_CALLS += 1
+            sequence = _PROVIDER_CALLS
+            Path(os.environ["AGENCY_FIXTURE_CALL_FILE"]).write_text(
+                str(sequence), encoding="utf-8"
+            )
+        return httpx.Response(
+            201,
+            headers={"x-request-id": "political-browser-create-{}".format(sequence)},
+            json={"data": {"id": _X_POST_ID}},
         )
-    return httpx.Response(
-        201,
-        headers={"x-request-id": "political-browser-provider-{}".format(sequence)},
-        json={"data": {"id": "political-browser-post-001"}},
-    )
+    if request.method == "GET" and request.url.path == "/2/tweets/{}".format(_X_POST_ID):
+        return httpx.Response(
+            200,
+            headers={"x-request-id": "political-browser-verify-001"},
+            json={
+                "data": {
+                    "id": _X_POST_ID,
+                    "text": _CREATED_TEXT,
+                    "author_id": "political-browser-x-account",
+                    "created_at": "2026-07-27T01:58:00Z",
+                }
+            },
+        )
+    raise AssertionError("unexpected provider request {}".format(request.url))
 
 
 social_environment = {

@@ -66,10 +66,13 @@ Disconnect y Greenlight revocation sólo revocan `pending`. Nunca borran ni ocul
 ### X
 
 - host fijo: `api.x.com`;
-- endpoint: `POST /2/tweets`;
+- creación: `POST /2/tweets`;
+- verificación independiente: `GET /2/tweets/{id}?tweet.fields=author_id,created_at`;
 - OAuth 1.0a user context con consumer key/secret y access token/secret server-side;
+- `succeeded` exige ID, texto, autor y timestamp coincidentes;
+- el receipt guarda permalink, timestamp y SHA-256, nunca el texto;
 - un 4xx conocido queda `failed`;
-- timeout, 5xx o respuesta sin post ID queda `unknown`.
+- timeout, 5xx, lookup malformado o mismatch queda `unknown` y bloquea retry.
 
 ### Instagram
 

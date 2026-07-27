@@ -16,6 +16,7 @@ ADMIN_KEY = "package-publication-admin-key-material-2026"
 X_SECRET = "package-publication-x-secret-must-not-leak"
 X_ACCESS_TOKEN = "package-publication-x-access-token-must-not-leak"
 X_ACCESS_SECRET = "package-publication-x-access-secret-must-not-leak"
+X_POST_ID = "1800000000000000303"
 
 
 def encryption_key() -> str:
@@ -75,15 +76,31 @@ def main() -> int:
         socket.socket(), args[0] if args else None
     )
 
+    created_text: dict[str, str] = {}
+
     def provider(request: httpx.Request) -> httpx.Response:
-        provider_calls.append(request)
-        if str(request.url) != "https://api.x.com/2/tweets":
-            raise AssertionError("unexpected provider request")
-        return httpx.Response(
-            201,
-            headers={"x-request-id": "package-provider-request-001"},
-            json={"data": {"id": "package-x-post-001"}},
-        )
+        if request.method == "POST" and str(request.url) == "https://api.x.com/2/tweets":
+            provider_calls.append(request)
+            created_text["value"] = json.loads(request.content)["text"]
+            return httpx.Response(
+                201,
+                headers={"x-request-id": "package-create-request-001"},
+                json={"data": {"id": X_POST_ID}},
+            )
+        if request.method == "GET" and request.url.path == "/2/tweets/{}".format(X_POST_ID):
+            return httpx.Response(
+                200,
+                headers={"x-request-id": "package-verify-request-001"},
+                json={
+                    "data": {
+                        "id": X_POST_ID,
+                        "text": created_text["value"],
+                        "author_id": "package-x-account-001",
+                        "created_at": "2026-07-27T01:58:00Z",
+                    }
+                },
+            )
+        raise AssertionError("unexpected provider request")
 
     def no_oauth(request: httpx.Request) -> httpx.Response:
         raise AssertionError("OAuth provider HTTP is not expected")
@@ -155,8 +172,10 @@ def main() -> int:
                 },
             )
             assert first.status_code == 201, first.text
-            assert first.json()["provider_post_id"] == "package-x-post-001"
+            assert first.json()["provider_post_id"] == X_POST_ID
             assert first.json()["replayed"] is False
+            assert first.json()["receipt"]["verification_status"] == "verified"
+            assert first.json()["receipt"]["author_id"] == "package-x-account-001"
             assert len(provider_calls) == 1
 
             replay = client.post(
@@ -188,7 +207,7 @@ def main() -> int:
             ]
             assert len(success_events) == 1
             assert success_events[0]["payload"]["provider_post_id"] == (
-                "package-x-post-001"
+                X_POST_ID
             )
 
             serialized = json.dumps(

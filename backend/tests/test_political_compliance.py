@@ -288,10 +288,25 @@ class PoliticalComplianceModeTests(unittest.TestCase):
 
     def test_correct_confirmation_is_persisted_only_as_sha256(self):
         calls: list[httpx.Request] = []
+        created_text: dict[str, str] = {}
+        post_id = "1800000000000000201"
 
         def handler(request: httpx.Request) -> httpx.Response:
             calls.append(request)
-            return httpx.Response(201, json={"data": {"id": "political-post-001"}})
+            if request.method == "POST":
+                created_text["value"] = json.loads(request.content)["text"]
+                return httpx.Response(201, json={"data": {"id": post_id}})
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": post_id,
+                        "text": created_text["value"],
+                        "author_id": "political-x-account",
+                        "created_at": "2026-07-23T20:30:01Z",
+                    }
+                },
+            )
 
         app = self.app(handler, content_enabled=True)
         with TestClient(app) as client:
@@ -325,7 +340,10 @@ class PoliticalComplianceModeTests(unittest.TestCase):
                 "tenant-political", run["run_id"]
             )[0]
             database_text = self.database.read_bytes()
-        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(
+            response.json()["receipt"]["verification_status"], "verified"
+        )
         self.assertEqual(
             intent.confirmation_hash,
             hashlib.sha256(phrase.encode("utf-8")).hexdigest(),
