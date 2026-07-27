@@ -12,6 +12,7 @@ PUBLIC_URL_FILE="$STATE_DIR/current-public-url"
 PRODUCT_PID_FILE="$STATE_DIR/product-launcher.pid"
 API_PID_FILE="$STATE_DIR/api.pid"
 TUNNEL_PID_FILE="$STATE_DIR/cloudflared.pid"
+RUNTIME_ENV_HASH_FILE="$STATE_DIR/runtime-env.sha256"
 LOCK_FILE="$STATE_DIR/workspace-up.lock"
 LOCAL_BASE_URL="http://127.0.0.1:${PORT:-4175}"
 RUNTIME_BIN="${AGENCY_LOCAL_RUNTIME_VENV:-/tmp/ai-native-content-agency-runtime}/bin/agency-api"
@@ -80,6 +81,26 @@ force_fail_closed() {
   set_env_value AGENCY_SOCIAL_PUBLICATION_ENABLED false
   set_env_value AGENCY_POLITICAL_PUBLICATION_ENABLED false
   set_env_value AGENCY_POLITICAL_PAID_MEDIA_ENABLED false
+}
+
+environment_fingerprint() {
+  [[ -f "$ENV_FILE" ]] || {
+    printf '%s\n' 'missing'
+    return 0
+  }
+  sha256sum "$ENV_FILE" | awk '{print $1}'
+}
+
+record_environment_fingerprint() {
+  environment_fingerprint >"$RUNTIME_ENV_HASH_FILE"
+}
+
+runtime_environment_changed() {
+  [[ -s "$RUNTIME_ENV_HASH_FILE" ]] || return 0
+  local recorded current
+  recorded="$(cat "$RUNTIME_ENV_HASH_FILE")"
+  current="$(environment_fingerprint)"
+  [[ "$recorded" != "$current" ]]
 }
 
 wait_for_health() {
@@ -234,6 +255,7 @@ status() {
   printf 'social_publication_enabled=%s\n' "$(read_env_value AGENCY_SOCIAL_PUBLICATION_ENABLED)"
   printf 'political_publication_enabled=%s\n' "$(read_env_value AGENCY_POLITICAL_PUBLICATION_ENABLED)"
   printf 'political_paid_media_enabled=%s\n' "$(read_env_value AGENCY_POLITICAL_PAID_MEDIA_ENABLED)"
+  printf 'runtime_environment=%s\n' "$(runtime_environment_changed && printf stale || printf current)"
 }
 
 up() {
@@ -246,9 +268,10 @@ up() {
   set_env_value AGENCY_PUBLIC_MEDIA_BASE_URL "$public_url"
   set_env_value AGENCY_INSTAGRAM_REDIRECT_URI "$public_url/api/v1/social-channels/instagram/oauth/callback"
   set_env_value AGENCY_X_REDIRECT_URI "$public_url/api/v1/social-channels/x/oauth/callback"
-  if [[ "$previous_url" != "$public_url" ]]; then
+  if [[ "$previous_url" != "$public_url" ]] || runtime_environment_changed; then
     restart_api_with_current_environment
   fi
+  record_environment_fingerprint
   health_ok "$public_url" || fail 'public endpoint is not healthy after recovery'
   printf 'workspace_up=ready\n'
   printf 'public_url=%s\n' "$public_url"
