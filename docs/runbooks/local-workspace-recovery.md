@@ -13,8 +13,9 @@ cd /workspace
 
 The command forces publication switches to `false`, restores the local product,
 reuses or recreates a Quick Tunnel with HTTP/2, refreshes the provider callback
-URLs, restarts the API only when the public hostname changes, and verifies both
-local and public health.
+URLs, restarts the API whenever the public hostname or `.env.local` changes,
+and verifies both local and public health. This includes newly saved provider
+credentials, so Docker Compose is not required to reload X or Instagram config.
 
 Useful commands:
 
