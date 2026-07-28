@@ -5,81 +5,94 @@ Updated: 2026-07-28
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-035-social-runtime-recovery`
-- Main merge base: `dcb1d1c567ad688b7fd78a219411b42d5806034c`
-- Previous stacked checkpoint: `728a5bdb756321ef91fa39cc7e734965b1b3d5a5`
-- INC-034 implementation commit: `a11ea1619ab9a2d341ee84d6497c46b9fa1752ab`
-- Remote delivery base: `agent/inc-022-governed-media-verification` at `ecd72ece9a97fc0587d88277be876c386cfb4263`
-- Remote branch: `agent/inc-034-modern-onboarding-trends-remote`
-- Remote implementation commit: `57dd2dc08408d7bcd1acc90a7eeb96cc6fa8e31f`
-- Remote browser-contract fix: `296c8e3a2791586d893b680cd6af38913156958a`
-- Draft PR: #27
-- Exact-head CI for browser-contract fix: workflow `30390791007`, 8/8 SUCCESS
-- INC-035 local implementation commit: `ad4a9cb`
+- Active branch: `agent/inc-036-trend-pilot`
+- Current local parent: `37aede9789b16842f0ee47f47d87ba8863f0938d`
+- INC-034 remote branch: `agent/inc-034-modern-onboarding-trends-remote`
+- INC-034 draft PR: #27
+- INC-034 exact-head workflow: `30390791007`, 8/8 SUCCESS
 - INC-035 remote branch: `agent/inc-035-social-runtime-recovery`
-- INC-035 remote implementation commit: `8a913bf49b8d55a7ed86666aed924759f48b086b`
-- INC-035 draft PR: #28, stacked on `agent/inc-034-modern-onboarding-trends-remote`
-- INC-035 implementation CI: workflow `30392865935`, 8/8 SUCCESS
-- Repository-owned Git Data publication: 10 changed paths and 459 complete remote paths verified
-- Audited `git_push` helper: reconfirmed blocked before GitHub by nested Docker `iptables` initialization
-- Nested containers created: none
-- New social publication, ad activation, model effect, cloud apply or paid resource: none
+- INC-035 remote HEAD: `37aede9789b16842f0ee47f47d87ba8863f0938d`
+- INC-035 draft PR: #28, stacked on INC-034
+- INC-035 exact-head workflow: `30393061103`, 8/8 SUCCESS
+- INC-036 delivery base: `agent/inc-035-social-runtime-recovery`
+- INC-036 local implementation commit: `9f9efce2104c9e9cba47e149de339fd3e4e4bfd5`
+- Audited Cloud Sandbox `git_push`: blocked by its isolated nested-Docker `iptables`
+  initialization; the repository-owned Git Data publisher remains the verified fallback.
+- New external publication, paid media, model effect, cloud apply, release or merge: none
 
-## INC-034 product result
+## Current product result
 
-The implementation now provides:
+CampaignOS provides:
 
-- an outcome-oriented CampaignOS hero with direct campaign and flow actions;
-- an actionable top login control using username and password;
-- server-derived tenant, role, permissions and HttpOnly browser sessions;
-- a plain-language `Aprobación manual` state instead of the unexplained hero label;
-- previous/next controls and an explicit counter for the eight-station map;
-- authenticated, read-only Guatemala research through Google Trends RSS;
-- one centralized model-provider selector and progressive server-side setup guidance;
-- DeepSeek model and endpoint configuration without browser-side credential entry;
-- `Video Use` shown as reviewed and disabled;
-- unchanged governed X and Instagram account-management surfaces;
-- no autoplay music;
-- persistent local SQLite under `.local/` instead of ephemeral `/tmp`.
+- an outcome-oriented campaign workspace and eight-station orchestration map;
+- individual username/password login backed by server-derived roles and HttpOnly sessions;
+- server-side provider, integration and social-account configuration;
+- encrypted X and Instagram OAuth connections in persistent SQLite;
+- automatic connection-state backups and recoverable Quick/Named Cloudflare tunnel modes;
+- four no-key research lanes for Guatemala: current searches, AI, marketing and business;
+- safe HTTPS evidence disclosure for research signals;
+- one-click conversion from a signal to an editable X/Instagram pilot brief;
+- explicit review-only labels before and after pilot execution;
+- fail-closed publication, political publication and paid-media controls.
+
+## INC-036 live pilot
+
+The production bundle and installed runtime wheel were updated without changing the
+public hostname. A real Chromium session used the public UI to log in, select the AI lane,
+open evidence, prepare a brief and execute a governed internal run.
+
+```text
+run_id=run-ce573811a46d6f06
+campaign_goal=trend_response_pilot
+status=awaiting_greenlight
+platforms=x,instagram
+artifacts=7
+copy_decks=1
+copy_platforms=x,instagram
+greenlight=none
+social_publication_intents=0
+```
+
+No X credits were required because research uses Google Trends/Google News RSS and the
+pilot ended before any external provider publication boundary.
 
 ## Verification
 
-- Hash-locked installed wheel before INC-035: 313 PASS; 25 PostgreSQL-only skips expected.
-- INC-035 complete backend suite: 320 PASS; 25 PostgreSQL-only skips expected.
-- Frontend: 54 PASS.
+- Backend: 323 PASS; 25 PostgreSQL-only skips expected.
+- Frontend: 58 PASS.
+- Focused trend, workspace and output tests: 39 PASS.
 - Oxlint: zero warnings/errors.
 - Production build: PASS.
-- Automated Chromium 320 px reflow, modern-workspace, keyboard, focus, reduced-motion and accessibility-tree gates: PASS.
-- Operability: PASS; 4 SLOs, 8 alerts, 9 exercises.
-- Program validator: PASS.
-- Release compliance validator: PASS with `DENY_RELEASE`.
-- Diff and high-confidence added-line secret guards: PASS.
-- Real local trend endpoint: HTTP 200 from Google Trends RSS with 8 verified items.
-- Second API restart preserved runtime session, audit and social-connection row counts exactly.
+- Automated Chromium 320 px reflow, keyboard, focus, reduced-motion and accessibility
+  tree gates: PASS.
+- Live authenticated research API:
+  - `general`: HTTP 200, Google Trends RSS, 8 signals, 24 evidence links;
+  - `ai`: HTTP 200, Google News RSS, 8 signals, 8 evidence links;
+  - `marketing`: HTTP 200, Google News RSS, 8 signals, 8 evidence links;
+  - `business`: HTTP 200, Google News RSS, 8 signals, 8 evidence links.
+- Live public Chromium trend-pilot flow: PASS.
+- Runtime restart preserved two encrypted social connections exactly.
+- SQLite integrity: `ok`.
 
 ## Runtime state
 
-- Local root and health: HTTP 200.
-- Public Quick Tunnel health: HTTP 200 at the current runtime hostname.
-- Runtime database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
-- Runtime process environment points to that exact persistent database.
-- SQLite integrity: `ok`.
-- Social-connection backup watchdog: running.
-- Latest consistent local social-state backup: available.
-- X: `ready_for_authentication`, `not_connected`, OAuth start available.
-- Instagram: `ready_for_authentication`, `not_connected`, OAuth start available.
+- Public URL: `https://offerings-council-guided-requiring.trycloudflare.com`
+- Local health: HTTP 200.
+- Public health: HTTP 200.
+- Tunnel: Quick Tunnel, running.
+- Database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
+- Social backup watcher: running.
+- Latest backup: available and includes both connections.
+- X: connected as `@beesheep` with `tweet.read`, `tweet.write`, `users.read`.
+- Instagram: connected as `@beesheep2` with professional basic/content-publish scopes.
 - Social publication: `false`.
 - Political publication: `false`.
 - Political paid media: `false`.
 - External effects enabled: `false`.
 
-The prior launcher stored SQLite in `/tmp`. Replacing the workstation runtime removed the
-previous OAuth connection rows, and no recoverable database containing them remained in
-the persistent workspace. INC-035 prevents recurrence with persistent state and a
-connection-change backup watcher. The user grants still require one new interactive OAuth
-authorization after the exact callback is allowlisted in Meta and X. Named Cloudflare
-Tunnel support is implemented for a durable hostname; the current Quick Tunnel remains a
-laboratory fallback.
+The Quick Tunnel is suitable for this laboratory pilot but remains ephemeral. Named
+Cloudflare Tunnel support is implemented and is the durable option when a stable hostname
+and token are available.
 
 Release recommendation: `DENY_RELEASE`
 
@@ -87,7 +100,7 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Update the Meta and X provider consoles with one stable named-tunnel hostname (preferred)
-or the currently active Quick Tunnel callback, then authorize each account once through
-CampaignOS. Verify two durable encrypted connection rows and a new backup manifest before
-any future publication window. Do not publish or enable paid media as part of INC-035.
+Continue evaluating the research-to-draft workflow in the UI. Review evidence and copy,
+but do not approve Greenlight, enable publication switches or create a provider post
+without a separate explicit authorization. A future production-like callback should use
+a named Cloudflare Tunnel before relying on the connection for long-lived operations.

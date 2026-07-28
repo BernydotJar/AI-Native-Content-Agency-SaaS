@@ -440,6 +440,15 @@ export function CampaignOutputPanel({
         {run && <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-400">{run.status.replaceAll("_", " ")}</span>}
       </header>
 
+      {run?.brief?.campaign_goal === "trend_response_pilot" && (
+        <div role="status" className="mx-5 mt-5 rounded-xl border border-sky-300/20 bg-sky-300/[0.05] p-4 text-xs leading-5 text-sky-100">
+          <p className="font-bold">Piloto de tendencia · sólo revisión</p>
+          <p className="mt-1 text-sky-100/70">
+            Estos posts se generaron para evaluar investigación, copy y experiencia de usuario. La acción de publicación permanece gobernada por el runtime y deshabilitada por defecto.
+          </p>
+        </div>
+      )}
+
       {!run ? (
         <div className="grid min-h-52 place-items-center p-8 text-center">
           <div>

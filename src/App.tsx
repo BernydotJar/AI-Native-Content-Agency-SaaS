@@ -22,6 +22,7 @@ import type {
   RuntimeRun,
   RuntimeSocialChannel,
   RuntimeSocialPublication,
+  RuntimeTrendPilotSeed,
 } from "./lib/runtimeApi";
 import {
   DEFAULT_THEME_ID,
@@ -124,6 +125,7 @@ export default function App() {
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
   const [connectionRequest, setConnectionRequest] = useState(0);
+  const [trendPilotSeed, setTrendPilotSeed] = useState<RuntimeTrendPilotSeed | null>(null);
   const sessionButtonRef = useRef<HTMLButtonElement>(null);
 
   const premiumThemeEntitled = runtimeEntitlements.includes("theme:premium");
@@ -144,6 +146,13 @@ export default function App() {
     }
     setConnectionRequest((value) => value + 1);
   };
+
+  const prepareTrendPilot = useCallback((seed: RuntimeTrendPilotSeed) => {
+    setTrendPilotSeed(seed);
+    window.requestAnimationFrame(() => {
+      document.getElementById("command")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   useEffect(() => {
     applyTheme(themeId);
@@ -453,7 +462,10 @@ export default function App() {
         />
 
         <div className="mt-8 lg:mt-10">
-          <TrendRadar sessionActive={Boolean(session)} />
+          <TrendRadar
+            sessionActive={Boolean(session)}
+            onPreparePilot={prepareTrendPilot}
+          />
         </div>
 
         <section id="command" aria-labelledby="command-title" className="scroll-mt-24 mt-10 lg:mt-14">
@@ -471,6 +483,7 @@ export default function App() {
               onEntitlementsChange={setRuntimeEntitlements}
               connectionRequest={connectionRequest}
               connectionReturnFocusRef={sessionButtonRef}
+              briefSeed={trendPilotSeed}
             />
           </div>
         </section>

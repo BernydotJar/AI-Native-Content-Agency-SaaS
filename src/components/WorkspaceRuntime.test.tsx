@@ -5,6 +5,7 @@ import type {
   BrowserRuntimeSession,
   RuntimeApi,
   RuntimeRun,
+  RuntimeTrendPilotSeed,
 } from "../lib/runtimeApi";
 import { RuntimeApiError } from "../lib/runtimeApi";
 import { WorkspaceRuntime } from "./WorkspaceRuntime";
@@ -150,6 +151,54 @@ describe("WorkspaceRuntime", () => {
     expect(screen.getByRole("link", { name: /Ver posts y estado de publicación/i })).toHaveAttribute("href", "#campaign-output");
     expect(screen.queryByText(/Speed and certainty remain in tension/i)).not.toBeInTheDocument();
     await waitFor(() => expect(onRunChange).toHaveBeenLastCalledWith(RUN));
+  });
+
+  it("accepts a radar seed as an editable no-publication pilot mission", async () => {
+    const user = userEvent.setup();
+    const runtime = api({ resumeSession: vi.fn().mockResolvedValue(SESSION) });
+    const briefSeed: RuntimeTrendPilotSeed = {
+      id: "ai:pilot-1",
+      source_label: "Radar IA: adopción de inteligencia artificial",
+      brief: {
+        title: "Piloto de tendencia: IA en Guatemala",
+        objective: "Crear borradores verificables sin publicar.",
+        audience: "Equipos de tecnología en Guatemala",
+        platforms: ["x", "instagram"],
+        budget_cents: 0,
+        campaign_goal: "trend_response_pilot",
+        campaign_type: "commercial",
+        publication_mode: "organic",
+        locale: "es-GT",
+        evidence_claims: [{
+          statement: "Una fuente reciente reportó adopción local de IA.",
+          source: "Google News RSS · Example",
+          locator: "https://example.test/evidence",
+          verification_status: "unverified",
+        }],
+      },
+    };
+
+    render(<WorkspaceRuntime api={runtime} briefSeed={briefSeed} />);
+
+    await screen.findByText(/operator@example.com/i);
+    expect(screen.getByText(/Modo piloto · brief precargado/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Título de campaña/i)).toHaveValue(
+      "Piloto de tendencia: IA en Guatemala",
+    );
+    expect(screen.getByLabelText(/Resultado esperado/i)).toHaveValue(
+      "Crear borradores verificables sin publicar.",
+    );
+
+    await user.click(screen.getByRole("button", { name: /Ejecutar campaña/i }));
+    expect(runtime.createRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaign_goal: "trend_response_pilot",
+        platforms: ["x", "instagram"],
+        budget_cents: 0,
+      }),
+      SESSION.csrf_token,
+      expect.stringMatching(/^run:create:/),
+    );
   });
 
   it("reveals grounded political campaign fields and legal-review warning", async () => {

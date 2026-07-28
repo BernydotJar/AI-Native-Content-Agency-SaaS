@@ -104,6 +104,7 @@ beforeEach(() => {
   vi.spyOn(runtimeApi, "trendRadar").mockResolvedValue({
     tenant_id: "tenant-alpha",
     geo: "GT",
+    topic: "general",
     source: "Google Trends RSS",
     source_url: "https://trends.google.com/trending/rss?geo=GT",
     fetched_at: "2026-07-28T16:00:00+00:00",
@@ -112,6 +113,12 @@ beforeEach(() => {
       approx_traffic: "2,000+",
       published_at: "Tue, 28 Jul 2026 12:00:00 +0000",
       news_source: "Fuente pública",
+      signal_type: "search_trend",
+      news_items: [{
+        title: "Innovación local respaldada",
+        source: "Fuente pública",
+        url: "https://example.test/evidence",
+      }],
     }],
   });
   vi.spyOn(runtimeApi, "providerCatalog").mockResolvedValue({
@@ -164,7 +171,7 @@ describe("product workspace shell", () => {
     expect(screen.queryByText("DeepSeek")).not.toBeInTheDocument();
     expect(screen.queryByText(/Greenlight visible/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Aprobación manual/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Qué está capturando atención ahora/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Investiga una señal y conviértela en misión/i })).toBeInTheDocument();
     expect(screen.getByText(/Inicia sesión para investigar señales reales/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Siguiente estación/i }));

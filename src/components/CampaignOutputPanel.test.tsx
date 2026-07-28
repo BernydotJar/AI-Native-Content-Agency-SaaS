@@ -122,6 +122,33 @@ describe("CampaignOutputPanel", () => {
     expect(screen.getByText("Platform copy deck")).toBeVisible();
   });
 
+  it("labels trend runs as review-only pilots", () => {
+    render(
+      <CampaignOutputPanel
+        run={{
+          ...RUN,
+          brief: {
+            title: "Piloto de tendencia",
+            objective: "Evaluar borradores sin publicar",
+            audience: "audiencia de prueba",
+            platforms: ["x", "instagram"],
+            budget_cents: 0,
+            campaign_goal: "trend_response_pilot",
+            campaign_type: "commercial",
+            publication_mode: "organic",
+          },
+        }}
+        socialChannels={SOCIAL_CHANNELS}
+      />,
+    );
+
+    expect(screen.getByText(/Piloto de tendencia · sólo revisión/i)).toBeInTheDocument();
+    expect(screen.getByText(/deshabilitada por defecto/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Publicar/i })).toSatisfy(
+      (buttons: HTMLElement[]) => buttons.every((button) => button.hasAttribute("disabled")),
+    );
+  });
+
   it("copies the composed post without enabling external publication", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
