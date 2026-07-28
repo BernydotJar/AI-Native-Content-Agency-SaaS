@@ -15,7 +15,12 @@ Updated: 2026-07-28
 - Remote browser-contract fix: `296c8e3a2791586d893b680cd6af38913156958a`
 - Draft PR: #27
 - Exact-head CI for browser-contract fix: workflow `30390791007`, 8/8 SUCCESS
-- INC-035 local implementation: social backup watcher, named-tunnel support and repository-owned Git Data publisher in verification
+- INC-035 local implementation commit: `ad4a9cb`
+- INC-035 remote branch: `agent/inc-035-social-runtime-recovery`
+- INC-035 remote implementation commit: `8a913bf49b8d55a7ed86666aed924759f48b086b`
+- INC-035 draft PR: #28, stacked on `agent/inc-034-modern-onboarding-trends-remote`
+- INC-035 implementation CI: workflow `30392865935`, 8/8 SUCCESS
+- Repository-owned Git Data publication: 10 changed paths and 459 complete remote paths verified
 - Audited `git_push` helper: reconfirmed blocked before GitHub by nested Docker `iptables` initialization
 - Nested containers created: none
 - New social publication, ad activation, model effect, cloud apply or paid resource: none
@@ -82,8 +87,7 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Complete INC-035 verification, publish its clean tree through the repository-owned Git
-Data tool, open a stacked draft PR and require exact-head CI. Then update the Meta and X
-provider consoles with the active callback hostname and authorize each account once.
-Verify two durable encrypted connection rows and a new backup manifest before any future
-publication window. Do not publish or enable paid media as part of INC-035.
+Update the Meta and X provider consoles with one stable named-tunnel hostname (preferred)
+or the currently active Quick Tunnel callback, then authorize each account once through
+CampaignOS. Verify two durable encrypted connection rows and a new backup manifest before
+any future publication window. Do not publish or enable paid media as part of INC-035.

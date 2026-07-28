@@ -131,6 +131,21 @@ authenticated `gh api` client. It:
 - all publication switches: false;
 - external side effects enabled: false.
 
+
+## Remote delivery evidence
+
+The repository-owned Git Data publisher was run against remote base
+`3011e3c563b28c02f9b982804c8c744c76a696a4`. Its dry-run and final comparison contained
+exactly the 10 INC-035 files; seven inherited INC-032/033 artifact paths were detected in
+the old local ancestry and deliberately excluded by realigning the local commit onto the
+remote base before publication.
+
+Remote implementation commit `8a913bf49b8d55a7ed86666aed924759f48b086b`
+verified all 459 final remote paths and modes. Draft PR #28 targets
+`agent/inc-034-modern-onboarding-trends-remote`. Workflow `30392865935` completed with
+8/8 successful jobs: verify, python-locks, PostgreSQL shared state, container, workflow
+lint, Helm, Terraform and supply chain.
+
 ## Remaining interactive provider gate
 
 The provider consoles must allowlist the exact callback hostname before OAuth can finish.
