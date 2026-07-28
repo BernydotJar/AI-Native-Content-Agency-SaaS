@@ -111,9 +111,18 @@ test, runbook and product files in scope before this delivery checkpoint. A recu
 remote-tree comparison verified all 25 blob SHAs and file modes against the validated
 local worktree with zero mismatches.
 
-## Remaining delivery gate
+## Pull request and exact-head CI
 
-Publish this checkpoint on top of the verified remote implementation commit and open a
-draft pull request against `agent/inc-022-governed-media-verification`. Restore a stable
-HTTPS callback before any future interactive social authorization. No
+Draft PR #27 targets `agent/inc-022-governed-media-verification`. Its first exact-head
+workflow found one stale browser-fixture assumption: the political authority verifier
+filled only the old credential field after the product login changed to username plus
+password. Commit `296c8e3a2791586d893b680cd6af38913156958a` updated that test contract and
+was reproduced locally end to end.
+
+Workflow `30390791007` then completed with 8/8 successful jobs: verify, python-locks,
+PostgreSQL shared state, container, workflow lint, Helm, Terraform and supply chain.
+
+## Remaining operational gate
+
+Restore a stable HTTPS callback before any future interactive social authorization. No
 external social post is required or authorized by this increment.

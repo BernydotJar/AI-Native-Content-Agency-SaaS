@@ -12,7 +12,9 @@ Updated: 2026-07-28
 - Remote delivery base: `agent/inc-022-governed-media-verification` at `ecd72ece9a97fc0587d88277be876c386cfb4263`
 - Remote branch: `agent/inc-034-modern-onboarding-trends-remote`
 - Remote implementation commit: `57dd2dc08408d7bcd1acc90a7eeb96cc6fa8e31f`
-- Draft PR / exact-head CI: pending
+- Remote browser-contract fix: `296c8e3a2791586d893b680cd6af38913156958a`
+- Draft PR: #27
+- Exact-head CI for browser-contract fix: workflow `30390791007`, 8/8 SUCCESS
 - Worktree after implementation commit: documentation checkpoint in progress
 - Audited `git_push` helper: blocked before GitHub by nested Docker `iptables` initialization; Git Data API fallback verified 25/25 blobs and modes
 - Nested containers created: none
@@ -74,8 +76,8 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish this documentation checkpoint to the verified remote implementation commit,
-open a draft pull request, run exact-head CI and repair any failure. Before any future
+Publish this final evidence checkpoint on PR #27 and confirm exact-head CI remains green.
+Before any future
 social OAuth action, establish
 a stable HTTPS callback, update the provider consoles and authorize each account
 interactively. Do not publish or enable paid media as part of INC-034.
