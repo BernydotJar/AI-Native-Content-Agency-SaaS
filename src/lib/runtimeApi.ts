@@ -140,6 +140,22 @@ export interface RuntimeProviderCatalog {
   gateway: RuntimeProviderGatewayStatus;
 }
 
+export interface RuntimeTrendItem {
+  title: string;
+  approx_traffic: string;
+  published_at: string;
+  news_source: string;
+}
+
+export interface RuntimeTrendSnapshot {
+  tenant_id: string;
+  geo: "GT";
+  source: "Google Trends RSS";
+  source_url: string;
+  fetched_at: string;
+  trends: RuntimeTrendItem[];
+}
+
 export interface RuntimeIntegrationSummary {
   integration_id: string;
   display_name: string;
@@ -255,7 +271,7 @@ export class RuntimeApiError extends Error {
 }
 
 export interface RuntimeApi {
-  createSession(apiKey: string): Promise<BrowserRuntimeSession>;
+  createSession(username: string, password: string): Promise<BrowserRuntimeSession>;
   resumeSession(): Promise<BrowserRuntimeSession | null>;
   currentIdentity(): Promise<RuntimeIdentity>;
   createRun(brief: RuntimeBrief, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
@@ -265,6 +281,7 @@ export interface RuntimeApi {
   revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   auditEvents(): Promise<RuntimeAuditEvent[]>;
   providerCatalog(): Promise<RuntimeProviderCatalog>;
+  trendRadar(): Promise<RuntimeTrendSnapshot>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
   socialChannels(): Promise<RuntimeSocialChannel[]>;
   socialPublications(runId: string): Promise<RuntimeSocialPublication[]>;
@@ -399,10 +416,10 @@ async function requestJson<T>(
 
 export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
   return {
-    createSession(apiKey) {
+    createSession(username, password) {
       return requestJson<BrowserRuntimeSession>(fetchImpl, "/api/v1/sessions", {
         method: "POST",
-        body: JSON.stringify({ api_key: apiKey }),
+        body: JSON.stringify({ username, api_key: password }),
       });
     },
     async resumeSession() {
@@ -490,6 +507,9 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
     },
     providerCatalog() {
       return requestJson<RuntimeProviderCatalog>(fetchImpl, "/api/v1/providers");
+    },
+    trendRadar() {
+      return requestJson<RuntimeTrendSnapshot>(fetchImpl, "/api/v1/trends?geo=GT&limit=8");
     },
     async integrations() {
       const payload = await requestJson<{ integrations: RuntimeIntegrationSummary[] }>(fetchImpl, "/api/v1/integrations");

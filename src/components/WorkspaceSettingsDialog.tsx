@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Cable, Check, Link2, LoaderCircle, LockKeyhole, Palette, RefreshCw, ServerCog, Unplug, X } from "lucide-react";
 import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGatewayStatus, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
@@ -63,6 +63,8 @@ export function WorkspaceSettingsDialog({
 }: WorkspaceSettingsDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [selectedProviderId, setSelectedProviderId] = useState<RuntimeProvider["provider_id"] | "">("");
+  const [providerConfigOpen, setProviderConfigOpen] = useState(false);
   useModalDialog({
     open,
     onClose,
@@ -72,6 +74,9 @@ export function WorkspaceSettingsDialog({
 
   if (!open) return null;
   const configuredCount = providers.filter((provider) => provider.configured).length;
+  const selectedProvider = providers.find((provider) => provider.provider_id === selectedProviderId)
+    ?? providers[0]
+    ?? null;
 
   return (
     <div className="fixed inset-0 z-[110] flex justify-end bg-black/70 backdrop-blur-sm" role="presentation">
@@ -208,30 +213,70 @@ export function WorkspaceSettingsDialog({
             ) : providerLoading && providers.length === 0 ? (
               <div role="status" className="mt-4 rounded-xl border border-white/[0.08] p-4 text-xs text-zinc-500">Cargando estado de proveedores del servidor…</div>
             ) : (
-              <div className="mt-4 space-y-2">
-                {providers.map((provider) => (
-                  <article key={provider.provider_id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="mt-4 space-y-3">
+                <label className="block text-xs font-semibold text-zinc-300">
+                  Proveedor de modelos
+                  <select
+                    value={selectedProvider?.provider_id ?? ""}
+                    onChange={(event) => {
+                      setSelectedProviderId(event.target.value as RuntimeProvider["provider_id"]);
+                      setProviderConfigOpen(false);
+                    }}
+                    className="form-control mt-2"
+                  >
+                    {providers.map((provider) => (
+                      <option key={provider.provider_id} value={provider.provider_id}>
+                        {provider.display_name} · {STATE_LABELS[provider.configuration_state]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {selectedProvider && (
+                  <article className="rounded-2xl border border-white/[0.09] bg-white/[0.025] p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-bold text-zinc-100">{provider.display_name}</h4>
-                          <span className={`rounded-full border px-2 py-1 font-mono text-[9px] uppercase ${provider.configured ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200" : "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"}`}>
-                            {STATE_LABELS[provider.configuration_state]}
+                          <h4 className="text-base font-bold text-zinc-100">{selectedProvider.display_name}</h4>
+                          <span className={`rounded-full border px-2 py-1 font-mono text-[9px] uppercase ${selectedProvider.configured ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-200" : "border-amber-300/20 bg-amber-300/[0.05] text-amber-100"}`}>
+                            {STATE_LABELS[selectedProvider.configuration_state]}
                           </span>
                         </div>
-                        <p className="mt-1 font-mono text-[10px] text-zinc-500">{provider.protocol.replaceAll("_", " ")}</p>
+                        <p className="mt-2 text-xs text-zinc-400">{selectedProvider.model || "Sin modelo seleccionado"}</p>
+                        <p className="mt-1 font-mono text-[9px] text-zinc-600">
+                          {selectedProvider.protocol.replaceAll("_", " ")} · {selectedProvider.endpoint_host || "endpoint pendiente"}
+                        </p>
                       </div>
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs font-semibold text-zinc-300">{provider.model || "Sin modelo seleccionado"}</p>
-                        <p className="mt-1 font-mono text-[9px] text-zinc-600">{provider.endpoint_host || "Endpoint no configurado"}</p>
+                      <button
+                        type="button"
+                        onClick={() => setProviderConfigOpen((value) => !value)}
+                        aria-expanded={providerConfigOpen}
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.1] px-3 text-xs font-bold text-zinc-200 hover:border-white/[0.2]"
+                      >
+                        <ServerCog size={13} aria-hidden="true" />
+                        {providerConfigOpen ? "Ocultar configuración" : "Configurar proveedor"}
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 border-t border-white/[0.06] pt-4 text-[10px] leading-5 text-zinc-500 sm:grid-cols-2">
+                      <p><span className="text-zinc-300">Recomendados:</span> {selectedProvider.recommended_models.join(" · ")}</p>
+                      <p><span className="text-zinc-300">Credenciales:</span> entorno seguro del servidor</p>
+                    </div>
+
+                    {providerConfigOpen && (
+                      <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-4 text-[10px] leading-5 text-sky-100/80">
+                        <p className="font-bold text-sky-100">Configuración server-side</p>
+                        <p className="mt-2">Añade estas variables en <code>.env.local</code> para desarrollo o en el secret manager del entorno desplegado. Nunca pegues credenciales en esta pantalla.</p>
+                        <dl className="mt-3 space-y-2 font-mono text-[9px]">
+                          <div><dt className="inline text-zinc-400">Credencial: </dt><dd className="inline">secret manager del servidor o archivo local no versionado</dd></div>
+                          <div><dt className="inline text-zinc-400">Modelo: </dt><dd className="inline break-all">{selectedProvider.model_environment}</dd></div>
+                          <div><dt className="inline text-zinc-400">Endpoint opcional: </dt><dd className="inline break-all">{selectedProvider.base_url_environment}</dd></div>
+                        </dl>
+                        <p className="mt-3">Después reinicia el runtime y pulsa Actualizar configuración de proveedores.</p>
                       </div>
-                    </div>
-                    <div className="mt-3 grid gap-2 border-t border-white/[0.06] pt-3 text-[10px] leading-4 text-zinc-500 sm:grid-cols-2">
-                      <p>Credencial: entorno del servidor</p>
-                      <p>Recomendados: {provider.recommended_models.join(" · ")}</p>
-                    </div>
+                    )}
                   </article>
-                ))}
+                )}
               </div>
             )}
 
@@ -373,7 +418,7 @@ export function WorkspaceSettingsDialog({
                         <p className="mt-1 font-mono text-[9px] text-zinc-600">{integration.integration_id}</p>
                       </div>
                       <span className="rounded-full border border-amber-300/20 bg-amber-300/[0.05] px-3 py-1 font-mono text-[9px] uppercase text-amber-100">
-                        {integration.review_status.replaceAll("_", " ")}
+                        {integration.review_status === "reviewed_disabled" ? "Revisada · deshabilitada" : integration.review_status.replaceAll("_", " ")}
                       </span>
                     </div>
                     <p className="mt-3 text-[10px] text-zinc-500">

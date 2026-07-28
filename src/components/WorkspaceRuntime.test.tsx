@@ -97,6 +97,7 @@ function api(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
         automatic_run_integration: false,
       },
     }),
+    trendRadar: vi.fn(),
     integrations: vi.fn().mockResolvedValue([]),
     socialChannels: vi.fn().mockResolvedValue([]),
     socialPublications: vi.fn().mockResolvedValue([]),
@@ -111,20 +112,29 @@ function api(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
 }
 
 describe("WorkspaceRuntime", () => {
-  it("exchanges the credential once and removes it after session creation", async () => {
+  it("handles each external login request once and stays signed out after logout", async () => {
     const user = userEvent.setup();
     const runtime = api();
-    render(<WorkspaceRuntime api={runtime} />);
+    render(<WorkspaceRuntime api={runtime} connectionRequest={1} />);
 
-    await user.click(await screen.findByRole("button", { name: /Conectar espacio/i }));
-    const credential = screen.getByLabelText(/Credencial del tenant/i);
-    await user.type(credential, "tenant-alpha-verification-key-2026");
-    await user.click(screen.getByRole("button", { name: /Crear sesión segura/i }));
+    await screen.findByRole("dialog", { name: /Conectar este navegador/i });
+    await user.type(screen.getByLabelText(/^Usuario$/i), "operator@example.com");
+    await user.type(screen.getByLabelText(/^Contraseña$/i), "tenant-alpha-verification-key-2026");
+    await user.click(screen.getByRole("button", { name: /Iniciar sesión/i }));
 
     await screen.findByText(/operator@example.com/i);
-    expect(runtime.createSession).toHaveBeenCalledWith("tenant-alpha-verification-key-2026");
-    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+    expect(runtime.createSession).toHaveBeenCalledWith(
+      "operator@example.com",
+      "tenant-alpha-verification-key-2026",
+    );
+    expect(screen.queryByLabelText(/^Usuario$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Contraseña$/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ejecutar campaña/i })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: /Desconectar/i }));
+    await screen.findByRole("button", { name: /Conectar espacio/i });
+    expect(runtime.revokeSession).toHaveBeenCalledWith(SESSION.csrf_token);
+    expect(screen.queryByRole("dialog", { name: /Conectar este navegador/i })).not.toBeInTheDocument();
   });
 
   it("renders versioned outputs from the governed runtime and reports the run upward", async () => {

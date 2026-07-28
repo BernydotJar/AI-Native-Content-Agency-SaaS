@@ -1,7 +1,37 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { RuntimeSocialChannel } from "../lib/runtimeApi";
+import type { RuntimeProvider, RuntimeSocialChannel } from "../lib/runtimeApi";
 import { WorkspaceSettingsDialog } from "./WorkspaceSettingsDialog";
+
+
+const PROVIDERS: RuntimeProvider[] = [
+  {
+    provider_id: "openai",
+    display_name: "OpenAI",
+    protocol: "openai_responses",
+    configured: true,
+    configuration_state: "ready",
+    model: "gpt-5.2",
+    endpoint_host: "api.openai.com",
+    model_environment: "AGENCY_OPENAI_MODEL",
+    base_url_environment: "AGENCY_OPENAI_BASE_URL",
+    credential_location: "server_environment",
+    recommended_models: ["gpt-5.2"],
+  },
+  {
+    provider_id: "deepseek",
+    display_name: "DeepSeek",
+    protocol: "openai_compatible",
+    configured: false,
+    configuration_state: "missing_credential",
+    model: "deepseek-v4-flash",
+    endpoint_host: "api.deepseek.com",
+    model_environment: "AGENCY_DEEPSEEK_MODEL",
+    base_url_environment: "AGENCY_DEEPSEEK_BASE_URL",
+    credential_location: "server_environment",
+    recommended_models: ["deepseek-v4-flash", "deepseek-v4-pro"],
+  },
+];
 
 const DISCONNECTED: RuntimeSocialChannel = {
   channel_id: "x",
@@ -51,7 +81,7 @@ function props(channel: RuntimeSocialChannel, role: "viewer" | "admin") {
     activeTheme: "blue" as const,
     premiumThemeEntitled: false,
     onThemeChange: vi.fn(),
-    providers: [],
+    providers: PROVIDERS,
     gateway: {
       execution_enabled: false,
       selected_provider: "",
@@ -59,7 +89,14 @@ function props(channel: RuntimeSocialChannel, role: "viewer" | "admin") {
       durable_outbound_receipt: false,
       automatic_run_integration: false,
     },
-    integrations: [],
+    integrations: [{
+      integration_id: "video-use",
+      display_name: "Video Use",
+      review_status: "reviewed_disabled",
+      activation_allowed: false,
+      execution_available: false,
+      external_effects_enabled: false,
+    }],
     socialChannels: [channel],
     providerLoading: false,
     providerError: "",
@@ -100,5 +137,18 @@ describe("WorkspaceSettingsDialog social accounts", () => {
     render(<WorkspaceSettingsDialog {...props(DISCONNECTED, "viewer")} />);
     expect(screen.queryByRole("button", { name: /Conectar cuenta/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Desconectar/i })).not.toBeInTheDocument();
+  });
+
+  it("centralizes provider setup and keeps reviewed integrations explicit", () => {
+    render(<WorkspaceSettingsDialog {...props(DISCONNECTED, "admin")} />);
+
+    const selector = screen.getByLabelText(/Proveedor de modelos/i);
+    fireEvent.change(selector, { target: { value: "deepseek" } });
+    expect(screen.getByRole("heading", { name: "DeepSeek" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Configurar proveedor/i }));
+    expect(screen.getByText(/secret manager del servidor/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nunca pegues credenciales en esta pantalla/i)).toBeInTheDocument();
+    expect(screen.getByText("Video Use")).toBeInTheDocument();
+    expect(screen.getByText(/Revisada · deshabilitada/i)).toBeInTheDocument();
   });
 });

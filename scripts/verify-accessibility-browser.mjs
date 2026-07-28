@@ -345,6 +345,12 @@ async function run() {
       horizontalOverflow: root.scrollWidth > root.clientWidth,
       themeButtonCount: document.querySelectorAll('button[aria-label^="Tema "]').length,
       credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
+      heroTitle: document.querySelector('#hero-title')?.textContent?.trim() ?? '',
+      createCampaignHref: [...document.querySelectorAll('a')].find((item) => item.textContent?.trim() === 'Crear campaña')?.getAttribute('href') ?? '',
+      exploreFlowHref: [...document.querySelectorAll('a')].find((item) => item.textContent?.trim() === 'Explorar el flujo')?.getAttribute('href') ?? '',
+      trendRadarPresent: Boolean(document.querySelector('#trend-radar-title')),
+      manualApprovalPresent: document.body.textContent?.includes('Aprobación manual') ?? false,
+      stationCounterPresent: document.body.textContent?.includes('Estación 1 de 8') ?? false,
     };
   })()`);
   requireCondition(initialReflow.innerWidth === 320, `Expected a 320 CSS px viewport, observed ${initialReflow.innerWidth}`);
@@ -352,6 +358,26 @@ async function run() {
   requireCondition(!initialReflow.horizontalOverflow, `Horizontal overflow detected: ${JSON.stringify(initialReflow)}`);
   requireCondition(initialReflow.themeButtonCount === 0, "Theme controls leaked into the primary mission flow");
   requireCondition(initialReflow.credentialFieldCount === 0, "Tenant credential field leaked into the primary workspace");
+  requireCondition(initialReflow.heroTitle.includes("campaña que sí se puede ejecutar"), `Modern hero copy missing: ${JSON.stringify(initialReflow)}`);
+  requireCondition(initialReflow.createCampaignHref === "#command", `Create-campaign CTA is not wired: ${JSON.stringify(initialReflow)}`);
+  requireCondition(initialReflow.exploreFlowHref === "#execution-map", `Flow CTA is not wired: ${JSON.stringify(initialReflow)}`);
+  requireCondition(initialReflow.trendRadarPresent, "Trend radar was not present in the product workspace");
+  requireCondition(initialReflow.manualApprovalPresent, "Plain-language manual approval status was missing");
+  requireCondition(initialReflow.stationCounterPresent, "Eight-station counter was missing");
+
+  const stationActivated = await client.evaluate(`(() => {
+    const next = document.querySelector('button[aria-label="Siguiente estación"]');
+    if (!(next instanceof HTMLButtonElement)) return false;
+    next.click();
+    return true;
+  })()`);
+  requireCondition(stationActivated, "Next-station control was unavailable");
+  await sleep(100);
+  const stationNavigation = await client.evaluate(`({
+    activated: true,
+    inspector: document.querySelector('#station-inspector-title')?.textContent?.trim() ?? '',
+  })`);
+  requireCondition(stationNavigation.inspector === "Research / Scholar", `Next-station navigation did not update the inspector: ${JSON.stringify(stationNavigation)}`);
 
   await client.evaluate("document.body.focus()");
   await press(client, "Tab", "Tab");
@@ -474,31 +500,42 @@ async function run() {
   requireCondition(settingsClosed.activeText === "Configuración", `El foco no volvió a Configuración: ${JSON.stringify(settingsClosed)}`);
 
   const connectFound = await client.evaluate(`(() => {
-    const button = [...document.querySelectorAll('button')].find((candidate) => candidate.textContent?.trim() === 'Conectar espacio');
+    const button = [...document.querySelectorAll('button')].find((candidate) => candidate.textContent?.trim() === 'Iniciar sesión');
     if (!button) return false;
     button.focus();
     return true;
   })()`);
-  requireCondition(connectFound, "El disparador Conectar espacio no estaba disponible");
+  requireCondition(connectFound, "El disparador superior Iniciar sesión no estaba disponible");
   await press(client, "Enter", "Enter");
   await sleep(50);
-  const credentialDisclosure = await client.evaluate(`({
-    dialogPresent: Boolean(document.querySelector('[role="dialog"][aria-labelledby="connect-workspace-title"]')),
-    credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
-    activeType: document.activeElement?.getAttribute('type') ?? '',
-  })`);
+  const credentialDisclosure = await client.evaluate(`(() => {
+    const dialog = document.querySelector('[role="dialog"][aria-labelledby="connect-workspace-title"]');
+    return {
+      dialogPresent: Boolean(dialog),
+      usernameFieldCount: dialog?.querySelectorAll('input[autocomplete="username"]').length ?? 0,
+      credentialFieldCount: dialog?.querySelectorAll('input[type="password"]').length ?? 0,
+      activeAutocomplete: document.activeElement?.getAttribute('autocomplete') ?? '',
+    };
+  })()`);
   requireCondition(credentialDisclosure.dialogPresent, "El diálogo de conexión no abrió");
-  requireCondition(credentialDisclosure.credentialFieldCount === 1, `Expected one disclosed credential field: ${JSON.stringify(credentialDisclosure)}`);
-  requireCondition(credentialDisclosure.activeType === "password", `Credential field did not receive focus: ${JSON.stringify(credentialDisclosure)}`);
+  requireCondition(credentialDisclosure.usernameFieldCount === 1, `Expected one username field: ${JSON.stringify(credentialDisclosure)}`);
+  requireCondition(credentialDisclosure.credentialFieldCount === 1, `Expected one password field: ${JSON.stringify(credentialDisclosure)}`);
+  requireCondition(credentialDisclosure.activeAutocomplete === "username", `Username field did not receive focus: ${JSON.stringify(credentialDisclosure)}`);
   await press(client, "Escape", "Escape");
   await sleep(50);
   const credentialClosed = await client.evaluate(`({
     dialogPresent: Boolean(document.querySelector('[role="dialog"][aria-labelledby="connect-workspace-title"]')),
+    usernameFieldCount: document.querySelectorAll('input[autocomplete="username"]').length,
     credentialFieldCount: document.querySelectorAll('input[type="password"]').length,
     activeText: document.activeElement?.textContent?.trim() ?? '',
   })`);
-  requireCondition(!credentialClosed.dialogPresent && credentialClosed.credentialFieldCount === 0, "Credential disclosure did not close cleanly");
-  requireCondition(credentialClosed.activeText === "Conectar espacio", `El foco no volvió a Conectar espacio: ${JSON.stringify(credentialClosed)}`);
+  requireCondition(
+    !credentialClosed.dialogPresent
+      && credentialClosed.usernameFieldCount === 0
+      && credentialClosed.credentialFieldCount === 0,
+    "Session credential disclosure did not close cleanly",
+  );
+  requireCondition(credentialClosed.activeText === "Iniciar sesión", `El foco no volvió a Iniciar sesión: ${JSON.stringify(credentialClosed)}`);
 
   const screenshot = await client.send("Page.captureScreenshot", {
     format: "png",
@@ -506,7 +543,7 @@ async function run() {
     captureBeyondViewport: false,
   });
   await writeFile(
-    resolve(outputDirectory, "inc-013-product-workspace-320px.png"),
+    resolve(outputDirectory, "inc-034-modern-workspace-320px.png"),
     Buffer.from(screenshot.data, "base64"),
   );
 
@@ -514,6 +551,7 @@ async function run() {
     chromium: await client.evaluate("navigator.userAgent"),
     previewUrl,
     viewport: initialReflow,
+    stationNavigation,
     settingsDisclosure: settingsState,
     credentialDisclosure: { opened: credentialDisclosure, closed: credentialClosed },
     skipLink: { firstFocus, result: skipResult },
@@ -534,10 +572,11 @@ async function run() {
     ],
   };
   await writeFile(
-    resolve(outputDirectory, "inc-013-browser-evidence.json"),
+    resolve(outputDirectory, "inc-034-browser-evidence.json"),
     `${JSON.stringify(evidence, null, 2)}\n`,
   );
   console.log("accessibility_browser_reflow_320=pass");
+  console.log("accessibility_browser_modern_workspace=pass");
   console.log("accessibility_browser_skip_link=pass");
   console.log("accessibility_browser_progressive_disclosure=pass");
   console.log("accessibility_browser_keyboard_theme=pass");

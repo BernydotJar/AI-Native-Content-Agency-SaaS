@@ -35,7 +35,7 @@ describe("runtime API client", () => {
       }, 201));
     const api = createRuntimeApi(fetchMock as typeof fetch);
 
-    await api.createSession("one-time-browser-api-key-value");
+    await api.createSession("operator@example.com", "one-time-browser-api-key-value");
     await api.createRun({
       title: "Runtime test",
       objective: "Verify browser session transport",
@@ -48,7 +48,10 @@ describe("runtime API client", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/v1/sessions", expect.objectContaining({
       method: "POST",
       credentials: "include",
-      body: JSON.stringify({ api_key: "one-time-browser-api-key-value" }),
+      body: JSON.stringify({
+        username: "operator@example.com",
+        api_key: "one-time-browser-api-key-value",
+      }),
     }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/runs", expect.objectContaining({
       method: "POST",
@@ -178,7 +181,7 @@ describe("runtime API client", () => {
     await expect(api.getRun("run-123")).resolves.toEqual(
       expect.objectContaining({ run_id: "run-123" }),
     );
-    await expect(api.createSession("invalid-key")).rejects.toEqual(
+    await expect(api.createSession("operator@example.com", "invalid-key")).rejects.toEqual(
       expect.objectContaining<Partial<RuntimeApiError>>({
         status: 429,
         code: "authentication_rate_limited",

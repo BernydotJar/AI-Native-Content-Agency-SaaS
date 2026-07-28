@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "run-local-product.sh"
 PACKAGE = ROOT / "package.json"
 LOCAL_BUILD_LOCK = ROOT / "backend" / "requirements-local-build.lock"
+WORKSPACE_UP = ROOT / "scripts" / "workspace-up.sh"
 SOCIAL_KEY_SCRIPT = ROOT / "scripts" / "generate-social-encryption-key.py"
 ENV_EXAMPLE = ROOT / ".env.example"
 
@@ -36,6 +37,23 @@ class LocalProductRunnerTests(unittest.TestCase):
         self.assertIn("pip==24.3.1", compatibility_lock)
         self.assertIn("--hash=sha256:", compatibility_lock)
         self.assertIn('AGENCY_STATIC_DIR="$ROOT_DIR/dist"', source)
+        self.assertIn(
+            'AGENCY_MEMORY_DB:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3',
+            source,
+        )
+        workspace_source = WORKSPACE_UP.read_text()
+        self.assertIn(
+            'AGENCY_MEMORY_DB:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3',
+            workspace_source,
+        )
+        self.assertNotIn(
+            'AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3',
+            workspace_source,
+        )
+        self.assertNotIn(
+            'AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3',
+            source,
+        )
         self.assertIn("AGENCY_SESSION_COOKIE_SAMESITE", source)
         self.assertIn("AGENCY_SESSION_COOKIE_SECURE", source)
         self.assertNotIn("set -x", source)

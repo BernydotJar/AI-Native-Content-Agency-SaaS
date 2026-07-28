@@ -77,7 +77,7 @@ fi
 
 HOST="${AGENCY_HOST:-127.0.0.1}"
 PORT_VALUE="${PORT:-4175}"
-DATABASE_PATH="${AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3}"
+DATABASE_PATH="${AGENCY_MEMORY_DB:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3}"
 BUILD_VENV="${AGENCY_LOCAL_BUILD_VENV:-/tmp/ai-native-content-agency-build}"
 RUNTIME_VENV="${AGENCY_LOCAL_RUNTIME_VENV:-/tmp/ai-native-content-agency-runtime}"
 WHEEL_DIR="${AGENCY_LOCAL_WHEEL_DIR:-/tmp/ai-native-content-agency-wheels}"
@@ -162,6 +162,9 @@ fi
 
 export AGENCY_HOST="$HOST"
 export PORT="$PORT_VALUE"
+if [[ "$MODE" == "run" ]]; then
+  mkdir -p "$(dirname "$DATABASE_PATH")"
+fi
 export AGENCY_MEMORY_DB="$DATABASE_PATH"
 export AGENCY_STATIC_DIR="$ROOT_DIR/dist"
 export AGENCY_SESSION_COOKIE_SAMESITE="${AGENCY_SESSION_COOKIE_SAMESITE:-lax}"

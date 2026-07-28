@@ -125,7 +125,7 @@ launch_installed_api_background() {
     set +a
     local host_value="${AGENCY_HOST:-127.0.0.1}"
     local port_value="${PORT:-4175}"
-    local database_value="${AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3}"
+    local database_value="${AGENCY_MEMORY_DB:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3}"
     local static_value="${AGENCY_STATIC_DIR:-$ROOT_DIR/dist}"
     local forwarded_value="${FORWARDED_ALLOW_IPS:-127.0.0.1}"
     nohup setsid env \

@@ -101,6 +101,19 @@ beforeEach(() => {
     entitlements: [],
     auth_method: "session",
   });
+  vi.spyOn(runtimeApi, "trendRadar").mockResolvedValue({
+    tenant_id: "tenant-alpha",
+    geo: "GT",
+    source: "Google Trends RSS",
+    source_url: "https://trends.google.com/trending/rss?geo=GT",
+    fetched_at: "2026-07-28T16:00:00+00:00",
+    trends: [{
+      title: "Innovación en Guatemala",
+      approx_traffic: "2,000+",
+      published_at: "Tue, 28 Jul 2026 12:00:00 +0000",
+      news_source: "Fuente pública",
+    }],
+  });
   vi.spyOn(runtimeApi, "providerCatalog").mockResolvedValue({
     tenant_id: "tenant-alpha",
     providers: PROVIDERS,
@@ -135,7 +148,9 @@ describe("product workspace shell", () => {
   it("prioritizes governed command and hides infrequent configuration", async () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: /Convierte una señal en una campaña completa/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /De una idea a una campaña que sí se puede ejecutar/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Crear campaña/i })).toHaveAttribute("href", "#command");
+    expect(screen.getByRole("link", { name: /Explorar el flujo/i })).toHaveAttribute("href", "#execution-map");
     expect(screen.getByRole("heading", { name: /Define la misión. Ejecuta el sistema/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Lanza una campaña gobernada/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Mapa de orquestación de ocho estaciones/i })).toBeInTheDocument();
@@ -147,24 +162,33 @@ describe("product workspace shell", () => {
     expect(screen.queryByText(/^Mock$/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Video Use")).not.toBeInTheDocument();
     expect(screen.queryByText("DeepSeek")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Greenlight visible/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Aprobación manual/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Qué está capturando atención ahora/i })).toBeInTheDocument();
+    expect(screen.getByText(/Inicia sesión para investigar señales reales/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente estación/i }));
+    expect(screen.getByRole("heading", { name: /Research/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
     expect(screen.getByRole("dialog", { name: /Administración del espacio/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Tema azul/i })).toBeInTheDocument();
   });
 
-  it("mounts the one-time tenant credential only inside the connection dialog", async () => {
+  it("opens username and password login from the top navigation", async () => {
     render(<App />);
 
-    const connect = await screen.findByRole("button", { name: /Conectar espacio/i });
-    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Usuario$/i)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /Iniciar sesión/i }));
 
-    fireEvent.click(connect);
     expect(screen.getByRole("dialog", { name: /Conectar este navegador/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Credencial del tenant/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Usuario$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Contraseña$/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Cerrar diálogo de conexión/i }));
-    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Usuario$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Contraseña$/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Iniciar sesión/i })).toHaveFocus();
   });
 
   it("explains when Instagram rejects the long-lived authorization exchange", async () => {
@@ -189,15 +213,17 @@ describe("product workspace shell", () => {
     vi.mocked(runtimeApi.resumeSession).mockResolvedValue(SESSION);
     render(<App />);
 
-    await screen.findByText(/tenant-alpha conectado/i);
+    await screen.findByText(/operator@example.com · conectado/i);
     await waitFor(() => expect(runtimeApi.providerCatalog).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
 
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("Anthropic")).toBeInTheDocument();
-    expect(screen.getByText("DeepSeek")).toBeInTheDocument();
-    expect(screen.getByText("Moonshot / Kimi")).toBeInTheDocument();
-    expect(screen.getByText("Llama")).toBeInTheDocument();
+    const providerSelect = screen.getByLabelText(/Proveedor de modelos/i);
+    expect(providerSelect).toBeInTheDocument();
+    expect(providerSelect.querySelectorAll("option")).toHaveLength(5);
+    fireEvent.change(providerSelect, { target: { value: "deepseek" } });
+    expect(screen.getByRole("heading", { name: "DeepSeek" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Configurar proveedor/i }));
+    expect(screen.getByText(/secret manager del servidor/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/OpenAI API key/i)).not.toBeInTheDocument();
     expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
     expect(screen.getByText(/Gateway de inferencia deshabilitado/i)).toBeInTheDocument();
@@ -225,7 +251,7 @@ describe("product workspace shell", () => {
     });
     render(<App />);
 
-    await screen.findByText(/tenant-alpha conectado/i);
+    await screen.findByText(/operator@example.com · conectado/i);
     fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
     const premium = screen.getByRole("button", { name: /Tema premium/i });
     expect(premium).toHaveAttribute("aria-disabled", "false");

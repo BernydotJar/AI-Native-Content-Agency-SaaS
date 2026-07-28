@@ -43,6 +43,13 @@ npm run start:local
 Después de conectar el tenant, **Configuración → Proveedores de modelos** muestra el
 estado derivado del servidor. El valor de las credenciales nunca aparece.
 
+La consola presenta los proveedores en un único selector. Al elegir uno, muestra su
+protocolo, endpoint, modelo, recomendaciones y un panel progresivo de configuración.
+Ese panel sólo orienta hacia el secret manager del servidor o un archivo local no
+versionado: no solicita la credencial ni devuelve por API el nombre de la variable que
+la contiene. **Actualizar configuración de proveedores** vuelve a leer el estado del
+runtime después de reiniciarlo.
+
 ## Estados
 
 - `ready`: credencial, modelo y endpoint presentes.

@@ -113,6 +113,7 @@ from .social_publication_store import (
     SocialPublicationStateError,
 )
 from .tools import build_sandbox_toolset
+from .trends import TrendRadar, TrendRadarUnavailable
 from .utils import canonical_json, stable_id, to_primitive
 from .version import VERSION
 
@@ -411,6 +412,12 @@ class ModelEffectReconcileRequest(BaseModel):
 
 class BrowserSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    username: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9@._:-]{0,127}$",
+    )
     api_key: str = Field(min_length=24, max_length=512)
 
 
@@ -1880,6 +1887,7 @@ def create_app(
     public_media_ttl_seconds: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
     model_transport: Optional[httpx.BaseTransport] = None,
+    trends_transport: Optional[httpx.BaseTransport] = None,
     social_environment: Optional[Mapping[str, str]] = None,
     social_oauth_transport: Optional[httpx.BaseTransport] = None,
     social_publication_transport: Optional[httpx.BaseTransport] = None,
@@ -2045,6 +2053,7 @@ def create_app(
         provider_source,
         transport=model_transport,
     )
+    trend_radar = TrendRadar(transport=trends_transport)
     raw_model_effect_enabled = str(
         provider_source.get("AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED", "false")
     ).strip().lower()
@@ -2233,6 +2242,7 @@ def create_app(
     app.state.integration_registry = IntegrationRegistry.default()
     app.state.provider_registry = provider_registry
     app.state.model_gateway = model_gateway
+    app.state.trend_radar = trend_radar
     app.state.model_effect_authority = model_effect_authority
     app.state.social_channel_registry = social_channel_registry
     app.state.social_oauth_service = social_oauth_service
@@ -2806,6 +2816,11 @@ def create_app(
             )
         try:
             principal = _rate_limited_authenticate(request, session_request.api_key)
+            if session_request.username is not None and not hmac.compare_digest(
+                session_request.username,
+                principal.subject_id,
+            ):
+                raise AuthenticationError("username does not match credential")
         except AuthenticationError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -2914,6 +2929,22 @@ def create_app(
             "providers": app.state.provider_registry.public_list(),
             "gateway": gateway_status,
         }
+
+    @app.get("/api/v1/trends", tags=["research"])
+    def read_trends(
+        geo: str = Query(default="GT", pattern=r"^GT$"),
+        limit: int = Query(default=8, ge=1, le=10),
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        try:
+            snapshot = app.state.trend_radar.read(geo=geo, limit=limit)
+        except TrendRadarUnavailable as error:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="trend_radar_unavailable",
+                detail="trend radar is temporarily unavailable",
+            ) from error
+        return {"tenant_id": principal.tenant_id, **snapshot}
 
     @app.post(
         "/api/v1/runs/{run_id}/model-effects/{station}",

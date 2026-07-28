@@ -73,6 +73,28 @@ class ApiVerticalSliceTests(unittest.TestCase):
             self.assertEqual(principal.json()["tenant_id"], "tenant-alpha")
             self.assertNotIn(ALPHA_KEY, principal.text)
 
+            mismatched_login = client.post(
+                "/api/v1/sessions",
+                json={
+                    "username": "someone-else@example.com",
+                    "api_key": ALPHA_KEY,
+                },
+            )
+            self.assertEqual(mismatched_login.status_code, 401)
+
+            matched_login = client.post(
+                "/api/v1/sessions",
+                json={
+                    "username": "tenant:tenant-alpha",
+                    "api_key": ALPHA_KEY,
+                },
+            )
+            self.assertEqual(matched_login.status_code, 201)
+            self.assertEqual(
+                matched_login.json()["subject_id"],
+                "tenant:tenant-alpha",
+            )
+
         with self.client(keys={}) as unconfigured:
             self.assertEqual(unconfigured.get("/healthz").status_code, 200)
             self.assertEqual(unconfigured.get("/readyz").status_code, 503)

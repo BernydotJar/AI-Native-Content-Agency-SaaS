@@ -47,3 +47,23 @@ Greenlight separation.
 An ephemeral credential is emitted only when
 `AGENCY_IDENTITY_CREDENTIALS_JSON` is absent. Use that mode only for an isolated
 local runtime, never for the governed Instagram or X publication workflow.
+
+## Persistencia del runtime local
+
+El launcher local y `scripts/workspace-up.sh` usan por defecto:
+
+```text
+/workspace/.local/ai-native-content-agency-local.sqlite3
+```
+
+No uses `/tmp` para un workspace que deba sobrevivir al reemplazo del contenedor. El
+repositorio ignora `.local/`, pero el volumen persistente del workspace conserva ese
+archivo. `AGENCY_MEMORY_DB` puede sobrescribir la ruta cuando una prueba necesita una
+base efímera explícita.
+
+Antes de reemplazar un runtime antiguo que todavía use `/tmp`, crea un backup SQLite
+consistente hacia `.local/`; copiar sólo el archivo principal mientras existe WAL puede
+perder transacciones. Después del reinicio, verifica la variable efectiva del proceso y
+los conteos de sesiones, auditoría y conexiones sociales. Una autorización OAuth que ya
+se perdió del volumen anterior no se reconstruye a partir de logs o receipts: exige una
+nueva autorización interactiva.

@@ -38,17 +38,21 @@ export function CinematicHero({
           <Sparkles size={13} aria-hidden="true" /> AI-native campaign operations
         </p>
         <h1 id="hero-title" className="hero-title">
-          Convierte una señal en una <span>campaña completa.</span>
+          De una idea a una campaña <span>que sí se puede ejecutar.</span>
         </h1>
         <p className="mt-5 max-w-2xl text-sm leading-7 text-zinc-400 sm:text-base sm:leading-8">
-          Define el resultado, ejecuta las estaciones y aprueba entregables desde un único run gobernado.
+          Investiga qué mueve a tu audiencia, coordina ocho especialistas y publica con revisión humana desde un solo lugar.
         </p>
+        <div className="hero-actions">
+          <a href="#command" className="hero-action hero-action--primary">Crear campaña</a>
+          <a href="#execution-map" className="hero-action">Explorar el flujo</a>
+        </div>
 
         <div className="mt-7 grid max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
-          <div className="hero-stat"><strong>{String(totalStations).padStart(2, "0")}</strong><span>stations</span></div>
-          <div className="hero-stat"><strong>{String(completedStations).padStart(2, "0")}</strong><span>complete</span></div>
-          <div className="hero-stat"><strong>{readyProviders}/{totalProviders || 5}</strong><span>providers</span></div>
-          <div className="hero-stat"><strong>{String(deliverables).padStart(2, "0")}</strong><span>outputs</span></div>
+          <div className="hero-stat"><strong>{String(totalStations).padStart(2, "0")}</strong><span>estaciones</span></div>
+          <div className="hero-stat"><strong>{String(completedStations).padStart(2, "0")}</strong><span>completas</span></div>
+          <div className="hero-stat"><strong>{readyProviders}/{totalProviders || 5}</strong><span>proveedores</span></div>
+          <div className="hero-stat"><strong>{String(deliverables).padStart(2, "0")}</strong><span>entregables</span></div>
         </div>
       </div>
 
@@ -63,7 +67,7 @@ export function CinematicHero({
         </div>
         <span className="orbit-tag orbit-tag--one">{sessionActive ? "SCHOLAR / READY" : "SCHOLAR / STANDBY"}</span>
         <span className="orbit-tag orbit-tag--two">{selectedProvider ? selectedProvider.toUpperCase() : "MODEL / OFF"}</span>
-        <span className="orbit-tag orbit-tag--three">GREENLIGHT / HUMAN</span>
+        <span className="orbit-tag orbit-tag--three">APROBACIÓN / HUMANA</span>
       </div>
     </section>
   );

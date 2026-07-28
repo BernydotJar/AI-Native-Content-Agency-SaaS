@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { Activity, Cpu, Network, Settings, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Activity, ChevronLeft, ChevronRight, Cpu, LogIn, Network, Settings, ShieldCheck } from "lucide-react";
 import { CanvasBackground } from "./components/CanvasBackground";
 import { CampaignOutputPanel } from "./components/CampaignOutputPanel";
 import { CinematicHero } from "./components/CinematicHero";
 import { PipelineGraph } from "./components/PipelineGraph";
 import type { NodeState } from "./components/PipelineGraph";
 import { StationInspector } from "./components/StationInspector";
+import { TrendRadar } from "./components/TrendRadar";
 import { WorkspaceRuntime } from "./components/WorkspaceRuntime";
 import { WorkspaceSettingsDialog } from "./components/WorkspaceSettingsDialog";
 import { runtimeApi } from "./lib/runtimeApi";
@@ -47,6 +48,17 @@ const EMPTY_NODE_STATE: NodeState = {
 
 const PIPELINE_NODE_IDS = [
   "ingestion",
+  "ceo",
+  "research",
+  "strategist",
+  "growth",
+  "writer",
+  "media",
+  "risk",
+  "publisher",
+] as const;
+
+const STATION_NODE_IDS = [
   "ceo",
   "research",
   "strategist",
@@ -111,6 +123,8 @@ export default function App() {
   const [fabricLoading, setFabricLoading] = useState(false);
   const [fabricError, setFabricError] = useState("");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("ceo");
+  const [connectionRequest, setConnectionRequest] = useState(0);
+  const sessionButtonRef = useRef<HTMLButtonElement>(null);
 
   const premiumThemeEntitled = runtimeEntitlements.includes("theme:premium");
   const nodeStates = useMemo(() => pipelineState(run), [run]);
@@ -120,6 +134,16 @@ export default function App() {
   const activeStep = Object.entries(nodeStates).find(([, state]) => state.status === "running")?.[0] ?? "";
   const selectedProvider = providerGateway.selected_provider || providers.find((provider) => provider.configured)?.provider_id || "";
   const activeRunId = run?.run_id ?? "";
+  const selectedStationIndex = Math.max(0, STATION_NODE_IDS.indexOf(selectedNodeId as typeof STATION_NODE_IDS[number]));
+  const selectPreviousStation = () => setSelectedNodeId(STATION_NODE_IDS[Math.max(0, selectedStationIndex - 1)]);
+  const selectNextStation = () => setSelectedNodeId(STATION_NODE_IDS[Math.min(STATION_NODE_IDS.length - 1, selectedStationIndex + 1)]);
+  const openSessionOrCommand = () => {
+    if (session) {
+      document.getElementById("command")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    setConnectionRequest((value) => value + 1);
+  };
 
   useEffect(() => {
     applyTheme(themeId);
@@ -388,12 +412,21 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`status-pill ${session ? "status-pill--live" : ""}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${session ? "bg-emerald-300" : "bg-zinc-500"}`} />
-              {session ? `${session.tenant_id} conectado` : "Espacio desconectado"}
-            </span>
+            <button
+              ref={sessionButtonRef}
+              type="button"
+              onClick={openSessionOrCommand}
+              className={`status-pill ${session ? "status-pill--live" : ""}`}
+            >
+              {session ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+              ) : (
+                <LogIn size={12} aria-hidden="true" />
+              )}
+              {session ? `${session.subject_id} · conectado` : "Iniciar sesión"}
+            </button>
             <span className="status-pill status-pill--amber">
-              <ShieldCheck size={12} aria-hidden="true" /> Greenlight visible
+              <ShieldCheck size={12} aria-hidden="true" /> Aprobación manual
             </span>
             <button
               type="button"
@@ -419,32 +452,58 @@ export default function App() {
           selectedProvider={selectedProvider}
         />
 
-        <section aria-labelledby="command-title" className="mt-10 lg:mt-14">
+        <div className="mt-8 lg:mt-10">
+          <TrendRadar sessionActive={Boolean(session)} />
+        </div>
+
+        <section id="command" aria-labelledby="command-title" className="scroll-mt-24 mt-10 lg:mt-14">
           <div className="section-heading">
             <div>
               <p className="section-kicker">01 / COMMAND</p>
               <h2 id="command-title">Define la misión. Ejecuta el sistema.</h2>
             </div>
-            <p>El comando produce un run durable, artefactos versionados y una decisión Greenlight verificable.</p>
+            <p>Una misión produce entregables versionados y una decisión de aprobación humana verificable.</p>
           </div>
           <div className="mt-5">
             <WorkspaceRuntime
               onSessionChange={setSession}
               onRunChange={setRun}
               onEntitlementsChange={setRuntimeEntitlements}
+              connectionRequest={connectionRequest}
+              connectionReturnFocusRef={sessionButtonRef}
             />
           </div>
         </section>
 
-        <section aria-labelledby="execution-map-title" className="mt-10 lg:mt-14">
+        <section id="execution-map" aria-labelledby="execution-map-title" className="scroll-mt-24 mt-10 lg:mt-14">
           <div className="section-heading">
             <div>
               <p className="section-kicker">02 / LIVE TOPOLOGY / FABRIC FLOW</p>
               <h2 id="execution-map-title">Mapa de orquestación de ocho estaciones</h2>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/20 px-3 py-2 font-mono text-[10px] text-zinc-400" aria-live="polite">
-              <Activity size={12} className="text-[var(--primary-color)]" aria-hidden="true" />
-              {selectedNodeId ? `${selectedNodeId} · ${selectedState?.status ?? "idle"} · ${selectedState?.progress ?? 0}%` : "Selecciona una estación"}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/20 px-3 py-2 font-mono text-[10px] text-zinc-400" aria-live="polite">
+                <Activity size={12} className="text-[var(--primary-color)]" aria-hidden="true" />
+                Estación {selectedStationIndex + 1} de {STATION_NODE_IDS.length} · {selectedState?.status ?? "idle"} · {selectedState?.progress ?? 0}%
+              </div>
+              <button
+                type="button"
+                onClick={selectPreviousStation}
+                disabled={selectedStationIndex === 0}
+                className="station-nav-button"
+                aria-label="Estación anterior"
+              >
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={selectNextStation}
+                disabled={selectedStationIndex === STATION_NODE_IDS.length - 1}
+                className="station-nav-button"
+                aria-label="Siguiente estación"
+              >
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
             </div>
           </div>
           <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.72fr)]">
@@ -491,10 +550,10 @@ export default function App() {
         <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-4 text-[11px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Network size={13} className="text-[var(--primary-color)]" aria-hidden="true" />
-            <span>Sesión, estados, artefactos y Greenlight provienen del backend gobernado.</span>
+            <span>Sesión, estados, entregables y aprobaciones provienen del backend gobernado.</span>
           </div>
           <div className="text-right font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">
-            <span className="block">Los efectos externos requieren autoridad durable y Greenlight exacto.</span>
+            <span className="block">Los efectos externos requieren autoridad durable y Greenlight exacto. Greenlight significa una aprobación humana ligada a esa versión.</span>
             <span className="mt-1 block">Las credenciales de proveedores permanecen server-side.</span>
           </div>
         </div>

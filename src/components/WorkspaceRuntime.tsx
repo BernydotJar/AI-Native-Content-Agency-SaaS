@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type { FormEvent } from "react";
 import {
   AlertTriangle,
@@ -32,6 +33,8 @@ interface WorkspaceRuntimeProps {
   onSessionChange?: (session: BrowserRuntimeSession | null) => void;
   onRunChange?: (run: RuntimeRun | null) => void;
   onEntitlementsChange?: (entitlements: readonly string[]) => void;
+  connectionRequest?: number;
+  connectionReturnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 type SessionPhase = "restoring" | "signed_out" | "authenticated";
@@ -199,10 +202,14 @@ export function WorkspaceRuntime({
   onSessionChange = ignoreSession,
   onRunChange = ignoreRun,
   onEntitlementsChange = ignoreEntitlements,
+  connectionRequest = 0,
+  connectionReturnFocusRef,
 }: WorkspaceRuntimeProps) {
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>("restoring");
   const [session, setSession] = useState<BrowserRuntimeSession | null>(null);
   const [connectionOpen, setConnectionOpen] = useState(false);
+  const [connectionOrigin, setConnectionOrigin] = useState<"internal" | "external">("internal");
+  const [username, setUsername] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [brief, setBrief] = useState<RuntimeBrief>(DEFAULT_BRIEF);
   const [run, setRun] = useState<RuntimeRun | null>(null);
@@ -211,9 +218,10 @@ export function WorkspaceRuntime({
   const [busyAction, setBusyAction] = useState("");
   const [notice, setNotice] = useState<OperatorNotice | null>(null);
   const commandKeys = useRef(new Map<string, string>());
+  const handledConnectionRequestRef = useRef(0);
   const connectButtonRef = useRef<HTMLButtonElement>(null);
   const connectionDialogRef = useRef<HTMLElement>(null);
-  const credentialInputRef = useRef<HTMLInputElement>(null);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
 
   const capabilities = session ? ROLE_CAPABILITIES[session.role] : null;
   const canCreate = Boolean(capabilities?.canCreate);
@@ -224,6 +232,7 @@ export function WorkspaceRuntime({
 
   const closeConnection = () => {
     setConnectionOpen(false);
+    setUsername("");
     setApiKey("");
   };
 
@@ -231,9 +240,20 @@ export function WorkspaceRuntime({
     open: connectionOpen,
     onClose: closeConnection,
     dialogRef: connectionDialogRef,
-    initialFocusRef: credentialInputRef,
-    returnFocusRef: connectButtonRef,
+    initialFocusRef: usernameInputRef,
+    returnFocusRef: connectionOrigin === "external" && connectionReturnFocusRef
+      ? connectionReturnFocusRef
+      : connectButtonRef,
   });
+
+  useEffect(() => {
+    if (connectionRequest <= handledConnectionRequestRef.current) return;
+    handledConnectionRequestRef.current = connectionRequest;
+    if (!session) {
+      setConnectionOrigin("external");
+      setConnectionOpen(true);
+    }
+  }, [connectionRequest, session]);
 
   const commandKey = (scope: string) => {
     const existing = commandKeys.current.get(scope);
@@ -335,12 +355,13 @@ export function WorkspaceRuntime({
 
   const openSession = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const identity = username.trim();
     const credential = apiKey.trim();
-    if (credential.length < 24) return;
+    if (!identity || credential.length < 24) return;
     setBusyAction("connect");
     setNotice(null);
     try {
-      const opened = await api.createSession(credential);
+      const opened = await api.createSession(identity, credential);
       setSession(opened);
       setSessionPhase("authenticated");
       onEntitlementsChange(opened.entitlements);
@@ -351,6 +372,7 @@ export function WorkspaceRuntime({
       clearProtectedState();
       handleFailure(caught);
     } finally {
+      setUsername("");
       setApiKey("");
       setBusyAction("");
     }
@@ -518,7 +540,10 @@ export function WorkspaceRuntime({
             <button
               ref={connectButtonRef}
               type="button"
-              onClick={() => setConnectionOpen(true)}
+              onClick={() => {
+                setConnectionOrigin("internal");
+                setConnectionOpen(true);
+              }}
               className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--primary-color)] px-4 text-xs font-extrabold text-black"
             >
               <KeyRound size={13} aria-hidden="true" /> Conectar espacio
@@ -859,24 +884,36 @@ export function WorkspaceRuntime({
               </button>
             </div>
             <p className="mt-3 text-xs leading-6 text-zinc-500">
-              Ingresa la credencial del tenant una sola vez. El servidor la intercambia por una sesión HttpOnly del mismo origen y el campo desaparece del espacio de trabajo.
+              Usa la identidad y contraseña asignadas por tu organización. La contraseña se intercambia por una sesión HttpOnly y nunca se guarda en el navegador.
             </p>
-            <form onSubmit={openSession} className="mt-5">
-              <label className="text-xs font-semibold text-zinc-300">
-                Credencial del tenant
+            <form onSubmit={openSession} className="mt-5 space-y-4">
+              <label className="block text-xs font-semibold text-zinc-300">
+                Usuario
                 <input
-                  ref={credentialInputRef}
+                  ref={usernameInputRef}
+                  type="text"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  maxLength={128}
+                  required
+                  className="form-control mt-2 text-xs"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-zinc-300">
+                Contraseña
+                <input
                   type="password"
                   autoComplete="current-password"
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
                   minLength={24}
                   required
-                  className="form-control mt-2 font-mono text-xs"
+                  className="form-control mt-2 text-xs"
                 />
               </label>
-              <button type="submit" disabled={busyAction === "connect" || apiKey.trim().length < 24} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 text-xs font-extrabold text-black disabled:opacity-40">
-                <ShieldCheck size={14} aria-hidden="true" /> {busyAction === "connect" ? "Conectando…" : "Crear sesión segura"}
+              <button type="submit" disabled={busyAction === "connect" || !username.trim() || apiKey.trim().length < 24} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 text-xs font-extrabold text-black disabled:opacity-40">
+                <ShieldCheck size={14} aria-hidden="true" /> {busyAction === "connect" ? "Conectando…" : "Iniciar sesión"}
               </button>
             </form>
           </section>
