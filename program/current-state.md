@@ -1,54 +1,72 @@
 # Current Program State
 
-Updated: 2026-07-26
+Updated: 2026-07-28
 
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-024-political-browser-qa`
-- Base cumulative branch commit: `4226a97056cc4fdbba8d54338c7ff370322567aa`
-- INC-024 implementation commit: `4d0bc7472c6b4d9d2719f5275028f35de4341463`
-- Remote branch / draft PR / exact-head CI: pending
+- Active branch: `agent/inc-034-modern-onboarding-trends`
+- Main merge base: `dcb1d1c567ad688b7fd78a219411b42d5806034c`
+- Previous stacked checkpoint: `728a5bdb756321ef91fa39cc7e734965b1b3d5a5`
+- INC-034 implementation commit: `a11ea1619ab9a2d341ee84d6497c46b9fa1752ab`
+- Remote delivery base: `agent/inc-022-governed-media-verification` at `ecd72ece9a97fc0587d88277be876c386cfb4263`
+- Remote branch: `agent/inc-034-modern-onboarding-trends-remote`
+- Remote implementation commit: `57dd2dc08408d7bcd1acc90a7eeb96cc6fa8e31f`
+- Draft PR / exact-head CI: pending
 - Worktree after implementation commit: documentation checkpoint in progress
+- Audited `git_push` helper: blocked before GitHub by nested Docker `iptables` initialization; Git Data API fallback verified 25/25 blobs and modes
 - Nested containers created: none
-- Real Instagram/X publication, ad activation, model call, cloud apply or spend: none
+- New social publication, ad activation, model effect, cloud apply or paid resource: none
 
-## Closed political publication increments
+## INC-034 product result
 
-- INC-021 Campaign Intelligence: done and merged through PR #13.
-- INC-022 Governed Media and Verified Publication: done and merged through PR #14.
-- INC-023 Political Compliance Mode: done and merged through PR #15; delivery receipt merged through PR #16.
-- Cumulative stacked base: `4226a97056cc4fdbba8d54338c7ff370322567aa`. The stack is still outside protected `main`.
+The implementation now provides:
 
-## INC-024 browser QA
+- an outcome-oriented CampaignOS hero with direct campaign and flow actions;
+- an actionable top login control using username and password;
+- server-derived tenant, role, permissions and HttpOnly browser sessions;
+- a plain-language `Aprobación manual` state instead of the unexplained hero label;
+- previous/next controls and an explicit counter for the eight-station map;
+- authenticated, read-only Guatemala research through Google Trends RSS;
+- one centralized model-provider selector and progressive server-side setup guidance;
+- DeepSeek model and endpoint configuration without browser-side credential entry;
+- `Video Use` shown as reviewed and disabled;
+- unchanged governed X and Instagram account-management surfaces;
+- no autoplay music;
+- persistent local SQLite under `.local/` instead of ephemeral `/tmp`.
 
-The implementation adds:
+## Verification
 
-- a two-profile Chromium/CDP political journey;
-- a mock-only provider fixture with zero real egress;
-- screenshots and a machine-readable receipt;
-- actionable reviewer-separation errors;
-- truthful queued/running copy progress;
-- explicit mayoral municipal and deputy legislative messaging;
-- semantic `office_message_alignment`;
-- exact final-phrase and raw-confirmation persistence checks;
-- a CI step that runs against the installed wheel and uploads evidence.
-
-## Local verification
-
-- Hash-locked installed wheel: 286 PASS, 25 PostgreSQL-only skips.
-- Frontend: 47 PASS.
-- Lint: zero warnings/errors.
+- Hash-locked installed wheel: 313 PASS; 25 PostgreSQL-only skips expected.
+- Frontend: 54 PASS.
+- Oxlint: zero warnings/errors.
 - Production build: PASS.
-- Accessibility browser: PASS.
-- Existing social-publication browser: PASS.
-- New political browser: PASS in source and installed-wheel modes.
-- Actionlint, program, compliance, diff and secret scans: PASS.
-- Compliance decision remains `DENY_RELEASE`.
+- Automated Chromium 320 px reflow, modern-workspace, keyboard, focus, reduced-motion and accessibility-tree gates: PASS.
+- Operability: PASS; 4 SLOs, 8 alerts, 9 exercises.
+- Program validator: PASS.
+- Release compliance validator: PASS with `DENY_RELEASE`.
+- Diff and high-confidence added-line secret guards: PASS.
+- Real local trend endpoint: HTTP 200 from Google Trends RSS with 8 verified items.
+- Second API restart preserved runtime session, audit and social-connection row counts exactly.
 
-## Safety boundary
+## Runtime state
 
-The live workstation remains configured with political content creation enabled for feedback while general social publication, political publication and political paid media remain disabled. Instagram `@beesheep2` remains connected, but INC-024 did not use it. The provider effect observed by the browser journey is an in-process `httpx.MockTransport` call only.
+- Local root and health: HTTP 200.
+- Runtime database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
+- Runtime process environment points to that exact persistent database.
+- X connection: `not_connected`.
+- Instagram connection: `not_connected`.
+- Social publication: `false`.
+- Political publication: `false`.
+- Political paid media: `false`.
+- Public health: unavailable.
+- Quick tunnel: stopped after newly issued hostnames failed DNS resolution.
+
+The prior launcher stored SQLite in `/tmp`. Replacing the workstation runtime removed the
+previous OAuth connection rows, and no recoverable database containing them remained in
+the persistent workspace. INC-034 did not invoke disconnect, OAuth or publication. X and
+Instagram require new interactive authorization only after a stable HTTPS callback is
+available.
 
 Release recommendation: `DENY_RELEASE`
 
@@ -56,4 +74,8 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish the implementation and documentation commits, open a draft PR against `4226a97056cc4fdbba8d54338c7ff370322567aa`, pass all eight exact-head `production-readiness` jobs including the installed-wheel political browser gate, repair any failure, then perform accountable human screenshot/copy review. The neutral `@beesheep2` sandbox post remains a separately authorized external effect.
+Publish this documentation checkpoint to the verified remote implementation commit,
+open a draft pull request, run exact-head CI and repair any failure. Before any future
+social OAuth action, establish
+a stable HTTPS callback, update the provider consoles and authorize each account
+interactively. Do not publish or enable paid media as part of INC-034.
