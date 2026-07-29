@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 4,
-  "event_count": 49,
-  "last_event_id": "ea6851a4-14b8-475b-86d4-325aed996b5e",
+  "checkpoint_count": 5,
+  "event_count": 92,
+  "last_event_id": "58ab6267-f841-4021-b3bc-f974f9124410",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -22,11 +22,49 @@
     },
     "INC-003": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "75ae4615-dd47-45c4-b57f-0e0fc62d307f": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "8d003c22-d8fc-4caf-a96c-c40615023d50": {
+          "artifact": "program/reports/inc-003-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "5fdc52ae17e8afc4ae1dcb99bb3cb3c36706156b190d787ad5bb124f7fa1697a"
+        },
+        "a65870a0-de4c-48c3-9bc5-211cbfe259c3": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "75ae4615-dd47-45c4-b57f-0e0fc62d307f"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "a65870a0-de4c-48c3-9bc5-211cbfe259c3"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "8d003c22-d8fc-4caf-a96c-c40615023d50"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "298c542a-8893-4fa6-960d-c16d766a887e",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-004": {
       "active_approval_count": 0,
@@ -118,11 +156,49 @@
     },
     "INC-015": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "518e2e07-508e-4a5f-88d5-0ea019786729": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "a2aebc5c-efe1-43f5-b534-19979dd31312": {
+          "artifact": "program/reports/inc-015-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "843c0412cca9fc6872522968015766f813202aab6ea333a9f3aea2eca8744937"
+        },
+        "af5db21e-c8d2-4c4a-b0f1-fbb2ef17d116": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "af5db21e-c8d2-4c4a-b0f1-fbb2ef17d116"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "518e2e07-508e-4a5f-88d5-0ea019786729"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "a2aebc5c-efe1-43f5-b534-19979dd31312"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "a640ac92-a2cd-4db5-a4d7-a7ab8cb57ca8",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-016": {
       "active_approval_count": 0,
@@ -134,35 +210,187 @@
     },
     "INC-017": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "02a58b07-af5d-463e-a471-76f9ab69f172": {
+          "artifact": "program/reports/inc-017-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "f78e4e6819b89de61dbe35961572e7b9879f5b22004d2e13903685abb4a3517a"
+        },
+        "397aa0b2-3be5-447c-a1e8-920eab13e4db": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "f39dbaec-01a7-4af7-b242-be6c9b5d540d": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "f39dbaec-01a7-4af7-b242-be6c9b5d540d"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "397aa0b2-3be5-447c-a1e8-920eab13e4db"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "02a58b07-af5d-463e-a471-76f9ab69f172"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "efa52001-3372-4ea4-8eb7-964f54846717",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-018": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "00558999-8819-4cec-9aea-c90352ab3b09": {
+          "artifact": "program/reports/inc-018-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "01ab7355b01256fd4325f29d1aab1e63e1c98c27cb6fbb6b5fba4b53d05b1581"
+        },
+        "80855b95-b903-4d05-8969-7986a8828b21": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "8857d211-c05b-4913-b98a-227024f4e9b0": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "80855b95-b903-4d05-8969-7986a8828b21"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "8857d211-c05b-4913-b98a-227024f4e9b0"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "00558999-8819-4cec-9aea-c90352ab3b09"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "6b4048f9-8715-4307-b47b-314168a686f6",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-019": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "2f003d45-54f6-4f8d-87b0-82b8d0ba0231": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "bc0825c4-b797-4a69-8f27-92a39fedc7ec": {
+          "artifact": "program/reports/inc-019-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "3d584985c1ab9ba8eec26a5149fab9a2a090f796ae9f019191e3bddcdc9e103c"
+        },
+        "da5e72aa-cb5f-41a7-b71b-0c625a58d38c": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "da5e72aa-cb5f-41a7-b71b-0c625a58d38c"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "2f003d45-54f6-4f8d-87b0-82b8d0ba0231"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "bc0825c4-b797-4a69-8f27-92a39fedc7ec"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "16441c1e-4f5e-474c-9241-12d5ded8dfa4",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-020": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": null,
+      "active_evidence": {
+        "790ec417-1a38-45e6-a005-1e50d71e0011": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "a337ccfb-628e-4045-92d4-e59a2d2f032a": {
+          "artifact": "program/reports/program-review-closure-2026-07-29.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "42861e0fcc77843a6be59813747af177769af1264ad7dc7c7ba648f36f873707"
+        },
+        "dae4d25d-0140-4964-a212-716a2b64aa90": {
+          "artifact": "program/reports/inc-020-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "6b3d167ccfafd949366041a550cdaa2f0e7d784bd213911e361de76db42ad6e6"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "790ec417-1a38-45e6-a005-1e50d71e0011"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "a337ccfb-628e-4045-92d4-e59a2d2f032a"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "dae4d25d-0140-4964-a212-716a2b64aa90"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "880e0da4-c638-4f96-bef5-5dd2ccfa6476",
       "revision": 0,
-      "status": "review"
+      "status": "done"
     },
     "INC-021": {
       "active_approval_count": 0,
