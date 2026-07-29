@@ -187,3 +187,18 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness event count: 92.
 - Remaining program state: 20 done, 4 blocked, 1 pending.
 - `DENY_RELEASE`, `DENY_APPLY`, default-off external effects and all human/external gates remain unchanged.
+
+## 2026-07-29 — INC-010 semantic/adversarial evaluation in review
+
+- Active branch: `feature/semantic-adversarial-evals-v1`.
+- Implementation commit: `b726ae5854bb5406b819c815f3acf66d933acf40`.
+- Exact implementation tree: `d842e2cd4e56fb7546e28272c217cd8819a74c8a`.
+- Graph Harness revision: 1 after localized critic/fixer repair.
+- Semantic corpus: 16/16 expectations met over real runtime artifacts.
+- Independent verifier: PASS; dirty=false; report/digest/case/effect tampering rejected.
+- Locked installed wheel: 332 backend tests PASS; 25 PostgreSQL-only skips.
+- Frontend: 58 tests, lint and production build PASS.
+- Program, graph, compliance and operability: PASS.
+- External effects observed: 0.
+- Exact-head CI and close gate: pending.
+- Manual accessibility, legal/privacy, persistent staging and release gates remain blocked and unchanged.

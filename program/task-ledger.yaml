@@ -547,6 +547,7 @@
         "production or external effect when applicable",
         "manual accessibility and legal release approvals remain separate blocked nodes"
       ],
+      "implementation_commit": "b726ae5854bb5406b819c815f3acf66d933acf40",
       "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
       "prohibited_paths": [
         "protected branches",
@@ -555,6 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
+      "publication_state": "LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -562,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -573,6 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
+      "validation_summary": "16/16 semantic cases, independent exact-tree/tamper verifier, 332 locked-wheel backend tests, 58 frontend tests, lint/build/program/graph/compliance/operability PASS; exact-head remote production gates pending.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },

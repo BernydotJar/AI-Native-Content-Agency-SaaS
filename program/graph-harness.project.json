@@ -620,7 +620,7 @@
           "specs/021-campaign-intelligence/spec.md",
           "specs/010-semantic-adversarial-evals/**"
         ],
-        "canonical_status": "running",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "production or external effect when applicable",
