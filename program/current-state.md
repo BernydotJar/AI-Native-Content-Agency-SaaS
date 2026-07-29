@@ -235,3 +235,13 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Corpus v2 contains 20 cases and binds exact verdict, finding codes, finding count and metrics for every case.
 - Local reproducible evidence: 20/20 semantic cases PASS, independent verifier PASS, 334 locked-wheel backend tests PASS, 58 frontend tests PASS, lint/build/actionlint/program/graph/compliance/operability PASS, external effects 0.
 - Exact-head CI, remote artifact inspection, review-thread resolution and close gate are pending.
+
+### INC-010 revision 3 closed
+
+- Exact-head run `30480645671` passed 8/8 jobs at `cf8f8c351b48f22b2755d285193ff5b6f76e00d8`.
+- Retained corpus v2 artifact SHA-256: `2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836`.
+- Semantic expectations: 20/20; external effects: 0.
+- Both P1/P2 PR review findings were repaired, answered and resolved.
+- Graph Harness revision 3: implementation, production, review and close gates PASS; `INC-010=done`.
+- Program state: 21 done, 4 blocked, 0 ready.
+- `DENY_RELEASE` and `DENY_APPLY` remain unchanged.

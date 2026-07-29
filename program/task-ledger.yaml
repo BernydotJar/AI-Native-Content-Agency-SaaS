@@ -556,7 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
-      "publication_state": "REVISION_3_LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
+      "publication_state": "REVISION_3_EXACT_HEAD_CI_PASS_GRAPH_CLOSED",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -564,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -575,7 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
-      "validation_summary": "Revision 3 clean tree 26b1bc37728f1cf6db3a9e3d5890fdb3db9d3b92: 20/20 semantic cases, exact codes/counts/metrics, 334 locked-wheel backend tests, 58 frontend tests and governance gates PASS; exact-head CI and review-thread resolution pending.",
+      "validation_summary": "Run 30480645671 passed 8/8 at exact PR head cf8f8c351b48f22b2755d285193ff5b6f76e00d8; retained corpus.v2 artifact SHA-256 2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836 passed 20/20 with zero effects; both P1/P2 review threads resolved; 334 locked-wheel backend and 58 frontend tests pass.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },

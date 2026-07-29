@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 9,
-  "event_count": 143,
-  "last_event_id": "4e4e2210-9bff-4354-b598-ce88b0b9f1bd",
+  "checkpoint_count": 10,
+  "event_count": 147,
+  "last_event_id": "c9c38666-01e9-459d-9141-4e31ebf7fa41",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -117,6 +117,12 @@
     "INC-010": {
       "active_approval_count": 0,
       "active_evidence": {
+        "1429e4bb-280f-4641-b5bd-b38150c9a272": {
+          "artifact": "program/reports/inc-010-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "391275f4ea959eee9142dfe38d9213e69b34b875d89173b3226d342c5acdb31b"
+        },
         "28db0e56-90d4-44b8-a0d0-30ee84b8d50e": {
           "artifact": "INC-010 revision 3 PR review repair",
           "kind": "implementation",
@@ -143,6 +149,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "1429e4bb-280f-4641-b5bd-b38150c9a272"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "28db0e56-90d4-44b8-a0d0-30ee84b8d50e",
@@ -163,9 +175,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "2e234728-989e-43e9-8645-92299d4d70d4",
+      "last_event_id": "5239c2ac-6fe9-4835-8da4-fdaa6a7096cc",
       "revision": 3,
-      "status": "review"
+      "status": "done"
     },
     "INC-011": {
       "active_approval_count": 0,

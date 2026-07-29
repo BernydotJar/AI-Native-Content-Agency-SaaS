@@ -25,3 +25,18 @@ Run `30471479970` remains recorded as rejected close evidence because its artifa
 ## Residual blockers
 
 Manual accessibility, accountable legal/privacy review, persistent staging, release approval, deployment approval, credentials and effect authorization remain external human-gated blockers. `DENY_RELEASE` and `DENY_APPLY` remain authoritative.
+
+## Revision 3 closure after PR review repair
+
+- Exact PR head: `cf8f8c351b48f22b2755d285193ff5b6f76e00d8`
+- Exact source tree: `58d6da8d49ccdaa99fc6e84260642c236e3eb58a`
+- GitHub Actions run: `30480645671`
+- Jobs: 8/8 successful
+- Retained semantic artifact SHA-256: `2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836`
+- Corpus: `agency.semantic-adversarial-corpus.v2`, 20/20 expectations met
+- P1 review: generic guarantee, superlative, certainty and 100 percent claims fail closed
+- P2 review: altered finding codes, counts and metrics are rejected
+- Unresolved review threads: 0
+- External effects observed: 0
+
+Decision: PASS for Graph Harness close gate. This does not authorize release, deployment, cloud mutation, credentials, spending or external publication.

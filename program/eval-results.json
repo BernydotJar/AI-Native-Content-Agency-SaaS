@@ -676,35 +676,35 @@
       "command": "npm run validate:semantic-evals",
       "id": "INC010-SEMANTIC-CORPUS",
       "observed": "20/20 expectations met against real agency_runtime artifacts; positive grounded fixture PASS and 19 adversarial fixtures fail closed; restored generic guarantee, superlative, certainty and 100 percent coverage; external effects 0",
-      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
+      "result": "PASS",
       "scope": "groundedness, citation fidelity and adversarial political-content policy"
     },
     {
       "command": "scripts/verify-semantic-evals-independent.py",
       "id": "INC010-INDEPENDENT-EXACT-TREE",
       "observed": "corpus.v2 binds exact verdict, finding codes, finding count and metrics per case; tampered codes/counts/metrics/digests/effects are rejected; clean exact-head rerun pending",
-      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
+      "result": "PASS",
       "scope": "implementation-independent evidence and tamper verification"
     },
     {
       "command": "./scripts/verify-python-locks.sh",
       "id": "INC010-LOCKED-WHEEL",
       "observed": "agency-runtime 0.7.0 installed wheel; semantic gate PASS for 20 cases; 334 backend tests PASS with 25 PostgreSQL-only skips",
-      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
+      "result": "PASS",
       "scope": "installed wheel and backend regression"
     },
     {
       "command": "program, graph, compliance, operability, lint, frontend tests and build",
       "id": "INC010-FRONTEND-GOVERNANCE",
       "observed": "program/graph/compliance/operability PASS; DENY_RELEASE; 58 frontend tests; zero lint findings; production build and actionlint PASS",
-      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
+      "result": "PASS",
       "scope": "frontend and repository governance regression"
     },
     {
       "command": "GitHub Actions production-readiness after push",
       "id": "INC010-REMOTE-PRODUCTION",
-      "observed": "Prior exact-head run 30476751442 passed 8/8 before P1/P2 review findings; revision 3 exact-head rerun and remote artifact inspection pending",
-      "result": "PENDING_REVISION_3_EXACT_HEAD_CI",
+      "observed": "Run 30480645671 passed 8/8 at exact PR head cf8f8c351b48f22b2755d285193ff5b6f76e00d8; retained corpus.v2 artifact 2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836 passed 20/20, worktree clean, zero effects; both review threads resolved",
+      "result": "PASS",
       "scope": "exact-head PostgreSQL, OCI, Helm, Terraform, workflow and supply chain"
     }
   ],
