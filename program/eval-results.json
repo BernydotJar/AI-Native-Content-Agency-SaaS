@@ -682,7 +682,7 @@
     {
       "command": "scripts/verify-semantic-evals-independent.py",
       "id": "INC010-INDEPENDENT-EXACT-TREE",
-      "observed": "commit ddac3777d933005706f6e5f5d78e52de13a71437; tree 1c5276bc46cd6f6da51fa7b9d3b39f3c4a8faab7; dirty=false; expected commit equals HEAD; synthetic merge report from run 30471479970 rejected; report/digest/case/effect tampering rejected",
+      "observed": "GitHub run 30476446123; exact PR head 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0; exact tree b3b6e6057ef7b36ede0ee9716b6b790c35cb7a21; remote report SHA-256 2e95ab94dae1b43b7dc273567d0dfc84cf7c247cc7686043ee7ec7f0ad535850; source_commit equals expected_source_commit equals HEAD; synthetic merge run 30471479970 remains rejected; report/digest/case/effect tampering rejected",
       "result": "PASS",
       "scope": "implementation-independent evidence and tamper verification"
     },
@@ -703,12 +703,12 @@
     {
       "command": "GitHub Actions production-readiness after push",
       "id": "INC010-REMOTE-PRODUCTION",
-      "observed": "Run 30471479970 passed 8/8 but semantic artifact was bound to synthetic PR merge and was rejected; revision 2 exact-head rerun pending",
-      "result": "PENDING_EXACT_HEAD_REPAIR_CI",
+      "observed": "Run 30476446123 passed 8/8 on exact PR head 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0; all jobs asserted checkout HEAD; remote semantic artifact binds commit/tree, 16/16 expectations, worktree_dirty=false and external effects 0",
+      "result": "PASS",
       "scope": "exact-head PostgreSQL, OCI, Helm, Terraform, workflow and supply chain"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "ddac3777d933005706f6e5f5d78e52de13a71437",
+  "source_commit": "6e69b8eb13a6196bba8db3c2039ab4dc09609aa0",
   "updated_at": "2026-07-29"
 }

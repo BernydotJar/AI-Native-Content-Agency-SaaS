@@ -211,3 +211,16 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Repair: all eight jobs now check out and assert `${{ github.event.pull_request.head.sha || github.sha }}`; the semantic evaluator and independent verifier also require `SEMANTIC_EVAL_EXPECTED_COMMIT` to equal `HEAD`.
 - Local repair evidence: 333 backend tests PASS, 16/16 semantic cases, expected-SHA mismatch negative PASS, actionlint and all governance gates PASS.
 - A new remote exact-head run is required before closure.
+
+## 2026-07-29 — INC-010 closed through exact-head Graph Harness evidence
+
+- PR #33 exact-head candidate: `6e69b8eb13a6196bba8db3c2039ab4dc09609aa0`.
+- GitHub Actions run `30476446123` passed 8/8 jobs.
+- Every job asserted checkout of the pull-request head rather than the synthetic merge ref.
+- Remote semantic artifact SHA-256: `2e95ab94dae1b43b7dc273567d0dfc84cf7c247cc7686043ee7ec7f0ad535850`.
+- Artifact binding: `source_commit == expected_source_commit == 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0`; tree `b3b6e6057ef7b36ede0ee9716b6b790c35cb7a21`.
+- Semantic results: 16/16 expectations met, worktree clean, external effects 0.
+- Graph Harness revision: 2; implementation, production, review and close gates PASS.
+- `INC-010` canonical and derived status: `done`.
+- The prior synthetic-merge run `30471479970` remains preserved as rejected evidence.
+- `DENY_RELEASE`, `DENY_APPLY`, disabled effect flags and all accessibility/legal/staging human gates remain unchanged.
