@@ -1,0 +1,37 @@
+project_id         = "replace-with-project-id"
+project_number     = "replace-with-project-number"
+billing_account_id = "012345-ABCDEF-6789AB"
+region             = "us-central1"
+environment       = "staging"
+github_repository = "BernydotJar/AI-Native-Content-Agency-SaaS"
+github_ref        = "refs/heads/main"
+
+enable_bootstrap  = false
+enable_cloud_run  = false
+monthly_budget_units = 20
+
+# After separate approval:
+# enable_bootstrap = true
+
+# Only after an immutable image and numeric secret versions exist:
+# enable_cloud_run      = true
+# allow_unauthenticated = false
+# container_image       = "us-central1-docker.pkg.dev/PROJECT/campaignos/app@sha256:..."
+# secret_environment = {
+#   AGENCY_DATABASE_URL = {
+#     secret  = "campaignos-database-url"
+#     version = "1"
+#   }
+#   AGENCY_IDENTITY_CREDENTIALS_JSON = {
+#     secret  = "campaignos-identity-credentials"
+#     version = "1"
+#   }
+#   AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON = {
+#     secret  = "campaignos-social-token-encryption-keys"
+#     version = "1"
+#   }
+#   AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID = {
+#     secret  = "campaignos-social-token-active-key-id"
+#     version = "1"
+#   }
+# }

@@ -1,24 +1,76 @@
 # Current Program State
 
-Updated: 2026-07-28
+Updated: 2026-07-29
 
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-036-trend-pilot`
-- Current local parent: `37aede9789b16842f0ee47f47d87ba8863f0938d`
-- INC-034 remote branch: `agent/inc-034-modern-onboarding-trends-remote`
+- Active branch: `agent/inc-037-gcp-staging-bootstrap`
+- Local checkpoint before the applied-infrastructure receipt: `a389fc9c2421b5a8dd66da752491f5f14ee295cd`
+- Remote INC-037 implementation commit before this receipt: `c88b5a1f763ac76420754d7283a4d4a490d6fc00`
+- INC-037 draft PR: #30, stacked on INC-036 PR #29
 - INC-034 draft PR: #27
-- INC-034 exact-head workflow: `30390791007`, 8/8 SUCCESS
-- INC-035 remote branch: `agent/inc-035-social-runtime-recovery`
-- INC-035 remote HEAD: `37aede9789b16842f0ee47f47d87ba8863f0938d`
-- INC-035 draft PR: #28, stacked on INC-034
-- INC-035 exact-head workflow: `30393061103`, 8/8 SUCCESS
-- INC-036 delivery base: `agent/inc-035-social-runtime-recovery`
-- INC-036 local implementation commit: `9f9efce2104c9e9cba47e149de339fd3e4e4bfd5`
-- Audited Cloud Sandbox `git_push`: blocked by its isolated nested-Docker `iptables`
-  initialization; the repository-owned Git Data publisher remains the verified fallback.
-- New external publication, paid media, model effect, cloud apply, release or merge: none
+- INC-035 draft PR: #28
+- INC-036 draft PR: #29
+- Audited Cloud Sandbox `git_push` remains blocked by nested-Docker `iptables` setup;
+  the repository-owned Git Data publisher is the verified delivery fallback.
+- Social publication, political publication, paid media, model effects, release and merge:
+  none.
+
+## INC-037 GCP staging foundation
+
+The operator explicitly authorized project billing and the reviewed bootstrap apply.
+The authenticated target is project `ai-native-content-agency-saas`, project number
+`970393454298`, region `us-central1`.
+
+Applied control-plane foundation:
+
+- project billing enabled;
+- monthly project budget: COP 64,000;
+- current-spend alerts: 5%, 25% and 100%, or COP 3,200, COP 16,000 and COP 64,000;
+- ten required Google APIs enabled and managed by Terraform;
+- Artifact Registry repository `campaignos` in `us-central1`;
+- active cleanup policies: delete versions older than 30 days and retain at least the
+  five most recent versions;
+- distinct runtime and deployer service accounts;
+- GitHub Workload Identity Federation without service-account keys;
+- OIDC restricted to `BernydotJar/AI-Native-Content-Agency-SaaS` and
+  `refs/heads/main`;
+- eight empty Secret Manager containers;
+- runtime Secret Manager access granted per secret, never project-wide.
+
+Verified absent:
+
+- Cloud Run services;
+- Cloud SQL, GKE and Compute Engine resources;
+- secret values or versions;
+- user-managed service-account keys;
+- images in Artifact Registry;
+- runtime publication or model effects.
+
+Terraform state contains 38 managed/data entries. The latest local persistent backup is
+`.local/gcp-state-backups/terraform-20260729T010938Z.tfstate`, SHA-256
+`8b7c04994ace29c3ab25eae94d81f76f63755e0ba4d34baba15c888b5a84f891`.
+
+## Image publication path
+
+The Cloud Sandbox Docker daemon is ARM64 and cannot reliably register the binfmt layers
+required for a Cloud Run-compatible `linux/amd64` image. No image was built or pushed
+from the workstation.
+
+A new manual GitHub workflow prepares the safe image path:
+
+- manual `workflow_dispatch` only;
+- boolean operator confirmation required;
+- `main` only, enforced by both GitHub and GCP WIF conditions;
+- Google authentication through short-lived OIDC credentials;
+- all actions pinned by full commit SHA;
+- image tag equals the exact Git commit SHA;
+- SBOM and provenance enabled;
+- no Cloud Run deployment, Terraform apply, secret read or `latest` tag authority.
+
+The workflow cannot be executed successfully before the stacked changes reach `main`.
+Merge remains separately authorized.
 
 ## Current product result
 
@@ -28,7 +80,7 @@ CampaignOS provides:
 - individual username/password login backed by server-derived roles and HttpOnly sessions;
 - server-side provider, integration and social-account configuration;
 - encrypted X and Instagram OAuth connections in persistent SQLite;
-- automatic connection-state backups and recoverable Quick/Named Cloudflare tunnel modes;
+- automatic connection-state backups;
 - four no-key research lanes for Guatemala: current searches, AI, marketing and business;
 - safe HTTPS evidence disclosure for research signals;
 - one-click conversion from a signal to an editable X/Instagram pilot brief;
@@ -36,10 +88,6 @@ CampaignOS provides:
 - fail-closed publication, political publication and paid-media controls.
 
 ## INC-036 live pilot
-
-The production bundle and installed runtime wheel were updated without changing the
-public hostname. A real Chromium session used the public UI to log in, select the AI lane,
-open evidence, prepare a brief and execute a governed internal run.
 
 ```text
 run_id=run-ce573811a46d6f06
@@ -53,54 +101,50 @@ greenlight=none
 social_publication_intents=0
 ```
 
-No X credits were required because research uses Google Trends/Google News RSS and the
-pilot ended before any external provider publication boundary.
+Research used Google Trends and Google News RSS and stopped before any provider
+publication boundary. No X credits were required.
 
 ## Verification
 
 - Backend: 323 PASS; 25 PostgreSQL-only skips expected.
 - Frontend: 58 PASS.
-- Focused trend, workspace and output tests: 39 PASS.
 - Oxlint: zero warnings/errors.
 - Production build: PASS.
-- Automated Chromium 320 px reflow, keyboard, focus, reduced-motion and accessibility
-  tree gates: PASS.
-- Live authenticated research API:
-  - `general`: HTTP 200, Google Trends RSS, 8 signals, 24 evidence links;
-  - `ai`: HTTP 200, Google News RSS, 8 signals, 8 evidence links;
-  - `marketing`: HTTP 200, Google News RSS, 8 signals, 8 evidence links;
-  - `business`: HTTP 200, Google News RSS, 8 signals, 8 evidence links.
-- Live public Chromium trend-pilot flow: PASS.
-- Runtime restart preserved two encrypted social connections exactly.
-- SQLite integrity: `ok`.
+- Terraform `fmt`, `validate` and 3 fail-closed tests: PASS.
+- Authenticated bootstrap and recovery plans: exact, create/update-only and audited.
+- GCP bootstrap apply: complete.
+- Artifact cleanup policy update: complete.
+- Actionlint: PASS.
+- Manual GCP image workflow static authority gate: PASS.
+- Secret versions: 0.
+- User-managed service-account keys: 0.
+- Cloud Run services: 0.
+- Cloud SQL instances: 0.
 
 ## Runtime state
 
-- Public URL: `https://offerings-council-guided-requiring.trycloudflare.com`
-- Local health: HTTP 200.
-- Public health: HTTP 200.
-- Tunnel: Quick Tunnel, running.
+- Local health: HTTP 200 at last runtime check.
+- Public health: unavailable; the ephemeral Quick Tunnel hostname expired.
 - Database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
-- Social backup watcher: running.
-- Latest backup: available and includes both connections.
-- X: connected as `@beesheep` with `tweet.read`, `tweet.write`, `users.read`.
-- Instagram: connected as `@beesheep2` with professional basic/content-publish scopes.
+- Social backup watcher: running at last runtime check.
+- X: connected as `@beesheep` in the local encrypted database.
+- Instagram: connected as `@beesheep2` in the local encrypted database.
 - Social publication: `false`.
 - Political publication: `false`.
 - Political paid media: `false`.
-- External effects enabled: `false`.
-
-The Quick Tunnel is suitable for this laboratory pilot but remains ephemeral. Named
-Cloudflare Tunnel support is implemented and is the durable option when a stable hostname
-and token are available.
+- External model effects: `false`.
 
 Release recommendation: `DENY_RELEASE`
 
 Cloud recommendation: `DENY_APPLY`
 
+`DENY_APPLY` now means no additional cloud mutation beyond the explicitly authorized and
+completed INC-037 bootstrap receipt. In particular, do not deploy Cloud Run, create a
+database, upload secret values or publish an image without the next reviewed gate.
+
 ## Exact resume condition
 
-Continue evaluating the research-to-draft workflow in the UI. Review evidence and copy,
-but do not approve Greenlight, enable publication switches or create a provider post
-without a separate explicit authorization. A future production-like callback should use
-a named Cloudflare Tunnel before relying on the connection for long-lived operations.
+Finish validation and publish the INC-037 receipt to PR #30. Then obtain explicit merge
+authorization for the stacked PRs. After the approved changes reach `main`, manually run
+the image publisher with confirmation. A separate database and secret-migration decision
+must precede any Cloud Run deployment or stable OAuth callback cutover.

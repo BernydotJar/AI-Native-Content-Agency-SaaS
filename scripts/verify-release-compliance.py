@@ -27,6 +27,7 @@ SUPPORT_FILES = (
     "artifacts/supply-chain/license-policy.json",
     "artifacts/supply-chain/base-images.json",
     ".github/workflows/production-readiness.yml",
+    ".github/workflows/publish-gcp-image.yml",
     "backend/agency_runtime/integration_reviews/video_use.json",
     "docs/privacy/data-classification-retention.md",
     "program/current-state.md",
