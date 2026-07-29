@@ -31,6 +31,15 @@ TEST_PYTHON="$TMP_DIR/test-venv/bin/python"
 "$TEST_PYTHON" -m pip install --disable-pip-version-check --no-deps \
   "$TMP_DIR"/wheels/*.whl
 "$TEST_PYTHON" -m pip check
+SEMANTIC_ARGS=()
+if [[ "${SEMANTIC_EVAL_ALLOW_DIRTY:-0}" == "1" ]]; then
+  SEMANTIC_ARGS+=(--allow-dirty)
+elif [[ "${SEMANTIC_EVAL_ALLOW_DIRTY:-0}" != "0" ]]; then
+  echo "SEMANTIC_EVAL_ALLOW_DIRTY must be 0 or 1" >&2
+  exit 2
+fi
+"$TEST_PYTHON" "$REPOSITORY_ROOT/scripts/verify-semantic-evals.py" "${SEMANTIC_ARGS[@]}"
+"$TEST_PYTHON" "$REPOSITORY_ROOT/scripts/verify-semantic-evals-independent.py" "${SEMANTIC_ARGS[@]}"
 "$TEST_PYTHON" -m unittest discover -s "$REPOSITORY_ROOT/backend/tests" -v
 
 "$TEST_PYTHON" - <<'PY'

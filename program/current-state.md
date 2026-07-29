@@ -187,3 +187,61 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness event count: 92.
 - Remaining program state: 20 done, 4 blocked, 1 pending.
 - `DENY_RELEASE`, `DENY_APPLY`, default-off external effects and all human/external gates remain unchanged.
+
+## 2026-07-29 — INC-010 semantic/adversarial evaluation in review
+
+- Active branch: `feature/semantic-adversarial-evals-v1`.
+- Implementation commit: `b726ae5854bb5406b819c815f3acf66d933acf40`.
+- Exact implementation tree: `d842e2cd4e56fb7546e28272c217cd8819a74c8a`.
+- Graph Harness revision: 1 after localized critic/fixer repair.
+- Semantic corpus: 16/16 expectations met over real runtime artifacts.
+- Independent verifier: PASS; dirty=false; report/digest/case/effect tampering rejected.
+- Locked installed wheel: 332 backend tests PASS; 25 PostgreSQL-only skips.
+- Frontend: 58 tests, lint and production build PASS.
+- Program, graph, compliance and operability: PASS.
+- External effects observed: 0.
+- Exact-head CI and close gate: pending.
+- Manual accessibility, legal/privacy, persistent staging and release gates remain blocked and unchanged.
+
+### INC-010 localized repair after run 30471479970
+
+- All eight jobs reported success, but independent artifact inspection rejected the run as close evidence.
+- The semantic report was bound to GitHub's synthetic PR merge `6b28cf529144a0424a26ebf235ae0ee20d068461`, whose parents were `main` `77251315e112d1651ab512f7c4de2deaeaa5dfce` and PR head `5d087ed3a1c03c072014ce7faa11a503866ccea6`.
+- Graph Harness recorded a `close-gate` failure, invalidated only `INC-010`, advanced its revision from 1 to 2 and preserved every unrelated node.
+- Repair: all eight jobs now check out and assert `${{ github.event.pull_request.head.sha || github.sha }}`; the semantic evaluator and independent verifier also require `SEMANTIC_EVAL_EXPECTED_COMMIT` to equal `HEAD`.
+- Local repair evidence: 333 backend tests PASS, 16/16 semantic cases, expected-SHA mismatch negative PASS, actionlint and all governance gates PASS.
+- A new remote exact-head run is required before closure.
+
+## 2026-07-29 — INC-010 closed through exact-head Graph Harness evidence
+
+- PR #33 exact-head candidate: `6e69b8eb13a6196bba8db3c2039ab4dc09609aa0`.
+- GitHub Actions run `30476446123` passed 8/8 jobs.
+- Every job asserted checkout of the pull-request head rather than the synthetic merge ref.
+- Remote semantic artifact SHA-256: `2e95ab94dae1b43b7dc273567d0dfc84cf7c247cc7686043ee7ec7f0ad535850`.
+- Artifact binding: `source_commit == expected_source_commit == 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0`; tree `b3b6e6057ef7b36ede0ee9716b6b790c35cb7a21`.
+- Semantic results: 16/16 expectations met, worktree clean, external effects 0.
+- Graph Harness revision: 2; implementation, production, review and close gates PASS.
+- `INC-010` canonical and derived status: `done`.
+- The prior synthetic-merge run `30471479970` remains preserved as rejected evidence.
+- `DENY_RELEASE`, `DENY_APPLY`, disabled effect flags and all accessibility/legal/staging human gates remain unchanged.
+
+### INC-010 revision 3 — localized PR review repair
+
+- PR #33 review identified two valid findings after the previous close checkpoint:
+  - P1: generic prohibited claims such as `garantiza`, `el mejor`, `sin duda` and `100%` could evade the narrowed overclaim list.
+  - P2: the independent verifier accepted altered finding codes, inflated counts or changed metrics when the aggregate verdict remained `FAIL`.
+- Graph Harness recorded a `review-gate` failure, invalidated only `INC-010`, advanced it to revision 3 and preserved all unrelated nodes.
+- Fixer restored the broader prohibited-claim coverage and upgraded the corpus contract to `agency.semantic-adversarial-corpus.v2`.
+- Corpus v2 contains 20 cases and binds exact verdict, finding codes, finding count and metrics for every case.
+- Local reproducible evidence: 20/20 semantic cases PASS, independent verifier PASS, 334 locked-wheel backend tests PASS, 58 frontend tests PASS, lint/build/actionlint/program/graph/compliance/operability PASS, external effects 0.
+- Exact-head CI, remote artifact inspection, review-thread resolution and close gate are pending.
+
+### INC-010 revision 3 closed
+
+- Exact-head run `30480645671` passed 8/8 jobs at `cf8f8c351b48f22b2755d285193ff5b6f76e00d8`.
+- Retained corpus v2 artifact SHA-256: `2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836`.
+- Semantic expectations: 20/20; external effects: 0.
+- Both P1/P2 PR review findings were repaired, answered and resolved.
+- Graph Harness revision 3: implementation, production, review and close gates PASS; `INC-010=done`.
+- Program state: 21 done, 4 blocked, 0 ready.
+- `DENY_RELEASE` and `DENY_APPLY` remain unchanged.

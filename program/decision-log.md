@@ -250,3 +250,14 @@ Decision: pin `BernydotJar/Graph-harness-sdlc` at `1bebce3db35303072049233786464
 Rationale: the repository already had rich domain artifacts but lacked one executable typed runtime for dependency readiness, evidence freshness, production gates and localized repair. A pinned adapter preserves product-specific truth while avoiding a competing framework implementation.
 
 Consequence: CI fails on framework revision drift, projection drift, state drift, event-chain corruption, stale evidence or illegal graph state. INC-038 remains `review`; exact-head CI, closure and merge are separate gates. Product behavior and all external-effect authority remain unchanged.
+
+## D-023 — Decouple semantic-eval implementation from manual accessibility approval
+
+Date: 2026-07-29
+Status: accepted for INC-010
+
+Decision: replace the `INC-010 -> INC-008` technical dependency with `INC-010 -> INC-021`, while retaining `INC-008` as an independent blocked release node. `INC-010` still depends on security (`INC-003`) and durable idempotency (`INC-004`).
+
+Rationale: the semantic/adversarial evaluator consumes campaign artifacts, evidence provenance and authority boundaries. It does not consume a human screen-reader, rendered-contrast or visual-review approval. Keeping that unrelated dependency prevented safe implementation and conflated engineering readiness with release readiness.
+
+Consequence: the eval harness can be implemented and exact-head verified without claiming that manual accessibility, legal review, staging observation, deployment or release are complete. The global release decision remains `DENY_RELEASE` until all blocked nodes close.

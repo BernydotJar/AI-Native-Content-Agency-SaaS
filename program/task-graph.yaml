@@ -111,10 +111,11 @@
       "depends_on": [
         "INC-003",
         "INC-004",
-        "INC-008"
+        "INC-021"
       ],
+      "graph_initial_status": "pending",
       "id": "INC-010",
-      "status": "pending"
+      "status": "done"
     },
     {
       "depends_on": [
