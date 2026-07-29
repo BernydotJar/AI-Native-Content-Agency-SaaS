@@ -62,8 +62,8 @@ def verify(corpus_path: Path, report_path: Path, *, allow_dirty: bool) -> None:
     if corpus.get("schema_version") != CORPUS_SCHEMA or report.get("schema_version") != REPORT_SCHEMA:
         raise IndependentVerificationError("schema mismatch")
     expected_keys = {
-        "schema_version", "source_commit", "source_tree", "worktree_dirty",
-        "corpus_path", "corpus_sha256", "evaluator_sha256", "case_count",
+        "schema_version", "source_commit", "expected_source_commit", "source_tree",
+        "worktree_dirty", "corpus_path", "corpus_sha256", "evaluator_sha256", "case_count",
         "expectations_met", "external_effects_observed", "results",
     }
     if set(report) != expected_keys:
@@ -71,8 +71,16 @@ def verify(corpus_path: Path, report_path: Path, *, allow_dirty: bool) -> None:
     dirty = bool(git_value("status", "--porcelain", "--untracked-files=all"))
     if dirty and not allow_dirty:
         raise IndependentVerificationError("exact-tree verification requires a clean worktree")
-    if report.get("source_commit") != git_value("rev-parse", "HEAD"):
+    current_commit = git_value("rev-parse", "HEAD")
+    expected_commit = __import__("os").environ.get(
+        "SEMANTIC_EVAL_EXPECTED_COMMIT", current_commit
+    ).strip()
+    if report.get("source_commit") != current_commit:
         raise IndependentVerificationError("report commit mismatch")
+    if report.get("expected_source_commit") != expected_commit:
+        raise IndependentVerificationError("report expected source commit mismatch")
+    if current_commit != expected_commit:
+        raise IndependentVerificationError("checked out commit is not the expected source commit")
     if report.get("source_tree") != git_value("rev-parse", "HEAD^{tree}"):
         raise IndependentVerificationError("report tree mismatch")
     if report.get("worktree_dirty") is not dirty:

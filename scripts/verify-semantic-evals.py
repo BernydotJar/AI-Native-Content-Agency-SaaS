@@ -101,6 +101,14 @@ def run_corpus(corpus_path: Path, *, allow_dirty: bool) -> dict[str, object]:
     dirty = is_dirty()
     if dirty and not allow_dirty:
         raise SemanticEvalInputError("exact-tree evaluation requires a clean worktree")
+    source_commit = git_value("rev-parse", "HEAD")
+    expected_source_commit = os.environ.get(
+        "SEMANTIC_EVAL_EXPECTED_COMMIT", source_commit
+    ).strip()
+    if not expected_source_commit or source_commit != expected_source_commit:
+        raise SemanticEvalInputError(
+            "checked out commit does not match SEMANTIC_EVAL_EXPECTED_COMMIT"
+        )
     baseline = build_bundle(corpus["base_fixture"])
     results: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -129,7 +137,8 @@ def run_corpus(corpus_path: Path, *, allow_dirty: bool) -> dict[str, object]:
         })
     return {
         "schema_version": REPORT_SCHEMA,
-        "source_commit": git_value("rev-parse", "HEAD"),
+        "source_commit": source_commit,
+        "expected_source_commit": expected_source_commit,
         "source_tree": git_value("rev-parse", "HEAD^{tree}"),
         "worktree_dirty": dirty,
         "corpus_path": str(corpus_path.relative_to(ROOT)),

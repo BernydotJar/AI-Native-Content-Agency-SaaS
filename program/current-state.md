@@ -202,3 +202,12 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - External effects observed: 0.
 - Exact-head CI and close gate: pending.
 - Manual accessibility, legal/privacy, persistent staging and release gates remain blocked and unchanged.
+
+### INC-010 localized repair after run 30471479970
+
+- All eight jobs reported success, but independent artifact inspection rejected the run as close evidence.
+- The semantic report was bound to GitHub's synthetic PR merge `6b28cf529144a0424a26ebf235ae0ee20d068461`, whose parents were `main` `77251315e112d1651ab512f7c4de2deaeaa5dfce` and PR head `5d087ed3a1c03c072014ce7faa11a503866ccea6`.
+- Graph Harness recorded a `close-gate` failure, invalidated only `INC-010`, advanced its revision from 1 to 2 and preserved every unrelated node.
+- Repair: all eight jobs now check out and assert `${{ github.event.pull_request.head.sha || github.sha }}`; the semantic evaluator and independent verifier also require `SEMANTIC_EVAL_EXPECTED_COMMIT` to equal `HEAD`.
+- Local repair evidence: 333 backend tests PASS, 16/16 semantic cases, expected-SHA mismatch negative PASS, actionlint and all governance gates PASS.
+- A new remote exact-head run is required before closure.

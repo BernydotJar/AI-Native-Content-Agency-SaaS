@@ -556,7 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
-      "publication_state": "LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
+      "publication_state": "REMOTE_MERGE_REF_REJECTED_EXACT_HEAD_REPAIR_IN_PROGRESS",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -564,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "review",
+      "status": "in_progress",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -575,7 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
-      "validation_summary": "16/16 semantic cases, independent exact-tree/tamper verifier, 332 locked-wheel backend tests, 58 frontend tests, lint/build/program/graph/compliance/operability PASS; exact-head remote production gates pending.",
+      "validation_summary": "Run 30471479970 passed 8/8 but its semantic artifact correctly exposed checkout of synthetic PR merge 6b28cf5 instead of head 5d087ed. Graph revision 2 repair forces every job to checkout and attest the PR head; 333 locked-wheel tests and actionlint pass locally.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },

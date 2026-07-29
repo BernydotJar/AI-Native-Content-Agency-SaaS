@@ -115,7 +115,7 @@
       ],
       "graph_initial_status": "pending",
       "id": "INC-010",
-      "status": "review"
+      "status": "in_progress"
     },
     {
       "depends_on": [

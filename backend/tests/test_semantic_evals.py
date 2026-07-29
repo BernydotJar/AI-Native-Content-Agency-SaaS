@@ -5,6 +5,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from agency_runtime.campaign_intelligence import critique_payload
@@ -125,6 +126,13 @@ class SemanticEvalTests(unittest.TestCase):
         self.assertFalse(checks["unsupported_numeric_claim_absent"])
         self.assertFalse(critique["publication_eligible"])
         self.assertEqual(critique["decision"], "revise")
+
+    def test_expected_source_commit_mismatch_fails_closed(self):
+        with patch.dict(
+            "os.environ", {"SEMANTIC_EVAL_EXPECTED_COMMIT": "0" * 40}, clear=False
+        ):
+            with self.assertRaises(SemanticEvalInputError):
+                VERIFIER.run_corpus(CORPUS, allow_dirty=True)
 
     def test_report_and_independent_verifier_are_deterministic(self):
         first = VERIFIER.run_corpus(CORPUS, allow_dirty=True)

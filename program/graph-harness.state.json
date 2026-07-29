@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 6,
-  "event_count": 112,
-  "last_event_id": "848f8e9e-b60e-463a-89bf-7339950ec8f8",
+  "event_count": 116,
+  "last_event_id": "d184ac41-1c13-45ec-9269-bcee7229eef4",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -116,56 +116,11 @@
     },
     "INC-010": {
       "active_approval_count": 0,
-      "active_evidence": {
-        "98328c7e-c196-4896-b875-4fdf4414ea59": {
-          "artifact": "program/reports/inc-010-production-review.md",
-          "kind": "production",
-          "result": "PASS",
-          "sha256": "bed10127af87650412e186a689c4c3abf07f2898719c1e3faf208b896dec7f59"
-        },
-        "eda5aa6d-2870-4fea-8de5-4d41754b30d7": {
-          "artifact": "INC-010 semantic evaluator, corpus, runtime critique and CI gate",
-          "kind": "implementation",
-          "result": "PASS",
-          "sha256": "2d1adce4f3c4fc5e5aea2d804aa1fd10e2fad55aff84048c319b4eb45e0f4071"
-        },
-        "f0c174f0-dd1d-4833-aaf9-585e08574b60": {
-          "artifact": "program/reports/inc-010-review.md",
-          "kind": "review",
-          "result": "PASS",
-          "sha256": "61aeb85db707ade8881862d567b09c96007ed6c56fe7c0ccbb070577d04d9d80"
-        },
-        "f88b6cb5-d786-4c42-9ce6-3413c636ff0d": {
-          "artifact": "artifacts/semantic-evals/generated/report.json",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "8aaeacfffe63f47bf60147e7f49efef365a4c287d3a3fe066e7a563600052a90"
-        }
-      },
-      "gates": {
-        "implementation-gate": {
-          "evidence_ids": [
-            "eda5aa6d-2870-4fea-8de5-4d41754b30d7",
-            "f88b6cb5-d786-4c42-9ce6-3413c636ff0d"
-          ],
-          "result": "PASS"
-        },
-        "production-gate": {
-          "evidence_ids": [
-            "98328c7e-c196-4896-b875-4fdf4414ea59"
-          ],
-          "result": "PASS"
-        },
-        "review-gate": {
-          "evidence_ids": [
-            "f0c174f0-dd1d-4833-aaf9-585e08574b60"
-          ],
-          "result": "PASS"
-        }
-      },
-      "last_event_id": "b795dd68-e52d-408b-851f-51c8542f005b",
-      "revision": 1,
-      "status": "review"
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": "d184ac41-1c13-45ec-9269-bcee7229eef4",
+      "revision": 2,
+      "status": "running"
     },
     "INC-011": {
       "active_approval_count": 0,
@@ -549,6 +504,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 3,
+  "repair_plan_count": 4,
   "schema_version": "graph-harness.state.v1"
 }
