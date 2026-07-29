@@ -133,6 +133,14 @@
         "persistence.py",
         "postgres.py"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "Parallel-branch threat model is not authoritative for PR #3.",
       "dependencies": [
         "INC-001"
@@ -142,6 +150,7 @@
         "privacy model",
         "adversarial tests"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "retention/deletion approval",
         "legal privacy review"
@@ -151,9 +160,10 @@
         "credential rotation",
         "data deletion"
       ],
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [],
       "role": "Security Reviewer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-003",
       "validation_commands": [],
       "workstream_id": "WS-07",
@@ -864,6 +874,14 @@
         "SQLite and PostgreSQL transaction contracts",
         "Greenlight fencing architecture"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "Durable model-effect authority is implemented at 6eb7fa070bcbe71c840ca316fc86d369d9d1691b with schema v4, server-side provider binding, fenced exact-once execution, replay repair, unknown reconciliation and default-disabled deployment controls.",
       "dependencies": [
         "INC-004",
@@ -875,6 +893,7 @@
         "mock-transport run integration",
         "failure-injection and cross-replica tests"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "real provider credentials",
         "privacy/legal approval",
@@ -891,12 +910,12 @@
         "provider response content in logs or audit",
         "cloud resources or spend"
       ],
-      "publication_state": "LOCAL_COMMITTED_REMOTE_CI_PENDING",
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Distributed Systems Engineer / Security Reviewer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-015",
       "validation_commands": [
         "focused SQLite and PostgreSQL race and failure-injection tests",
@@ -987,6 +1006,14 @@
         "durable idempotency",
         "copy_deck artifacts"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "Implementation 9b0b659 converts same-brief conflicts into audited replay, serializes distinct keys on one run and centers channel posts.",
       "dependencies": [
         "INC-004",
@@ -999,6 +1026,7 @@
         "compact evidence",
         "admin diagnostics"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "merge",
         "production",
@@ -1011,12 +1039,12 @@
         "automatic publication",
         "social secrets in browser"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING",
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Product Engineer / Concurrency Critic",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-017",
       "validation_commands": [
         "locked wheel/PostgreSQL",
@@ -1047,6 +1075,14 @@
         "orchestrator/persistence",
         "Greenlight fencing"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "Implementation 3cc304d10b64b8cb32bffeee52f36e583c46f844 persists queued runs, advances fourteen fenced station checkpoints and exposes backend-derived progress without browser simulation.",
       "dependencies": [
         "INC-004",
@@ -1059,6 +1095,7 @@
         "polling/SSE",
         "crash recovery"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "production worker deployment",
         "merge"
@@ -1070,12 +1107,12 @@
         "unfenced worker",
         "cloud resources"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED",
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Distributed Systems Engineer / Runtime Critic",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-018",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -1116,6 +1153,14 @@
         "Greenlight/tenant/session contracts",
         "specs/019-social-oauth-publication/**"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "OAuth/account connection is implemented; repair 6d5e59b changes the browser session cookie to Secure SameSite=Lax for cross-site provider returns, exposes exact callbacks and adds phase-safe provider diagnostics.",
       "dependencies": [
         "INC-003",
@@ -1132,6 +1177,7 @@
         "token bootstrap",
         "Helm/Terraform Secret refs"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "real X/Instagram login",
         "callback registration",
@@ -1147,13 +1193,13 @@
         "publication routes",
         "unbounded retry"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING",
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "readiness_commit": "93c5f55852dc60409d231eca948c20d74a871aa0",
       "role": "Integration Engineer / Security Reviewer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-019",
       "validation_commands": [
         "192 locked/PostgreSQL tests",
@@ -1193,6 +1239,14 @@
         "INC-019 connected accounts",
         "Greenlight artifact authority"
       ],
+      "closure_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30466498822",
+        "workflow": "production-readiness"
+      },
+      "closure_commit": "afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3",
+      "closure_scope": "increment_only_external_and_release_gates_preserved",
       "context": "Implementation 8eb0cf7 adds default-disabled exact-once X/Instagram publication with durable binding, fenced execution, bounded receipts, idempotent reconciliation, audit repair, confirmation UI and zero-real-HTTP browser/package evidence.",
       "dependencies": [
         "INC-004",
@@ -1205,6 +1259,7 @@
         "confirmation UI",
         "sandbox evidence"
       ],
+      "graph_initial_status": "review",
       "human_gates": [
         "authorized sandbox posts",
         "pricing/terms review",
@@ -1220,12 +1275,12 @@
         "tokens/provider bodies in logs",
         "publication without Greenlight"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED",
+      "publication_state": "INTEGRATED_MAIN_CI_PASS_INCREMENT_DONE_EXTERNAL_EFFECTS_DISABLED",
       "read_only_paths": [
         "checkpoints/**"
       ],
       "role": "Distributed Systems Integration Engineer / Security Reviewer",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-020",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",

@@ -179,3 +179,11 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness events: 49; `INC-038` revision: 2; derived status: `done`.
 - All five gates pass, including `close-gate`.
 - Release decision remains `DENY_RELEASE`; deployment and external effects remain unauthorized.
+
+## 2026-07-29 — Integrated review backlog closure
+
+- Closed at increment scope: `INC-003`, `INC-015`, `INC-017`, `INC-018`, `INC-019`, `INC-020`.
+- Evidence base: protected `main` `afb52ffdcdf85f7ed4236be6fe5102d4fbf763a3`, run `30466498822`, 8/8 jobs successful.
+- Graph Harness event count: 92.
+- Remaining program state: 20 done, 4 blocked, 1 pending.
+- `DENY_RELEASE`, `DENY_APPLY`, default-off external effects and all human/external gates remain unchanged.

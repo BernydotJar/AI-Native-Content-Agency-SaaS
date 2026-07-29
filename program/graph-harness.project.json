@@ -200,7 +200,7 @@
           "persistence.py",
           "postgres.py"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "retention/deletion approval",
           "legal privacy review"
@@ -959,7 +959,7 @@
           "SQLite and PostgreSQL transaction contracts",
           "Greenlight fencing architecture"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "real provider credentials",
           "privacy/legal approval",
@@ -1080,7 +1080,7 @@
           "durable idempotency",
           "copy_deck artifacts"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "merge",
           "production",
@@ -1140,7 +1140,7 @@
           "orchestrator/persistence",
           "Greenlight fencing"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "production worker deployment",
           "merge"
@@ -1210,7 +1210,7 @@
           "Greenlight/tenant/session contracts",
           "specs/019-social-oauth-publication/**"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "real X/Instagram login",
           "callback registration",
@@ -1281,7 +1281,7 @@
           "INC-019 connected accounts",
           "Greenlight artifact authority"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "authorized sandbox posts",
           "pricing/terms review",
