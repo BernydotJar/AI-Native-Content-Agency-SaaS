@@ -1850,7 +1850,7 @@
         "deployment or infrastructure apply",
         "provider publication/deletion or other external effect"
       ],
-      "implementation_commit": "WORKTREE@65df53ebe73ff831954a55f5f5e0b517126ef116",
+      "implementation_commit": "bf32be4b697f8c12bc476f204fbfa2ddc55c5399",
       "objective": "Implement durable public-media signing-key rotation without invalidating active capabilities or exposing secret material.",
       "prohibited_paths": [
         "production secrets",
@@ -1860,14 +1860,14 @@
         "destructive persistent migration",
         "legal/privacy approval mutation"
       ],
-      "publication_state": "REVISION_2_LOCAL_GATES_PASS_CLEAN_COMMIT_PENDING",
+      "publication_state": "REVISION_2_LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
       "read_only_paths": [
         ".env.local",
         "compliance/privacy-decision-register.json",
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Data Migration Reviewer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-025",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -1881,7 +1881,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Revision 2 local PASS: 341 locked-wheel tests; 341/341 PostgreSQL schema-v7 tests; 58 frontend tests; OCI non-root package; Helm keyring/legacy guards; Terraform/K3s SQLite and PostgreSQL plan-apply-destroy with no key values in state; supply-chain provenance pending clean commit; external effects 0.",
+      "validation_summary": "Exact implementation commit bf32be4b697f8c12bc476f204fbfa2ddc55c5399, tree 76eaaa464aa485d66318cd3b493f4dcaae8da6f5: 341 locked-wheel tests PASS; 341/341 PostgreSQL schema-v7 tests PASS; 58 frontend tests PASS; OCI/Helm/Terraform/K3s PASS; supply-chain source_dirty=false, 33 packages evaluated, policy/provenance/Cosign PASS; external effects 0; exact-head CI pending.",
       "workstream_id": "WS-08",
       "write_lock": "orchestrator:INC-025"
     }

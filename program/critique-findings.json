@@ -402,6 +402,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "65df53ebe73ff831954a55f5f5e0b517126ef116",
+  "source_commit": "bf32be4b697f8c12bc476f204fbfa2ddc55c5399",
   "updated_at": "2026-07-29"
 }

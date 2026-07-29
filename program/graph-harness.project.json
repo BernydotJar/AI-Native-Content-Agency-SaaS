@@ -1698,7 +1698,7 @@
           "backend/agency_runtime/publication_media_postgres.py",
           "specs/025-public-media-signing-keyring/**"
         ],
-        "canonical_status": "running",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "production secret rotation",

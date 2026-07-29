@@ -69,3 +69,15 @@ Status: PASS for local deterministic scope.
 Decision: `PASS_FOR_CLEAN_TREE_VERIFICATION`; global decision remains `DENY_RELEASE` and `DENY_APPLY`.
 
 Exact resume condition: commit the implementation, run clean-source supply-chain provenance and all strict exact-tree gates, record Graph Harness review evidence, publish a PR, pass exact-head CI and inspect retained artifacts before the close gate.
+
+
+## Exact-Tree Verification
+
+- Implementation commit: `bf32be4b697f8c12bc476f204fbfa2ddc55c5399`
+- Git tree: `76eaaa464aa485d66318cd3b493f4dcaae8da6f5`
+- Locked wheel: 341 PASS; 25 PostgreSQL-only skips without a server.
+- PostgreSQL 15.18: 341/341 PASS; schema v7; migration and backup/restore PASS.
+- Frontend: 58 PASS; lint and production build PASS.
+- OCI/Helm/Terraform/K3s: PASS; external effects false; all ephemeral resources destroyed.
+- Supply chain: 33 packages evaluated; policy PASS; source dirty false; provenance SHA-256 `6584d7e803ab0b49a1b9ec8a957fd7107591047526fe23d202d2db2d2b531f4d`; OCI archive SHA-256 `62f3ed1a4093c616022f099c710fc0131d33bf5fdd4caecc875ed4073728b08a`; offline Cosign verification PASS; registry publication false.
+- Remaining gate: exact-head GitHub Actions and retained artifact inspection.

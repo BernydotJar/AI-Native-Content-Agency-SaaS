@@ -259,3 +259,14 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - OCI non-root package, Helm preferred/legacy guards, Terraform/K3s SQLite and PostgreSQL plan-apply-destroy PASS; signing values remain outside Git and Terraform state.
 - Clean-source supply-chain provenance, exact-head CI, Graph Harness close gate and merge remain pending.
 - Provider publication/deletion, production Secret mutation, deployment, spend, legal approval and all real external effects remain unauthorized.
+
+
+## 2026-07-29 — INC-025 exact-tree implementation checkpoint
+
+- Implementation commit: `bf32be4b697f8c12bc476f204fbfa2ddc55c5399`.
+- Exact tree: `76eaaa464aa485d66318cd3b493f4dcaae8da6f5`.
+- Graph Harness revision: 2; local implementation, verification, production and review evidence ready to record.
+- 341 locked-wheel tests and 341/341 PostgreSQL schema-v7 tests PASS.
+- OCI/Helm/Terraform/K3s PASS; ephemeral resources destroyed; external effects 0.
+- Clean-source supply chain PASS: 33 packages evaluated, policy/provenance/offline Cosign verified, registry publication false.
+- Exact-head CI, close gate and merge remain pending. `DENY_RELEASE` and `DENY_APPLY` remain unchanged.
