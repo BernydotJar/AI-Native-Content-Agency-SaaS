@@ -1860,14 +1860,14 @@
         "destructive persistent migration",
         "legal/privacy approval mutation"
       ],
-      "publication_state": "REVISION_2_LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
+      "publication_state": "EXACT_HEAD_CI_PASS_GRAPH_CLOSED",
       "read_only_paths": [
         ".env.local",
         "compliance/privacy-decision-register.json",
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Data Migration Reviewer / Independent Verifier",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-025",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -1881,7 +1881,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Exact implementation commit bf32be4b697f8c12bc476f204fbfa2ddc55c5399, tree 76eaaa464aa485d66318cd3b493f4dcaae8da6f5: 341 locked-wheel tests PASS; 341/341 PostgreSQL schema-v7 tests PASS; 58 frontend tests PASS; OCI/Helm/Terraform/K3s PASS; supply-chain source_dirty=false, 33 packages evaluated, policy/provenance/Cosign PASS; external effects 0; exact-head CI pending.",
+      "validation_summary": "GitHub Actions run 30500998431 passed 8/8 on exact PR head 7f56f711abc5d13fb609e2fee5b04176ea4c4319; remote supply-chain policy PASS with 33 packages, provenance 3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112; semantic artifact exact-head/clean/20-of-20/zero-effects; all local schema-v7 and rotation gates PASS.",
       "workstream_id": "WS-08",
       "write_lock": "orchestrator:INC-025"
     }
@@ -2119,7 +2119,7 @@
         "R-037",
         "R-038"
       ],
-      "status": "in_progress",
+      "status": "done",
       "validation": [
         "./scripts/verify-python-locks.sh",
         "exact-head PostgreSQL/OCI/Helm/Terraform/supply-chain CI",

@@ -270,3 +270,13 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - OCI/Helm/Terraform/K3s PASS; ephemeral resources destroyed; external effects 0.
 - Clean-source supply chain PASS: 33 packages evaluated, policy/provenance/offline Cosign verified, registry publication false.
 - Exact-head CI, close gate and merge remain pending. `DENY_RELEASE` and `DENY_APPLY` remain unchanged.
+
+
+## 2026-07-29 — INC-025 closed through Graph Harness
+
+- Exact PR head: `7f56f711abc5d13fb609e2fee5b04176ea4c4319`.
+- GitHub Actions run `30500998431` passed 8/8 jobs.
+- Remote provenance `3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112` and policy `1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb` were inspected; 33 packages evaluated.
+- Semantic artifact `6c872912a227341c396905c1dd39a3b2b70ca63482eb85cb8451d977997d21b6` is exact-head, clean, 20/20 and zero-effects.
+- Graph Harness revision 2 close gate: PASS; node status: `done`.
+- Production Secret rotation, deployment, publication/deletion and legal approval remain unauthorized.
