@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 8,
-  "event_count": 134,
-  "last_event_id": "8ff38c62-8c8b-49aa-b2ab-87a8e9cbea29",
+  "checkpoint_count": 9,
+  "event_count": 143,
+  "last_event_id": "4e4e2210-9bff-4354-b598-ce88b0b9f1bd",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -116,11 +116,56 @@
     },
     "INC-010": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": "8ff38c62-8c8b-49aa-b2ab-87a8e9cbea29",
+      "active_evidence": {
+        "28db0e56-90d4-44b8-a0d0-30ee84b8d50e": {
+          "artifact": "INC-010 revision 3 PR review repair",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "584c45de3a0c805397c09ed41202bba45211f9b8c9e5394337cfe1c50bc6598e"
+        },
+        "40a16dd9-5990-4f0b-9660-4c1d2dd8608c": {
+          "artifact": "program/reports/inc-010-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "25905b93ef2a669e6643d855fe0e58381b16984b3e86a14eeb47d26fbe569f85"
+        },
+        "966fffa9-ed60-4660-99b5-3a9760af0bf8": {
+          "artifact": "artifacts/semantic-evals/generated/report.json",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "1cc450d5f6fc93386ee44da0812277c3726bd25fd2760c67a9135a3de12c15cc"
+        },
+        "fe01c942-3118-476b-b9ed-b8c2a51d0698": {
+          "artifact": "program/reports/inc-010-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "0a9502c28a1ab3e74f8d41aff01668473aefb2957f64c19cbea6c40337a9061b"
+        }
+      },
+      "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "28db0e56-90d4-44b8-a0d0-30ee84b8d50e",
+            "966fffa9-ed60-4660-99b5-3a9760af0bf8"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "40a16dd9-5990-4f0b-9660-4c1d2dd8608c"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "fe01c942-3118-476b-b9ed-b8c2a51d0698"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "2e234728-989e-43e9-8645-92299d4d70d4",
       "revision": 3,
-      "status": "running"
+      "status": "review"
     },
     "INC-011": {
       "active_approval_count": 0,

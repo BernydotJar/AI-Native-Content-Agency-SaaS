@@ -547,7 +547,7 @@
         "production or external effect when applicable",
         "manual accessibility and legal release approvals remain separate blocked nodes"
       ],
-      "implementation_commit": "WORKTREE@86d83daa5d8d70ffbd6281d8248820e7677bc937",
+      "implementation_commit": "8c8b3f260dd50e09251cc5f84c64fd0590341061",
       "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
       "prohibited_paths": [
         "protected branches",
@@ -556,7 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
-      "publication_state": "REVISION_3_REVIEW_FINDINGS_REPAIRED_LOCAL_GATES_PASS",
+      "publication_state": "REVISION_3_LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -564,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -575,7 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
-      "validation_summary": "Revision 3 localized repair: 20/20 semantic cases PASS, broad prohibited-claim coverage restored, exact finding codes/counts/metrics bound to corpus.v2, 334 locked-wheel backend tests and 58 frontend tests PASS; exact-head CI pending.",
+      "validation_summary": "Revision 3 clean tree 26b1bc37728f1cf6db3a9e3d5890fdb3db9d3b92: 20/20 semantic cases, exact codes/counts/metrics, 334 locked-wheel backend tests, 58 frontend tests and governance gates PASS; exact-head CI and review-thread resolution pending.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },
