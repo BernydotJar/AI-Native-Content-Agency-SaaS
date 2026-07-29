@@ -1631,11 +1631,11 @@
       ],
       "authoritative_inputs": [
         "user directive",
-        "BernydotJar/Graph-harness-sdlc@a10ed02c1afe95b0e39a0d0e3662c209fa4033cb",
+        "BernydotJar/Graph-harness-sdlc@1bebce3db35303072049233786464bb01163c98b",
         "program/task-ledger.yaml",
         "program/task-graph.yaml"
       ],
-      "context": "User explicitly selected Graph Harness SDLC as the execution runtime. The canonical framework is pinned at a10ed02c1afe95b0e39a0d0e3662c209fa4033cb.",
+      "context": "User explicitly selected Graph Harness SDLC as the execution runtime. The canonical framework is pinned at 1bebce3db35303072049233786464bb01163c98b.",
       "dependencies": [
         "INC-001"
       ],

@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 2,
-  "event_count": 30,
-  "last_event_id": "25ae813b-a69f-4a13-8594-804e32d4dc7c",
+  "checkpoint_count": 3,
+  "event_count": 45,
+  "last_event_id": "39e1680f-fd56-4552-a638-24a2db530108",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -199,31 +199,31 @@
     "INC-038": {
       "active_approval_count": 0,
       "active_evidence": {
-        "1578ef3d-112a-4890-8f45-1da2ea5e3ed4": {
-          "artifact": "localized exact-head CI repair",
-          "kind": "implementation",
-          "result": "PASS",
-          "sha256": "23099d03903a3dc65abf27ec091a53facfd23cec6a768c50d3d55bb3e4c82014"
-        },
-        "173655c6-c482-4024-a40e-b5215ecc068e": {
+        "03d50e52-a4dd-4dee-b142-697caec488f5": {
           "artifact": "specs/038-graph-harness-adoption",
           "kind": "spec",
           "result": "PASS",
           "sha256": "af5901c71ebb69b0441439804a2b1b6b05d520ea5996dafbdf9d6f49a5f79889"
         },
-        "8295ec77-db6d-430a-adb5-99808d495567": {
+        "9f461fb6-9da2-4ce3-b1df-238fc0a795a4": {
+          "artifact": "merged Graph Harness runtime pin and application adapter",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "9cb8189265259564ab583b92b03c51d00aecd56d3f1f299ae8102633fc08f3a8"
+        },
+        "e566c2aa-7721-43f4-99dc-a782fd6f61bc": {
           "artifact": "program/reports/inc-038-review.md",
           "kind": "review",
           "result": "PASS",
           "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
         },
-        "85bbddd9-cdd7-4fd0-a388-66a7bc13b1b4": {
+        "e919e4f5-3b93-48c2-a7fb-db72e6d3d97a": {
           "artifact": "program/reports/inc-038-production-review.md",
           "kind": "production",
           "result": "PASS",
           "sha256": "a678dff58dcf818c8c6e0ca8115caeaffb5585de67af8e9f119c5c45ee450a1e"
         },
-        "e2575cae-f72a-40e3-9648-8b6a90f03d7c": {
+        "f14156c0-8783-40b2-991a-3fb1973e0057": {
           "artifact": "program/reports/inc-038-review.md",
           "kind": "verification",
           "result": "PASS",
@@ -233,37 +233,37 @@
       "gates": {
         "implementation-gate": {
           "evidence_ids": [
-            "1578ef3d-112a-4890-8f45-1da2ea5e3ed4",
-            "e2575cae-f72a-40e3-9648-8b6a90f03d7c"
+            "9f461fb6-9da2-4ce3-b1df-238fc0a795a4",
+            "f14156c0-8783-40b2-991a-3fb1973e0057"
           ],
           "result": "PASS"
         },
         "production-gate": {
           "evidence_ids": [
-            "85bbddd9-cdd7-4fd0-a388-66a7bc13b1b4"
+            "e919e4f5-3b93-48c2-a7fb-db72e6d3d97a"
           ],
           "result": "PASS"
         },
         "review-gate": {
           "evidence_ids": [
-            "8295ec77-db6d-430a-adb5-99808d495567"
+            "e566c2aa-7721-43f4-99dc-a782fd6f61bc"
           ],
           "result": "PASS"
         },
         "spec-gate": {
           "evidence_ids": [
-            "173655c6-c482-4024-a40e-b5215ecc068e"
+            "03d50e52-a4dd-4dee-b142-697caec488f5"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "6336ebc4-2d13-4b0f-81f6-ac9881e3d205",
-      "revision": 1,
+      "last_event_id": "5d367535-6121-498e-b596-6fcdc63e1d88",
+      "revision": 2,
       "status": "review"
     }
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 1,
+  "repair_plan_count": 2,
   "schema_version": "graph-harness.state.v1"
 }

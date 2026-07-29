@@ -245,7 +245,7 @@ Consequence: local deterministic gates can prove authority separation and zero-p
 Date: 2026-07-29
 Status: accepted for INC-038; close and merge pending
 
-Decision: pin `BernydotJar/Graph-harness-sdlc` at `a10ed02c1afe95b0e39a0d0e3662c209fa4033cb` as a gitlink. Preserve the SaaS task ledger and dependency graph as domain sources, generate the framework project contract deterministically, and persist execution as a hash-chained append-only event ledger. Do not copy framework runtime modules into the application.
+Decision: pin `BernydotJar/Graph-harness-sdlc` at `1bebce3db35303072049233786464bb01163c98b` as a gitlink. Preserve the SaaS task ledger and dependency graph as domain sources, generate the framework project contract deterministically, and persist execution as a hash-chained append-only event ledger. Do not copy framework runtime modules into the application.
 
 Rationale: the repository already had rich domain artifacts but lacked one executable typed runtime for dependency readiness, evidence freshness, production gates and localized repair. A pinned adapter preserves product-specific truth while avoiding a competing framework implementation.
 

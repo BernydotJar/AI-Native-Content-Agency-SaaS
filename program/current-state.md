@@ -153,7 +153,7 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 
 - Protected `main` cumulative head before this increment: `c8b177c9b615b7b14e726d52c9d94f121ab9b64a`.
 - Active feature branch: `feature/graph-harness-adoption-v1`.
-- Canonical framework revision: `a10ed02c1afe95b0e39a0d0e3662c209fa4033cb`.
+- Canonical framework revision: `1bebce3db35303072049233786464bb01163c98b`.
 - Graph nodes: 25.
 - Graph events: 15.
 - `INC-038` derived status: `review`.
