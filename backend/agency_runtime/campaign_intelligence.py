@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Mapping, Sequence
 
 from .models import MissionBrief
+from .semantic_evals import find_text_risks, unsupported_numeric_tokens
 from .utils import stable_id
 
 
@@ -238,14 +239,6 @@ def critique_payload(
                 variant.get("cta", ""),
             )
         ).lower()
-        prohibited_terms = (
-            "garantizado",
-            "garantiza",
-            "el mejor",
-            "todos apoyan",
-            "100%",
-            "sin duda",
-        )
         source_visible = all(
             str(claim["source"]).strip().lower() in rendered_text
             for claim in brief.evidence_claims
@@ -305,8 +298,22 @@ def critique_payload(
                 ),
             },
             {
+                "name": "instruction_injection_absent",
+                "passed": "instruction_injection" not in find_text_risks(rendered_text)
+                and all(
+                    "instruction_injection"
+                    not in find_text_risks(str(claim.get(field, "")))
+                    for claim in claims
+                    for field in ("statement", "source", "locator")
+                ),
+            },
+            {
                 "name": "unsupported_promotion_absent",
-                "passed": not any(term in rendered_text for term in prohibited_terms),
+                "passed": "unsupported_overclaim" not in find_text_risks(rendered_text),
+            },
+            {
+                "name": "unsupported_numeric_claim_absent",
+                "passed": not unsupported_numeric_tokens(rendered_text, claims),
             },
             {"name": "legal_review_gate_present", "passed": True},
         ]

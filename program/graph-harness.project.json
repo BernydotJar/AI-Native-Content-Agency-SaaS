@@ -571,16 +571,25 @@
     },
     {
       "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        ".gitignore",
+        "backend/agency_runtime/campaign_intelligence.py",
+        "backend/agency_runtime/semantic_evals.py",
+        "backend/tests/test_semantic_evals.py",
+        "compliance/third-party-inventory.json",
+        "package-lock.json",
+        "package.json",
         "program/**",
-        "specs/**",
-        "docs/**",
-        "applicable implementation/test paths"
+        "program/evals/**",
+        "scripts/verify-python-locks.sh",
+        "scripts/verify-semantic-evals*.py",
+        "specs/010-semantic-adversarial-evals/**"
       ],
       "capability": "Eval Engineer",
       "depends_on": [
         "INC-003",
         "INC-004",
-        "INC-008"
+        "INC-021"
       ],
       "gates": {
         "approved": [
@@ -600,22 +609,34 @@
       "kind": "feature",
       "metadata": {
         "acceptance_criteria": [
-          "applicable traceability rows proven",
-          "zero open CRITICAL/HIGH findings in slice"
+          "EVAL-003, EVAL-004 and EVAL-005 are proven by exact-tree evidence",
+          "positive grounded fixture passes and every adversarial fixture fails as expected",
+          "zero open CRITICAL/HIGH findings in the INC-010 slice",
+          "no network, model, provider, publication, credential or spending effect occurs"
         ],
         "authoritative_inputs": [
           "program/requirements-traceability.csv",
-          "program/architecture.md",
-          "applicable specs and runtime evidence"
+          "backend/agency_runtime/campaign_intelligence.py",
+          "specs/021-campaign-intelligence/spec.md",
+          "specs/010-semantic-adversarial-evals/**"
         ],
-        "canonical_status": "pending",
+        "canonical_status": "running",
         "human_gates": [
           "merge",
-          "production or external effect when applicable"
+          "production or external effect when applicable",
+          "manual accessibility and legal release approvals remain separate blocked nodes"
         ],
-        "validation_commands": [],
+        "validation_commands": [
+          "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
+          "npm run validate:program",
+          "npm run validate:graph",
+          "npm run validate:compliance",
+          "npm run validate:operability",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
+        ],
         "workstream_id": "WS-10",
-        "write_lock": "unclaimed"
+        "write_lock": "orchestrator:INC-010"
       },
       "status": "pending",
       "title": "Build semantic/adversarial evals and independent exact-tree verification."

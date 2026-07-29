@@ -46,3 +46,6 @@ artifacts/accessibility/generated/
 # Generated social browser evidence
 artifacts/social/generated/
 gha-creds-*.json
+
+# Generated semantic evaluation evidence
+artifacts/semantic-evals/generated/
