@@ -1,7 +1,8 @@
 # INC-010 Production Review — Semantic Evaluation Gate
 
-Updated: 2026-07-29  
-Implementation commit: `b726ae5854bb5406b819c815f3acf66d933acf40`  
+Updated: 2026-07-29
+Implementation base: `b726ae5854bb5406b819c815f3acf66d933acf40`
+Exact-head repair commit: `ddac3777d933005706f6e5f5d78e52de13a71437`
 Decision: `PASS_FOR_REMOTE_VERIFICATION`; `DENY_RELEASE` remains mandatory.
 
 ## Security and Integrity
@@ -34,6 +35,11 @@ Decision: `PASS_FOR_REMOTE_VERIFICATION`; `DENY_RELEASE` remains mandatory.
 - `scripts/verify-python-locks.sh` runs the same gate and is strict unless development explicitly opts into dirty mode.
 - GitHub Actions uploads `artifacts/semantic-evals/generated` for 30 days.
 - No runtime service, database migration, provider configuration, cloud resource or secret is introduced.
+
+
+## Exact-Head CI Repair
+
+The first green PR run (`30471479970`) checked out GitHub's synthetic merge ref. Artifact inspection detected and rejected that evidence. Revision 2 sets an explicit checkout ref and assertion in every job and binds the semantic report to `SEMANTIC_EVAL_EXPECTED_COMMIT`. This repair is a production-integrity requirement, not a cosmetic workflow change.
 
 ## Release Boundary
 

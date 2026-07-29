@@ -547,7 +547,7 @@
         "production or external effect when applicable",
         "manual accessibility and legal release approvals remain separate blocked nodes"
       ],
-      "implementation_commit": "b726ae5854bb5406b819c815f3acf66d933acf40",
+      "implementation_commit": "ddac3777d933005706f6e5f5d78e52de13a71437",
       "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
       "prohibited_paths": [
         "protected branches",
@@ -556,7 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
-      "publication_state": "REMOTE_MERGE_REF_REJECTED_EXACT_HEAD_REPAIR_IN_PROGRESS",
+      "publication_state": "REVISION_2_LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -564,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -575,7 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
-      "validation_summary": "Run 30471479970 passed 8/8 but its semantic artifact correctly exposed checkout of synthetic PR merge 6b28cf5 instead of head 5d087ed. Graph revision 2 repair forces every job to checkout and attest the PR head; 333 locked-wheel tests and actionlint pass locally.",
+      "validation_summary": "16/16 semantic cases; expected SHA equals HEAD; synthetic merge evidence rejected; 333 locked-wheel backend tests, 58 frontend tests, actionlint and governance gates PASS; revision 2 remote CI pending.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },

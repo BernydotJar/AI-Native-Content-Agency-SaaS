@@ -682,14 +682,14 @@
     {
       "command": "scripts/verify-semantic-evals-independent.py",
       "id": "INC010-INDEPENDENT-EXACT-TREE",
-      "observed": "commit b726ae5854bb5406b819c815f3acf66d933acf40; tree d842e2cd4e56fb7546e28272c217cd8819a74c8a; dirty=false; corpus/evaluator digests exact; report, digest, case and effect tampering rejected",
+      "observed": "commit ddac3777d933005706f6e5f5d78e52de13a71437; tree 1c5276bc46cd6f6da51fa7b9d3b39f3c4a8faab7; dirty=false; expected commit equals HEAD; synthetic merge report from run 30471479970 rejected; report/digest/case/effect tampering rejected",
       "result": "PASS",
       "scope": "implementation-independent evidence and tamper verification"
     },
     {
       "command": "./scripts/verify-python-locks.sh",
       "id": "INC010-LOCKED-WHEEL",
-      "observed": "agency-runtime 0.7.0 installed wheel; semantic gate PASS; 332 backend tests PASS with 25 PostgreSQL-only skips",
+      "observed": "agency-runtime 0.7.0 installed wheel; semantic gate PASS; expected-SHA mismatch fails closed; 333 backend tests PASS with 25 PostgreSQL-only skips",
       "result": "PASS",
       "scope": "installed wheel and backend regression"
     },
@@ -703,12 +703,12 @@
     {
       "command": "GitHub Actions production-readiness after push",
       "id": "INC010-REMOTE-PRODUCTION",
-      "observed": "Pending exact-head CI; local package command could not start because helm is absent from this workstation",
-      "result": "PENDING_REMOTE_CI",
+      "observed": "Run 30471479970 passed 8/8 but semantic artifact was bound to synthetic PR merge and was rejected; revision 2 exact-head rerun pending",
+      "result": "PENDING_EXACT_HEAD_REPAIR_CI",
       "scope": "exact-head PostgreSQL, OCI, Helm, Terraform, workflow and supply chain"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "b726ae5854bb5406b819c815f3acf66d933acf40",
+  "source_commit": "ddac3777d933005706f6e5f5d78e52de13a71437",
   "updated_at": "2026-07-29"
 }

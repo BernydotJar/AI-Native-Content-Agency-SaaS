@@ -1,9 +1,10 @@
 # INC-010 Review — Semantic, Adversarial and Exact-Tree Evaluation
 
-Updated: 2026-07-29  
-Implementation commit: `b726ae5854bb5406b819c815f3acf66d933acf40`  
-Exact implementation tree: `d842e2cd4e56fb7546e28272c217cd8819a74c8a`  
-Graph revision: `1`  
+Updated: 2026-07-29
+Implementation base: `b726ae5854bb5406b819c815f3acf66d933acf40`
+Exact-head repair commit: `ddac3777d933005706f6e5f5d78e52de13a71437`
+Exact repaired tree: `1c5276bc46cd6f6da51fa7b9d3b39f3c4a8faab7`
+Graph revision: `2`
 Decision: `PASS_FOR_REVIEW`; exact-head CI and closure remain pending.
 
 ## Producer
@@ -37,15 +38,16 @@ Open CRITICAL/HIGH findings in the INC-010 slice: **0**.
 
 ## Independent Verification
 
-Exact clean-tree evidence at `b726ae5854bb5406b819c815f3acf66d933acf40`:
+Exact clean-tree repair evidence at `ddac3777d933005706f6e5f5d78e52de13a71437`:
 
 ```text
 semantic_evals=pass cases=16
 semantic_independent_verifier=pass cases=16
-source_tree=d842e2cd4e56fb7546e28272c217cd8819a74c8a
+source_tree=1c5276bc46cd6f6da51fa7b9d3b39f3c4a8faab7
+expected_source_commit=ddac3777d933005706f6e5f5d78e52de13a71437
 worktree_dirty=false
 external_effects_observed=0
-locked-wheel backend tests=332 PASS, 25 PostgreSQL-only skips
+locked-wheel backend tests=333 PASS, 25 PostgreSQL-only skips
 frontend tests=58 PASS
 Oxlint=0 warnings, 0 errors
 TypeScript/Vite production build=PASS
@@ -54,6 +56,12 @@ release_decision=DENY_RELEASE
 ```
 
 The independent verifier does not import the semantic evaluator. It checks exact report schemas, case/result cardinality, required categories, corpus and evaluator digests, commit/tree binding, canonical findings/metrics, zero effects and tamper negatives.
+
+## Rejected Remote Evidence and Repair
+
+GitHub Actions run `30471479970` passed all eight jobs but is deliberately not accepted as exact-head closure evidence. Its uploaded semantic report named synthetic merge `6b28cf529144a0424a26ebf235ae0ee20d068461` as `source_commit`, not PR head `5d087ed3a1c03c072014ce7faa11a503866ccea6`. Graph Harness recorded a `close-gate` failure and invalidated only `INC-010`.
+
+Revision 2 forces all eight jobs to check out and assert `${{ github.event.pull_request.head.sha || github.sha }}`. The semantic evaluator and independent verifier additionally require `SEMANTIC_EVAL_EXPECTED_COMMIT == HEAD`. A mismatch test fails closed.
 
 ## Residual Boundaries
 
