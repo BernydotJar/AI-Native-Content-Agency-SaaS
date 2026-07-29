@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 1,
-  "event_count": 15,
-  "last_event_id": "848f4abd-8b22-40ed-a299-764cbb42ca57",
+  "checkpoint_count": 2,
+  "event_count": 30,
+  "last_event_id": "25ae813b-a69f-4a13-8594-804e32d4dc7c",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -197,73 +197,73 @@
       "status": "done"
     },
     "INC-038": {
-      "active_approval_count": 1,
+      "active_approval_count": 0,
       "active_evidence": {
-        "1bca0114-b9ac-4a1f-949c-eea1d6358af8": {
-          "artifact": "program/reports/inc-038-review.md",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
-        },
-        "2da14ba7-ffbc-42b9-8992-d491f3a4e6f6": {
-          "artifact": "Graph Harness adapter and pinned gitlink",
+        "1578ef3d-112a-4890-8f45-1da2ea5e3ed4": {
+          "artifact": "localized exact-head CI repair",
           "kind": "implementation",
           "result": "PASS",
-          "sha256": "f4dcedcd4a8cad15132e4c3732f8aa46e58e6e2ca397a787865697050d711fdb"
+          "sha256": "23099d03903a3dc65abf27ec091a53facfd23cec6a768c50d3d55bb3e4c82014"
         },
-        "8ba6b2ed-a6e1-4d73-a6a6-602f3fbdce21": {
+        "173655c6-c482-4024-a40e-b5215ecc068e": {
+          "artifact": "specs/038-graph-harness-adoption",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "af5901c71ebb69b0441439804a2b1b6b05d520ea5996dafbdf9d6f49a5f79889"
+        },
+        "8295ec77-db6d-430a-adb5-99808d495567": {
           "artifact": "program/reports/inc-038-review.md",
           "kind": "review",
           "result": "PASS",
           "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
         },
-        "9cf9c048-21c0-4b43-b798-0d6e7999034e": {
+        "85bbddd9-cdd7-4fd0-a388-66a7bc13b1b4": {
           "artifact": "program/reports/inc-038-production-review.md",
           "kind": "production",
           "result": "PASS",
           "sha256": "a678dff58dcf818c8c6e0ca8115caeaffb5585de67af8e9f119c5c45ee450a1e"
         },
-        "f909f3f2-39f9-44b6-9009-db075338a5c7": {
-          "artifact": "specs/038-graph-harness-adoption",
-          "kind": "spec",
+        "e2575cae-f72a-40e3-9648-8b6a90f03d7c": {
+          "artifact": "program/reports/inc-038-review.md",
+          "kind": "verification",
           "result": "PASS",
-          "sha256": "af5901c71ebb69b0441439804a2b1b6b05d520ea5996dafbdf9d6f49a5f79889"
+          "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
         }
       },
       "gates": {
         "implementation-gate": {
           "evidence_ids": [
-            "2da14ba7-ffbc-42b9-8992-d491f3a4e6f6",
-            "1bca0114-b9ac-4a1f-949c-eea1d6358af8"
+            "1578ef3d-112a-4890-8f45-1da2ea5e3ed4",
+            "e2575cae-f72a-40e3-9648-8b6a90f03d7c"
           ],
           "result": "PASS"
         },
         "production-gate": {
           "evidence_ids": [
-            "9cf9c048-21c0-4b43-b798-0d6e7999034e"
+            "85bbddd9-cdd7-4fd0-a388-66a7bc13b1b4"
           ],
           "result": "PASS"
         },
         "review-gate": {
           "evidence_ids": [
-            "8ba6b2ed-a6e1-4d73-a6a6-602f3fbdce21"
+            "8295ec77-db6d-430a-adb5-99808d495567"
           ],
           "result": "PASS"
         },
         "spec-gate": {
           "evidence_ids": [
-            "f909f3f2-39f9-44b6-9009-db075338a5c7"
+            "173655c6-c482-4024-a40e-b5215ecc068e"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "f5b2b6a7-51ea-4bd2-9904-6ec242a2db02",
-      "revision": 0,
+      "last_event_id": "6336ebc4-2d13-4b0f-81f6-ac9881e3d205",
+      "revision": 1,
       "status": "review"
     }
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 0,
+  "repair_plan_count": 1,
   "schema_version": "graph-harness.state.v1"
 }

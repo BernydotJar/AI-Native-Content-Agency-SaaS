@@ -162,3 +162,12 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Local program, graph, lint, 58 frontend tests and production build: PASS.
 - Exact-head CI, human closure and merge: pending.
 - No product runtime, UI, database schema, cloud resource, secret, social effect, model effect or publication authority changed.
+
+### Localized repair after exact-head run 30427783709
+
+- Failed gates: backend test discovery in `verify` and `postgresql-shared-state`.
+- Root causes: stale fixed task count (`24`) and missing submodule initialization in the PostgreSQL checkout.
+- Graph action: `failure.recorded`, `INC-038` invalidated, revision advanced from 0 to 1; no other node was invalidated.
+- Repair: task cardinality expectation updated to 25, adapter import made explicit, PostgreSQL job initializes the pinned gitlink.
+- Graph events after repair: 30.
+- Derived state after repair: `INC-038=review`; close gate remains open.

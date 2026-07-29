@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "e60cdb3599a69033583e7288042418ba9f3a25926559306066dd89749f720440"
+      "sha256": "f41d1f7d89eaec8de7ba8938a094dffe2b9bc2a2b96c117f2b4e862455dc8d5c"
     },
     {
       "path": ".github/workflows/publish-gcp-image.yml",

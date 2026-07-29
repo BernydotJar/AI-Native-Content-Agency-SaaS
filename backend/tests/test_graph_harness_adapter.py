@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "scripts/verify_graph_harness.py"
+FRAMEWORK = ROOT / "vendor/graph-harness-sdlc"
+if str(FRAMEWORK) not in sys.path:
+    sys.path.insert(0, str(FRAMEWORK))
 SPEC = importlib.util.spec_from_file_location("verify_graph_harness", MODULE_PATH)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
