@@ -112,28 +112,62 @@ def run_corpus(corpus_path: Path, *, allow_dirty: bool) -> dict[str, object]:
     baseline = build_bundle(corpus["base_fixture"])
     results: list[dict[str, object]] = []
     seen: set[str] = set()
+    expected_case_keys = {
+        "id", "category", "expected", "mutations", "expected_finding_codes",
+        "expected_finding_count", "expected_metrics",
+    }
+    expected_metric_keys = {"claims", "mapped_claims", "rendered_characters", "variants"}
     for index, raw in enumerate(corpus["cases"]):
-        if not isinstance(raw, Mapping) or set(raw) != {"id", "category", "expected", "mutations"}:
+        if not isinstance(raw, Mapping) or set(raw) != expected_case_keys:
             raise SemanticEvalInputError(f"case {index} keys are not exact")
         case_id, category, expected, mutations = (
             raw.get("id"), raw.get("category"), raw.get("expected"), raw.get("mutations")
         )
+        expected_codes = raw.get("expected_finding_codes")
+        expected_count = raw.get("expected_finding_count")
+        expected_metrics = raw.get("expected_metrics")
         if not isinstance(case_id, str) or not case_id or case_id in seen:
             raise SemanticEvalInputError("case IDs must be unique")
         if not isinstance(category, str) or expected not in {"PASS", "FAIL"} or not isinstance(mutations, list):
             raise SemanticEvalInputError(f"case {case_id} metadata is invalid")
+        if (
+            not isinstance(expected_codes, list)
+            or not all(isinstance(code, str) and code for code in expected_codes)
+            or expected_codes != sorted(set(expected_codes))
+        ):
+            raise SemanticEvalInputError(f"case {case_id} expected finding codes are invalid")
+        if type(expected_count) is not int or expected_count < len(expected_codes):
+            raise SemanticEvalInputError(f"case {case_id} expected finding count is invalid")
+        if (
+            not isinstance(expected_metrics, Mapping)
+            or set(expected_metrics) != expected_metric_keys
+            or not all(type(value) is int and value >= 0 for value in expected_metrics.values())
+        ):
+            raise SemanticEvalInputError(f"case {case_id} expected metrics are invalid")
+        if (expected == "PASS" and (expected_codes or expected_count)) or (
+            expected == "FAIL" and not expected_codes
+        ):
+            raise SemanticEvalInputError(f"case {case_id} expected findings contradict verdict")
         seen.add(case_id)
         evaluation = evaluate_bundle(apply_mutations(baseline, mutations))
         actual = "PASS" if evaluation.passed else "FAIL"
+        finding_codes = sorted({item.code for item in evaluation.findings})
+        finding_count = len(evaluation.findings)
+        metrics = dict(sorted(evaluation.metrics.items()))
         results.append({
             "id": case_id,
             "category": category,
             "expected": expected,
             "actual": actual,
-            "expectation_met": actual == expected,
-            "finding_codes": sorted({item.code for item in evaluation.findings}),
-            "finding_count": len(evaluation.findings),
-            "metrics": dict(sorted(evaluation.metrics.items())),
+            "expectation_met": (
+                actual == expected
+                and finding_codes == expected_codes
+                and finding_count == expected_count
+                and metrics == dict(expected_metrics)
+            ),
+            "finding_codes": finding_codes,
+            "finding_count": finding_count,
+            "metrics": metrics,
         })
     return {
         "schema_version": REPORT_SCHEMA,

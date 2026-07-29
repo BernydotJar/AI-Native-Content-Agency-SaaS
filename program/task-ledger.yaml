@@ -547,7 +547,7 @@
         "production or external effect when applicable",
         "manual accessibility and legal release approvals remain separate blocked nodes"
       ],
-      "implementation_commit": "6e69b8eb13a6196bba8db3c2039ab4dc09609aa0",
+      "implementation_commit": "WORKTREE@86d83daa5d8d70ffbd6281d8248820e7677bc937",
       "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
       "prohibited_paths": [
         "protected branches",
@@ -556,7 +556,7 @@
         "external effects",
         "manual accessibility evidence"
       ],
-      "publication_state": "EXACT_HEAD_CI_PASS_GRAPH_CLOSED",
+      "publication_state": "REVISION_3_REVIEW_FINDINGS_REPAIRED_LOCAL_GATES_PASS",
       "read_only_paths": [
         "compliance/privacy-decision-register.json",
         "compliance/public-claims-policy.json",
@@ -564,7 +564,7 @@
         ".env.local"
       ],
       "role": "Eval Engineer",
-      "status": "done",
+      "status": "in_progress",
       "task_id": "INC-010",
       "validation_commands": [
         "SEMANTIC_EVAL_ALLOW_DIRTY=1 ./scripts/verify-python-locks.sh",
@@ -575,7 +575,7 @@
         "npm run lint && npm test -- --reporter=dot && npm run build",
         "npm run validate:semantic-evals (strict, installed wheel, clean exact tree in CI)"
       ],
-      "validation_summary": "GitHub Actions run 30476446123 passed 8/8 on exact PR head 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0; remote semantic artifact SHA-256 2e95ab94dae1b43b7dc273567d0dfc84cf7c247cc7686043ee7ec7f0ad535850 binds source_commit and expected_source_commit to HEAD, 16/16 cases, zero effects; 333 locked-wheel backend tests and 58 frontend tests pass.",
+      "validation_summary": "Revision 3 localized repair: 20/20 semantic cases PASS, broad prohibited-claim coverage restored, exact finding codes/counts/metrics bound to corpus.v2, 334 locked-wheel backend tests and 58 frontend tests PASS; exact-head CI pending.",
       "workstream_id": "WS-10",
       "write_lock": "orchestrator:INC-010"
     },

@@ -69,3 +69,7 @@ Revision 2 forces all eight jobs to check out and assert `${{ github.event.pull_
 - Local production-package execution stopped before build because this workstation does not contain `helm`; no product defect or external mutation occurred.
 - Semantic rules are deterministic policy checks, not jurisdiction-specific legal advice or complete human editorial review.
 - Manual accessibility, privacy/legal decisions, persistent staging observation and release authorization remain separate blocked nodes.
+
+## Revision 3 review repair
+
+The prior close evidence was invalidated after two valid PR review findings. The repair restores the original broad prohibited-claim coverage and upgrades the versioned corpus so every result is bound to exact finding codes, finding count and metrics. Tampered codes, counts and metrics are now negative tests. Local installed-wheel and repository gates pass; remote exact-head evidence remains pending.

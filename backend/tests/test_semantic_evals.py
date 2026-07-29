@@ -75,6 +75,12 @@ class SemanticEvalTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 result = evaluate_bundle(apply_mutations(baseline, case["mutations"]))
                 self.assertEqual("PASS" if result.passed else "FAIL", case["expected"])
+                self.assertEqual(
+                    sorted({item.code for item in result.findings}),
+                    case["expected_finding_codes"],
+                )
+                self.assertEqual(len(result.findings), case["expected_finding_count"])
+                self.assertEqual(dict(sorted(result.metrics.items())), case["expected_metrics"])
                 observed[case["id"]] = {item.code for item in result.findings}
         self.assertIn("instruction_injection", observed["english-instruction-injection"])
         self.assertIn("untrusted_instruction_text", observed["spanish-instruction-injection"])
@@ -127,6 +133,49 @@ class SemanticEvalTests(unittest.TestCase):
         self.assertFalse(critique["publication_eligible"])
         self.assertEqual(critique["decision"], "revise")
 
+    def test_runtime_critique_preserves_broad_prohibited_claim_coverage(self):
+        brief = MissionBrief(
+            title="Prueba", objective="Prueba", audience="ciudadanía",
+            platforms=(Platform.X,), campaign_type="political", locale="es-GT",
+            jurisdiction="Guatemala", office="alcalde", candidate_name="Candidatura",
+            locality="Municipio", problem="Problema", proposal="Propuesta verificable.",
+            desired_action="Consulta.",
+            disclosure="Contenido orgánico sujeto a revisión humana.",
+            legal_review_status="approved", legal_reviewed_by="legal-reviewer",
+            evidence_claims=({
+                "statement": "Existe una propuesta verificable.",
+                "source": "Plan 2027-2031", "locator": "sección 2",
+                "verification_status": "verified", "reviewed_by": "fact-reviewer",
+            },),
+        )
+        claims = [{
+            "claim_id": "claim-1", "statement": "Existe una propuesta verificable.",
+            "source": "Plan 2027-2031", "locator": "sección 2",
+            "verification_status": "verified", "reviewed_by": "fact-reviewer",
+            "supported": True,
+        }]
+        for phrase in (
+            "Esta propuesta garantiza prosperidad.",
+            "Este es el mejor plan para el municipio.",
+            "Sin duda, esta propuesta resolverá el problema.",
+            "Esta propuesta tiene 100% de respaldo.",
+        ):
+            with self.subTest(phrase=phrase):
+                variants = {"x": {
+                    "hook": "Una propuesta municipal.",
+                    "body": (
+                        f"{phrase} Fuente: Plan 2027-2031 (sección 2). "
+                        "Contenido orgánico sujeto a revisión humana."
+                    ),
+                    "cta": "Consulta.", "claim_map": ["claim-1"],
+                    "language": "es-GT", "candidate": "Candidatura", "office": "alcalde",
+                }}
+                critique = critique_payload(brief, claims=claims, variants=variants)
+                checks = {item["name"]: item["passed"] for item in critique["checks"]}
+                self.assertFalse(checks["unsupported_promotion_absent"])
+                self.assertFalse(critique["publication_eligible"])
+                self.assertEqual(critique["decision"], "revise")
+
     def test_expected_source_commit_mismatch_fails_closed(self):
         with patch.dict(
             "os.environ", {"SEMANTIC_EVAL_EXPECTED_COMMIT": "0" * 40}, clear=False
@@ -163,16 +212,32 @@ class SemanticEvalTests(unittest.TestCase):
         baseline = VERIFIER.run_corpus(CORPUS, allow_dirty=True)
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / "report.json"
-            for mutation, expected in (
-                (("results", 0, "expectation_met", False), "expectation failed"),
-                (("corpus_sha256", None, None, "0" * 64), "corpus digest mismatch"),
-            ):
+            mutations = (
+                (lambda value: value["results"][0].__setitem__("expectation_met", False), "expectation failed"),
+                (lambda value: value.__setitem__("corpus_sha256", "0" * 64), "corpus digest mismatch"),
+                (
+                    lambda value: value["results"][1].__setitem__(
+                        "finding_codes", ["fabricated_finding"]
+                    ),
+                    "finding codes mismatch",
+                ),
+                (
+                    lambda value: value["results"][1].__setitem__(
+                        "finding_count", value["results"][1]["finding_count"] + 1
+                    ),
+                    "finding count mismatch",
+                ),
+                (
+                    lambda value: value["results"][1]["metrics"].__setitem__(
+                        "rendered_characters",
+                        value["results"][1]["metrics"]["rendered_characters"] + 1,
+                    ),
+                    "metrics mismatch",
+                ),
+            )
+            for mutate, expected in mutations:
                 candidate = json.loads(json.dumps(baseline))
-                field, index, child, value = mutation
-                if index is None:
-                    candidate[field] = value
-                else:
-                    candidate[field][index][child] = value
+                mutate(candidate)
                 report.write_text(json.dumps(candidate, indent=2, sort_keys=True) + "\n")
                 rejected = subprocess.run(
                     ["python3", str(ROOT / "scripts/verify-semantic-evals-independent.py"),

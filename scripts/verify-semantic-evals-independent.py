@@ -13,7 +13,7 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CORPUS = ROOT / "program/evals/semantic-adversarial-corpus.json"
 DEFAULT_REPORT = ROOT / "artifacts/semantic-evals/generated/report.json"
-CORPUS_SCHEMA = "agency.semantic-adversarial-corpus.v1"
+CORPUS_SCHEMA = "agency.semantic-adversarial-corpus.v2"
 REPORT_SCHEMA = "agency.semantic-eval-report.v1"
 REQUIRED_CATEGORIES = {
     "groundedness", "citation", "authority", "injection",
@@ -97,21 +97,45 @@ def verify(corpus_path: Path, report_path: Path, *, allow_dirty: bool) -> None:
         raise IndependentVerificationError("cases and results must be lists")
     if report.get("case_count") != len(cases) or len(results) != len(cases):
         raise IndependentVerificationError("case cardinality mismatch")
-    expected: dict[str, tuple[str, str]] = {}
+    expected: dict[str, tuple[str, str, list[str], int, dict[str, int]]] = {}
     categories: set[str] = set()
+    expected_case_keys = {
+        "id", "category", "expected", "mutations", "expected_finding_codes",
+        "expected_finding_count", "expected_metrics",
+    }
+    expected_metric_keys = {"claims", "mapped_claims", "rendered_characters", "variants"}
     for case in cases:
         if not isinstance(case, Mapping):
             raise IndependentVerificationError("corpus case is not an object")
-        if set(case) != {"id", "category", "expected", "mutations"}:
+        if set(case) != expected_case_keys:
             raise IndependentVerificationError("corpus case keys are not exact")
         if not isinstance(case.get("mutations"), list):
             raise IndependentVerificationError("corpus mutations must be a list")
         case_id, verdict, category = case.get("id"), case.get("expected"), case.get("category")
+        codes = case.get("expected_finding_codes")
+        count = case.get("expected_finding_count")
+        metrics = case.get("expected_metrics")
         if not isinstance(case_id, str) or case_id in expected:
             raise IndependentVerificationError("case IDs are invalid or duplicate")
         if verdict not in {"PASS", "FAIL"} or not isinstance(category, str):
             raise IndependentVerificationError(f"case {case_id} metadata is invalid")
-        expected[case_id] = (verdict, category)
+        if (
+            not isinstance(codes, list)
+            or not all(isinstance(code, str) and code for code in codes)
+            or codes != sorted(set(codes))
+        ):
+            raise IndependentVerificationError(f"case {case_id} expected finding codes are invalid")
+        if type(count) is not int or count < len(codes):
+            raise IndependentVerificationError(f"case {case_id} expected finding count is invalid")
+        if (
+            not isinstance(metrics, Mapping)
+            or set(metrics) != expected_metric_keys
+            or not all(type(value) is int and value >= 0 for value in metrics.values())
+        ):
+            raise IndependentVerificationError(f"case {case_id} expected metrics are invalid")
+        if (verdict == "PASS" and (codes or count)) or (verdict == "FAIL" and not codes):
+            raise IndependentVerificationError(f"case {case_id} expected findings contradict verdict")
+        expected[case_id] = (verdict, category, list(codes), count, dict(metrics))
         categories.add(category)
     if not REQUIRED_CATEGORIES.issubset(categories):
         raise IndependentVerificationError(f"missing categories: {sorted(REQUIRED_CATEGORIES-categories)}")
@@ -129,7 +153,7 @@ def verify(corpus_path: Path, report_path: Path, *, allow_dirty: bool) -> None:
         if case_id not in expected or case_id in observed:
             raise IndependentVerificationError("result case is unknown or duplicate")
         observed.add(case_id)
-        verdict, category = expected[case_id]
+        verdict, category, expected_codes, expected_count, expected_metrics = expected[case_id]
         if result.get("expected") != verdict or result.get("category") != category:
             raise IndependentVerificationError(f"metadata mismatch for {case_id}")
         if result.get("actual") != verdict or result.get("expectation_met") is not True:
@@ -137,14 +161,20 @@ def verify(corpus_path: Path, report_path: Path, *, allow_dirty: bool) -> None:
         codes = result.get("finding_codes")
         if not isinstance(codes, list) or codes != sorted(set(codes)):
             raise IndependentVerificationError(f"finding codes are not canonical for {case_id}")
+        if codes != expected_codes:
+            raise IndependentVerificationError(f"finding codes mismatch for {case_id}")
         finding_count = result.get("finding_count")
-        if not isinstance(finding_count, int) or finding_count < len(codes):
+        if type(finding_count) is not int or finding_count < len(codes):
             raise IndependentVerificationError(f"finding count is invalid for {case_id}")
+        if finding_count != expected_count:
+            raise IndependentVerificationError(f"finding count mismatch for {case_id}")
         metrics = result.get("metrics")
         if not isinstance(metrics, Mapping) or set(metrics) != {
             "claims", "mapped_claims", "rendered_characters", "variants"
-        } or not all(isinstance(value, int) and value >= 0 for value in metrics.values()):
+        } or not all(type(value) is int and value >= 0 for value in metrics.values()):
             raise IndependentVerificationError(f"metrics are invalid for {case_id}")
+        if dict(metrics) != expected_metrics:
+            raise IndependentVerificationError(f"metrics mismatch for {case_id}")
         if (verdict == "PASS" and (codes or finding_count)) or (verdict == "FAIL" and not codes):
             raise IndependentVerificationError(f"finding/verdict mismatch for {case_id}")
     if observed != set(expected):

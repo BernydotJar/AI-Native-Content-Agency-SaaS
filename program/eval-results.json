@@ -675,36 +675,36 @@
     {
       "command": "npm run validate:semantic-evals",
       "id": "INC010-SEMANTIC-CORPUS",
-      "observed": "16/16 expectations met against real agency_runtime artifacts; positive grounded fixture PASS and 15 adversarial fixtures fail closed; external effects 0",
-      "result": "PASS",
+      "observed": "20/20 expectations met against real agency_runtime artifacts; positive grounded fixture PASS and 19 adversarial fixtures fail closed; restored generic guarantee, superlative, certainty and 100 percent coverage; external effects 0",
+      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
       "scope": "groundedness, citation fidelity and adversarial political-content policy"
     },
     {
       "command": "scripts/verify-semantic-evals-independent.py",
       "id": "INC010-INDEPENDENT-EXACT-TREE",
-      "observed": "GitHub run 30476446123; exact PR head 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0; exact tree b3b6e6057ef7b36ede0ee9716b6b790c35cb7a21; remote report SHA-256 2e95ab94dae1b43b7dc273567d0dfc84cf7c247cc7686043ee7ec7f0ad535850; source_commit equals expected_source_commit equals HEAD; synthetic merge run 30471479970 remains rejected; report/digest/case/effect tampering rejected",
-      "result": "PASS",
+      "observed": "corpus.v2 binds exact verdict, finding codes, finding count and metrics per case; tampered codes/counts/metrics/digests/effects are rejected; clean exact-head rerun pending",
+      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
       "scope": "implementation-independent evidence and tamper verification"
     },
     {
       "command": "./scripts/verify-python-locks.sh",
       "id": "INC010-LOCKED-WHEEL",
-      "observed": "agency-runtime 0.7.0 installed wheel; semantic gate PASS; expected-SHA mismatch fails closed; 333 backend tests PASS with 25 PostgreSQL-only skips",
-      "result": "PASS",
+      "observed": "agency-runtime 0.7.0 installed wheel; semantic gate PASS for 20 cases; 334 backend tests PASS with 25 PostgreSQL-only skips",
+      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
       "scope": "installed wheel and backend regression"
     },
     {
       "command": "program, graph, compliance, operability, lint, frontend tests and build",
       "id": "INC010-FRONTEND-GOVERNANCE",
-      "observed": "program/graph/compliance/operability PASS; DENY_RELEASE; 58 frontend tests; zero lint findings; production build PASS",
-      "result": "PASS",
+      "observed": "program/graph/compliance/operability PASS; DENY_RELEASE; 58 frontend tests; zero lint findings; production build and actionlint PASS",
+      "result": "PASS_LOCAL_REPAIR_REMOTE_PENDING",
       "scope": "frontend and repository governance regression"
     },
     {
       "command": "GitHub Actions production-readiness after push",
       "id": "INC010-REMOTE-PRODUCTION",
-      "observed": "Run 30476446123 passed 8/8 on exact PR head 6e69b8eb13a6196bba8db3c2039ab4dc09609aa0; all jobs asserted checkout HEAD; remote semantic artifact binds commit/tree, 16/16 expectations, worktree_dirty=false and external effects 0",
-      "result": "PASS",
+      "observed": "Prior exact-head run 30476751442 passed 8/8 before P1/P2 review findings; revision 3 exact-head rerun and remote artifact inspection pending",
+      "result": "PENDING_REVISION_3_EXACT_HEAD_CI",
       "scope": "exact-head PostgreSQL, OCI, Helm, Terraform, workflow and supply chain"
     }
   ],

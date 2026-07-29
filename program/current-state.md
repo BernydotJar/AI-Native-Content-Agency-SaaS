@@ -224,3 +224,14 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - `INC-010` canonical and derived status: `done`.
 - The prior synthetic-merge run `30471479970` remains preserved as rejected evidence.
 - `DENY_RELEASE`, `DENY_APPLY`, disabled effect flags and all accessibility/legal/staging human gates remain unchanged.
+
+### INC-010 revision 3 — localized PR review repair
+
+- PR #33 review identified two valid findings after the previous close checkpoint:
+  - P1: generic prohibited claims such as `garantiza`, `el mejor`, `sin duda` and `100%` could evade the narrowed overclaim list.
+  - P2: the independent verifier accepted altered finding codes, inflated counts or changed metrics when the aggregate verdict remained `FAIL`.
+- Graph Harness recorded a `review-gate` failure, invalidated only `INC-010`, advanced it to revision 3 and preserved all unrelated nodes.
+- Fixer restored the broader prohibited-claim coverage and upgraded the corpus contract to `agency.semantic-adversarial-corpus.v2`.
+- Corpus v2 contains 20 cases and binds exact verdict, finding codes, finding count and metrics for every case.
+- Local reproducible evidence: 20/20 semantic cases PASS, independent verifier PASS, 334 locked-wheel backend tests PASS, 58 frontend tests PASS, lint/build/actionlint/program/graph/compliance/operability PASS, external effects 0.
+- Exact-head CI, remote artifact inspection, review-thread resolution and close gate are pending.

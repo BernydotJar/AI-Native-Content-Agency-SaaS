@@ -44,3 +44,7 @@ The first green PR run (`30471479970`) checked out GitHub's synthetic merge ref.
 ## Release Boundary
 
 This increment improves release evidence but does not authorize release, deployment, political publication, provider execution or legal conclusions. Exact-head CI must pass before Graph Harness `close-gate` can pass.
+
+## Revision 3 production boundary
+
+The repair is offline and deterministic. It adds no network import, provider authority, credential access, publication permission, cloud mutation or spend. `DENY_RELEASE` and `DENY_APPLY` remain unchanged. The close gate must remain open until the revised exact-head artifact is inspected.
