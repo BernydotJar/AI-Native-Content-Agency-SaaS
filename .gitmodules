@@ -1,0 +1,3 @@
+[submodule "vendor/graph-harness-sdlc"]
+	path = vendor/graph-harness-sdlc
+	url = https://github.com/BernydotJar/Graph-harness-sdlc.git

@@ -257,3 +257,7 @@ brew uninstall rtk
 - [GitHub repo](https://github.com/rtk-ai/rtk)
 - [User guide](https://rtk-ai.app/guide)
 - `INSTALL.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `SECURITY.md` in the RTK repository
+
+## Graph Harness SDLC
+
+Repository execution is projected into the pinned Graph Harness SDLC runtime. `program/task-ledger.yaml` and `program/task-graph.yaml` remain application-domain inputs; `program/graph-harness.events.jsonl` is the append-only execution record; project and state JSON documents are generated projections. Validate with `npm run validate:graph`. Do not duplicate framework runtime modules in this repository.

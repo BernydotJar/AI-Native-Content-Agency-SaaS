@@ -239,3 +239,14 @@ Consequence: Campaign Intelligence, Publication Media and Verified Publication a
 Decision: INC-023 uses independent default-off switches for political content, general publication, political publication and paid planning. Political Greenlight requires a legal/electoral reviewer distinct from the Greenlight approver and includes a hashed compliance record. Organic publication requires the exact typed phrase `PUBLICAR POLITICA <run_id> <channel_id>` before intent reservation; only its SHA-256 is durable. Paid mode cannot use the organic endpoint.
 
 Consequence: local deterministic gates can prove authority separation and zero-provider fail-closed behavior, but cannot supply jurisdiction-specific legal approval or authorize a real post. Release and cloud apply remain denied.
+
+## D-021 — Graph Harness SDLC is the delivery execution runtime
+
+Date: 2026-07-29
+Status: accepted for INC-038; close and merge pending
+
+Decision: pin `BernydotJar/Graph-harness-sdlc` at `a10ed02c1afe95b0e39a0d0e3662c209fa4033cb` as a gitlink. Preserve the SaaS task ledger and dependency graph as domain sources, generate the framework project contract deterministically, and persist execution as a hash-chained append-only event ledger. Do not copy framework runtime modules into the application.
+
+Rationale: the repository already had rich domain artifacts but lacked one executable typed runtime for dependency readiness, evidence freshness, production gates and localized repair. A pinned adapter preserves product-specific truth while avoiding a competing framework implementation.
+
+Consequence: CI fails on framework revision drift, projection drift, state drift, event-chain corruption, stale evidence or illegal graph state. INC-038 remains `review`; exact-head CI, closure and merge are separate gates. Product behavior and all external-effect authority remain unchanged.

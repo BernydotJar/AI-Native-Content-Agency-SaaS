@@ -120,3 +120,17 @@ Authenticated admin
 The public media URL is an opaque bounded capability required because Meta downloads media server-to-server. It does not encode tenant/run/account identity. Origin responses cache for at most 300 seconds and never claim immutability, preserving a bounded revocation path.
 
 A provider-returned media ID is insufficient for success. Any ambiguity after container creation or `media_publish` produces `unknown`; exact replay is blocked until reconciliation. Verified success requires a second provider read matching the intended post.
+
+## Graph Harness SDLC execution boundary — 2026-07-29
+
+```text
+program/task-ledger.yaml + program/task-graph.yaml
+  -> application adapter
+  -> graph-harness.project.v1
+  + graph-harness.event.v1 JSONL
+  -> pinned Graph Harness SDLC runtime
+  -> graph-harness.state.v1
+  -> CI gate and localized repair
+```
+
+The application repositories retain domain requirements, paths, roles, validation commands and human gates. The framework owns generic transition legality, dependency readiness, evidence freshness, gate evaluation, event integrity and repair invalidation. The framework is referenced at an immutable gitlink and is not copied into application runtime code. It is development governance only and is excluded from the production image context.

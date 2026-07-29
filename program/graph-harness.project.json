@@ -1,0 +1,1689 @@
+{
+  "gate_definitions": [
+    {
+      "blocking": true,
+      "id": "spec-gate",
+      "required_evidence_kinds": [
+        "spec"
+      ]
+    },
+    {
+      "blocking": true,
+      "id": "implementation-gate",
+      "required_evidence_kinds": [
+        "implementation",
+        "verification"
+      ]
+    },
+    {
+      "blocking": true,
+      "id": "review-gate",
+      "required_evidence_kinds": [
+        "review"
+      ]
+    },
+    {
+      "blocking": true,
+      "id": "production-gate",
+      "required_evidence_kinds": [
+        "production"
+      ]
+    },
+    {
+      "blocking": true,
+      "id": "close-gate",
+      "required_evidence_kinds": [
+        "closure"
+      ]
+    }
+  ],
+  "mode": "SHIP",
+  "nodes": [
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/001-program-baseline/**",
+        "README.md",
+        "package*.json",
+        "backend/agency_runtime/**",
+        "Dockerfile",
+        ".github/workflows/production-readiness.yml",
+        "scripts/validate-program-state.py",
+        "backend/tests/test_program_state.py"
+      ],
+      "capability": "Producer",
+      "depends_on": [],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-001",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "validator passes",
+          "frontend gates pass",
+          "backend locked gate passes",
+          "git diff --check passes"
+        ],
+        "authoritative_inputs": [
+          "AGENTS.md",
+          "goal",
+          "Git",
+          "PR #2",
+          "PR #3",
+          "current code/tests"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "merge",
+          "release",
+          "production"
+        ],
+        "validation_commands": [
+          "python3 scripts/validate-program-state.py",
+          "npm run lint",
+          "npm test",
+          "npm run build",
+          "./scripts/verify-python-locks.sh"
+        ],
+        "workstream_id": "WS-01",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Bootstrap operational program state, reconcile architecture, normalize version, repair stale claims, and add an executable governance gate."
+    },
+    {
+      "allowed_paths": [
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "backend/tests/test_backup_restore.py",
+        "docs/**",
+        "program/**",
+        "specs/002-backup-restore/**"
+      ],
+      "capability": "Producer",
+      "depends_on": [
+        "INC-001"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-002",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "SQLite restore preserves state",
+          "tamper rejected",
+          "existing target rejected without explicit replace",
+          "PostgreSQL dump/restore equivalence passes"
+        ],
+        "authoritative_inputs": [
+          "docs/POSTGRESQL_PERSISTENCE.md",
+          "persistence.py",
+          "postgres.py",
+          "operations policy"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "restore against persistent data",
+          "destructive replacement"
+        ],
+        "validation_commands": [
+          "python -m unittest backend.tests.test_backup_restore",
+          "./scripts/verify-postgresql-runtime.sh"
+        ],
+        "workstream_id": "WS-03",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Implement fail-closed SQLite/PostgreSQL backup and restore tools and execute ephemeral restore drills."
+    },
+    {
+      "allowed_paths": [
+        "docs/security/**",
+        "docs/privacy/**",
+        "backend/tests/**",
+        "program/**",
+        "specs/**"
+      ],
+      "capability": "Security Reviewer",
+      "depends_on": [
+        "INC-001"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-003",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "all trust boundaries covered",
+          "zero open HIGH code findings in slice"
+        ],
+        "authoritative_inputs": [
+          "selected architecture",
+          "auth.py",
+          "api.py",
+          "persistence.py",
+          "postgres.py"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "retention/deletion approval",
+          "legal privacy review"
+        ],
+        "validation_commands": [],
+        "workstream_id": "WS-07",
+        "write_lock": "unclaimed"
+      },
+      "status": "review",
+      "title": "Create selected-architecture threat/privacy models and close executable HIGH findings."
+    },
+    {
+      "allowed_paths": [
+        "backend/**",
+        "src/lib/runtimeApi*",
+        "src/components/ProductionRuntimePanel*",
+        "docs/**",
+        "program/**",
+        "specs/**"
+      ],
+      "capability": "Backend Engineer",
+      "depends_on": [
+        "INC-001",
+        "INC-003"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-004",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "identical replay returns original response",
+          "different payload returns uniform 409",
+          "provider work executes once under concurrent replicas",
+          "raw idempotency key is absent from persistence and responses",
+          "authenticated subject is decision and revocation authority",
+          "revocation increments fencing token and stale effects fail"
+        ],
+        "authoritative_inputs": [
+          "API v1",
+          "SQLite/PostgreSQL stores",
+          "Greenlight invariants"
+        ],
+        "canonical_status": "done",
+        "human_gates": [],
+        "validation_commands": [
+          "python -m unittest backend.tests.test_idempotency -v",
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "gitleaks dir .",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-04",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Add durable idempotency keys, compatible replay, conflict behavior, and structured errors for mutable APIs."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Production Reviewer",
+      "depends_on": [
+        "INC-002",
+        "INC-003"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-005",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "python3 scripts/verify-operability.py",
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "actionlint .github/workflows/*.yml",
+          "gitleaks dir .",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-09",
+        "write_lock": "unclaimed"
+      },
+      "status": "blocked",
+      "title": "Define SLOs, alert rules, alert exercises, incident response and rollback drills."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Release Reviewer",
+      "depends_on": [
+        "INC-002",
+        "INC-004",
+        "INC-005"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-006",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [],
+        "workstream_id": "WS-09",
+        "write_lock": "unclaimed"
+      },
+      "status": "blocked",
+      "title": "Demonstrate an authorized staging workload and runtime observation."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Frontend Engineer",
+      "depends_on": [
+        "INC-004"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-007",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
+          "npm test -- --reporter=dot",
+          "npm run lint",
+          "npm run build",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "actionlint .github/workflows/*.yml",
+          "gitleaks dir . --redact"
+        ],
+        "workstream_id": "WS-05",
+        "write_lock": "released after exact-head CI"
+      },
+      "status": "done",
+      "title": "Unify the backend-backed operator journey and complete degraded states."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Accessibility Reviewer",
+      "depends_on": [
+        "INC-007"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-008",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "manual screen-reader, rendered contrast, 400 percent zoom/reflow and visual review",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "npm test -- --reporter=dot",
+          "npm run lint",
+          "npm run build",
+          "npm run verify:accessibility-browser",
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "actionlint .github/workflows/*.yml",
+          "gitleaks dir . --redact"
+        ],
+        "workstream_id": "WS-06",
+        "write_lock": "released; blocked on accountable human accessibility review"
+      },
+      "status": "blocked",
+      "title": "Implement accessible themes and complete manual accessibility gates."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Security Reviewer",
+      "depends_on": [
+        "INC-003",
+        "INC-004"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-009",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "npm run lint",
+          "npm test -- --run",
+          "npm run build",
+          "npm run verify:accessibility-browser",
+          "./scripts/check-python-locks.sh",
+          "npm run validate:operability",
+          "actionlint .github/workflows/production-readiness.yml",
+          "gitleaks git --no-banner --redact --log-opts='--all' .",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "released; review complete, integration activation remains prohibited"
+      },
+      "status": "done",
+      "title": "Evaluate browser/video integration contracts without side effects."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Eval Engineer",
+      "depends_on": [
+        "INC-003",
+        "INC-004",
+        "INC-008"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-010",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "pending",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [],
+        "workstream_id": "WS-10",
+        "write_lock": "unclaimed"
+      },
+      "status": "pending",
+      "title": "Build semantic/adversarial evals and independent exact-tree verification."
+    },
+    {
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "capability": "Privacy Reviewer",
+      "depends_on": [
+        "INC-003",
+        "INC-009"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-011",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "applicable traceability rows proven",
+          "zero open CRITICAL/HIGH findings in slice"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv",
+          "program/architecture.md",
+          "applicable specs and runtime evidence"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "npm run validate:compliance",
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "npm test -- --run",
+          "npm run lint",
+          "npm run build",
+          "npm run verify:accessibility-browser",
+          "./scripts/check-python-locks.sh",
+          "npm run validate:program",
+          "npm run validate:operability",
+          "actionlint .github/workflows/production-readiness.yml",
+          "gitleaks git --no-banner --redact --log-opts='--all' .",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-11",
+        "write_lock": "released; exact remote CI green, accountable privacy/legal human gate remains"
+      },
+      "status": "blocked",
+      "title": "Complete licensing, privacy, third-party and legal-overclaim release review."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/postgres_schema.py",
+        "backend/setup.cfg",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "docs/POSTGRESQL_PERSISTENCE.md",
+        "docs/OPERATIONS.md",
+        "docs/IMPLEMENTATION_AUDIT.md",
+        "docs/adr/0007-postgresql-durable-state.md",
+        "docs/runbooks/postgresql-schema-rollout.md",
+        "docs/runbooks/runtime-backup-restore.md",
+        "docs/security/threat-model.md",
+        "docs/privacy/privacy-model.md",
+        "README.md",
+        "program/**",
+        "specs/012-postgresql-runtime-role/**"
+      ],
+      "capability": "Security Reviewer / Data Engineer",
+      "depends_on": [
+        "INC-003"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-012",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "runtime role is not superuser and owns no runtime table/schema",
+          "runtime role cannot CREATE, ALTER, DROP or TRUNCATE runtime schema objects",
+          "runtime role can execute all supported application operations",
+          "migration role alone can initialize/upgrade schema",
+          "tenant isolation and recovery gates remain green"
+        ],
+        "authoritative_inputs": [
+          "docs/security/threat-model.md",
+          "backend/agency_runtime/postgres.py",
+          "backend/agency_runtime/api.py",
+          "scripts/verify-postgresql-runtime.sh",
+          "program/requirements-traceability.csv"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "production database role creation or credential rotation",
+          "persistent schema migration"
+        ],
+        "validation_commands": [
+          "python3 -m unittest backend.tests.test_postgres_schema_cli -v",
+          "./scripts/verify-postgresql-runtime.sh",
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "npm run validate:program",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-07",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "package.json",
+        "compliance/**",
+        "program/**",
+        "specs/013-product-workspace/**"
+      ],
+      "capability": "Product Engineer / Critic",
+      "depends_on": [
+        "INC-007",
+        "INC-009"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-013",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "mission-first product workspace replaces primary demo flow",
+          "tenant credential and appearance use progressive disclosure",
+          "five-provider configuration is server-derived and secret-free",
+          "applied context and operational fabric reflect durable runtime state",
+          "integrated local product runner is loopback-only and reproducible",
+          "focused backend/frontend/browser/package gates pass"
+        ],
+        "authoritative_inputs": [
+          "user product critique and screenshots",
+          "existing runtime/API contracts",
+          "official provider security and API documentation",
+          "program/current-state.md"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "real provider egress or spend",
+          "final E2E release gate",
+          "merge"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "npm run verify:accessibility-browser",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-05",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Productize the primary workspace and add truthful provider configuration without enabling paid inference or external effects."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "backend/requirements*",
+        "backend/setup.cfg",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "compliance/**",
+        "program/**",
+        "specs/014-model-gateway/**"
+      ],
+      "capability": "Integration Engineer / Security Critic",
+      "depends_on": [
+        "INC-004",
+        "INC-013"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-014",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "five provider protocols implemented with exact bounded contracts",
+          "gateway disabled by default and no public inference route",
+          "credentials prompts and provider bodies absent from public errors and receipts",
+          "host proxy redirect timeout input token and response limits fail closed",
+          "wheel PostgreSQL frontend Chromium and non-root package gates pass",
+          "zero real provider calls or spend during verification"
+        ],
+        "authoritative_inputs": [
+          "official OpenAI Responses documentation",
+          "official Anthropic Messages documentation",
+          "official DeepSeek chat-completions documentation",
+          "official Moonshot Kimi K3 documentation",
+          "existing provider registry and idempotency architecture"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "real provider credentials",
+          "egress",
+          "spend",
+          "merge"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "npm run verify:accessibility-browser",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "actionlint and Gitleaks history/worktree",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "done",
+      "title": "Implement real provider protocols without activating inference or weakening durable idempotency."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/015-model-effect-authority/**"
+      ],
+      "capability": "Distributed Systems Engineer / Security Reviewer",
+      "depends_on": [
+        "INC-004",
+        "INC-014"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-015",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "outbound intent persists before provider call",
+          "tenant run command provider model payload and budget binding is exact",
+          "single fenced owner may execute an intent",
+          "successful receipt persists before run completion",
+          "compatible replay reuses receipt without another provider call",
+          "pending or unknown state blocks automatic retry",
+          "reconciliation circuit breaker and revocation are observable",
+          "all verification uses mock transports until explicit egress and spend authorization"
+        ],
+        "authoritative_inputs": [
+          "INC-004 durable command idempotency",
+          "INC-014 model gateway",
+          "SQLite and PostgreSQL transaction contracts",
+          "Greenlight fencing architecture"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "real provider credentials",
+          "privacy/legal approval",
+          "egress",
+          "spend",
+          "production activation",
+          "merge"
+        ],
+        "validation_commands": [
+          "focused SQLite and PostgreSQL race and failure-injection tests",
+          "locked wheel and production package",
+          "zero-egress mock transport verification"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "released"
+      },
+      "status": "review",
+      "title": "Add durable economic idempotency before attaching model inference to governed runs."
+    },
+    {
+      "allowed_paths": [
+        "src/**",
+        "scripts/**",
+        "backend/tests/**",
+        "docs/**",
+        "program/**",
+        "compliance/**"
+      ],
+      "capability": "Product Engineer / Visual Critic",
+      "depends_on": [
+        "INC-013"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-016",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "cinematic hierarchy restored",
+          "topology uses durable run state",
+          "no browser simulation authority",
+          "exact-head CI passes"
+        ],
+        "authoritative_inputs": [
+          "user screenshots and critique",
+          "runtime session/run/artifact state"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "merge",
+          "production deployment"
+        ],
+        "validation_commands": [
+          "frontend and Chromium",
+          "locked Python/PostgreSQL",
+          "container and supply chain"
+        ],
+        "workstream_id": "WS-05",
+        "write_lock": "released"
+      },
+      "status": "done",
+      "title": "Restore cinematic product hierarchy while preserving one backend-authoritative runtime."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/017-usable-campaign-output/**"
+      ],
+      "capability": "Product Engineer / Concurrency Critic",
+      "depends_on": [
+        "INC-004",
+        "INC-016"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-017",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "same brief returns 200 replay",
+          "changed same-key payload remains 409",
+          "cross-replica create once",
+          "posts from copy_deck",
+          "local gates pass"
+        ],
+        "authoritative_inputs": [
+          "observed 409 logs",
+          "user screenshots",
+          "durable idempotency",
+          "copy_deck artifacts"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "merge",
+          "production",
+          "external publication"
+        ],
+        "validation_commands": [
+          "locked wheel/PostgreSQL",
+          "frontend/Chromium",
+          "Buildah/infra/hygiene"
+        ],
+        "workstream_id": "WS-05",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "review",
+      "title": "Expose usable campaign posts and make deterministic run replay safe."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/018-async-run-execution/**"
+      ],
+      "capability": "Distributed Systems Engineer / Runtime Critic",
+      "depends_on": [
+        "INC-004",
+        "INC-017"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-018",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "run returns before completion",
+          "one fenced worker",
+          "restart-safe progress",
+          "idempotent station completion"
+        ],
+        "authoritative_inputs": [
+          "specs/018-async-run-execution",
+          "orchestrator/persistence",
+          "Greenlight fencing"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "production worker deployment",
+          "merge"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "npm run verify:accessibility-browser",
+          "npm run verify:async-run-browser",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
+        ],
+        "workstream_id": "WS-04",
+        "write_lock": "released"
+      },
+      "status": "review",
+      "title": "Execute stations through a durable asynchronous worker for truthful progress."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "infra/**",
+        "compliance/**",
+        "program/**",
+        "specs/019-social-oauth-publication/**"
+      ],
+      "capability": "Integration Engineer / Security Reviewer",
+      "depends_on": [
+        "INC-003",
+        "INC-012",
+        "INC-017"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-019",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "state tenant/session/channel bound",
+          "tokens encrypted and hidden",
+          "Professional Instagram required",
+          "admin-only connect/disconnect",
+          "cross-replica replay blocked",
+          "all local gates pass"
+        ],
+        "authoritative_inputs": [
+          "official X OAuth documentation",
+          "official Meta Instagram API documentation",
+          "Greenlight/tenant/session contracts",
+          "specs/019-social-oauth-publication/**"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "real X/Instagram login",
+          "callback registration",
+          "provider terms review",
+          "merge",
+          "deployment"
+        ],
+        "validation_commands": [
+          "192 locked/PostgreSQL tests",
+          "35 frontend tests",
+          "Chromium accessibility/social output/cross-site OAuth",
+          "Buildah package and supply chain",
+          "K3s/Helm/Terraform",
+          "Actionlint/Gitleaks"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "single writer: orchestrator"
+      },
+      "status": "review",
+      "title": "Connect tenant-owned X and Instagram accounts through OAuth or encrypted server-side token bootstrap."
+    },
+    {
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/020-social-publication-authority/**"
+      ],
+      "capability": "Distributed Systems Integration Engineer / Security Reviewer",
+      "depends_on": [
+        "INC-004",
+        "INC-019"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-020",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "intent persists before provider request",
+          "one fenced executor per exact effect binding",
+          "compatible replay and reconciliation create no duplicate effect",
+          "unknown outcomes block automatic retry",
+          "disconnect and Greenlight revocation invalidate unused authority",
+          "Instagram requires approved reachable media",
+          "receipt-success audit is repairable without a second provider call",
+          "installed image effect smoke uses MockTransport plus socket guard",
+          "async worker/read lock ordering is deadlock-free"
+        ],
+        "authoritative_inputs": [
+          "specs/020-social-publication-authority/**",
+          "INC-004 fencing",
+          "INC-019 connected accounts",
+          "Greenlight artifact authority"
+        ],
+        "canonical_status": "review",
+        "human_gates": [
+          "authorized sandbox posts",
+          "pricing/terms review",
+          "privacy/legal approval",
+          "production budget",
+          "merge/deployment"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "npm run verify:accessibility-browser",
+          "npm run verify:social-browser",
+          "npm run verify:social-oauth-browser",
+          "npm run verify:async-run-browser",
+          "npm run verify:social-publication-browser",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "released"
+      },
+      "status": "review",
+      "title": "Publish approved X and Instagram artifacts exactly once through durable intent/fence/receipt authority."
+    },
+    {
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "infra/**",
+        "program/**",
+        "specs/021-campaign-intelligence/**"
+      ],
+      "capability": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "depends_on": [
+        "INC-004",
+        "INC-019",
+        "INC-020"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-021",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "missing evidence is rejected",
+          "unverified evidence remains reviewable but cannot receive Greenlight",
+          "operator cannot self-attest evidence or legal approval",
+          "verified/legal-approved content maps every claim to source and reviewer",
+          "general social enablement does not enable political effects",
+          "OAuth state remains mandatory and cross-session callbacks never call the provider",
+          "locked backend and complete frontend gates pass"
+        ],
+        "authoritative_inputs": [
+          "specs/021-campaign-intelligence/spec.md",
+          "skills/hooks-copy.md",
+          "skills/platform-instagram.md",
+          "existing Greenlight/RBAC/effect-authority contracts"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "accountable jurisdiction-specific legal review",
+          "candidate/campaign authorization",
+          "real source authenticity review",
+          "political publication enablement",
+          "real external publication",
+          "merge/deployment/release"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh => 261 PASS, 23 PostgreSQL-only SKIP",
+          "npm test => 39 PASS",
+          "npm run lint => 0 warnings, 0 errors",
+          "npm run build => PASS",
+          "focused OAuth family => 18 PASS, 2 PostgreSQL-only SKIP",
+          "focused political/red-team families => PASS"
+        ],
+        "workstream_id": "WS-05",
+        "write_lock": "released after implementation commit"
+      },
+      "status": "done",
+      "title": "Replace generic mixed-language campaign fixtures with grounded political campaign intelligence and fail-closed publication gates."
+    },
+    {
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "backend/requirements*.in",
+        "backend/requirements*.lock",
+        "backend/setup.cfg",
+        "src/**",
+        "infra/**",
+        "scripts/**",
+        "program/**",
+        "specs/022-governed-media-verification/**"
+      ],
+      "capability": "Media Engineer / Backend Engineer / Data Engineer / Security Reviewer / Privacy Reviewer / Red Team / Independent Verifier",
+      "depends_on": [
+        "INC-020",
+        "INC-021"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-022",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "invalid MIME/bytes/dimensions/rights/alt text fail closed",
+          "bytes/hash/idempotency survive SQLite restart and PostgreSQL replicas",
+          "public capability is opaque, tenant-free, expiring and revocable",
+          "expired/revoked media blocks before provider HTTP",
+          "container FINISHED is required before media_publish",
+          "provider/read mismatch becomes unknown and blocks replay",
+          "verified receipt persists permalink/timestamp/account/caption/media hashes without raw content",
+          "frontend upload/revoke/history preserve Greenlight and publication gates",
+          "all effects remain disabled by default"
+        ],
+        "authoritative_inputs": [
+          "specs/022-governed-media-verification/spec.md",
+          "skills/platform-instagram.md",
+          "official Meta Instagram API Content Publishing and media reference contracts",
+          "INC-020 exact-once publication authority",
+          "INC-021 campaign intelligence and political kill switch"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "media rights/consent",
+          "human accessibility review",
+          "jurisdiction/campaign/legal approval",
+          "explicit general and political publication enablement",
+          "one separately authorized sandbox post",
+          "cloud object-storage/retention review",
+          "merge/deploy/release"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh => PASS (277 tests; 0 PostgreSQL-only skips locally)",
+          "npm test => PASS (0 tests)",
+          "npm run lint => PASS, zero warnings/errors",
+          "npm run build => PASS",
+          "focused Media Vault/publication/schema/backup/local-runner families => PASS",
+          "git diff --check and secret scan => PASS"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "released after exact-head CI and merge"
+      },
+      "status": "done",
+      "title": "Create immutable governed JPEG media, pre-Greenlight revocation, container processing and durable read-after-write verified Instagram receipts."
+    },
+    {
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "infra/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/023-political-compliance-mode/**"
+      ],
+      "capability": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "depends_on": [
+        "INC-021",
+        "INC-022"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-023",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "political content creation is disabled by default",
+          "legal/electoral reviewer and Greenlight approver are distinct authenticated subjects",
+          "political compliance record is included in the approved artifact envelope",
+          "paid political mode never reaches the organic provider transport",
+          "wrong or missing final phrase creates no intent and no provider call",
+          "correct phrase is persisted only as SHA-256 in the exact-once binding",
+          "commercial flows remain backward compatible",
+          "all kill switches remain false by default across local, Helm and Terraform configuration"
+        ],
+        "authoritative_inputs": [
+          "specs/023-political-compliance-mode/spec.md",
+          "docs/runbooks/political-publication.md",
+          "INC-021 campaign intelligence",
+          "INC-022 governed media and verified receipt",
+          "existing Greenlight and exact-once effect authority"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "independent accountable review",
+          "jurisdiction-specific legal/campaign approval",
+          "authorized account ownership",
+          "exact neutral sandbox payload and timing",
+          "explicit short publication window and rollback owner",
+          "merge/deployment/release"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh => 285 PASS, 25 PostgreSQL-only SKIP locally",
+          "npm test => 45 PASS",
+          "npm run lint => 0 warnings, 0 errors",
+          "npm run build => PASS",
+          "GitHub Actions 30174006993 => verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain and workflow-lint SUCCESS"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "released after exact-head CI; documentation checkpoint only"
+      },
+      "status": "done",
+      "title": "Implement fail-closed political content, independent approval, organic-versus-paid boundaries and durable final confirmation authority."
+    },
+    {
+      "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        "artifacts/political-browser/**",
+        "backend/agency_runtime/campaign_intelligence.py",
+        "backend/tests/test_runtime.py",
+        "package.json",
+        "scripts/fixtures/political_browser_app.py",
+        "scripts/verify-political-browser.mjs",
+        "src/components/CampaignOutputPanel*",
+        "src/components/WorkspaceRuntime*",
+        "program/**",
+        "specs/024-political-browser-qa/**"
+      ],
+      "capability": "Test Engineer / UX Reviewer / Critique Agent / Content Writer / Security Reviewer / Independent Verifier",
+      "depends_on": [
+        "INC-021",
+        "INC-022",
+        "INC-023"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-024",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "same reviewer cannot approve Greenlight and receives an actionable message",
+          "independent browser profile approves the same durable run",
+          "wrong final phrase produces zero provider calls",
+          "exact phrase produces one mock effect and one durable receipt",
+          "raw final phrase is absent from SQLite and responses",
+          "queued/running state never reports a false Writer failure",
+          "mayor and deputy copy reflect municipal and legislative competencies",
+          "browser gate executes from the installed wheel in CI"
+        ],
+        "authoritative_inputs": [
+          "specs/024-political-browser-qa/spec.md",
+          "INC-021 campaign intelligence",
+          "INC-022 verified publication",
+          "INC-023 political compliance authority",
+          "existing Chromium/CDP browser harnesses"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "human review of screenshots and copy quality",
+          "jurisdiction-specific legal/campaign approval",
+          "exact neutral sandbox account/copy/media/window/rollback authorization",
+          "cumulative integration to protected main",
+          "deployment/release"
+        ],
+        "validation_commands": [
+          "npm test => 47 PASS",
+          "npm run lint => 0 warnings/errors",
+          "npm run build => PASS",
+          "npm run verify:accessibility-browser => PASS",
+          "npm run verify:social-publication-browser => PASS",
+          "npm run verify:political-browser => PASS source mode",
+          "POLITICAL_BROWSER_USE_INSTALLED=1 npm run verify:political-browser => PASS from installed wheel",
+          "./scripts/verify-python-locks.sh => 286 PASS, 25 PostgreSQL-only SKIP",
+          "GitHub Actions 30188644229 => 8/8 SUCCESS; installed-wheel political browser PASS"
+        ],
+        "workstream_id": "WS-10",
+        "write_lock": "released after implementation commit; documentation checkpoint only"
+      },
+      "status": "done",
+      "title": "Browser-observe the complete political authority journey, repair reproducible UX defects and enforce office-specific political messaging without real provider effects."
+    },
+    {
+      "allowed_paths": [
+        ".gitmodules",
+        "vendor/graph-harness-sdlc",
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "package-lock.json",
+        "scripts/verify_graph_harness.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "program/**",
+        "specs/038-graph-harness-adoption/**",
+        "README.md",
+        "AGENTS.md",
+        "RTK.md"
+      ],
+      "capability": "Graph Runtime Integrator / Production Reviewer",
+      "depends_on": [
+        "INC-001"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-038",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "framework revision is exact and immutable",
+          "domain ledgers remain authoritative inputs",
+          "graph and event chain validate",
+          "spec implementation production and review gates pass",
+          "close gate remains open",
+          "existing product behavior is unchanged"
+        ],
+        "authoritative_inputs": [
+          "user directive",
+          "BernydotJar/Graph-harness-sdlc@a10ed02c1afe95b0e39a0d0e3662c209fa4033cb",
+          "program/task-ledger.yaml",
+          "program/task-graph.yaml"
+        ],
+        "canonical_status": "spec_ready",
+        "human_gates": [
+          "close feature",
+          "merge",
+          "release",
+          "deployment",
+          "spending",
+          "secret mutation",
+          "external effects"
+        ],
+        "validation_commands": [
+          "python3 scripts/validate-program-state.py",
+          "python3 scripts/verify_graph_harness.py",
+          "python3 -m unittest backend.tests.test_graph_harness_adapter -v",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-01",
+        "write_lock": "single writer: graph-harness orchestrator"
+      },
+      "status": "spec_ready",
+      "title": "Adopt Graph Harness SDLC as the executable governance runtime without duplicating framework concepts."
+    }
+  ],
+  "project_id": "ai-native-content-agency-saas",
+  "schema_version": "graph-harness.project.v1"
+}

@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "start:local": "./scripts/run-local-product.sh",
     "validate:program": "python3 scripts/validate-program-state.py",
+    "validate:graph": "python3 scripts/verify_graph_harness.py",
     "validate:compliance": "python3 scripts/verify-release-compliance.py",
     "validate:operability": "python3 scripts/verify-operability.py",
     "verify:social-browser": "node scripts/verify-social-output-browser.mjs",

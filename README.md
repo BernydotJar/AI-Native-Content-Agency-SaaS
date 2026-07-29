@@ -312,3 +312,15 @@ CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh
 ```
 
 El resultado verificado contiene cero hallazgos Critical, cinco High aceptados por coincidencia exacta hasta el 21 de agosto de 2026 y ocho Medium reportados. Cualquier Critical, High nuevo, fix reportado sin excepción explícita, excepción obsoleta o baseline vencida falla. Los artefactos generados se ignoran en Git y CI los retiene durante 30 días; no se publica ninguna imagen. Consulta [Software Supply-Chain Security](docs/SUPPLY_CHAIN_SECURITY.md) y [ADR 0005](docs/adr/0005-supply-chain-evidence-and-policy.md).
+
+## Graph Harness SDLC
+
+Development execution is governed by the canonical Graph Harness SDLC runtime pinned in `vendor/graph-harness-sdlc`. The SaaS keeps its domain-specific specs and task ledgers, then projects them into a typed execution graph with append-only evidence, dependency readiness, production gates and localized repair.
+
+```bash
+git submodule update --init --recursive
+npm run validate:program
+npm run validate:graph
+```
+
+`program/graph-harness.project.json` and `program/graph-harness.state.json` are generated projections. `program/graph-harness.events.jsonl` is the persistent execution ledger. A valid application build does not by itself close a feature; the current-revision graph gates must also pass.

@@ -250,3 +250,9 @@ Merge, production deployment, force-push, spending, protected-branch mutation, e
 
 Continue execution until no safe, relevant, unblocked, and verifiable work remains.
 ```
+
+## Graph Harness SDLC runtime
+
+Graph Harness SDLC is the authoritative execution runtime for repository delivery. The application owns domain requirements, task ledgers, evidence artifacts, and adapters; it must not copy or reimplement framework runtime concepts.
+
+The pinned framework revision is declared in `program/graph-harness.lock.json` and referenced by the `vendor/graph-harness-sdlc` gitlink. Before claiming an increment complete, run `npm run validate:graph`. A feature may be closed only when the derived graph state is valid and all target-state gates have current-revision evidence. Failures must use localized repair and preserve unaffected evidence.

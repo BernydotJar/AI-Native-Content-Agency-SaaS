@@ -8,3 +8,5 @@ dist
 coverage
 *.log
 gha-creds-*.json
+
+vendor/graph-harness-sdlc

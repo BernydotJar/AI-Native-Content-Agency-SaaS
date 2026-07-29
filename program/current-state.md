@@ -148,3 +148,17 @@ Finish validation and publish the INC-037 receipt to PR #30. Then obtain explici
 authorization for the stacked PRs. After the approved changes reach `main`, manually run
 the image publisher with confirmation. A separate database and secret-migration decision
 must precede any Cloud Run deployment or stable OAuth callback cutover.
+
+## 2026-07-29 — Graph Harness SDLC adoption
+
+- Protected `main` cumulative head before this increment: `c8b177c9b615b7b14e726d52c9d94f121ab9b64a`.
+- Active feature branch: `feature/graph-harness-adoption-v1`.
+- Canonical framework revision: `a10ed02c1afe95b0e39a0d0e3662c209fa4033cb`.
+- Graph nodes: 25.
+- Graph events: 15.
+- `INC-038` derived status: `review`.
+- Passed gates: spec, implementation, production and review.
+- Intentionally open gate: close.
+- Local program, graph, lint, 58 frontend tests and production build: PASS.
+- Exact-head CI, human closure and merge: pending.
+- No product runtime, UI, database schema, cloud resource, secret, social effect, model effect or publication authority changed.
