@@ -5,7 +5,7 @@ Updated: 2026-07-28
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-036-trend-pilot`
+- Active branch: `agent/inc-037-gcp-staging-bootstrap`
 - Current local parent: `37aede9789b16842f0ee47f47d87ba8863f0938d`
 - INC-034 remote branch: `agent/inc-034-modern-onboarding-trends-remote`
 - INC-034 draft PR: #27
@@ -18,7 +18,22 @@ Updated: 2026-07-28
 - INC-036 local implementation commit: `9f9efce2104c9e9cba47e149de339fd3e4e4bfd5`
 - Audited Cloud Sandbox `git_push`: blocked by its isolated nested-Docker `iptables`
   initialization; the repository-owned Git Data publisher remains the verified fallback.
+- INC-037 local implementation: in progress; authenticated GCP plans only
 - New external publication, paid media, model effect, cloud apply, release or merge: none
+
+## INC-037 GCP staging foundation
+
+- Authenticated project: `ai-native-content-agency-saas`.
+- Selected region: `us-central1`.
+- Project billing: disabled.
+- Existing Cloud Run, Artifact Registry, Cloud SQL and Secret Manager resources: none.
+- Google Cloud CLI `578.0.0` and Terraform `1.15.8` installed in the persistent workspace.
+- New `infra/gcp` module is disabled by default and produces a real zero-resource plan.
+- Bootstrap-only plan: 33 creates, no Cloud Run, SQL, Compute, GKE, secret values or
+  service-account keys.
+- GitHub deployment identity uses WIF restricted to this repository and `main`.
+- Runtime Secret Manager access is granted per secret, never project-wide.
+- Cloud apply remains unauthorized until the exact bootstrap plan is separately approved.
 
 ## Current product result
 
@@ -78,7 +93,7 @@ pilot ended before any external provider publication boundary.
 
 - Public URL: `https://offerings-council-guided-requiring.trycloudflare.com`
 - Local health: HTTP 200.
-- Public health: HTTP 200.
+- Public health: unavailable; the Quick Tunnel hostname expired.
 - Tunnel: Quick Tunnel, running.
 - Database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
 - Social backup watcher: running.
@@ -90,7 +105,7 @@ pilot ended before any external provider publication boundary.
 - Political paid media: `false`.
 - External effects enabled: `false`.
 
-The Quick Tunnel is suitable for this laboratory pilot but remains ephemeral. Named
+The expired Quick Tunnel demonstrated that this laboratory route is not suitable for stable operation. Named
 Cloudflare Tunnel support is implemented and is the durable option when a stable hostname
 and token are available.
 
@@ -102,5 +117,4 @@ Cloud recommendation: `DENY_APPLY`
 
 Continue evaluating the research-to-draft workflow in the UI. Review evidence and copy,
 but do not approve Greenlight, enable publication switches or create a provider post
-without a separate explicit authorization. A future production-like callback should use
-a named Cloudflare Tunnel before relying on the connection for long-lived operations.
+without a separate explicit authorization. The next infrastructure gate is the reviewed GCP bootstrap plan. Do not apply it, attach billing, deploy Cloud Run or provision a managed database without a separate explicit authorization.

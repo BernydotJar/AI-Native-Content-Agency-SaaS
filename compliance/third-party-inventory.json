@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "8fee6f1d81bdcd4c4b747dd6e9e25c6554cd0dfaa64a7a32840b23899bdec9e1"
+      "sha256": "0b78fda297d62092c1c3590970587aac3b0a6e8343818fdfcf4674a92726be0b"
     },
     {
       "path": "artifacts/supply-chain/base-images.json",
