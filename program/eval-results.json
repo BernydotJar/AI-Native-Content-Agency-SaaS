@@ -1,0 +1,679 @@
+{
+  "results": [
+    {
+      "command": "npm run lint",
+      "id": "BASE-FE-LINT",
+      "observed": "0 warnings, 0 errors",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": "npm test -- --reporter=dot",
+      "id": "BASE-FE-TEST",
+      "observed": "33/33 tests",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": "npm run build",
+      "id": "BASE-FE-BUILD",
+      "observed": "Vite production bundle built",
+      "result": "PASS",
+      "scope": "frontend"
+    },
+    {
+      "command": ".venv/bin/python -m unittest discover -s backend/tests -v",
+      "id": "BASE-BE-DIRECT",
+      "observed": "persisted venv missing pg8000; use locked wheel verifier",
+      "result": "NOT_VALID",
+      "scope": "backend"
+    },
+    {
+      "command": "gh pr view 3",
+      "id": "BASE-CI",
+      "observed": "8/8 checks successful at b9e88fe",
+      "result": "PASS",
+      "scope": "remote"
+    },
+    {
+      "command": "npm run validate:program",
+      "id": "INC001-PROGRAM-GATE",
+      "observed": "version 0.7.0; 78 requirements; 11 tasks; 22 required files",
+      "result": "PASS",
+      "scope": "program/version"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_program_state -v",
+      "id": "INC001-PROGRAM-NEGATIVE",
+      "observed": "6/6 negative and positive validation tests",
+      "result": "PASS",
+      "scope": "program/version"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_backup_restore -v",
+      "id": "INC002-BACKUP-UNIT",
+      "observed": "11/11 integrity, tamper, overwrite, URL, timeout and durability tests",
+      "result": "PASS",
+      "scope": "backup/restore"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC002-RECOVERY-DRILL",
+      "observed": "68/68 tests; SQLite restore; migration/replay guard; PostgreSQL non-empty guard and application-readable restore",
+      "result": "PASS",
+      "scope": "SQLite/PostgreSQL application state"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC001-LOCKED-WHEEL",
+      "observed": "hash-locked agency-runtime 0.7.0 wheel; pip check; 68 tests with 7 PostgreSQL-only skips",
+      "result": "PASS",
+      "scope": "Python reproducibility"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC003-LOCKED-WHEEL",
+      "observed": "agency-runtime 0.7.0; pip check; 78 tests with 8 PostgreSQL-only skips",
+      "result": "PASS",
+      "scope": "security/privacy backend"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC003-POSTGRESQL",
+      "observed": "78/78 including cross-instance denial, migration/replay, both restores and cleanup",
+      "result": "PASS",
+      "scope": "shared security/tenant/recovery"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build",
+      "id": "INC003-FRONTEND",
+      "observed": "zero lint findings; 33/33 tests; Vite production build",
+      "result": "PASS",
+      "scope": "TypeScript public-error client and UI regression"
+    },
+    {
+      "command": "./scripts/verify-helm.sh",
+      "id": "INC003-HELM",
+      "observed": "schema, lint, render and safety guards pass with runtime.maxRequestBodyBytes",
+      "result": "PASS",
+      "scope": "deployment request-size configuration"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC012-POSTGRESQL-RUNTIME-ROLE",
+      "observed": "PostgreSQL 15.18; 85/85; distinct non-owner runtime role; zero ownership; exact grants; safe search_path; schema guards; atomic rollback; DDL/TEMP/metadata/GRANT/SET ROLE denials; migration replay and SQLite/PostgreSQL restore readability PASS",
+      "result": "PASS",
+      "scope": "PostgreSQL migration/runtime authority separation and recovery"
+    },
+    {
+      "command": "./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC012-DEPLOYMENT-CONTRACT",
+      "observed": "Helm validate-only schema mode; Buildah non-root runtime smoke; Terraform 1.15.8 plan/apply/destroy for SQLite and PostgreSQL against agentless K3s; database URL absent from state; workload scheduling not claimed",
+      "result": "PASS",
+      "scope": "Helm/Terraform/package runtime boundary"
+    },
+    {
+      "command": "gh run view 29868899218",
+      "id": "INC012-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh",
+      "id": "INC004-IDEMPOTENCY-UNIT",
+      "observed": "agency-runtime 0.7.0; 97 tests; 11 PostgreSQL-only skips; digest-only receipts, restart replay, conflicts, revocation/fencing and authorization negatives PASS",
+      "result": "PASS",
+      "scope": "SQLite/API durable command behavior"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC004-POSTGRESQL-CONCURRENCY",
+      "observed": "PostgreSQL 15.18; 97/97; compatible create/approve races replay exactly, incompatible same-key race yields one success/one sanitized 409, provider package and audit commit once; migration/replay/restores PASS",
+      "result": "PASS",
+      "scope": "PostgreSQL multi-replica idempotency and recovery"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build",
+      "id": "INC004-FRONTEND",
+      "observed": "zero lint findings; 35/35 tests; retry preserves key, brief edits invalidate key, Greenlight revoke control and production build PASS",
+      "result": "PASS",
+      "scope": "browser idempotency and revocation contract"
+    },
+    {
+      "command": "verify-production-package, verify-local-infrastructure, actionlint, Gitleaks, verify-supply-chain",
+      "id": "INC004-PACKAGE-INFRA-SUPPLY",
+      "observed": "Buildah runtime smoke PASS; Terraform/Helm/K3s both storage modes PASS; no secrets; clean-source SBOM, Grype/license, provenance and offline Cosign PASS",
+      "result": "PASS",
+      "scope": "package, infrastructure and supply-chain regression"
+    },
+    {
+      "command": "gh run view 29871278876",
+      "id": "INC004-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "python3 scripts/verify-operability.py",
+      "id": "INC005-OPERABILITY-CONTRACT",
+      "observed": "4 SLOs, exact error budgets, 7 alerts, 8 deterministic exercises, metric/rule/runbook parity and negative drift tests PASS",
+      "result": "PASS",
+      "scope": "SLO, alert and runbook contracts"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC005-BACKUP-FRESHNESS",
+      "observed": "PostgreSQL 15.18; 101/101; private atomic SQLite/PostgreSQL freshness textfiles, migration/replay and both restores PASS",
+      "result": "PASS",
+      "scope": "backup freshness and recovery"
+    },
+    {
+      "command": "./scripts/verify-local-infrastructure.sh",
+      "id": "INC005-ROLLBACK",
+      "observed": "bounded Helm upgrade, new revision, rollback to captured revision, original configuration restored, deployed status verified; Terraform SQLite/PostgreSQL lifecycle cleanup PASS",
+      "result": "PASS",
+      "scope": "agentless Kubernetes control-plane rollback"
+    },
+    {
+      "command": "verify-python-locks, frontend, package, workflow, secret and supply-chain gates",
+      "id": "INC005-CROSS-WORKSTREAM",
+      "observed": "100 locked-wheel tests with 11 PostgreSQL-only skips; frontend lint/35 tests/build; non-root package and opt-in PrometheusRule render; actionlint/Gitleaks; clean-source SBOM/policy/provenance/Cosign PASS",
+      "result": "PASS",
+      "scope": "reproducibility, UI, package and supply chain"
+    },
+    {
+      "command": "gh run view 29873268944",
+      "id": "INC005-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
+      "id": "INC007-OPERATOR-CONTRACTS",
+      "observed": "20/20 session restoration, role capability, run lookup, idempotent retry, 401/403/404/409/422/429/500/503, audit loading/empty/degraded and stale-run recovery tests PASS",
+      "result": "PASS",
+      "scope": "backend-first operator journey and degraded states"
+    },
+    {
+      "command": "npm test -- --reporter=dot && npm run lint && npm run build",
+      "id": "INC007-FRONTEND-REGRESSION",
+      "observed": "48/48 frontend tests; zero lint warnings/errors; TypeScript and Vite production build PASS",
+      "result": "PASS",
+      "scope": "frontend regression and bundle"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC007-PACKAGE-RUNTIME",
+      "observed": "Helm/operability contract, non-root OCI runtime, SPA, HttpOnly/CSRF, RBAC, Greenlight, audit, metrics and publication=false PASS; package verifier PYTHON_BIN defect repaired",
+      "result": "PASS",
+      "scope": "packaged runtime integration"
+    },
+    {
+      "command": "actionlint .github/workflows/*.yml && gitleaks dir . --redact && git diff --check",
+      "id": "INC007-HYGIENE",
+      "observed": "workflow lint, current-worktree secret scan and whitespace checks PASS",
+      "result": "PASS",
+      "scope": "workflow, secrets and repository hygiene"
+    },
+    {
+      "command": "gh run view 29874536962",
+      "id": "INC007-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head delivery"
+    },
+    {
+      "command": "npm test -- --reporter=dot",
+      "id": "INC008-THEME-CONTRACTS",
+      "observed": "66/66 frontend tests; five named themes, measured token contrast, keyboard activation, entitlement lock/unlock/revocation and no browser storage PASS",
+      "result": "PASS",
+      "scope": "accessible themes and premium entitlement"
+    },
+    {
+      "command": "npm run verify:accessibility-browser",
+      "id": "INC008-BROWSER-ACCESSIBILITY",
+      "observed": "Chromium: 320 CSS px without horizontal overflow; >=44px theme targets; skip link first and focus transfer; keyboard selection; premium lock; reduced motion; AX names/pressed/disabled PASS",
+      "result": "PASS",
+      "scope": "real browser automated accessibility evidence"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC008-IDENTITY-ENTITLEMENT",
+      "observed": "107 locked backend tests and 107/107 PostgreSQL tests; exact allowlist, active-key consistency, session response, dynamic revocation, absence from SQLite and shared runtime regression PASS",
+      "result": "PASS",
+      "scope": "server-owned product entitlement"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC008-PACKAGE-INFRA",
+      "observed": "non-root package, session entitlement, SPA, RBAC, Greenlight, audit and publication=false PASS; Terraform/Helm SQLite/PostgreSQL plan/apply/destroy on agentless K3s PASS",
+      "result": "PASS",
+      "scope": "package and deployment regression"
+    },
+    {
+      "command": "actionlint .github/workflows/*.yml && gitleaks dir . --redact && git diff --check",
+      "id": "INC008-HYGIENE",
+      "observed": "workflow lint, zero current-worktree leaks, whitespace and no accessibility browser listeners PASS",
+      "result": "PASS",
+      "scope": "workflow, secrets and cleanup"
+    },
+    {
+      "command": "docs/accessibility/manual-review-protocol.md",
+      "id": "INC008-MANUAL-A11Y",
+      "observed": "human screen-reader, rendered contrast, 400% zoom/reflow and visual screenshot review not executed",
+      "result": "BLOCKED",
+      "scope": "manual accessibility release evidence"
+    },
+    {
+      "command": "gh run view 29876402303",
+      "id": "INC008-EXACT-HEAD-CI",
+      "observed": "workflow-lint, verify (including Chromium accessibility and artifact upload), python-locks, postgresql-shared-state, container, helm, terraform and supply-chain all SUCCESS",
+      "result": "PASS",
+      "scope": "remote exact-head automated delivery"
+    },
+    {
+      "command": "gh run view 29876550199",
+      "id": "INC008-CLOSURE-CI-FAIL",
+      "observed": "7/8 jobs SUCCESS; verify failed because Chromium CDP did not become ready on PID-derived port",
+      "result": "FAIL",
+      "scope": "remote closure checkpoint"
+    },
+    {
+      "command": "npm run verify:accessibility-browser x3 plus occupied preview-port negative case",
+      "id": "INC008-BROWSER-HARNESS-REPAIR",
+      "observed": "Three consecutive positive runs PASS; occupied-port case fails in 2 seconds with Vite process diagnostic; no residual listeners; stale output removed before each run",
+      "result": "PASS",
+      "scope": "deterministic accessibility browser gate"
+    },
+    {
+      "command": "gh run view 29876865289",
+      "id": "INC008-REPAIRED-HEAD-CI",
+      "observed": "All eight jobs SUCCESS after deterministic browser-harness repair; Chromium accessibility and artifact upload steps PASS.",
+      "result": "PASS",
+      "scope": "remote repaired-head automated delivery"
+    },
+    {
+      "command": "SHA-256 compare packaged manifest against /tmp/video-use-review exact tree",
+      "id": "INC009-UPSTREAM-INTEGRITY",
+      "observed": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66; 33/33 file hashes match; MIT; no installer/helper/media/provider execution",
+      "result": "PASS",
+      "scope": "external source identity and integrity review"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC009-FAIL-CLOSED-CONTRACTS",
+      "observed": "118 locked-wheel tests and 118/118 PostgreSQL tests PASS; manifest mutation, traversal, encoded traversal, raw secret, arbitrary egress, approval/fence/bounds and disabled execute/receipt cases fail closed",
+      "result": "PASS",
+      "scope": "integration registry, API and shared-runtime regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC009-PACKAGE-BOUNDARY",
+      "observed": "Non-root image packages exact manifest; authenticated list/detail and tenant derivation PASS; OpenAPI has two GET routes only; execute attempt safely 404/405; external_side_effects_enabled=false",
+      "result": "PASS",
+      "scope": "production package read-only integration boundary"
+    },
+    {
+      "command": "frontend, Chromium, lock regeneration, operability, K3s/Helm/Terraform, actionlint, Gitleaks and whitespace gates",
+      "id": "INC009-CROSS-WORKSTREAM",
+      "observed": "66 frontend tests, lint/build, real Chromium, lock byte equality, 4 SLO/7 alert/8 exercise validation, agentless plan/apply/destroy, zero leaks and whitespace PASS",
+      "result": "PASS",
+      "scope": "cross-workstream regression and repository hygiene"
+    },
+    {
+      "command": "gh run view 29878783817",
+      "id": "INC009-EXACT-HEAD-CI",
+      "observed": "Eight of eight jobs SUCCESS: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform and supply-chain; PR #8 clean and mergeable.",
+      "result": "PASS",
+      "scope": "remote exact-head delivery verification"
+    },
+    {
+      "command": "npm run validate:compliance",
+      "id": "INC011-COMPLIANCE-CONTRACT",
+      "observed": "DENY_RELEASE; 33 direct/build/candidate components; 0 active providers; 8 human decision records; 10 claim surfaces PASS",
+      "result": "PASS",
+      "scope": "third-party, privacy, claims and release decision consistency"
+    },
+    {
+      "command": "python3 -m unittest backend.tests.test_release_compliance -v",
+      "id": "INC011-NEGATIVE-MUTATIONS",
+      "observed": "9 tests PASS: stale hashes, unlocked dependency, provider activation, invented retention/approval, prohibited claim/missing disclosure, release allow, nested schema/resolved blocker and video-use drift all fail closed",
+      "result": "PASS",
+      "scope": "compliance adversarial contract"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC011-RUNTIME-REGRESSION",
+      "observed": "127 locked-wheel tests with 11 PostgreSQL skips and 127/127 PostgreSQL tests PASS",
+      "result": "PASS",
+      "scope": "backend, persistence and compliance regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC011-PACKAGE-INFRA",
+      "observed": "Compliance gate executes before non-root image build; package smoke and agentless K3s/Helm/Terraform SQLite/PostgreSQL plan-apply-destroy PASS; no provider/deployment persists",
+      "result": "PASS",
+      "scope": "package and ephemeral infrastructure regression"
+    },
+    {
+      "command": "frontend/Chromium/locks/operability/actionlint/Gitleaks/whitespace gates",
+      "id": "INC011-FRONTEND-HYGIENE",
+      "observed": "66 frontend tests, lint/build, real Chromium, byte-identical locks, 4 SLO/7 alert/8 exercises, actionlint, zero leaks and whitespace PASS; prohibited claim scan empty",
+      "result": "PASS",
+      "scope": "public claims and cross-workstream hygiene"
+    },
+    {
+      "command": "compliance/privacy-decision-register.json and docs/compliance/release-compliance-review.md",
+      "id": "INC011-HUMAN-PRIVACY-LEGAL",
+      "observed": "Entity, jurisdiction, controller/processor role, retention/deletion/legal hold and provider terms remain UNKNOWN/unapproved; required reviewers have not approved",
+      "result": "BLOCKED",
+      "scope": "accountable privacy/legal/business decision"
+    },
+    {
+      "command": "gh run view 29880157199",
+      "id": "INC011-EXACT-HEAD-CI",
+      "observed": "Eight of eight jobs SUCCESS: workflow-lint, verify including validate:compliance/Chromium/127 tests, python-locks, PostgreSQL, container, Helm, Terraform and supply-chain; PR #9 clean and mergeable.",
+      "result": "PASS",
+      "scope": "remote exact-head delivery verification"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC013-RUNTIME-PROVIDER-CONTRACTS",
+      "observed": "136 locked-wheel tests with 11 PostgreSQL skips and 136/136 PostgreSQL tests PASS; exact five-provider registry, GET-only auth, secret absence, endpoint validation and local runner contracts pass.",
+      "result": "PASS",
+      "scope": "backend provider configuration, runtime and persistence regression"
+    },
+    {
+      "command": "npm run lint && npm test -- --reporter=dot && npm run build && npm run verify:accessibility-browser",
+      "id": "INC013-PRODUCT-WORKSPACE",
+      "observed": "26/26 active frontend tests, zero lint warnings, 258.29 kB JS/69.75 kB CSS bundle and Chromium reflow/progressive disclosure/keyboard/premium/reduced-motion/AX PASS after removing 5,778 legacy lines.",
+      "result": "PASS",
+      "scope": "single product shell, UX and accessibility automation"
+    },
+    {
+      "command": "npm run start:local focused loopback smoke",
+      "id": "INC013-LOCAL-PRODUCT",
+      "observed": "Integrated SPA + FastAPI + SQLite starts on loopback; HttpOnly session, five-provider catalog and governed run creation PASS; external_effects=false; credential absent from logs.",
+      "result": "PASS",
+      "scope": "operator local full-stack path"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh && ./scripts/verify-local-infrastructure.sh",
+      "id": "INC013-PACKAGE-INFRA",
+      "observed": "Non-root package proves provider registry/secrets absent/SPA/session/run/Greenlight; K3s/Helm/Terraform SQLite and PostgreSQL plan-apply-destroy PASS; cleanup PASS.",
+      "result": "PASS",
+      "scope": "package and ephemeral infrastructure regression"
+    },
+    {
+      "command": "actionlint, Gitleaks history/worktree, compliance/program and whitespace gates",
+      "id": "INC013-HYGIENE",
+      "observed": "Actionlint PASS; zero Gitleaks findings; 79 requirements/13 tasks PASS; DENY_RELEASE with zero active providers and eight claim surfaces PASS; whitespace clean.",
+      "result": "PASS",
+      "scope": "workflow, secrets, governance and claims hygiene"
+    },
+    {
+      "command": "future authorized provider-gateway increment",
+      "id": "INC013-REAL-INFERENCE",
+      "observed": "No provider HTTP client, inference request, provider receipt, spend or egress executed; final broad E2E remains deferred by user strategy.",
+      "result": "NOT_RUN",
+      "scope": "real model execution and final cross-product E2E"
+    },
+    {
+      "command": "./scripts/verify-python-locks.sh && ./scripts/verify-postgresql-runtime.sh",
+      "id": "INC014-PROTOCOL-CONTRACTS",
+      "observed": "145 locked-wheel tests with 11 PostgreSQL skips and 145/145 PostgreSQL tests PASS; OpenAI Responses, Anthropic Messages, DeepSeek/Kimi K3/Llama chat, host policy, limits, sanitized errors and one-attempt behavior pass with MockTransport.",
+      "result": "PASS",
+      "scope": "bounded provider protocols and shared-runtime regression"
+    },
+    {
+      "command": "frontend lint/test/build and Chromium accessibility gate",
+      "id": "INC014-OPERATOR-STATUS",
+      "observed": "26/26 frontend tests, lint/build and Chromium PASS; UI separates provider configured, gateway protocol-ready, durable receipt false and automatic integration false.",
+      "result": "PASS",
+      "scope": "truthful gateway status and frontend regression"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+      "id": "INC014-PACKAGE-BOUNDARY",
+      "observed": "Non-root image includes hash-locked httpx; provider registry, gateway disabled, inference route absent, secrets absent, SPA/session/run/Greenlight and external_effects=false PASS.",
+      "result": "PASS",
+      "scope": "production package disabled gateway boundary"
+    },
+    {
+      "command": "K3s/Helm/Terraform, actionlint, Gitleaks, program/compliance and whitespace",
+      "id": "INC014-CROSS-WORKSTREAM",
+      "observed": "Agentless SQLite/PostgreSQL plan-apply-destroy, cleanup, workflow lint, zero leaks, 79 requirements/15 tasks and DENY_RELEASE with zero active providers PASS.",
+      "result": "PASS",
+      "scope": "infrastructure and governance regression"
+    },
+    {
+      "command": "real provider execution",
+      "id": "INC014-REAL-EGRESS",
+      "observed": "No DNS/network provider call, real credential, prompt transfer or spend was used; ModelGateway.complete is test-only and no API/orchestrator invocation exists.",
+      "result": "NOT_RUN",
+      "scope": "real provider inference and spend"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "id": "INC014-SUPPLY-CHAIN",
+      "observed": "Clean source 723dcd0; SBOM, vulnerability/license policy, provenance and Cosign offline verification PASS; registry_publication=false.",
+      "result": "PASS",
+      "scope": "clean-source supply-chain evidence"
+    },
+    {
+      "id": "INC019-OAUTH-CONTRACTS",
+      "scope": "X/Instagram OAuth, encryption and callback replay",
+      "command": "locked wheel and PostgreSQL runtime gates",
+      "result": "PASS",
+      "observed": "192 locked tests and 192/192 PostgreSQL tests PASS; AES-GCM, schema v2, cross-site SameSite=Lax callbacks, Professional Instagram, cross-replica single-use state and bootstrap pass with mock transports."
+    },
+    {
+      "id": "INC019-ADMIN-UX",
+      "scope": "admin connect/disconnect and secret-free browser contract",
+      "command": "frontend tests/lint/build and Chromium gates",
+      "result": "PASS",
+      "observed": "35/35 frontend tests, TypeScript/Vite and Chromium PASS; admin Connect/Disconnect is real, viewer mutations are hidden, account metadata is visible and no token fields exist."
+    },
+    {
+      "id": "INC019-PACKAGE-INFRA",
+      "scope": "non-root package, OAuth boundary and Secret references",
+      "command": "Buildah package plus K3s/Helm/Terraform/actionlint/Gitleaks",
+      "result": "PASS",
+      "observed": "OAuth routes governed, publication routes absent, package secrets absent, Secret refs only, Terraform state secret-free, infrastructure cleanup and zero leaks PASS."
+    },
+    {
+      "id": "INC019-REAL-OAUTH",
+      "scope": "real X/Meta account authorization",
+      "command": "not run",
+      "result": "NOT_RUN",
+      "observed": "No real app credential, access token, callback exchange or provider HTTP was used; user authentication is deferred until exact remote CI passes."
+    },
+    {
+      "id": "INC020-REAL-PUBLICATION",
+      "scope": "real X/Instagram publication",
+      "command": "not implemented",
+      "result": "NOT_RUN",
+      "observed": "No publication route or adapter exists; publishing_available=false and INC-020 owns durable intent/receipt/reconciliation."
+    },
+    {
+      "id": "INC019-SUPPLY-CHAIN",
+      "scope": "clean-source SBOM, vulnerability/license policy and provenance",
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "result": "PASS",
+      "observed": "Clean source 6d5e59b; SBOM, exact license policy, vulnerability baseline, provenance and Cosign offline PASS with Buildah; registry_publication=false."
+    },
+    {
+      "id": "INC019-CROSS-SITE-CALLBACK",
+      "scope": "browser session preservation across X/Instagram OAuth returns",
+      "command": "npm run verify:social-oauth-browser",
+      "result": "PASS",
+      "observed": "Chromium created an HttpOnly SameSite=Lax session on 127.0.0.1, navigated through a different-site localhost provider page, returned through X and Instagram callbacks, connected both accounts and observed no external provider HTTP beyond MockTransport."
+    },
+    {
+      "id": "INC019-CALLBACK-DIAGNOSTICS",
+      "scope": "exact callback visibility and sanitized provider failure phase",
+      "command": "locked backend and frontend contracts",
+      "result": "PASS",
+      "observed": "API/UI expose callback URLs without secrets; X request-token, X access-token, Instagram code exchange and profile phases produce bounded actionable codes without provider bodies or credentials."
+    },
+    {
+      "id": "INC018-DURABLE-RUNTIME",
+      "scope": "SQLite/API lease, fence and crash recovery",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "196 tests with 15 PostgreSQL-only skips; queued 202, fourteen checkpoints, active-lease blocking, expired-lease recovery and synchronous compatibility PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-POSTGRESQL-WORKERS",
+      "scope": "PostgreSQL cross-replica station execution",
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "observed": "196/196; two workers serialize fences 1 and 2 and create the CEO artifact exactly once; backup/restore and cleanup PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-BROWSER-PROGRESS",
+      "scope": "truthful live topology",
+      "command": "npm run verify:async-run-browser",
+      "observed": "Chromium observed all seven processing stations, fourteen checkpoint values and final fencing token 14 before Greenlight; state source is authenticated backend polling",
+      "result": "PASS"
+    },
+    {
+      "id": "INC018-PACKAGE-SUPPLY",
+      "scope": "production image and software supply chain",
+      "command": "verify-production-package, verify-local-infrastructure, verify-supply-chain",
+      "observed": "Buildah image returns async 202, persists fences 1..14 and reaches Greenlight; K3s/Helm/Terraform, SBOM, policy, provenance and offline Cosign PASS; registry publication false",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-BACKEND-AUTHORITY",
+      "scope": "social publication persistence/protocols/concurrency",
+      "command": "verify-python-locks and verify-postgresql-runtime",
+      "observed": "226 locked-wheel tests with 19 PostgreSQL skips and 226/226 PostgreSQL tests PASS; schema v3, non-owner grants, unique binding, replay, unknown, reconciliation, revocation, audit repair and deadlock regression pass.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-BROWSER-PACKAGE",
+      "scope": "human confirmation and installed artifact",
+      "command": "five Chromium gates and verify-production-package",
+      "observed": "38 frontend tests; all Chromium gates PASS; provider calls 0 before confirmation, 1 after success and 1 after compatible replay; non-root image runs MockTransport effect with socket guard and real_provider_http=false.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-INFRA-OPERABILITY",
+      "scope": "deployment defaults, observability and hygiene",
+      "command": "verify-local-infrastructure, verify-operability, actionlint, gitleaks",
+      "observed": "SQLite/PostgreSQL Helm/Terraform plan-apply-destroy and cleanup PASS; publication default false, Secret refs only, 4 SLOs, 8 alerts, 9 exercises, workflow/secret/whitespace gates PASS.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC020-SUPPLY-CHAIN",
+      "scope": "clean-source software supply chain",
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh",
+      "observed": "Source 8eb0cf7dee9b3400351a8b7d603a94666253f1e7; 32 packages evaluated; SBOM, vulnerability/license policy, provenance and offline Cosign verification PASS; source_dirty=false; registry_publication=false.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC015-LOCKED-WHEEL-AUTHORITY",
+      "scope": "durable model-effect API, SQLite persistence, RBAC and regression",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "245 locked-wheel tests PASS with 23 PostgreSQL-only skips; exact-once execution, default-disabled behavior, browser-session/CSRF authority, replay repair, unknown reconciliation and secret-free public contracts pass.",
+      "result": "PASS"
+    },
+    {
+      "id": "INC015-EXACT-HEAD-DELIVERY-GATES",
+      "scope": "PostgreSQL v4, installed image, Helm/Terraform and supply chain",
+      "command": "delegated to exact-head CI after push",
+      "observed": "Not rerun after the final infrastructure edits because the operator explicitly requested no further demos or tests. The branch contains the gates and remains default-disabled; CI is the next arbiter.",
+      "result": "PENDING_REMOTE_CI"
+    },
+    {
+      "id": "INC015-REAL-MODEL-EFFECT",
+      "scope": "real provider prompt transfer and spend",
+      "command": "not run",
+      "observed": "No provider credential, real HTTP request, prompt transfer, token charge or production activation occurred.",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "INC021-LOCKED-WHEEL",
+      "scope": "backend reproducibility and regression",
+      "command": "./scripts/verify-python-locks.sh",
+      "observed": "261 PASS; 23 PostgreSQL-only SKIP; wheel install and pip check PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-POLITICAL-SEMANTIC",
+      "scope": "groundedness, citation mapping, missing evidence and legal gate",
+      "command": "focused political runtime/API tests",
+      "observed": "verified/legal-approved path PASS; missing evidence 422; unverified and legal-pending paths revise and deny Greenlight",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-RBAC-RED-TEAM",
+      "scope": "reviewer authority and political publication kill switch",
+      "command": "operator denial and general-on/political-off tests",
+      "observed": "self-attestation 403; political publication 409; provider calls 0",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-OAUTH-REGRESSION",
+      "scope": "OAuth state/session/transport repair",
+      "command": "focused OAuth service/API/store family",
+      "observed": "18 PASS; 2 PostgreSQL-only SKIP; state mandatory; wrong session calls provider 0",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-FRONTEND",
+      "scope": "campaign form and production bundle",
+      "command": "npm test && npm run lint && npm run build",
+      "observed": "39 PASS; lint 0 warnings/0 errors; build PASS",
+      "result": "PASS"
+    },
+    {
+      "id": "INC021-INFRA-EXACT-HEAD",
+      "scope": "PostgreSQL, OCI, Helm, Terraform and supply chain",
+      "command": "GitHub Actions production-readiness run 30149528848",
+      "observed": "8/8 jobs SUCCESS at exact head 25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1: workflow-lint, verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-MEDIA-VALIDATION",
+      "scope": "JPEG bytes, dimensions, accessibility and rights",
+      "command": "publication media unit/API tests",
+      "observed": "valid full decode/hash pass; wrong MIME/truncation/aspect/size/rights/alt fail closed",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-CAPABILITY-SECURITY",
+      "scope": "opaque public delivery, expiry, cache and revocation",
+      "command": "Media Vault store/API/red-team tests",
+      "observed": "tenant-free digest lookup; random/expired/revoked 404; ETag exact; cache max-age 300; pre-Greenlight revoke idempotent",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-VERIFIED-EFFECT",
+      "scope": "container processing, exact-once publication and independent verification",
+      "command": "social publication unit and vertical API tests",
+      "observed": "FINISHED->publish->GET verified receipt; ERROR no publish; exhaustion/mismatch unknown; replay performs zero second effect",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-DURABLE-HISTORY",
+      "scope": "receipt recovery after reload",
+      "command": "publication history API/client/UI tests",
+      "observed": "tenant/run-scoped succeeded receipt returns verified permalink; unsafe/unverified hosts never link",
+      "result": "PASS"
+    },
+    {
+      "id": "INC022-PG-INFRA-EXACT-HEAD",
+      "scope": "PostgreSQL schema v5, OCI, Helm, Terraform and supply chain",
+      "command": "GitHub Actions exact-head jobs",
+      "observed": "Not run remotely yet",
+      "result": "PENDING"
+    }
+  ],
+  "schema_version": "program-eval-results.v1",
+  "source_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac",
+  "updated_at": "2026-07-25"
+}

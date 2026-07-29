@@ -1,88 +1,263 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { runtimeApi } from "./lib/runtimeApi";
+import type { BrowserRuntimeSession, RuntimeProvider, RuntimeSocialChannel } from "./lib/runtimeApi";
 
-afterEach(() => {
-  vi.useRealTimers();
+const SESSION: BrowserRuntimeSession = {
+  tenant_id: "tenant-alpha",
+  subject_id: "operator@example.com",
+  role: "operator",
+  key_id: "operator-v1",
+  entitlements: [],
+  csrf_token: "csrf-session-value",
+  expires_at: "2026-07-22T20:00:00+00:00",
+};
+
+const PROVIDERS: RuntimeProvider[] = [
+  ["openai", "OpenAI", true, "ready", "gpt-5.2"],
+  ["anthropic", "Anthropic", false, "missing_credential", ""],
+  ["deepseek", "DeepSeek", true, "ready", "deepseek-v4-flash"],
+  ["moonshot", "Moonshot / Kimi", true, "ready", "kimi-k3"],
+  ["llama", "Llama", false, "missing_endpoint", "llama-4-maverick"],
+].map(([provider_id, display_name, configured, configuration_state, model]) => ({
+  provider_id: provider_id as RuntimeProvider["provider_id"],
+  display_name: String(display_name),
+  protocol: provider_id === "anthropic" ? "anthropic_messages" : provider_id === "openai" ? "openai_responses" : "openai_compatible",
+  configured: Boolean(configured),
+  configuration_state: configuration_state as RuntimeProvider["configuration_state"],
+  model: String(model),
+  endpoint_host: configured ? `${provider_id}.example.test` : "",
+  model_environment: `AGENCY_${String(provider_id).toUpperCase()}_MODEL`,
+  base_url_environment: `AGENCY_${String(provider_id).toUpperCase()}_BASE_URL`,
+  credential_location: "server_environment",
+  recommended_models: [String(model || `${provider_id}-recommended`)],
+}));
+
+const SOCIAL_CHANNELS: RuntimeSocialChannel[] = [
+  {
+    channel_id: "x",
+    display_name: "X",
+    oauth_flow: "oauth_1_0a_user_context",
+    configured: false,
+    configuration_state: "missing_credentials",
+    credentials_configured: false,
+    callback_configured: false,
+    callback_url: "",
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    oauth_runtime_configured: false,
+    publication_runtime_configured: false,
+    publication_execution_enabled: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_X_CONSUMER_KEY", "AGENCY_X_CONSUMER_SECRET"],
+    redirect_environment: "AGENCY_X_REDIRECT_URI",
+    scopes: ["tweet.read", "tweet.write", "users.read"],
+    account_requirement: "X account authorized by the tenant",
+    publish_protocol: "POST /2/tweets",
+    supported_content: ["text", "image", "video"],
+    requires_media: false,
+    connected_account: null,
+  },
+  {
+    channel_id: "instagram",
+    display_name: "Instagram",
+    oauth_flow: "instagram_business_login",
+    configured: true,
+    configuration_state: "ready_for_authentication",
+    credentials_configured: true,
+    callback_configured: true,
+    callback_url: "https://agency.example/api/v1/social-channels/instagram/oauth/callback",
+    connection_state: "not_connected",
+    oauth_start_available: false,
+    oauth_runtime_configured: false,
+    publication_runtime_configured: false,
+    publication_execution_enabled: false,
+    publishing_available: false,
+    external_effects_enabled: false,
+    credential_location: "server_environment",
+    credential_environments: ["AGENCY_INSTAGRAM_APP_ID", "AGENCY_INSTAGRAM_APP_SECRET"],
+    redirect_environment: "AGENCY_INSTAGRAM_REDIRECT_URI",
+    scopes: ["instagram_business_basic", "instagram_business_content_publish"],
+    account_requirement: "Instagram Professional account (Business or Creator)",
+    publish_protocol: "POST /media then POST /media_publish",
+    supported_content: ["image", "reel", "carousel"],
+    requires_media: true,
+    connected_account: null,
+  },
+];
+
+beforeEach(() => {
+  vi.spyOn(runtimeApi, "resumeSession").mockResolvedValue(null);
+  vi.spyOn(runtimeApi, "auditEvents").mockResolvedValue([]);
+  vi.spyOn(runtimeApi, "currentIdentity").mockResolvedValue({
+    tenant_id: SESSION.tenant_id,
+    subject_id: SESSION.subject_id,
+    role: SESSION.role,
+    key_id: SESSION.key_id,
+    permissions: ["identity:read", "runs:read", "runs:create", "audit:read"],
+    entitlements: [],
+    auth_method: "session",
+  });
+  vi.spyOn(runtimeApi, "trendRadar").mockResolvedValue({
+    tenant_id: "tenant-alpha",
+    geo: "GT",
+    source: "Google Trends RSS",
+    source_url: "https://trends.google.com/trending/rss?geo=GT",
+    fetched_at: "2026-07-28T16:00:00+00:00",
+    trends: [{
+      title: "Innovación en Guatemala",
+      approx_traffic: "2,000+",
+      published_at: "Tue, 28 Jul 2026 12:00:00 +0000",
+      news_source: "Fuente pública",
+    }],
+  });
+  vi.spyOn(runtimeApi, "providerCatalog").mockResolvedValue({
+    tenant_id: "tenant-alpha",
+    providers: PROVIDERS,
+    gateway: {
+      execution_enabled: false,
+      selected_provider: "",
+      execution_available: false,
+      durable_outbound_receipt: false,
+      automatic_run_integration: false,
+    },
+  });
+  vi.spyOn(runtimeApi, "integrations").mockResolvedValue([{
+    integration_id: "video-use",
+    display_name: "Video Use",
+    review_status: "reviewed_disabled",
+    activation_allowed: false,
+    execution_available: false,
+    external_effects_enabled: false,
+  }]);
+  vi.spyOn(runtimeApi, "socialChannels").mockResolvedValue(SOCIAL_CHANNELS);
 });
 
-describe("campaign approval gate", () => {
-  it("holds Publisher until approval and cancels pending work when approval is revoked", () => {
-    vi.useFakeTimers();
+afterEach(() => {
+  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-theme-tier");
+  document.documentElement.removeAttribute("style");
+  window.history.replaceState({}, "", "/");
+  vi.restoreAllMocks();
+});
+
+describe("product workspace shell", () => {
+  it("prioritizes governed command and hides infrequent configuration", async () => {
     render(<App />);
 
-    const lockedGate = screen.getByRole("button", { name: "Awaiting QA" });
-    expect(lockedGate).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /De una idea a una campaña que sí se puede ejecutar/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Crear campaña/i })).toHaveAttribute("href", "#command");
+    expect(screen.getByRole("link", { name: /Explorar el flujo/i })).toHaveAttribute("href", "#execution-map");
+    expect(screen.getByRole("heading", { name: /Define la misión. Ejecuta el sistema/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Lanza una campaña gobernada/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Mapa de orquestación de ocho estaciones/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Campaign command/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Posts listos para revisión/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Tema azul/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Credencial del tenant/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Memory & Skills Console/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Mock$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Video Use")).not.toBeInTheDocument();
+    expect(screen.queryByText("DeepSeek")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Greenlight visible/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Aprobación manual/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Qué está capturando atención ahora/i })).toBeInTheDocument();
+    expect(screen.getByText(/Inicia sesión para investigar señales reales/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
-    act(() => vi.advanceTimersByTime(18 * 1200 + 10));
+    fireEvent.click(screen.getByRole("button", { name: /Siguiente estación/i }));
+    expect(screen.getByRole("heading", { name: /Research/i })).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: /Publisher.*Standby, 0%/i })).toBeInTheDocument();
-    const pendingGate = screen.getByRole("button", { name: "Pending" });
-    expect(pendingGate).toBeEnabled();
-
-    fireEvent.click(pendingGate);
-    act(() => vi.advanceTimersByTime(0.25 * 1200 + 10));
-
-    expect(screen.getByRole("button", { name: /Publisher.*Processing, 30%/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Approved" }));
-
-    expect(screen.getByRole("button", { name: /Publisher.*Attention, 30%/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
+    expect(screen.getByRole("dialog", { name: /Administración del espacio/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tema azul/i })).toBeInTheDocument();
   });
 
-  it("builds the writer pack from the operator thesis instead of a fixed template", () => {
-    vi.useFakeTimers();
+  it("opens username and password login from the top navigation", async () => {
     render(<App />);
 
-    fireEvent.change(screen.getByRole("textbox", { name: /campaign thesis/i }), {
-      target: { value: "Why reversible AI experiments beat platform bets" },
-    });
-    fireEvent.change(screen.getByRole("textbox", { name: /audience/i }), {
-      target: { value: "AI product leaders" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
-    act(() => vi.advanceTimersByTime(12 * 1200 + 10));
+    expect(screen.queryByLabelText(/^Usuario$/i)).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /Iniciar sesión/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Writer.*Complete/i }));
-    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
+    expect(screen.getByRole("dialog", { name: /Conectar este navegador/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Usuario$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Contraseña$/i)).toBeInTheDocument();
 
-    expect(screen.getByText(/1\/3 AI product leaders/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Why reversible AI experiments beat platform bets/i).length).toBeGreaterThan(1);
-    expect(screen.getByText(/Newsletter \/ Scholar Edition/i)).toBeInTheDocument();
-    expect(screen.queryByText(/1\/5/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Cerrar diálogo de conexión/i }));
+    expect(screen.queryByLabelText(/^Usuario$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Contraseña$/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Iniciar sesión/i })).toHaveFocus();
   });
 
-  it("recalls operator memory and enabled skills during the next campaign", () => {
-    vi.useFakeTimers();
+  it("explains when Instagram rejects the long-lived authorization exchange", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue(SESSION);
+    window.history.replaceState(
+      {},
+      "",
+      "/?social_channel=instagram&status=error&error=instagram_long_lived_exchange_rejected",
+    );
+
     render(<App />);
 
-    fireEvent.click(screen.getByRole("switch", { name: /Activar Churn Prevention/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /Add session memory flag/i }), {
-      target: { value: "Use cautious claims and reversible experiments" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Store flag/i }));
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
-    act(() => vi.advanceTimersByTime(7 * 1200 + 10));
-
-    expect(screen.getByText(/Skills:.*churn-prevention/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
-    expect(screen.getByText(/Memoria recuperada: Use cautious claims and reversible experiments/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Instagram rechazó la extensión de la autorización/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: /Administración del espacio/i }),
+    ).toBeInTheDocument();
   });
 
-  it("stores CEO feedback before a completed run can be replaced", () => {
-    vi.useFakeTimers();
+  it("shows five server-derived providers after a secure session is restored", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue(SESSION);
     render(<App />);
 
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
-    act(() => vi.advanceTimersByTime(18 * 1200 + 10));
-    fireEvent.click(screen.getByRole("button", { name: "Pending" }));
-    act(() => vi.advanceTimersByTime(3 * 1200 + 10));
+    await screen.findByText(/operator@example.com · conectado/i);
+    await waitFor(() => expect(runtimeApi.providerCatalog).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
 
-    expect(screen.getByText(/Synthetic Meta metrics → CEO feedback/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /launch autonomous cycle/i }));
-    act(() => vi.advanceTimersByTime(6 * 1200 + 10));
-    fireEvent.click(screen.getByRole("button", { name: /Research.*Complete/i }));
+    const providerSelect = screen.getByLabelText(/Proveedor de modelos/i);
+    expect(providerSelect).toBeInTheDocument();
+    expect(providerSelect.querySelectorAll("option")).toHaveLength(5);
+    fireEvent.change(providerSelect, { target: { value: "deepseek" } });
+    expect(screen.getByRole("heading", { name: "DeepSeek" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Configurar proveedor/i }));
+    expect(screen.getByText(/secret manager del servidor/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/OpenAI API key/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/3\/5 listos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gateway de inferencia deshabilitado/i)).toBeInTheDocument();
+    expect(screen.getByText("Video Use")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Canales de publicación/i })).toBeInTheDocument();
+    expect(screen.getByText(/Instagram Professional account/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lista para autenticar/i)).toBeInTheDocument();
+    expect(screen.getByText(/AGENCY_INSTAGRAM_APP_ID/i)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("instagram-app-secret-value");
+  });
 
-    expect(screen.getByText(/Memoria recuperada: Priorizar el hook/i)).toBeInTheDocument();
+  it("keeps premium appearance server-entitled and outside the command flow", async () => {
+    vi.mocked(runtimeApi.resumeSession).mockResolvedValue({
+      ...SESSION,
+      entitlements: ["theme:premium"],
+    });
+    vi.mocked(runtimeApi.currentIdentity).mockResolvedValue({
+      tenant_id: SESSION.tenant_id,
+      subject_id: SESSION.subject_id,
+      role: SESSION.role,
+      key_id: SESSION.key_id,
+      permissions: [],
+      entitlements: ["theme:premium"],
+      auth_method: "session",
+    });
+    render(<App />);
+
+    await screen.findByText(/operator@example.com · conectado/i);
+    fireEvent.click(screen.getByRole("button", { name: /Configuración/i }));
+    const premium = screen.getByRole("button", { name: /Tema premium/i });
+    expect(premium).toHaveAttribute("aria-disabled", "false");
+    fireEvent.click(premium);
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "premium");
+    expect(document.documentElement).toHaveAttribute("data-theme-tier", "premium");
   });
 });

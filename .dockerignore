@@ -1,0 +1,9 @@
+.git
+.github
+.agent-runtime
+artifacts
+checkpoints
+node_modules
+dist
+coverage
+*.log

@@ -1,0 +1,86 @@
+# Release Plan
+
+Current target version: `0.7.0`
+Current recommendation: `DENY_RELEASE`
+
+## Candidate release boundary
+
+Version `0.7.0` may become a reviewable sandbox release only after all deterministic local/CI gates pass and documentation no longer overstates cloud, integration, backup, alert, or accessibility evidence. It is not a production release merely because its image, chart, Terraform, and PR are green.
+
+## Required release evidence
+
+- version consistency across npm, Python, API, metrics, OCI, and Helm;
+- frontend lint/tests/build;
+- hash-locked wheel build, `pip check`, complete backend tests;
+- SQLite and PostgreSQL runtime checks;
+- backup and restore drills with verified manifests;
+- tenant isolation, RBAC, session/CSRF, rate-limit, concurrency, and denial tests;
+- container runtime smoke as non-root;
+- Helm/Terraform validation with scope limitations stated;
+- supply-chain SBOM, vulnerability, license, provenance, and signature gates;
+- exact third-party inventory, provider/privacy decision register and public-claims scan via `npm run validate:compliance`;
+- explicit machine decision `DENY_RELEASE` while jurisdiction, retention/deletion/legal hold, semantic evaluation or independent approval remain unresolved;
+- program traceability and completion audit validation;
+- zero open CRITICAL/HIGH code findings for the release scope;
+- independent review of exact commit and evidence.
+
+## Rollback compatibility
+
+- Application rollback must use an immutable prior image digest and prove compatibility with the active schema.
+- SQLite rollback requires a verified pre-change backup and an explicit destructive-data human gate before replacement.
+- PostgreSQL rollback is forward-repair preferred; restoring a database requires an approved recovery point, empty/isolated target validation, and human authorization.
+- No automatic schema downgrade, Terraform destroy, public ingress, or credential change is included.
+
+## Human gates
+
+- merge PR;
+- publish external image/package or release;
+- choose cloud account/project/region and incur cost;
+- apply infrastructure outside the local ephemeral sandbox;
+- execute destructive restore or migration against persistent data;
+- enable real publishing, media generation, browser automation, ads, or spend;
+- approve legal/privacy decisions requiring accountable human review;
+- change `compliance/release-decision.json` from denial only through a separately reviewed schema/evidence update.
+
+## Executable compliance gate
+
+`npm run validate:compliance` reconciles direct package versions/licenses,
+repository license, base-image digests, SHA-pinned Actions, disabled external
+candidates, privacy UNKNOWNs, public copy and unresolved HIGH findings. Its
+current successful output is `DENY_RELEASE`; PASS means the denial/evidence is
+internally consistent, not that release is authorized. See
+[`docs/compliance/release-compliance-review.md`](../docs/compliance/release-compliance-review.md).
+
+## Political and campaign-content release gate
+
+A green build never authorizes political publication. Any release candidate containing political-campaign functionality must additionally prove:
+
+- evidence claims are source/locator bound and reviewed by an authenticated authorized subject;
+- jurisdiction-specific legal review is explicitly approved by an accountable human;
+- Critique Agent reports `publication_eligible=true` without unsupported promotional claims;
+- Greenlight is active and artifact/media hashes match;
+- `AGENCY_POLITICAL_PUBLICATION_ENABLED` is independently reviewed and explicitly enabled;
+- governed media and read-after-write provider verification are present;
+- provider/account/candidate/campaign authority is documented;
+- one sandbox post is separately authorized and reconciled before production.
+
+Current decision remains `DENY_RELEASE`; the political publication flag remains false.
+
+## Governed media and verified publication release gate
+
+A social publication release candidate must prove:
+
+- image bytes are decoded, bounded, persisted and hash-bound before Greenlight;
+- rights and accessibility metadata are recorded by an authenticated operator and reviewed by humans;
+- public capability origin is HTTPS, opaque, expiring, revocable and configured from an external Secret;
+- PostgreSQL schema v6 is shared across replicas, migrates schema v5 safely and is included in backup/restore evidence;
+- expired, revoked or byte-inconsistent media blocks before provider HTTP;
+- Instagram container reaches `FINISHED` before `media_publish`;
+- read-after-write verification matches account, ID, caption hash, media type, permalink and timestamp;
+- unknown outcomes cannot retry automatically;
+- durable receipt/history is available after reload;
+- post-publication rights withdrawal/deletion has an explicit procedure;
+- general and political publication flags are separately authorized;
+- one sandbox publication is explicitly approved and reconciled before production.
+
+Current decision remains `DENY_RELEASE`; no provider effect is authorized by a green build.

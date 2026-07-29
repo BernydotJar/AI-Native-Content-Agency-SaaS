@@ -1,0 +1,12 @@
+apiVersion: runtime.cloud-sandbox.dev/v1alpha1
+kind: Session
+metadata:
+  id: production-readiness
+  name: Production Readiness
+spec:
+  branch: agent/production-readiness
+  executionPolicyRef: execution-policy.yaml
+  objective: Full-stack production-readiness and supply-chain hardening program
+status:
+  phase: active
+  lastVerifiedCommit: bba8493

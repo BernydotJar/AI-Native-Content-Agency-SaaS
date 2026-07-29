@@ -1,6 +1,6 @@
 # Implementation Audit
 
-Fecha de corte: 17 de julio de 2026.
+Fecha de corte: 22 de julio de 2026.
 
 Este documento compara el producto actual con `proposal_and_prompt.md` y con el contrato operativo de `agency_manifesto.md`. La evidencia se refiere a archivos ejecutables o pruebas del repositorio; no a intención futura.
 
@@ -17,34 +17,35 @@ Este documento compara el producto actual con `proposal_and_prompt.md` y con el 
 
 | Requisito | Evidencia actual | Estado |
 |---|---|---|
-| Webapp cinematográfica, oscura y single-scroll | [`src/App.tsx`](../src/App.tsx), [`src/index.css`](../src/index.css), [`src/components/CanvasBackground.tsx`](../src/components/CanvasBackground.tsx), [`src/components/GlowCard.tsx`](../src/components/GlowCard.tsx) | **Real local.** Render React, layout responsive, escena obsidian/slate, partículas y motion. |
+| Espacio de trabajo oscuro y responsive | [`src/App.tsx`](../src/App.tsx), [`src/index.css`](../src/index.css), [`src/components/CanvasBackground.tsx`](../src/components/CanvasBackground.tsx) | **Real local.** Shell de producto, misión gobernada, configuración progresiva, partículas decorativas y layout responsive. |
 | Topología Fabric con entrada y ocho estaciones | [`src/components/PipelineGraph.tsx`](../src/components/PipelineGraph.tsx) y su prueba | **Real local.** Sensor + CEO, Research, Strategist, Growth, Writer, Media, Risk y Publisher. |
-| Estados por nodo, progreso y transmisión visual | `PipelineGraph.tsx`, estado de misión en [`src/App.tsx`](../src/App.tsx) | **Real local para UI; mock para ejecución.** Las transiciones son timers del navegador, no eventos backend. |
-| Sidebar con actividad, archivos/assets y Greenlight | [`src/components/InteractiveSidebar.tsx`](../src/components/InteractiveSidebar.tsx) | **Parcial.** Hay tabs Activity/Outputs, previews y gate accesible; no hay conversación bidireccional, filesystem de artefactos ni descarga versionada. |
-| Tres casos de uso: video, imagen y campaña completa | [`src/components/ControlPanel.tsx`](../src/components/ControlPanel.tsx), `src/App.tsx` | **Mock explícito.** La UI acepta parámetros/nombre de archivo y produce planes/previews sandbox; no lee binarios ni genera media. |
-| Scholar NLP en tres puntos | [`src/lib/simulationRuntime.ts`](../src/lib/simulationRuntime.ts) y pruebas | **Real local como transformación determinista; contenido simulado.** Siempre devuelve reencuadre, tensión del trade-off y resolución operativa. |
-| Mezcla de tendencias X/Facebook/TikTok/Instagram | `simulationRuntime.ts`, [`src/components/ToolFabricPanel.tsx`](../src/components/ToolFabricPanel.tsx) | **Mock explícito.** Cuatro señales fijas y adaptaciones deterministas; no consulta plataformas. |
-| Meta Ads feedback loop | [`src/components/MetaAdsDashboard.tsx`](../src/components/MetaAdsDashboard.tsx), adaptador TS y `backend/agency_runtime/tools.py` | **Mock explícito.** Métricas/forecast sintéticos; cero creación de campañas o gasto. |
-| Catálogo de ocho herramientas solicitado | `SIMULATION_TOOL_CATALOG` en `simulationRuntime.ts` y `SandboxToolset` en [`backend/agency_runtime/tools.py`](../backend/agency_runtime/tools.py) | **Mock explícito.** Contratos para trends, Meta Ads, browser, GitHub, Context7, video, image-to-video y packager; todos declaran sandbox. |
+| Estados por nodo, progreso y transmisión visual | `PipelineGraph.tsx`, [`src/App.tsx`](../src/App.tsx), [`src/components/WorkspaceRuntime.tsx`](../src/components/WorkspaceRuntime.tsx) | **Real para el runtime durable.** La topología deriva de `run.agent_states`; ya no usa timers de una state machine paralela. |
+| Actividad, artefactos y Greenlight | [`src/components/WorkspaceRuntime.tsx`](../src/components/WorkspaceRuntime.tsx), `runtimeApi.ts` | **Real local y durable.** El workspace crea/abre runs, lista artefactos versionados, consulta auditoría y aplica approve/reject/revoke según RBAC. Descarga de archivos binarios aún no existe. |
+| Brief de campaña y ejecución gobernada | [`src/components/WorkspaceRuntime.tsx`](../src/components/WorkspaceRuntime.tsx), [`backend/agency_runtime/api.py`](../backend/agency_runtime/api.py) | **Real local para el vertical slice durable.** Crea un run tenant-scoped y produce artefactos deterministas; ingesta de video/imagen y media real siguen no implementadas. |
+| Scholar NLP en tres puntos | `research_dossier.payload.scholar`, [`src/components/CampaignOutputPanel.tsx`](../src/components/CampaignOutputPanel.tsx), pruebas backend | **Real como transformación determinista del runtime.** Expone reencuadre, tensión y resolución; aún no usa un proveedor de modelos externo. |
+| Señales y canales externos | [`backend/agency_runtime/tools.py`](../backend/agency_runtime/tools.py), [`src/components/WorkspaceSettingsDialog.tsx`](../src/components/WorkspaceSettingsDialog.tsx) | **No implementado como integración externa.** Las fixtures backend siguen deterministas y la UI ya no las presenta como proveedores conectados. |
+| Meta Ads feedback loop | [`backend/agency_runtime/tools.py`](../backend/agency_runtime/tools.py) | **No implementado como integración.** El frontend legacy fue retirado; no hay OAuth, mutación, polling ni gasto. |
+| Fabric de herramientas y proveedores | [`backend/agency_runtime/providers.py`](../backend/agency_runtime/providers.py), [`src/components/WorkspaceSettingsDialog.tsx`](../src/components/WorkspaceSettingsDialog.tsx), `SandboxToolset` backend | **Parcial.** Cinco proveedores de modelos tienen configuración server-side real y secret-free; las herramientas de research/media/ads/browser continúan deterministas y sin egress. |
 | Runtime de ocho agentes | [`backend/agency_runtime/orchestrator.py`](../backend/agency_runtime/orchestrator.py), [`backend/agency_runtime/models.py`](../backend/agency_runtime/models.py), [`backend/agency_runtime/flow_manifest.json`](../backend/agency_runtime/flow_manifest.json) | **Real local.** Flujo secuencial determinista, artefactos, estados, traza y evidencia; los adaptadores que alimentan el flujo son mocks. |
 | Fachada ejecutable del runtime | [`agency.py`](../agency.py), [`backend/agency_runtime/cli.py`](../backend/agency_runtime/cli.py) | **Real local.** Demo segura por defecto y reportes humanos/JSON. No requiere `agency_swarm`. |
-| Greenlight obligatorio después de Risk y antes de Publisher | Gate TS en `src/App.tsx`; gate Python en `orchestrator.py`; pruebas de ambas capas | **Real local.** Detiene trabajo local de Publisher. Aprobación sólo libera empaquetado sandbox; rechazo bloquea. Los dos gates no comparten estado. |
-| Revocación/cancelación | `src/App.tsx` y [`src/App.test.tsx`](../src/App.test.tsx) | **Parcial.** La UI cancela timers pendientes durante una ejecución. El runtime Python soporta approve/reject antes del packaging, pero no revocación posterior a la aprobación. |
-| Memoria Observe → Store → Search → Recall | [`backend/agency_runtime/memory.py`](../backend/agency_runtime/memory.py), pruebas de persistencia; [`src/components/MemorySkillsPanel.tsx`](../src/components/MemorySkillsPanel.tsx) | **Real local en Python; mock/local-session en UI.** SQLite conserva contenido, procedencia, confianza y tags. No hay sincronización navegador↔SQLite. |
+| Greenlight obligatorio después de Risk y antes de Publisher | `orchestrator.py`, `persistence.py`, `WorkspaceRuntime.tsx` y pruebas SQLite/PostgreSQL | **Real y compartido.** La UI consume la misma autoridad durable del backend; approve/reject/revoke usan idempotencia y fencing. |
+| Revocación/cancelación | `WorkspaceRuntime.tsx`, API Greenlight y pruebas de idempotencia | **Real local y durable.** Revocación incrementa fencing token, conserva evidencia e invalida autoridad anterior. |
+| Memoria y contexto aplicado | [`backend/agency_runtime/memory.py`](../backend/agency_runtime/memory.py), pruebas de persistencia; [`src/components/CampaignOutputPanel.tsx`](../src/components/CampaignOutputPanel.tsx) | **Real local en Python.** SQLite/PostgreSQL conservan contexto tenant-scoped; la UI prioriza posts por canal y mantiene evidencia bajo divulgación progresiva, no el algoritmo Observe/Store/Search/Recall. |
 | Provenance, confianza y evidencia | `memory.py`, `models.py`, `orchestrator.py` | **Real local.** Registros tipados y consultables. La procedencia de herramientas sigue siendo sandbox, no prueba de fuente externa. |
 | Instrucciones por agente | [`agents/`](../agents) | **Parcial.** Existen ocho documentos auditables; el orquestador no los parsea ni aplica dinámicamente. |
 | Base de conocimiento | [`knowledge/`](../knowledge), [`agency_manifesto.md`](../agency_manifesto.md) | **Parcial.** Corpus local con índice/procedencia; no hay retrieval ni inyección automática al runtime. |
-| Skills editoriales y de plataforma | [`skills/`](../skills), toggles en `MemorySkillsPanel.tsx` | **Parcial.** Los Markdown existen y la UI aplica cuatro overlays deterministas; no hay motor general que ejecute los playbooks. |
+| Skills editoriales y de plataforma | [`skills/`](../skills) | **Parcial.** Los Markdown existen como fuentes auditables; el frontend legacy de toggles fue retirado y el runtime todavía no los carga como motor general. |
 | Creación dinámica de skills | [`backend/agency_runtime/skill_creator.py`](../backend/agency_runtime/skill_creator.py), [`backend/tests/test_skill_creator.py`](../backend/tests/test_skill_creator.py) | **Real local como utilidad aislada.** Escritura segura y atómica dentro de una raíz; sin CLI, UI ni enlace al orquestador. |
 | Publicación multicanal | `CampaignPackagerTool` TS/Python | **No implementado.** Sólo manifiestos `sandbox://`; `publication_performed=false`. |
 | Generación/optimización real de media | Adaptadores `VideoOptimizerTool` e `ImageToVideoTool` | **No implementado.** Se crean planes y storyboards; ningún archivo se lee o renderiza. |
-| Context7, browser y GitHub en runtime | Catálogos TS/Python con estados mock | **No implementado como integración.** Los nombres representan contratos de adapter; el producto no hace llamadas, navegación ni cambios remotos. |
-| API Meta Ads y métricas live | Catálogo, dashboard y forecast fixture | **No implementado.** No hay OAuth, cuenta publicitaria, mutación, polling ni spend. |
-| Transporte frontend↔backend | Búsqueda de `fetch`, `WebSocket`, FastAPI y clientes HTTP sin ruta de producto | **No implementado.** Las dos state machines son independientes. |
-| Streaming de eventos | No hay servidor FastAPI/SSE/WebSocket | **No implementado.** La animación web usa timers locales. |
-| Persistencia de producto multiusuario | SQLite local por ruta explícita | **No implementado.** No hay servicio, tenancy, auth, Postgres ni object storage. |
+| Browser/video e integraciones revisadas | registro `video-use` pinneado, API GET-only, `WorkspaceSettingsDialog.tsx` | **Revisado y deshabilitado.** No existe executor, navegación, render, upload ni cambio remoto. |
+| API Meta Ads y métricas live | `backend/agency_runtime/tools.py` y límites de integración | **No implementado.** No hay OAuth, cuenta publicitaria, mutación, polling ni spend; el dashboard mock fue retirado. |
+| Transporte frontend↔backend | [`src/components/WorkspaceRuntime.tsx`](../src/components/WorkspaceRuntime.tsx) + `runtimeApi.ts` consumen FastAPI same-origin con cookie HttpOnly y CSRF | **Real para el único frontend activo.** La state machine cinematográfica y `ProductionRuntimePanel` fueron retirados en `INC-013`. |
+| Streaming de eventos | FastAPI sólo expone request/response REST; no hay SSE/WebSocket | **No implementado.** La animación web usa timers locales. |
+| Persistencia de producto multiusuario | `auth.py`, `persistence.py`, `postgres.py`, memoria namespaced, backup/restore y pruebas de reinicio/cross-tenant | **Real local para SQLite y PostgreSQL.** Runs, approvals, sesiones, rate limits y memoria sobreviven reinicios y se particionan por tenant. Los drills SQLite/PostgreSQL ya restauran estado representativo; PostgreSQL runtime/migration authority separation está implementada en `INC-012` pero no verificada en el worktree actual. Siguen faltando object storage, backup productivo programado/cifrado/inmutable, failover y capacidad medida. |
 | Accesibilidad y reduced motion | Skip link y semántica en `src/App.tsx`; controles/tab/progressbar en componentes; media queries en `src/index.css` | **Real local, con cobertura automatizada parcial.** Falta auditoría manual completa con browser/lector de pantalla. |
-| Testing y build reproducibles | Tests `src/**/*.test.*`, `backend/tests/`, scripts en [`package.json`](../package.json) | **Real local.** Gates TypeScript, interacción, Python, lint y bundle. |
+| Testing y build reproducibles | Tests web/backend, `requirements*.lock`, wheel scripts, `package-lock.json`, Dockerfile y CI | **Real local.** Hash-verified Python graphs, byte-identical drift gate, wheel `--no-deps`, `pip check`, TypeScript, interaction, lint and bundle gates. |
+| Release compliance y claims | `compliance/*.json`, `scripts/verify-release-compliance.py`, `backend/tests/test_release_compliance.py` | **Real local como gate de denegación.** Inventaría 33 componentes directos/build/candidato, valida licencias/digests/SHAs, cero proveedores activos, decisiones de privacidad UNKNOWN/unapproved y copy pública. Resultado `DENY_RELEASE`; no es asesoría ni certificación. |
 
 ## Desviaciones intencionales de la propuesta
 
@@ -56,9 +57,9 @@ La implementación conserva React y TypeScript, pero usa Vite 8. No hay routing 
 
 La topología usa botones HTML posicionados y un SVG normalizado para edges. Esto evita otra dependencia y permite una secuencia móvil específica, pero no ofrece edición de grafos, zoom/pan, minimap, handles o el ecosistema de React Flow.
 
-### Dos runtimes en lugar de una arquitectura cliente/servidor
+### Única shell cliente/servidor
 
-`src/App.tsx` y `src/lib/simulationRuntime.ts` ejecutan la demo en el navegador. `backend/agency_runtime` ejecuta otra representación determinista desde Python. Esta separación permite probar seguridad y contratos sin levantar servicios, pero puede producir divergencia de estado, artefactos y reglas. La convergencia requiere un contrato versionado y transporte real.
+`INC-013` retiró `ProductionRuntimePanel`, `ControlPanel`, `MemorySkillsPanel`, `ToolFabricPanel`, `MetaAdsDashboard`, `InteractiveSidebar` y `simulationRuntime`. `App.tsx` y `WorkspaceRuntime.tsx` son ahora la única experiencia activa y consumen la autoridad durable de FastAPI.
 
 ### Fixtures deterministas en lugar de MCP/APIs live
 
@@ -84,9 +85,35 @@ La verificación automatizada no sustituye QA visual/manual. El browser integrad
 ## Trabajo necesario para una integración real
 
 1. Definir esquemas versionados para brief, eventos, artefactos, evidencia, memoria y Greenlight.
-2. Exponer el runtime mediante FastAPI u otro servicio con auth; elegir SSE/WebSocket sólo para eventos que realmente necesiten streaming.
+2. Conectar el frontend al servicio autenticado y elegir SSE/WebSocket sólo para eventos que realmente necesiten streaming.
 3. Reemplazar cada fixture por un adapter separado, autenticado, observable e idempotente.
-4. Vincular Greenlight a hashes/versiones exactas y hacer revocación efectiva en backend.
-5. Añadir tenancy, secrets management, retención, borrado y auditoría.
+4. Implementar revocación efectiva del Greenlight en backend.
+5. Integrar un IdP administrado con SSO/MFA, lifecycle provisioning, retención/borrado y auditoría exportable.
 6. Conectar el frontend a una única fuente de verdad y retirar la state machine duplicada cuando la paridad esté comprobada.
 7. Realizar QA visual, responsive, accesible y de fallo antes de cualquier piloto con efectos externos.
+
+## Production Readiness increments — 21 July 2026
+
+| Capability | Evidence | Status |
+|---|---|---|
+| Network-addressable backend | `backend/agency_runtime/api.py` exposes health, readiness, identity, run creation/read, approval, and rejection via FastAPI. | **Real local and packaged.** |
+| Brief → governed campaign package vertical slice | `backend/tests/test_api.py` executes brief → seven pre-gate artifacts → Scholar → Risk → Greenlight → sandbox package. | **Real local with mock external evidence.** |
+| Scholar three-part explanation | `research_dossier.payload.scholar` contains cognitive reframing, trade-off tension, and operational resolution. | **Real deterministic transformation.** |
+| Artifact-bound Greenlight | `Greenlight` records exact artifact IDs and SHA-256-derived hashes, authorized channels, and budget. | **Real and durable.** Revocation after approval remains missing. |
+| Individual identity and RBAC | `auth.py`, `test_identity_access.py`, session persistence and frontend identity display derive tenant/subject/role/key ID server-side and enforce viewer/operator/approver/admin permissions. | **Real local and packaged.** Static application-managed identities; managed IdP, SSO and MFA remain open. |
+| Tenant isolation | Run store uses `(tenant_id, run_id)` and memory uses tenant namespaces; cross-tenant reads return `404`. | **Verified.** |
+| Durable authentication abuse controls | `authentication_failures`, separate credential/source thresholds, aggregate metrics, trusted-proxy configuration and negative tests. | **Real single-node.** Raw keys and sources are not persisted; shared/distributed limiter and ingress/WAF controls remain open. |
+| Durable run persistence | `persistence.py` serializes the complete execution and restores it before later decisions. | **Verified across multiple service restarts.** |
+| Unified production process | Multi-stage image serves React and FastAPI as non-root UID `10001`; packaged smoke covers health, readiness, auth, SPA and API. | **Verified with Buildah vfs/chroot.** |
+| Kubernetes state and secrets | Helm requires individual identity from an existing Secret, permits legacy-key removal, configures trusted proxies/rate limits, provisions a PVC, uses one replica and `Recreate`, and rejects unsafe bounds/scaling. | **Helm lint/template and negative guards verified locally.** |
+| Horizontal high availability | `postgres.py` supplies bounded pooled shared state and cross-instance tests. | **Partial.** The shared adapter is verified locally, but no scheduler workload, failover, soak, capacity or managed-database evidence exists. |
+| Structured observability | `observability.py`, `/metrics`, request middleware, Helm scrape annotations, and sanitization tests. | **Real local.** Metrics are process-local; no external exporter or distributed tracing. |
+| Durable audit export | Transactional `audit_events` plus tenant-scoped cursor endpoint and restart tests. | **Real local.** Application append-only; no hash chain, retention engine, immutable archive, or SIEM export. |
+| Browser-safe frontend session | `runtime_sessions`, `/api/v1/sessions*`, `runtimeApi.ts`, `WorkspaceRuntime.tsx` y pruebas de sesión/modal/storage. | **Real local and packaged.** HttpOnly/SameSite/CSRF/rotation/revocation, progressive disclosure y revalidación de clave activa; no SSO/MFA. |
+| Reproducible Python graph | Three `.in` files, three hash locks, locked pip-tools/build toolchain, wheel verification scripts, Docker and CI. | **Verified across Python 3.11 lock generation, Python 3.13 CI verification and Python 3.13.14 Alpine image runtime.** |
+| Supply-chain evidence and policy | Digest-pinned bases, SHA-pinned Actions, Syft SBOM, Grype policy, license policy, in-toto provenance, Cosign verification and CI retention. | **Verified locally without publication.** 0 Critical; 5 exact High exceptions expire 21 August 2026. Production registry/KMS or keyless signing remains open. |
+| Local Terraform/Kubernetes validation | Checksum-pinned Terraform/kubectl/K3s, `verify-local-infrastructure.sh`, agentless K3s API, Terraform apply/destroy, Helm server dry-run. | **Real API/admission validation.** Pod scheduling is not claimed because host cgroups are read-only; executable image is verified separately. |
+
+Current operational evidence is maintained in [`program/current-state.md`](../program/current-state.md) and [`program/evidence-register.jsonl`](../program/evidence-register.jsonl). At baseline commit `b9e88fe91dd6db7894dcf5825ca63c2294f52377`, local Oxlint, 33 frontend tests and the Vite production build passed; draft PR #3 reported all eight repository jobs successful on the same SHA. Those jobs cover the locked wheel/backend suite, PostgreSQL shared-state and migration verification, container, Helm, Terraform and supply-chain gates. This is exact-commit local/CI evidence, not staging, GCP, pod-scheduling, alert, backup/restore or production-runtime evidence.
+
+| OAuth tenant-scoped de X/Instagram | `backend/agency_runtime/social_oauth*.py`, `src/components/WorkspaceSettingsDialog.tsx` | **Implementado sin publicación.** State single-use, tokens AES-GCM, metadata de cuenta y disconnect; publicación externa sigue deshabilitada. |

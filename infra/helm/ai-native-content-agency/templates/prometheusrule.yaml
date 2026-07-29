@@ -1,0 +1,14 @@
+{{- if .Values.observability.prometheusRule.enabled }}
+{{- $contract := .Files.Get "files/prometheus-rules.json" | fromJson }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "agency.fullname" . }}
+  namespace: {{ default .Release.Namespace .Values.observability.prometheusRule.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "agency.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  {{- toYaml $contract | nindent 2 }}
+{{- end }}

@@ -1,6 +1,25 @@
 """Typed, deterministic sandbox runtime for the AI-native content agency."""
 
-from .memory import SQLiteMemory
+from .auth import (
+    AuthConfigurationError,
+    AuthenticationError,
+    AuthorizationError,
+    TenantAuthenticator,
+    TenantPrincipal,
+)
+from .memory import MemoryStore, SQLiteMemory
+from .postgres import PostgresMemory, PostgresRunStore, PostgresRuntimeDatabase
+from .persistence import (
+    AuditEvent,
+    AuditWrite,
+    AuthenticationRateLimitError,
+    RunStateConflictError,
+    SessionAuthenticationError,
+    SessionCsrfError,
+    SessionIssue,
+    SessionRecord,
+    SQLiteRunStore,
+)
 from .manifest import load_flow_manifest
 from .models import (
     AGENT_SEQUENCE,
@@ -42,9 +61,23 @@ from .tools import (
     VideoOptimizerTool,
     build_sandbox_toolset,
 )
+from .version import VERSION
 
 __all__ = [
     "AGENT_SEQUENCE",
+    "AuditEvent",
+    "AuditWrite",
+    "AuthConfigurationError",
+    "AuthenticationError",
+    "AuthenticationRateLimitError",
+    "AuthorizationError",
+    "TenantAuthenticator",
+    "TenantPrincipal",
+    "SQLiteRunStore",
+    "SessionAuthenticationError",
+    "SessionCsrfError",
+    "SessionIssue",
+    "SessionRecord",
     "AgencyOrchestrator",
     "AgentRole",
     "AgentStatus",
@@ -71,7 +104,12 @@ __all__ = [
     "Platform",
     "Provenance",
     "PuppeteerBrowserTool",
+    "RunStateConflictError",
     "RunStatus",
+    "MemoryStore",
+    "PostgresMemory",
+    "PostgresRunStore",
+    "PostgresRuntimeDatabase",
     "SQLiteMemory",
     "SandboxToolset",
     "SkillAlreadyExistsError",
@@ -79,6 +117,7 @@ __all__ = [
     "SkillDocument",
     "UnsafeSkillPathError",
     "VideoOptimizerTool",
+    "VERSION",
     "build_sandbox_toolset",
     "load_flow_manifest",
 ]

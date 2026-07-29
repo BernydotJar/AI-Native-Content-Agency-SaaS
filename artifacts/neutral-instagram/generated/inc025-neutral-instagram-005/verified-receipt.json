@@ -1,0 +1,27 @@
+{
+  "schema": "neutral-instagram-publication.v1",
+  "phase": "published_verified",
+  "operation_id": "inc025-neutral-instagram-005",
+  "verified_at": "2026-07-27T00:13:14+00:00",
+  "rollback_owner": "Eduardo-Sacahui",
+  "account": {
+    "channel_id": "instagram",
+    "account_id": "27525095797156898",
+    "account_username": "beesheep2"
+  },
+  "run_id": "run-90534aa784e451aa",
+  "intent_id": "social-publication-intent-a9f246300d21bd0aee790fb33755385ba14150023e3f4587",
+  "provider_container_id": "18609504208033520",
+  "provider_post_id": "18027585197670069",
+  "status": "succeeded",
+  "execution_fencing_token": 1,
+  "verification_status": "verified",
+  "permalink": "https://www.instagram.com/p/DbRpnHHoB7j/",
+  "published_at": "2026-07-27T00:13:11+0000",
+  "username": "beesheep2",
+  "caption_sha256": "be237c368962c6d180929a7a8489459c31f561565ecb7e8e854dc16684909803",
+  "media_sha256": "e542083bf71fbf335539896dc5df79eb1d7eb24319c827948a21809ccf8286f5",
+  "durable_intent_count": 1,
+  "raw_confirmation_persisted": false,
+  "capability_url_persisted": false
+}

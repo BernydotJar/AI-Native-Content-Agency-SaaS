@@ -1,0 +1,125 @@
+{
+  "alerts": [
+    {
+      "exercise_condition": {
+        "metric": "api_error_ratio_5m",
+        "operator": ">",
+        "threshold": 0.0144
+      },
+      "expression": "sum(rate(agency_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(agency_http_requests_total[5m])), 1) > 0.0144",
+      "for": "5m",
+      "name": "AgencyApiAvailabilityFastBurn",
+      "owner": "WS-09",
+      "runbook": "docs/runbooks/incident-response.md#api-availability-burn",
+      "severity": "critical",
+      "slo": "SLO-API-AVAILABILITY",
+      "summary": "API availability error budget is burning rapidly"
+    },
+    {
+      "exercise_condition": {
+        "metric": "api_error_ratio_1h",
+        "operator": ">",
+        "threshold": 0.006
+      },
+      "expression": "sum(rate(agency_http_requests_total{status=~\"5..\"}[1h])) / clamp_min(sum(rate(agency_http_requests_total[1h])), 1) > 0.006",
+      "for": "30m",
+      "name": "AgencyApiAvailabilitySlowBurn",
+      "owner": "WS-09",
+      "runbook": "docs/runbooks/incident-response.md#api-availability-burn",
+      "severity": "warning",
+      "slo": "SLO-API-AVAILABILITY",
+      "summary": "API availability error budget is burning persistently"
+    },
+    {
+      "exercise_condition": {
+        "metric": "api_p95_latency_seconds",
+        "operator": ">",
+        "threshold": 1.0
+      },
+      "expression": "histogram_quantile(0.95, sum by (le) (rate(agency_http_request_duration_seconds_bucket[15m]))) > 1",
+      "for": "15m",
+      "name": "AgencyApiLatencySloViolation",
+      "owner": "WS-09",
+      "runbook": "docs/runbooks/incident-response.md#api-latency",
+      "severity": "warning",
+      "slo": "SLO-API-LATENCY-P95",
+      "summary": "API p95 latency exceeds one second"
+    },
+    {
+      "exercise_condition": {
+        "metric": "readiness_probe_success",
+        "operator": "<",
+        "threshold": 1.0
+      },
+      "expression": "max(probe_success{job=\"ai-native-content-agency-readiness\"}) < 1 or absent(probe_success{job=\"ai-native-content-agency-readiness\"})",
+      "for": "5m",
+      "name": "AgencyRuntimeUnavailable",
+      "owner": "WS-09",
+      "runbook": "docs/runbooks/incident-response.md#runtime-unavailable",
+      "severity": "critical",
+      "slo": "SLO-READINESS",
+      "summary": "The application readiness probe is failing or absent"
+    },
+    {
+      "exercise_condition": {
+        "metric": "authentication_denials_per_second",
+        "operator": ">",
+        "threshold": 1.0
+      },
+      "expression": "sum(rate(agency_security_denials_total{reason=\"authentication\"}[5m])) > 1",
+      "for": "10m",
+      "name": "AgencyAuthenticationAbuse",
+      "owner": "WS-07",
+      "runbook": "docs/runbooks/incident-response.md#authentication-abuse",
+      "severity": "warning",
+      "slo": "SEC-011",
+      "summary": "Authentication denials exceed the reviewed abuse threshold"
+    },
+    {
+      "exercise_condition": {
+        "metric": "backup_age_seconds",
+        "operator": ">",
+        "threshold": 90000
+      },
+      "expression": "time() - agency_backup_last_success_timestamp_seconds > 90000",
+      "for": "15m",
+      "name": "AgencyBackupStale",
+      "owner": "WS-03",
+      "runbook": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+      "severity": "critical",
+      "slo": "SLO-BACKUP-FRESHNESS",
+      "summary": "The last validated runtime backup is older than 25 hours"
+    },
+    {
+      "exercise_condition": {
+        "metric": "backup_signal_present",
+        "operator": "<",
+        "threshold": 1.0
+      },
+      "expression": "absent(agency_backup_last_success_timestamp_seconds)",
+      "for": "15m",
+      "name": "AgencyBackupSignalMissing",
+      "owner": "WS-03",
+      "runbook": "docs/runbooks/runtime-backup-restore.md#stale-or-missing-backup-signal",
+      "severity": "critical",
+      "slo": "SLO-BACKUP-FRESHNESS",
+      "summary": "No validated runtime backup freshness signal is available"
+    },
+    {
+      "exercise_condition": {
+        "metric": "social_publication_unknown_15m",
+        "operator": ">",
+        "threshold": 0.0
+      },
+      "expression": "sum(increase(agency_social_publications_total{outcome=\"unknown\"}[15m])) > 0",
+      "for": "0m",
+      "name": "AgencySocialPublicationUnknown",
+      "owner": "WS-04",
+      "runbook": "docs/runbooks/incident-response.md#social-publication-outcome-unknown",
+      "severity": "critical",
+      "slo": "SEC-011",
+      "summary": "A social publication outcome is unknown and requires reconciliation"
+    }
+  ],
+  "schema_version": "agency-alert-catalog.v1"
+}

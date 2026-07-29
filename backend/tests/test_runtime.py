@@ -181,5 +181,221 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("campaign_package", report["artifact_kinds"])
 
 
+class PoliticalCampaignIntelligenceTests(unittest.TestCase):
+    def setUp(self):
+        self.memory = SQLiteMemory(clock=fixed_clock)
+        self.tools = build_sandbox_toolset()
+        self.orchestrator = AgencyOrchestrator(
+            tools=self.tools,
+            memory=self.memory,
+            clock=fixed_clock,
+        )
+
+    def tearDown(self):
+        self.memory.close()
+
+    def test_political_brief_requires_grounded_context(self):
+        with self.assertRaises(ValueError):
+            MissionBrief(
+                title="Campaña municipal",
+                objective="Explicar una propuesta",
+                audience="vecinos",
+                platforms=(Platform.INSTAGRAM,),
+                campaign_type="political",
+                locale="es-GT",
+                jurisdiction="Guatemala",
+                office="alcalde",
+                candidate_name="Candidatura de prueba",
+                locality="Municipio de prueba",
+                problem="Falta de información presupuestaria accesible",
+                proposal="Publicar avances y ejecución presupuestaria",
+                desired_action="Consultar el plan y enviar preguntas",
+                disclosure="Contenido orgánico de campaña sujeto a revisión humana",
+                evidence_claims=(),
+            )
+
+    def _office_specific_brief(self, office: str, locality: str) -> MissionBrief:
+        return MissionBrief(
+            title="Mensaje específico por cargo",
+            objective="Explicar una propuesta verificable según las competencias del cargo",
+            audience="ciudadanía del territorio",
+            platforms=(Platform.INSTAGRAM,),
+            campaign_type="political",
+            locale="es-GT",
+            jurisdiction="Guatemala",
+            office=office,
+            candidate_name="Candidatura de prueba",
+            locality=locality,
+            problem="La ciudadanía necesita información pública verificable",
+            proposal="Publicar avances, decisiones y resultados verificables",
+            desired_action="Consulta la propuesta y envía observaciones",
+            disclosure="Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            legal_review_status="approved",
+            legal_reviewed_by="legal-reviewer",
+            evidence_claims=(
+                {
+                    "statement": "La propuesta contempla publicación periódica de información verificable.",
+                    "source": "Plan de prueba 2027-2031",
+                    "locator": "sección 2",
+                    "verification_status": "verified",
+                    "reviewed_by": "fact-reviewer",
+                },
+            ),
+        )
+
+    def test_writer_and_critique_are_office_specific_for_mayor_and_deputy(self):
+        expectations = (
+            ("alcalde", "Municipio de prueba", "municipio"),
+            ("diputado", "Distrito de prueba", "legislativa"),
+        )
+        for office, locality, expected_term in expectations:
+            with self.subTest(office=office):
+                run = self.orchestrator.start(
+                    self._office_specific_brief(office, locality)
+                )
+                writer = next(
+                    item for item in run.artifacts if item.kind == "copy_deck"
+                )
+                risk = next(
+                    item for item in run.artifacts if item.kind == "risk_report"
+                )
+                hook = writer.payload["variants"]["instagram"]["hook"].lower()
+                self.assertIn(expected_term, hook)
+                if office == "alcalde":
+                    self.assertNotIn("municipio de municipio", hook)
+                alignment = next(
+                    item for item in risk.payload["checks"]
+                    if item["name"] == "office_message_alignment"
+                )
+                self.assertTrue(alignment["passed"])
+                self.assertTrue(risk.payload["publication_eligible"])
+
+    def test_eight_station_political_run_is_spanish_grounded_and_critique_gated(self):
+        brief = MissionBrief(
+            title="Transparencia municipal verificable",
+            objective="Explicar una propuesta de rendición de cuentas",
+            audience="vecinas y vecinos del municipio",
+            platforms=(Platform.INSTAGRAM, Platform.X),
+            campaign_type="political",
+            locale="es-GT",
+            jurisdiction="Guatemala",
+            office="alcalde",
+            candidate_name="Candidatura de prueba",
+            locality="Municipio de prueba",
+            problem="La ciudadanía no encuentra avances y ejecución presupuestaria en un solo lugar",
+            proposal="Publicar mensualmente avances, contratos y ejecución presupuestaria de prioridades municipales",
+            desired_action="Consulta el plan completo y envía tus preguntas",
+            disclosure="Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            legal_review_status="approved",
+            legal_reviewed_by="human-legal-reviewer",
+            evidence_claims=(
+                {
+                    "statement": "La propuesta contempla publicación mensual de avances y ejecución presupuestaria.",
+                    "source": "Plan municipal de prueba 2027-2031",
+                    "locator": "páginas 12-14",
+                    "verification_status": "verified",
+                    "reviewed_by": "human-fact-reviewer",
+                },
+            ),
+        )
+        run = self.orchestrator.start(brief)
+        research = next(item for item in run.artifacts if item.kind == "research_dossier")
+        writer = next(item for item in run.artifacts if item.kind == "copy_deck")
+        media = next(item for item in run.artifacts if item.kind == "media_plan")
+        risk = next(item for item in run.artifacts if item.kind == "risk_report")
+
+        claims = research.payload["claim_ledger"]
+        self.assertEqual(len(claims), 1)
+        self.assertTrue(claims[0]["supported"])
+        instagram = writer.payload["variants"]["instagram"]
+        copy = " ".join((instagram["hook"], instagram["body"], instagram["cta"]))
+        self.assertIn("municipio", copy.lower())
+        self.assertNotIn("made clear", copy.lower())
+        self.assertEqual(instagram["claim_map"], [claims[0]["claim_id"]])
+        self.assertEqual(media.payload["instagram"]["format"], "carousel")
+        self.assertTrue(media.payload["instagram"]["alt_text"])
+        self.assertTrue(risk.payload["publication_eligible"])
+        self.assertEqual(risk.payload["decision"], "pass")
+
+
+    def test_pending_legal_review_blocks_greenlight_even_with_verified_claim(self):
+        brief = MissionBrief(
+            title="Revisión legal pendiente",
+            objective="Preparar contenido para revisión legal",
+            audience="vecinas y vecinos del municipio",
+            platforms=(Platform.INSTAGRAM,),
+            campaign_type="political",
+            locale="es-GT",
+            jurisdiction="Guatemala",
+            office="alcalde",
+            candidate_name="Candidatura de prueba",
+            locality="Municipio de prueba",
+            problem="Información pública dispersa",
+            proposal="Publicar un tablero mensual de avances",
+            desired_action="Consulta el borrador y envía observaciones",
+            disclosure="Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            legal_review_status="pending",
+            evidence_claims=(
+                {
+                    "statement": "La propuesta contempla un tablero mensual.",
+                    "source": "Plan municipal revisado",
+                    "locator": "sección 3",
+                    "verification_status": "verified",
+                    "reviewed_by": "human-fact-reviewer",
+                },
+            ),
+        )
+        run = self.orchestrator.start(brief)
+        risk = next(item for item in run.artifacts if item.kind == "risk_report")
+        self.assertFalse(risk.payload["publication_eligible"])
+        legal_check = next(
+            item for item in risk.payload["checks"]
+            if item["name"] == "legal_review_approved"
+        )
+        self.assertFalse(legal_check["passed"])
+        with self.assertRaises(GreenlightError):
+            self.orchestrator.approve(run.run_id, reviewer="approver")
+
+    def test_unverified_political_claim_blocks_greenlight(self):
+        brief = MissionBrief(
+            title="Propuesta todavía no verificada",
+            objective="Preparar contenido para revisión",
+            audience="vecinas y vecinos del municipio",
+            platforms=(Platform.INSTAGRAM,),
+            campaign_type="political",
+            locale="es-GT",
+            jurisdiction="Guatemala",
+            office="alcalde",
+            candidate_name="Candidatura de prueba",
+            locality="Municipio de prueba",
+            problem="Información pública dispersa",
+            proposal="Publicar un tablero mensual de avances",
+            desired_action="Consulta el borrador y envía observaciones",
+            disclosure="Contenido orgánico de una candidatura de prueba; requiere aprobación humana",
+            legal_review_status="approved",
+            legal_reviewed_by="human-legal-reviewer",
+            evidence_claims=(
+                {
+                    "statement": "La propuesta contempla un tablero mensual.",
+                    "source": "Borrador de plan municipal",
+                    "locator": "sección 3",
+                    "verification_status": "unverified",
+                    "reviewed_by": "",
+                },
+            ),
+        )
+        run = self.orchestrator.start(brief)
+        risk = next(item for item in run.artifacts if item.kind == "risk_report")
+        research = next(item for item in run.artifacts if item.kind == "research_dossier")
+        self.assertFalse(research.payload["claim_ledger"][0]["supported"])
+        self.assertFalse(risk.payload["publication_eligible"])
+        self.assertEqual(risk.payload["decision"], "revise")
+        self.assertEqual(
+            run.state_for(AgentRole.PUBLISHER).status, AgentStatus.ATTENTION
+        )
+        with self.assertRaises(GreenlightError):
+            self.orchestrator.approve(run.run_id, reviewer="approver")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,407 @@
+{
+  "findings": [
+    {
+      "description": "Backup/restore lacks executed evidence.",
+      "evidence": "SQLite and PostgreSQL tools, 11 adversarial tests and representative application-readable restore drills pass.",
+      "id": "F-001",
+      "owner": "INC-002",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Mutable commands required durable compatible replay, uniform incompatible conflicts and Greenlight revocation/fencing.",
+      "evidence": "Exact published head bc01fa7b54341865f848c0754884cc83f660a0c7 passed GitHub Actions run 29871278876 with all eight jobs successful. Local evidence passed 97/97 PostgreSQL tests including compatible/incompatible cross-replica races and package-once behavior, 97 locked-wheel tests, 35 frontend tests, package, infrastructure, secret and supply-chain gates. Durable digest-only receipts, exact replay, authenticated decision identity, Greenlight revocation and fencing are proven for the current sandbox. External providers still require outbound outbox/idempotency/receipt controls before activation.",
+      "id": "F-002",
+      "owner": "INC-004",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Selected architecture lacks threat and privacy models.",
+      "evidence": "Selected-runtime threat model, privacy model and data-classification/retention register exist and the bounded error/denial findings were repaired and tested.",
+      "id": "F-003",
+      "owner": "INC-003",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "No staging/cloud runtime observation.",
+      "evidence": "No authorized target or apply evidence.",
+      "id": "F-004",
+      "owner": "INC-006",
+      "severity": "HIGH",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "description": "Product version drifted between frontend and runtime/chart.",
+      "evidence": "All npm/Python/API/metrics/OCI/Helm version surfaces are 0.7.0 and validator detects drift.",
+      "id": "F-005",
+      "owner": "INC-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "README contains mutually contradictory architecture claims.",
+      "evidence": "README and implementation audit now match backend transport, PostgreSQL and deployment evidence boundaries.",
+      "id": "F-006",
+      "owner": "INC-001",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Automated Chromium proves keyboard activation, skip-link focus, 320 CSS px reflow, reduced motion and AX semantics; human screen-reader, rendered contrast, 400% zoom/reflow and visual review remain absent.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; npm run verify:accessibility-browser; docs/accessibility/manual-review-protocol.md; automated evidence is explicitly not manual certification.",
+      "id": "F-007",
+      "owner": "INC-008",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "Production backups require scheduling, encrypted immutable off-host retention, KMS/key lifecycle and exercised alert delivery.",
+      "evidence": "Exact local commit 6a885827b7e89d06111c87c34293250eab196d47 adds private atomic SQLite/PostgreSQL backup freshness metrics, 24-hour RPO/25-hour freshness SLO, stale/missing-signal alerts, deterministic rule exercises and restore-preserving regression. Production scheduler, KMS/encryption, immutable off-host storage, retention and real alert delivery remain external/human-gated.",
+      "id": "F-008",
+      "owner": "INC-005",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "PostgreSQL migration and runtime authority required separation and proof of a non-owner least-privilege runtime role.",
+      "evidence": "Exact published head 1002d077564618623fe00f27ffae23c2b410aca8 passed GitHub Actions run 29868899218 with all eight jobs successful, including PostgreSQL shared state, locked wheel, container, Helm, Terraform and supply chain. Local exact evidence additionally proved 85/85 under a non-owner role, zero ownership, exact grants, safe search_path, atomic rollback, negative DDL/TEMP/metadata/GRANT/SET ROLE checks, migration/replay and both restores. Persistent environment observation remains tracked by F-004 and SEC-013.",
+      "id": "F-009",
+      "owner": "INC-012",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "No approved retention, deletion, legal-hold or data-subject workflow exists for runs, memories, audit, telemetry and backups.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; compliance/privacy-decision-register.json; npm run validate:compliance; seven policy scopes remain unapproved with null retention and no deletion/legal-hold implementation; entity/jurisdiction/role/provider terms UNKNOWN.",
+      "id": "F-010",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "Prompt-injection, groundedness, citation fidelity, harmful-use and legal-overclaim semantic/adversarial evals are incomplete.",
+      "evidence": "Deterministic unit/integration tests exist, but no complete semantic eval harness or release threshold exists.",
+      "id": "F-011",
+      "owner": "INC-010",
+      "severity": "HIGH",
+      "status": "OPEN"
+    },
+    {
+      "description": "The audit ledger is transactional but is not hash-chained, signed or exported to immutable storage.",
+      "evidence": "Database owners/operators can alter rows outside the application interface.",
+      "id": "F-012",
+      "owner": "INC-005",
+      "severity": "MEDIUM",
+      "status": "OPEN"
+    },
+    {
+      "description": "A valid principal can amplify denial-audit storage because no general authenticated request quota exists.",
+      "evidence": "Credential authentication is rate limited; successful principals can repeatedly invoke forbidden actions.",
+      "id": "F-013",
+      "owner": "INC-005",
+      "severity": "MEDIUM",
+      "status": "OPEN"
+    },
+    {
+      "description": "Approver and viewer roles had no path to load an existing tenant-scoped run, leaving server-authorized review authority unusable from the production console.",
+      "evidence": "4f101221d3ddfb426aded5e7f4caec9c87985b32; ProductionRuntimePanel run lookup and approver contract test prove GET-by-ID without create authority.",
+      "id": "F-014",
+      "owner": "INC-007",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The previous console rendered generic backend exception detail and collapsed authorization, conflict, rate limit, validation and dependency failures into one message.",
+      "evidence": "4f101221d3ddfb426aded5e7f4caec9c87985b32; bounded notice classifier and tests prove non-reflection plus distinct 401/403/404/409/422/429/500/503 states and request correlation.",
+      "id": "F-015",
+      "owner": "INC-007",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The prior accent-dot selector had no named semantic themes, entitlement state or non-color selected-state contract.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; typed catalog, named controls, aria-pressed/live status and contrast tests.",
+      "id": "F-016",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A premium theme controlled only by frontend state could be self-granted and survive server revocation.",
+      "evidence": "f63a58648eec0579d53a007c8ed83ff376b95727; 8ecf77e7f58789d1e5b47826b595b172bac6fa89; exact allowlisted server identity entitlement, session/identity refresh, no persistence, fallback on revocation and tests.",
+      "id": "F-017",
+      "owner": "INC-008",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The skip link changed the URL fragment but did not transfer focus because main was not programmatically focusable.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; main tabIndex=-1 and real Chromium focus-transfer gate.",
+      "id": "F-018",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A live SPA could retain premium after the identity configuration removed the entitlement.",
+      "evidence": "f63a58648eec0579d53a007c8ed83ff376b95727; 8ecf77e7f58789d1e5b47826b595b172bac6fa89; /me synchronization on audit/mutations and immediate free-theme fallback.",
+      "id": "F-019",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Initial accessibility browser probes could leave preview/Chromium descendants and fixed ports behind after failure.",
+      "evidence": "8ecf77e7f58789d1e5b47826b595b172bac6fa89; dynamic ports, detached process groups, bounded cleanup and post-gate listener check.",
+      "id": "F-020",
+      "owner": "INC-008",
+      "severity": "LOW",
+      "status": "CLOSED"
+    },
+    {
+      "description": "The Chromium accessibility gate derived a fixed-range CDP port from process PID and accepted any HTTP 200 as Vite readiness, producing nondeterministic exact-head CI and allowing an unrelated server to masquerade as the production bundle.",
+      "evidence": "Failed run 29876550199 at 6eb2b6b3ee7a253ef67dae64a888198de6594330; repair a3fa52f6c3e0e5e503527f5ba446badf4ee52070 uses system-assigned preview port, Chromium DevToolsActivePort, strict compiled-bundle fingerprint, child exit diagnostics, stale-artifact removal, negative occupied-port proof and three consecutive positive runs.",
+      "id": "F-021",
+      "owner": "INC-008",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A reviewed integration name could be mistaken for executable authority or permit receipt construction without an enabled provider.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; all activation/execution/effect flags false; no POST route; execute and receipt construction raise IntegrationDisabledError; package OpenAPI GET-only.",
+      "id": "F-022",
+      "owner": "INC-009",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Future browser/video paths, secrets or egress could escape the intended worker boundary.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; canonical inputs/outputs roots, absolute/parent/percent rejection, exact secret references, exact operation-specific egress and negative tests.",
+      "id": "F-023",
+      "owner": "INC-009",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Manifest strings could masquerade as sequences or malformed metadata/findings could weaken review integrity.",
+      "evidence": "61da89cd5bcc36fc5d99b97dd429d73fbb331959; exact field/type, timestamp, repository, commit, digest, finding severity and activation-requirement validation plus mutation tests.",
+      "id": "F-024",
+      "owner": "INC-009",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Green CI, SBOM or license automation could be mistaken for legal/privacy approval or release authority.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; machine release decision DENY_RELEASE; all authority booleans false; README/dossier explicitly deny legal/regulatory approval.",
+      "id": "F-025",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "An external provider, retention duration or destructive privacy workflow could be silently enabled without accountable approval.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; UNKNOWN/unapproved/null/false privacy invariants, exact provider schema and negative mutation tests.",
+      "id": "F-026",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Public copy used unqualified autonomous/live language unsupported by the deterministic sandbox.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; copy changed to sandbox/local simulation and ten-surface claims policy rejects unsupported autonomy/live/production/legal/compliance claims.",
+      "id": "F-027",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Third-party inventory could drift from manifests, locks, images, workflow Actions or reviewed integration commit.",
+      "evidence": "1843aa93c7675c6f5f10254ee3b7cffc020f9fd5; exact hashes, direct version/license reconciliation, image digests, Action SHAs, video-use manifest match and stale-drift tests.",
+      "id": "F-028",
+      "owner": "INC-011",
+      "severity": "MEDIUM",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Appearance and one-time tenant authentication occupied the primary mission hierarchy and displaced the user outcome.",
+      "evidence": "a89907f; theme moved to WorkspaceSettingsDialog; tenant credential exists only in WorkspaceRuntime connection modal; App/Chromium progressive-disclosure tests pass.",
+      "id": "F-029",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Memory and Tool Fabric taught implementation internals or displayed attractive mock capabilities instead of applied context and operational state.",
+      "evidence": "a89907f; CampaignOutputPanel exposes channel-ready drafts and collapses evidence; WorkspaceSettingsDialog owns provider/integration diagnostics; StationInspector derives station state from authenticated run data.",
+      "id": "F-030",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "A parallel simulation runtime and six unreachable legacy product panels could diverge from backend authority or be revived accidentally.",
+      "evidence": "a89907f removes simulationRuntime, ControlPanel, InteractiveSidebar, MemorySkillsPanel, MetaAdsDashboard, ProductionRuntimePanel and ToolFabricPanel plus exclusive tests/assets; one App path remains.",
+      "id": "F-031",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Settings and connection dialogs initially leaked keyboard focus or failed to restore it after Escape.",
+      "evidence": "a89907f; shared useModalDialog focus trap, bidirectional Tab tests, Escape close, trigger restoration and real Chromium checks.",
+      "id": "F-032",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Provider readiness could be mistaken for executed inference, spend authority or a browser-safe place to enter provider secrets.",
+      "evidence": "a89907f; exact GET-only server registry, secret-free payload/package tests, no HTTP client, no browser credential fields, runbook disclosure and DENY_RELEASE/zero active providers.",
+      "id": "F-033",
+      "owner": "INC-013",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Real model inference is not attached to governed runs because durable outbound intent/receipt and economic replay protection are absent.",
+      "evidence": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b; SQLite/PostgreSQL schema v4 intent stores, one fenced executor, server-side provider/model binding, durable output/receipt, compatible replay, unknown blocking, idempotent reconciliation, run-attachment/audit repair, admin session+CSRF API and zero-socket MockTransport fixture are implemented. Real credentials, egress and spend remain unused; exact-head CI is pending.",
+      "id": "F-034",
+      "owner": "INC-015",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "id": "F-035",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-014",
+      "description": "Provider protocol clients could leak credentials prompts or upstream bodies, or retry and duplicate spend.",
+      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
+    },
+    {
+      "id": "F-036",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-017",
+      "description": "Repeated missions returned a misleading conflict and publishable copy was hidden behind generic diagnostics.",
+      "evidence": "9b0b65927fe9609e1f55835728332bb3e2aa09ca; audited 200 replay, resource lock and channel output pass."
+    },
+    {
+      "id": "F-037",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-018",
+      "description": "Synchronous orchestration prevents truthful intermediate topology progress and station-level crash recovery.",
+      "evidence": "3cc304d10b64b8cb32bffeee52f36e583c46f844; Prefer respond-async returns 202, SQLite restart/lease recovery and PostgreSQL two-worker fencing pass, production image records fences 1..14, and Chromium observes seven processing stations plus fourteen durable checkpoint values. No browser timer invents station state."
+    },
+    {
+      "id": "F-038",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "No tenant social OAuth, encrypted token store or connected-account control existed.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; X/Instagram OAuth, AES-GCM tokens, schema v2, admin UI and disconnect pass 183 locked/PostgreSQL and 35 frontend tests."
+    },
+    {
+      "id": "F-039",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-020",
+      "description": "Connected-account publication required durable intent, exact artifact/media/Greenlight binding, provider receipt, replay protection and unknown-outcome reconciliation.",
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; schema v3 SQLite/PostgreSQL stores, bounded X/Instagram adapters, unique binding authority, one-call compatible replay, unknown blocking, idempotent reconciliation, revocation and exact Chromium/package MockTransport gates pass. Real publication remains disabled and human-authorized."
+    },
+    {
+      "id": "F-040",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "OAuth state or tokens could replay, cross tenants or leak through persistence/API/logs.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; tenant/session/channel binding, atomic single-use state, AES-GCM AAD, sanitized errors and Gitleaks zero pass."
+    },
+    {
+      "id": "F-041",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-019",
+      "description": "Browser sessions used SameSite=Strict, so X/Instagram cross-site OAuth callback GETs lost the HttpOnly session and returned authentication_failed before token exchange.",
+      "evidence": "6d5e59b; Secure SameSite=Lax policy, strict-policy startup rejection, exact callback visibility, safe phase diagnostics and real Chromium cross-site X/Instagram callback gates pass with mock provider transport."
+    },
+    {
+      "id": "F-042",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-020",
+      "description": "The asynchronous worker acquired the durable run-store lock before resolving the tenant runtime while GET /runs acquired the service lock first, allowing a lock inversion after prior inline work.",
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; faulthandler reproduced the cycle at poll 14, runtime resolution moved before the durable lock, deterministic order test passes, the prior-inline plus async reproduction reaches Greenlight and the installed-image 14-checkpoint smoke passes."
+    },
+    {
+      "id": "F-043",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "Generic mixed-language campaign fixtures could be mistaken for production political content.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political context, Spanish channel variants, claim mapping and truthful review states; locked/backend/frontend gates pass."
+    },
+    {
+      "id": "F-044",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "A client could self-attest evidence or legal approval by supplying reviewer text.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 requires greenlight:decide and overwrites reviewer identity server-side; operator attempt returns 403."
+    },
+    {
+      "id": "F-045",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-021",
+      "description": "General social publication enablement could accidentally authorize political effects.",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds a separate default-off political authority in app/Helm/Terraform; red-team test records zero provider calls."
+    },
+    {
+      "id": "F-046",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "owner": "INC-022",
+      "description": "Instagram has no governed publication_media generator/delivery contract and the receipt lacks independent post read-after-write verification.",
+      "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition."
+    },
+    {
+      "id": "F-047",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Media plans existed without immutable provider-fetchable bytes or Greenlight hash binding.",
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac adds decoded JPEG Media Vault, artifact binding, upload/revoke UI and durable stores."
+    },
+    {
+      "id": "F-048",
+      "severity": "CRITICAL",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Instagram media ID was treated as success without container completion or independent read verification.",
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac requires FINISHED and verifies ID/account/caption hash/type/permalink/timestamp; mismatch is unknown."
+    },
+    {
+      "id": "F-049",
+      "severity": "HIGH",
+      "status": "CLOSED",
+      "owner": "INC-022",
+      "description": "Public immutable caching conflicted with media-rights revocation.",
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac removes immutable, caps max-age at 300 and supports pre-Greenlight revocation."
+    },
+    {
+      "id": "F-050",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "owner": "future media operations",
+      "description": "Post-publication provider deletion and independent HMAC keyring rotation are not implemented.",
+      "evidence": "OI-016/OI-017 and publication-media runbook define exact resume conditions; release remains denied."
+    }
+  ],
+  "schema_version": "program-critique-findings.v1",
+  "source_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac",
+  "updated_at": "2026-07-25"
+}

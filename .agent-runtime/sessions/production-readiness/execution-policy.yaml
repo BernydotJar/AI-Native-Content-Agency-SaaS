@@ -1,0 +1,29 @@
+apiVersion: runtime.cloud-sandbox.dev/v1alpha1
+kind: ExecutionPolicy
+metadata:
+  name: continuous-goal-mode
+spec:
+  mode: goal
+  autonomy: continuous
+  persistGoalAsObject: false
+  resumeBehavior: restore-session-and-reinject-policy
+  allowed:
+    - inspect
+    - edit
+    - install-local-dependencies
+    - run-tests
+    - build-images
+    - run-local-containers
+    - create-local-branches
+    - create-local-commits
+    - push-working-branch
+  forbidden:
+    - force-push
+    - push-protected-branch
+    - production-deploy-without-human-gate
+    - destructive-infrastructure-change-without-human-gate
+  stopConditions:
+    - human-gate-required
+    - unsafe
+    - externally-blocked
+    - no-verifiable-progress

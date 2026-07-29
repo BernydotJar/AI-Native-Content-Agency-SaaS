@@ -1,0 +1,1963 @@
+{
+  "branch": "agent/inc-024-political-browser-qa",
+  "schema_version": "program-task-ledger.v1",
+  "tasks": [
+    {
+      "acceptance_criteria": [
+        "validator passes",
+        "frontend gates pass",
+        "backend locked gate passes",
+        "git diff --check passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/001-program-baseline/**",
+        "README.md",
+        "package*.json",
+        "backend/agency_runtime/**",
+        "Dockerfile",
+        ".github/workflows/production-readiness.yml",
+        "scripts/validate-program-state.py",
+        "backend/tests/test_program_state.py"
+      ],
+      "authoritative_inputs": [
+        "AGENTS.md",
+        "goal",
+        "Git",
+        "PR #2",
+        "PR #3",
+        "current code/tests"
+      ],
+      "context": "Baseline HEAD b9e88fe; PR #3 selected; PR #2 donor branch.",
+      "dependencies": [],
+      "expected_outputs": [
+        "validated program state",
+        "version 0.7.0 consistency",
+        "truthful README",
+        "completion audit"
+      ],
+      "human_gates": [
+        "merge",
+        "release",
+        "production"
+      ],
+      "objective": "Bootstrap operational program state, reconcile architecture, normalize version, repair stale claims, and add an executable governance gate.",
+      "prohibited_paths": [
+        ".git/**",
+        "main",
+        "external infrastructure"
+      ],
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Producer",
+      "status": "done",
+      "task_id": "INC-001",
+      "validation_commands": [
+        "python3 scripts/validate-program-state.py",
+        "npm run lint",
+        "npm test",
+        "npm run build",
+        "./scripts/verify-python-locks.sh"
+      ],
+      "workstream_id": "WS-01",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "SQLite restore preserves state",
+        "tamper rejected",
+        "existing target rejected without explicit replace",
+        "PostgreSQL dump/restore equivalence passes"
+      ],
+      "allowed_paths": [
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "backend/tests/test_backup_restore.py",
+        "docs/**",
+        "program/**",
+        "specs/002-backup-restore/**"
+      ],
+      "authoritative_inputs": [
+        "docs/POSTGRESQL_PERSISTENCE.md",
+        "persistence.py",
+        "postgres.py",
+        "operations policy"
+      ],
+      "context": "Backup/restore is a global release gate and currently lacks executable evidence.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "expected_outputs": [
+        "checksummed manifests",
+        "atomic SQLite restore",
+        "empty-target PostgreSQL restore",
+        "drill evidence"
+      ],
+      "human_gates": [
+        "restore against persistent data",
+        "destructive replacement"
+      ],
+      "objective": "Implement fail-closed SQLite/PostgreSQL backup and restore tools and execute ephemeral restore drills.",
+      "prohibited_paths": [
+        "persistent production data",
+        "external databases"
+      ],
+      "read_only_paths": [],
+      "role": "Producer",
+      "status": "done",
+      "task_id": "INC-002",
+      "validation_commands": [
+        "python -m unittest backend.tests.test_backup_restore",
+        "./scripts/verify-postgresql-runtime.sh"
+      ],
+      "workstream_id": "WS-03",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "all trust boundaries covered",
+        "zero open HIGH code findings in slice"
+      ],
+      "allowed_paths": [
+        "docs/security/**",
+        "docs/privacy/**",
+        "backend/tests/**",
+        "program/**",
+        "specs/**"
+      ],
+      "authoritative_inputs": [
+        "selected architecture",
+        "auth.py",
+        "api.py",
+        "persistence.py",
+        "postgres.py"
+      ],
+      "context": "Parallel-branch threat model is not authoritative for PR #3.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "expected_outputs": [
+        "threat model",
+        "privacy model",
+        "adversarial tests"
+      ],
+      "human_gates": [
+        "retention/deletion approval",
+        "legal privacy review"
+      ],
+      "objective": "Create selected-architecture threat/privacy models and close executable HIGH findings.",
+      "prohibited_paths": [
+        "credential rotation",
+        "data deletion"
+      ],
+      "read_only_paths": [],
+      "role": "Security Reviewer",
+      "status": "review",
+      "task_id": "INC-003",
+      "validation_commands": [],
+      "workstream_id": "WS-07",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "identical replay returns original response",
+        "different payload returns uniform 409",
+        "provider work executes once under concurrent replicas",
+        "raw idempotency key is absent from persistence and responses",
+        "authenticated subject is decision and revocation authority",
+        "revocation increments fencing token and stale effects fail"
+      ],
+      "allowed_paths": [
+        "backend/**",
+        "src/lib/runtimeApi*",
+        "src/components/ProductionRuntimePanel*",
+        "docs/**",
+        "program/**",
+        "specs/**"
+      ],
+      "authoritative_inputs": [
+        "API v1",
+        "SQLite/PostgreSQL stores",
+        "Greenlight invariants"
+      ],
+      "context": "Exact published head bc01fa7b54341865f848c0754884cc83f660a0c7 passed all eight jobs in GitHub Actions run 29871278876. Durable inbound command idempotency and Greenlight revocation/fencing are complete for the selected sandbox runtime. External effect adapters remain disabled and require separate outbound receipts.",
+      "dependencies": [
+        "INC-001",
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "durable digest-only command receipts",
+        "compatible exact replay and sanitized conflicts",
+        "SQLite restart and PostgreSQL cross-replica race tests",
+        "Greenlight revocation and effect fencing",
+        "browser retry-key lifecycle",
+        "API/operations/security documentation"
+      ],
+      "human_gates": [],
+      "implementation_commit": "bc01fa7b54341865f848c0754884cc83f660a0c7",
+      "objective": "Add durable idempotency keys, compatible replay, conflict behavior, and structured errors for mutable APIs.",
+      "prohibited_paths": [
+        "external side effects"
+      ],
+      "publication_state": "REMOTE_CI_GREEN",
+      "read_only_paths": [],
+      "role": "Backend Engineer",
+      "status": "done",
+      "task_id": "INC-004",
+      "validation_commands": [
+        "python -m unittest backend.tests.test_idempotency -v",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "gitleaks dir .",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-04",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Exact published head 8e837e77c0e4274cdc4d32c9615f941b147b30b8 passed all eight jobs in GitHub Actions run 29873268944. All safe local operability work is complete. Persistent monitoring/paging, production scheduler/KMS/encrypted immutable off-host retention, approved retention and staging workload/incident exercises remain external gates.",
+      "dependencies": [
+        "INC-002",
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "versioned SLO and error-budget catalog",
+        "cumulative request latency histogram",
+        "validated Prometheus alert rules and deterministic exercises",
+        "private atomic backup freshness textfiles for SQLite/PostgreSQL",
+        "opt-in Helm/Terraform PrometheusRule contract",
+        "incident, rollback, capacity and tracing-decision runbooks",
+        "disposable Helm upgrade/rollback evidence",
+        "exact local and CI evidence before publication claim"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "implementation_commit": "8e837e77c0e4274cdc4d32c9615f941b147b30b8",
+      "objective": "Define SLOs, alert rules, alert exercises, incident response and rollback drills.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "publication_state": "REMOTE_CI_GREEN_EXTERNAL_GATES_OPEN",
+      "read_only_paths": [],
+      "role": "Production Reviewer",
+      "status": "blocked",
+      "task_id": "INC-005",
+      "validation_commands": [
+        "python3 scripts/verify-operability.py",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir .",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-09",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-002",
+        "INC-004",
+        "INC-005"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Demonstrate an authorized staging workload and runtime observation.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Release Reviewer",
+      "status": "blocked",
+      "task_id": "INC-006",
+      "validation_commands": [],
+      "workstream_id": "WS-09",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-004"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Unify the backend-backed operator journey and complete degraded states.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Frontend Engineer",
+      "status": "done",
+      "task_id": "INC-007",
+      "validation_commands": [
+        "npm test -- --reporter=dot src/components/ProductionRuntimePanel.test.tsx src/lib/runtimeApi.test.ts",
+        "npm test -- --reporter=dot",
+        "npm run lint",
+        "npm run build",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir . --redact"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "released after exact-head CI"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-007"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "manual screen-reader, rendered contrast, 400 percent zoom/reflow and visual review",
+        "production or external effect when applicable"
+      ],
+      "objective": "Implement accessible themes and complete manual accessibility gates.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Accessibility Reviewer",
+      "status": "blocked",
+      "task_id": "INC-008",
+      "validation_commands": [
+        "npm test -- --reporter=dot",
+        "npm run lint",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "actionlint .github/workflows/*.yml",
+        "gitleaks dir . --redact"
+      ],
+      "workstream_id": "WS-06",
+      "write_lock": "released; blocked on accountable human accessibility review"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Exact upstream 92c2b34e44c205cbc2acae7f6ca7c1c219d5dd66 reviewed without installation/execution. Published exact head f59fcbe792c5f4e28d904fc1e1a17442b9340ec7, draft PR #8 and GitHub Actions run 29878783817 passed all eight jobs. The integration review is complete; activation/execution/external effects remain disabled and require a separate authorized increment.",
+      "dependencies": [
+        "INC-003",
+        "INC-004"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Evaluate browser/video integration contracts without side effects.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Security Reviewer",
+      "status": "done",
+      "task_id": "INC-009",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "npm run lint",
+        "npm test -- --run",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/check-python-locks.sh",
+        "npm run validate:operability",
+        "actionlint .github/workflows/production-readiness.yml",
+        "gitleaks git --no-banner --redact --log-opts='--all' .",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "released; review complete, integration activation remains prohibited"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "Global production-readiness requirement.",
+      "dependencies": [
+        "INC-003",
+        "INC-004",
+        "INC-008"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Build semantic/adversarial evals and independent exact-tree verification.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Eval Engineer",
+      "status": "pending",
+      "task_id": "INC-010",
+      "validation_commands": [],
+      "workstream_id": "WS-10",
+      "write_lock": "unclaimed"
+    },
+    {
+      "acceptance_criteria": [
+        "applicable traceability rows proven",
+        "zero open CRITICAL/HIGH findings in slice"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**",
+        "docs/**",
+        "applicable implementation/test paths"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv",
+        "program/architecture.md",
+        "applicable specs and runtime evidence"
+      ],
+      "context": "All safe repository-local work is published at exact head 8820b1d50085363a160634a4d81b02d69a6424b4; draft PR #9 and GitHub Actions run 29880157199 passed all eight jobs. The machine release decision remains DENY_RELEASE. INC-011 is blocked only on accountable entity/jurisdiction/controller-role, retention/deletion/legal-hold/provider decisions and privacy/legal/security/business approvals.",
+      "dependencies": [
+        "INC-003",
+        "INC-009"
+      ],
+      "expected_outputs": [
+        "bounded spec",
+        "implementation/evidence",
+        "independent review"
+      ],
+      "human_gates": [
+        "merge",
+        "production or external effect when applicable"
+      ],
+      "objective": "Complete licensing, privacy, third-party and legal-overclaim release review.",
+      "prohibited_paths": [
+        "protected branches",
+        "production",
+        "external side effects without human gate"
+      ],
+      "read_only_paths": [],
+      "role": "Privacy Reviewer",
+      "status": "blocked",
+      "task_id": "INC-011",
+      "validation_commands": [
+        "npm run validate:compliance",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "npm test -- --run",
+        "npm run lint",
+        "npm run build",
+        "npm run verify:accessibility-browser",
+        "./scripts/check-python-locks.sh",
+        "npm run validate:program",
+        "npm run validate:operability",
+        "actionlint .github/workflows/production-readiness.yml",
+        "gitleaks git --no-banner --redact --log-opts='--all' .",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-11",
+      "write_lock": "released; exact remote CI green, accountable privacy/legal human gate remains"
+    },
+    {
+      "acceptance_criteria": [
+        "runtime role is not superuser and owns no runtime table/schema",
+        "runtime role cannot CREATE, ALTER, DROP or TRUNCATE runtime schema objects",
+        "runtime role can execute all supported application operations",
+        "migration role alone can initialize/upgrade schema",
+        "tenant isolation and recovery gates remain green"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/postgres_schema.py",
+        "backend/setup.cfg",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "docs/POSTGRESQL_PERSISTENCE.md",
+        "docs/OPERATIONS.md",
+        "docs/IMPLEMENTATION_AUDIT.md",
+        "docs/adr/0007-postgresql-durable-state.md",
+        "docs/runbooks/postgresql-schema-rollout.md",
+        "docs/runbooks/runtime-backup-restore.md",
+        "docs/security/threat-model.md",
+        "docs/privacy/privacy-model.md",
+        "README.md",
+        "program/**",
+        "specs/012-postgresql-runtime-role/**"
+      ],
+      "authoritative_inputs": [
+        "docs/security/threat-model.md",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/api.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "program/requirements-traceability.csv"
+      ],
+      "context": "Exact published head 1002d077564618623fe00f27ffae23c2b410aca8 passed all eight jobs in GitHub Actions run 29868899218. INC-012 code, local verification, push, remote SHA and CI gates are complete. Persistent environment observation is tracked separately.",
+      "dependencies": [
+        "INC-003"
+      ],
+      "expected_outputs": [
+        "explicit operator-only schema initialize mode",
+        "application runtime restricted to read-only schema validation",
+        "fixed pg_catalog,public application search path",
+        "packaged schema operator command",
+        "non-owner PostgreSQL role fixture with exact grants and no TEMPORARY",
+        "negative absent/incompatible/wrong-type/missing-column/DDL/ownership/escalation checks",
+        "Helm/Terraform validate-only application configuration",
+        "operator rollout and rollback runbooks",
+        "exact-commit behavioral evidence before review",
+        "atomic initialize rollback fixture"
+      ],
+      "foundation_commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
+      "human_gates": [
+        "production database role creation or credential rotation",
+        "persistent schema migration"
+      ],
+      "implementation_commit": "1002d077564618623fe00f27ffae23c2b410aca8",
+      "objective": "Separate PostgreSQL schema-migration authority from runtime authority and prove a non-owner least-privilege runtime role without weakening tenant isolation.",
+      "prohibited_paths": [
+        "external databases",
+        "persistent production data",
+        "credential rotation",
+        "protected branches"
+      ],
+      "publication_state": "REMOTE_CI_GREEN",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Security Reviewer / Data Engineer",
+      "status": "done",
+      "task_id": "INC-012",
+      "validation_commands": [
+        "python3 -m unittest backend.tests.test_postgres_schema_cli -v",
+        "./scripts/verify-postgresql-runtime.sh",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "npm run validate:program",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-07",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "mission-first product workspace replaces primary demo flow",
+        "tenant credential and appearance use progressive disclosure",
+        "five-provider configuration is server-derived and secret-free",
+        "applied context and operational fabric reflect durable runtime state",
+        "integrated local product runner is loopback-only and reproducible",
+        "focused backend/frontend/browser/package gates pass"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "package.json",
+        "compliance/**",
+        "program/**",
+        "specs/013-product-workspace/**"
+      ],
+      "authoritative_inputs": [
+        "user product critique and screenshots",
+        "existing runtime/API contracts",
+        "official provider security and API documentation",
+        "program/current-state.md"
+      ],
+      "ci_run": 29956435978,
+      "context": "Implementation commit a89907f replaces the parallel demo frontend with one durable workspace, adds a secret-free five-provider control plane and an integrated loopback local runner. Local wheel, PostgreSQL, frontend, Chromium, package, infrastructure and hygiene gates pass. Provider inference/effects and final E2E remain separate gated work.",
+      "delivered_head": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "dependencies": [
+        "INC-007",
+        "INC-009"
+      ],
+      "expected_outputs": [
+        "mission-first workspace shell",
+        "server-side five-provider registry and GET-only API",
+        "progressive Settings and tenant connection dialogs",
+        "applied context and operational fabric panels",
+        "loopback-only integrated local runner",
+        "critic and verifier evidence"
+      ],
+      "human_gates": [
+        "real provider egress or spend",
+        "final E2E release gate",
+        "merge"
+      ],
+      "implementation_commit": "a89907f",
+      "objective": "Productize the primary workspace and add truthful provider configuration without enabling paid inference or external effects.",
+      "prohibited_paths": [
+        "provider calls using real credentials during verification",
+        "cloud resources or spend",
+        "protected branches",
+        "external publication or media generation"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_IN_STACK",
+      "pull_request": 10,
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Product Engineer / Critic",
+      "status": "done",
+      "task_id": "INC-013",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "five provider protocols implemented with exact bounded contracts",
+        "gateway disabled by default and no public inference route",
+        "credentials prompts and provider bodies absent from public errors and receipts",
+        "host proxy redirect timeout input token and response limits fail closed",
+        "wheel PostgreSQL frontend Chromium and non-root package gates pass",
+        "zero real provider calls or spend during verification"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "backend/requirements*",
+        "backend/setup.cfg",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "README.md",
+        "compliance/**",
+        "program/**",
+        "specs/014-model-gateway/**"
+      ],
+      "authoritative_inputs": [
+        "official OpenAI Responses documentation",
+        "official Anthropic Messages documentation",
+        "official DeepSeek chat-completions documentation",
+        "official Moonshot Kimi K3 documentation",
+        "existing provider registry and idempotency architecture"
+      ],
+      "ci_run": 29956435978,
+      "context": "Implementation 56f9ee8 adds bounded protocol clients with mock-transport verification. The gateway remains disabled and disconnected from runs because no durable outbound intent/receipt exists.",
+      "delivered_head": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "dependencies": [
+        "INC-004",
+        "INC-013"
+      ],
+      "expected_outputs": [
+        "bounded model gateway",
+        "private provider execution configuration",
+        "safe gateway status",
+        "protocol contract tests",
+        "package boundary evidence",
+        "operator runbook and critic review"
+      ],
+      "human_gates": [
+        "real provider credentials",
+        "egress",
+        "spend",
+        "merge"
+      ],
+      "implementation_commit": "56f9ee84cb46e479bf3c46658306599102ae0051",
+      "objective": "Implement real provider protocols without activating inference or weakening durable idempotency.",
+      "prohibited_paths": [
+        "real provider requests during verification",
+        "public completion endpoint",
+        "automatic run integration",
+        "cloud resources or spend",
+        "protected branches"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_IN_STACK",
+      "pull_request": 10,
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Integration Engineer / Security Critic",
+      "status": "done",
+      "task_id": "INC-014",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "actionlint and Gitleaks history/worktree",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "outbound intent persists before provider call",
+        "tenant run command provider model payload and budget binding is exact",
+        "single fenced owner may execute an intent",
+        "successful receipt persists before run completion",
+        "compatible replay reuses receipt without another provider call",
+        "pending or unknown state blocks automatic retry",
+        "reconciliation circuit breaker and revocation are observable",
+        "all verification uses mock transports until explicit egress and spend authorization"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/015-model-effect-authority/**"
+      ],
+      "authoritative_inputs": [
+        "INC-004 durable command idempotency",
+        "INC-014 model gateway",
+        "SQLite and PostgreSQL transaction contracts",
+        "Greenlight fencing architecture"
+      ],
+      "context": "Durable model-effect authority is implemented at 6eb7fa070bcbe71c840ca316fc86d369d9d1691b with schema v4, server-side provider binding, fenced exact-once execution, replay repair, unknown reconciliation and default-disabled deployment controls.",
+      "dependencies": [
+        "INC-004",
+        "INC-014"
+      ],
+      "expected_outputs": [
+        "SQLite and PostgreSQL outbound intent and receipt model",
+        "fenced execution replay and reconciliation service",
+        "mock-transport run integration",
+        "failure-injection and cross-replica tests"
+      ],
+      "human_gates": [
+        "real provider credentials",
+        "privacy/legal approval",
+        "egress",
+        "spend",
+        "production activation",
+        "merge"
+      ],
+      "implementation_commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
+      "objective": "Add durable economic idempotency before attaching model inference to governed runs.",
+      "prohibited_paths": [
+        "real provider requests during verification",
+        "unbounded automatic retry",
+        "provider response content in logs or audit",
+        "cloud resources or spend"
+      ],
+      "publication_state": "LOCAL_COMMITTED_REMOTE_CI_PENDING",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Distributed Systems Engineer / Security Reviewer",
+      "status": "review",
+      "task_id": "INC-015",
+      "validation_commands": [
+        "focused SQLite and PostgreSQL race and failure-injection tests",
+        "locked wheel and production package",
+        "zero-egress mock transport verification"
+      ],
+      "validation_summary": "245 locked-wheel tests passed; local API and socket-guard MockTransport contracts passed. Final PostgreSQL/package/infrastructure/supply-chain reruns were intentionally delegated to exact-head CI by operator instruction.",
+      "workstream_id": "WS-08",
+      "write_lock": "released"
+    },
+    {
+      "acceptance_criteria": [
+        "cinematic hierarchy restored",
+        "topology uses durable run state",
+        "no browser simulation authority",
+        "exact-head CI passes"
+      ],
+      "allowed_paths": [
+        "src/**",
+        "scripts/**",
+        "backend/tests/**",
+        "docs/**",
+        "program/**",
+        "compliance/**"
+      ],
+      "authoritative_inputs": [
+        "user screenshots and critique",
+        "runtime session/run/artifact state"
+      ],
+      "ci_run": 29956435978,
+      "context": "Exact remote head 9c9c548 restores orbital hero, live topology and station inspector without simulation timers or mock authority.",
+      "dependencies": [
+        "INC-013"
+      ],
+      "expected_outputs": [
+        "cinematic hero",
+        "backend-derived topology",
+        "station inspector",
+        "portable local runner"
+      ],
+      "human_gates": [
+        "merge",
+        "production deployment"
+      ],
+      "implementation_commit": "9c9c548e188c0c4a22154531a41b655d943e14b7",
+      "objective": "Restore cinematic product hierarchy while preserving one backend-authoritative runtime.",
+      "prohibited_paths": [
+        "browser simulation runtime",
+        "synthetic progress timers",
+        "external publication"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS",
+      "pull_request": 10,
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Product Engineer / Visual Critic",
+      "status": "done",
+      "task_id": "INC-016",
+      "validation_commands": [
+        "frontend and Chromium",
+        "locked Python/PostgreSQL",
+        "container and supply chain"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "released"
+    },
+    {
+      "acceptance_criteria": [
+        "same brief returns 200 replay",
+        "changed same-key payload remains 409",
+        "cross-replica create once",
+        "posts from copy_deck",
+        "local gates pass"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/017-usable-campaign-output/**"
+      ],
+      "authoritative_inputs": [
+        "observed 409 logs",
+        "user screenshots",
+        "durable idempotency",
+        "copy_deck artifacts"
+      ],
+      "context": "Implementation 9b0b659 converts same-brief conflicts into audited replay, serializes distinct keys on one run and centers channel posts.",
+      "dependencies": [
+        "INC-004",
+        "INC-016"
+      ],
+      "expected_outputs": [
+        "audited replay",
+        "resource lock",
+        "channel posts",
+        "compact evidence",
+        "admin diagnostics"
+      ],
+      "human_gates": [
+        "merge",
+        "production",
+        "external publication"
+      ],
+      "implementation_commit": "9b0b65927fe9609e1f55835728332bb3e2aa09ca",
+      "objective": "Expose usable campaign posts and make deterministic run replay safe.",
+      "prohibited_paths": [
+        "fake progress",
+        "automatic publication",
+        "social secrets in browser"
+      ],
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Product Engineer / Concurrency Critic",
+      "status": "review",
+      "task_id": "INC-017",
+      "validation_commands": [
+        "locked wheel/PostgreSQL",
+        "frontend/Chromium",
+        "Buildah/infra/hygiene"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "run returns before completion",
+        "one fenced worker",
+        "restart-safe progress",
+        "idempotent station completion"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/018-async-run-execution/**"
+      ],
+      "authoritative_inputs": [
+        "specs/018-async-run-execution",
+        "orchestrator/persistence",
+        "Greenlight fencing"
+      ],
+      "context": "Implementation 3cc304d10b64b8cb32bffeee52f36e583c46f844 persists queued runs, advances fourteen fenced station checkpoints and exposes backend-derived progress without browser simulation.",
+      "dependencies": [
+        "INC-004",
+        "INC-017"
+      ],
+      "expected_outputs": [
+        "queued run",
+        "worker lease/fence",
+        "station checkpoints",
+        "polling/SSE",
+        "crash recovery"
+      ],
+      "human_gates": [
+        "production worker deployment",
+        "merge"
+      ],
+      "implementation_commit": "3cc304d10b64b8cb32bffeee52f36e583c46f844",
+      "objective": "Execute stations through a durable asynchronous worker for truthful progress.",
+      "prohibited_paths": [
+        "fake browser progress",
+        "unfenced worker",
+        "cloud resources"
+      ],
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Distributed Systems Engineer / Runtime Critic",
+      "status": "review",
+      "task_id": "INC-018",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "npm run verify:async-run-browser",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh"
+      ],
+      "workstream_id": "WS-04",
+      "write_lock": "released"
+    },
+    {
+      "acceptance_criteria": [
+        "state tenant/session/channel bound",
+        "tokens encrypted and hidden",
+        "Professional Instagram required",
+        "admin-only connect/disconnect",
+        "cross-replica replay blocked",
+        "all local gates pass"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "infra/**",
+        "compliance/**",
+        "program/**",
+        "specs/019-social-oauth-publication/**"
+      ],
+      "authoritative_inputs": [
+        "official X OAuth documentation",
+        "official Meta Instagram API documentation",
+        "Greenlight/tenant/session contracts",
+        "specs/019-social-oauth-publication/**"
+      ],
+      "context": "OAuth/account connection is implemented; repair 6d5e59b changes the browser session cookie to Secure SameSite=Lax for cross-site provider returns, exposes exact callbacks and adds phase-safe provider diagnostics.",
+      "dependencies": [
+        "INC-003",
+        "INC-012",
+        "INC-017"
+      ],
+      "expected_outputs": [
+        "X OAuth 1.0a",
+        "Instagram Authorization Code",
+        "AES-GCM token store",
+        "single-use state",
+        "account metadata",
+        "disconnect",
+        "token bootstrap",
+        "Helm/Terraform Secret refs"
+      ],
+      "human_gates": [
+        "real X/Instagram login",
+        "callback registration",
+        "provider terms review",
+        "merge",
+        "deployment"
+      ],
+      "implementation_commit": "6d5e59b",
+      "objective": "Connect tenant-owned X and Instagram accounts through OAuth or encrypted server-side token bootstrap.",
+      "prohibited_paths": [
+        "real provider calls in CI",
+        "tokens in browser/Git/logs",
+        "publication routes",
+        "unbounded retry"
+      ],
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_PENDING",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "readiness_commit": "93c5f55852dc60409d231eca948c20d74a871aa0",
+      "role": "Integration Engineer / Security Reviewer",
+      "status": "review",
+      "task_id": "INC-019",
+      "validation_commands": [
+        "192 locked/PostgreSQL tests",
+        "35 frontend tests",
+        "Chromium accessibility/social output/cross-site OAuth",
+        "Buildah package and supply chain",
+        "K3s/Helm/Terraform",
+        "Actionlint/Gitleaks"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "single writer: orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "intent persists before provider request",
+        "one fenced executor per exact effect binding",
+        "compatible replay and reconciliation create no duplicate effect",
+        "unknown outcomes block automatic retry",
+        "disconnect and Greenlight revocation invalidate unused authority",
+        "Instagram requires approved reachable media",
+        "receipt-success audit is repairable without a second provider call",
+        "installed image effect smoke uses MockTransport plus socket guard",
+        "async worker/read lock ordering is deadlock-free"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/020-social-publication-authority/**"
+      ],
+      "authoritative_inputs": [
+        "specs/020-social-publication-authority/**",
+        "INC-004 fencing",
+        "INC-019 connected accounts",
+        "Greenlight artifact authority"
+      ],
+      "context": "Implementation 8eb0cf7 adds default-disabled exact-once X/Instagram publication with durable binding, fenced execution, bounded receipts, idempotent reconciliation, audit repair, confirmation UI and zero-real-HTTP browser/package evidence.",
+      "dependencies": [
+        "INC-004",
+        "INC-019"
+      ],
+      "expected_outputs": [
+        "durable publication intent",
+        "X/Instagram adapters",
+        "receipt/reconciliation",
+        "confirmation UI",
+        "sandbox evidence"
+      ],
+      "human_gates": [
+        "authorized sandbox posts",
+        "pricing/terms review",
+        "privacy/legal approval",
+        "production budget",
+        "merge/deployment"
+      ],
+      "implementation_commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
+      "objective": "Publish approved X and Instagram artifacts exactly once through durable intent/fence/receipt authority.",
+      "prohibited_paths": [
+        "real publication in CI",
+        "automatic retry of unknown outcomes",
+        "tokens/provider bodies in logs",
+        "publication without Greenlight"
+      ],
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_BLOCKED_REAL_PUBLICATION_DISABLED",
+      "read_only_paths": [
+        "checkpoints/**"
+      ],
+      "role": "Distributed Systems Integration Engineer / Security Reviewer",
+      "status": "review",
+      "task_id": "INC-020",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "npm run verify:accessibility-browser",
+        "npm run verify:social-browser",
+        "npm run verify:social-oauth-browser",
+        "npm run verify:async-run-browser",
+        "npm run verify:social-publication-browser",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "released"
+    },
+    {
+      "acceptance_criteria": [
+        "missing evidence is rejected",
+        "unverified evidence remains reviewable but cannot receive Greenlight",
+        "operator cannot self-attest evidence or legal approval",
+        "verified/legal-approved content maps every claim to source and reviewer",
+        "general social enablement does not enable political effects",
+        "OAuth state remains mandatory and cross-session callbacks never call the provider",
+        "locked backend and complete frontend gates pass"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "scripts/**",
+        "infra/**",
+        "program/**",
+        "specs/021-campaign-intelligence/**"
+      ],
+      "authoritative_inputs": [
+        "specs/021-campaign-intelligence/spec.md",
+        "skills/hooks-copy.md",
+        "skills/platform-instagram.md",
+        "existing Greenlight/RBAC/effect-authority contracts"
+      ],
+      "context": "Implementation commit 6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political briefs, claim provenance, server-bound fact/legal review, Spanish channel copy, accessible media plans, semantic critique, truthful revise state and a separate political publication kill switch. OAuth regression repair discovered by the full wheel gate is included.",
+      "dependencies": [
+        "INC-004",
+        "INC-019",
+        "INC-020"
+      ],
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/13",
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30149528848",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30149528848",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "structured political brief",
+        "claim ledger",
+        "Spanish platform copy",
+        "accessible carousel plan",
+        "critique report",
+        "legal/evidence authority binding",
+        "separate political publication flag"
+      ],
+      "human_gates": [
+        "accountable jurisdiction-specific legal review",
+        "candidate/campaign authorization",
+        "real source authenticity review",
+        "political publication enablement",
+        "real external publication",
+        "merge/deployment/release"
+      ],
+      "implementation_commit": "6ebbd634bd32408db0a7678289b0f906cda014c0",
+      "objective": "Replace generic mixed-language campaign fixtures with grounded political campaign intelligence and fail-closed publication gates.",
+      "prohibited_paths": [
+        "real political publication",
+        "real provider calls in tests",
+        "credentials in Git/logs",
+        "cloud apply or spend",
+        "protected branch mutation"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_EXTERNAL_EFFECTS_DISABLED",
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "remote_head": "25f2ef0c19d89f008a87aa1daa79b1ca9a1df9a1",
+      "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "status": "done",
+      "task_id": "INC-021",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh => 261 PASS, 23 PostgreSQL-only SKIP",
+        "npm test => 39 PASS",
+        "npm run lint => 0 warnings, 0 errors",
+        "npm run build => PASS",
+        "focused OAuth family => 18 PASS, 2 PostgreSQL-only SKIP",
+        "focused political/red-team families => PASS"
+      ],
+      "workstream_id": "WS-05",
+      "write_lock": "released after implementation commit"
+    },
+    {
+      "acceptance_criteria": [
+        "invalid MIME/bytes/dimensions/rights/alt text fail closed",
+        "bytes/hash/idempotency survive SQLite restart and PostgreSQL replicas",
+        "public capability is opaque, tenant-free, expiring and revocable",
+        "expired/revoked media blocks before provider HTTP",
+        "container FINISHED is required before media_publish",
+        "provider/read mismatch becomes unknown and blocks replay",
+        "verified receipt persists permalink/timestamp/account/caption/media hashes without raw content",
+        "frontend upload/revoke/history preserve Greenlight and publication gates",
+        "all effects remain disabled by default"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "backend/requirements*.in",
+        "backend/requirements*.lock",
+        "backend/setup.cfg",
+        "src/**",
+        "infra/**",
+        "scripts/**",
+        "program/**",
+        "specs/022-governed-media-verification/**"
+      ],
+      "authoritative_inputs": [
+        "specs/022-governed-media-verification/spec.md",
+        "skills/platform-instagram.md",
+        "official Meta Instagram API Content Publishing and media reference contracts",
+        "INC-020 exact-once publication authority",
+        "INC-021 campaign intelligence and political kill switch"
+      ],
+      "context": "Implementation commit 3d8ed72332d29b161a48c1201e627a9c016ec6ac adds a SQLite/PostgreSQL Media Vault, schema v5, Pillow-verified JPEG ingestion, HMAC capability URLs, UI upload/revocation, Instagram container polling, media verification and durable history. No real provider effect was executed.",
+      "dependencies": [
+        "INC-020",
+        "INC-021"
+      ],
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/14",
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30164438593",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "immutable JPEG Media Vault",
+        "opaque expiring public capability",
+        "pre-Greenlight revocation",
+        "publication_media artifact",
+        "container status polling",
+        "read-after-write verified receipt",
+        "durable publication history and safe permalink UI"
+      ],
+      "human_gates": [
+        "media rights/consent",
+        "human accessibility review",
+        "jurisdiction/campaign/legal approval",
+        "explicit general and political publication enablement",
+        "one separately authorized sandbox post",
+        "cloud object-storage/retention review",
+        "merge/deploy/release"
+      ],
+      "implementation_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac",
+      "merge_commit": "7522164240b8090fe70ec51525a6a247e4a558c8",
+      "objective": "Create immutable governed JPEG media, pre-Greenlight revocation, container processing and durable read-after-write verified Instagram receipts.",
+      "prohibited_paths": [
+        "real provider publication",
+        "cloud resource creation or spend",
+        "carousel/reel publication",
+        "automatic retry after unknown effect",
+        "secret disclosure",
+        "protected branch mutation"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_EXTERNAL_EFFECTS_DISABLED",
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "remote_head": "b5d63f65c52c886a1855f20aff8593ca398383ac",
+      "role": "Media Engineer / Backend Engineer / Data Engineer / Security Reviewer / Privacy Reviewer / Red Team / Independent Verifier",
+      "status": "done",
+      "task_id": "INC-022",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh => PASS (277 tests; 0 PostgreSQL-only skips locally)",
+        "npm test => PASS (0 tests)",
+        "npm run lint => PASS, zero warnings/errors",
+        "npm run build => PASS",
+        "focused Media Vault/publication/schema/backup/local-runner families => PASS",
+        "git diff --check and secret scan => PASS"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "released after exact-head CI and merge"
+    },
+    {
+      "acceptance_criteria": [
+        "political content creation is disabled by default",
+        "legal/electoral reviewer and Greenlight approver are distinct authenticated subjects",
+        "political compliance record is included in the approved artifact envelope",
+        "paid political mode never reaches the organic provider transport",
+        "wrong or missing final phrase creates no intent and no provider call",
+        "correct phrase is persisted only as SHA-256 in the exact-once binding",
+        "commercial flows remain backward compatible",
+        "all kill switches remain false by default across local, Helm and Terraform configuration"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "src/**",
+        "infra/**",
+        "scripts/**",
+        "docs/**",
+        "program/**",
+        "specs/023-political-compliance-mode/**"
+      ],
+      "authoritative_inputs": [
+        "specs/023-political-compliance-mode/spec.md",
+        "docs/runbooks/political-publication.md",
+        "INC-021 campaign intelligence",
+        "INC-022 governed media and verified receipt",
+        "existing Greenlight and exact-once effect authority"
+      ],
+      "context": "Implementation 2315ac3 plus CI repair e35fa74 adds durable political compliance authority. Exact-head CI run 30174006993 passed all eight jobs after one infrastructure-only Docker Hub retry. No provider or cloud effect was executed.",
+      "dependencies": [
+        "INC-021",
+        "INC-022"
+      ],
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15",
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30174006993",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30174006993",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "independent political kill switches",
+        "organic versus paid brief contract",
+        "political compliance record inside Greenlight",
+        "reviewer separation",
+        "typed final confirmation with SHA-256 durable binding",
+        "schema v6 migration",
+        "operator UI and runbook"
+      ],
+      "human_gates": [
+        "independent accountable review",
+        "jurisdiction-specific legal/campaign approval",
+        "authorized account ownership",
+        "exact neutral sandbox payload and timing",
+        "explicit short publication window and rollback owner",
+        "merge/deployment/release"
+      ],
+      "implementation_commit": "2315ac32f63958b83f26754e95a88f18b65028a6",
+      "merge_commit": "ca7e8c97dc31b0461832d72232213ccc5963f0af",
+      "merged_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/15",
+      "objective": "Implement fail-closed political content, independent approval, organic-versus-paid boundaries and durable final confirmation authority.",
+      "prohibited_paths": [
+        "real political publication before exact-head review",
+        "paid media through the organic endpoint",
+        "same-subject legal review and Greenlight approval",
+        "raw final confirmation in durable state",
+        "credentials in Git or logs",
+        "cloud apply or spend"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_ALL_EFFECTS_DISABLED",
+      "read_only_paths": [
+        "checkpoints/**",
+        ".env.local"
+      ],
+      "remote_head": "e35fa74fa7704161ef81bf9dbe13cea7b761f5ab",
+      "role": "Producer / Critic / Security Reviewer / Legal Reviewer / Red Team / Independent Verifier",
+      "status": "done",
+      "task_id": "INC-023",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh => 285 PASS, 25 PostgreSQL-only SKIP locally",
+        "npm test => 45 PASS",
+        "npm run lint => 0 warnings, 0 errors",
+        "npm run build => PASS",
+        "GitHub Actions 30174006993 => verify, python-locks, postgresql-shared-state, container, helm, terraform, supply-chain and workflow-lint SUCCESS"
+      ],
+      "workstream_id": "WS-08",
+      "write_lock": "released after exact-head CI; documentation checkpoint only"
+    },
+    {
+      "acceptance_criteria": [
+        "same reviewer cannot approve Greenlight and receives an actionable message",
+        "independent browser profile approves the same durable run",
+        "wrong final phrase produces zero provider calls",
+        "exact phrase produces one mock effect and one durable receipt",
+        "raw final phrase is absent from SQLite and responses",
+        "queued/running state never reports a false Writer failure",
+        "mayor and deputy copy reflect municipal and legislative competencies",
+        "browser gate executes from the installed wheel in CI"
+      ],
+      "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        "artifacts/political-browser/**",
+        "backend/agency_runtime/campaign_intelligence.py",
+        "backend/tests/test_runtime.py",
+        "package.json",
+        "scripts/fixtures/political_browser_app.py",
+        "scripts/verify-political-browser.mjs",
+        "src/components/CampaignOutputPanel*",
+        "src/components/WorkspaceRuntime*",
+        "program/**",
+        "specs/024-political-browser-qa/**"
+      ],
+      "authoritative_inputs": [
+        "specs/024-political-browser-qa/spec.md",
+        "INC-021 campaign intelligence",
+        "INC-022 verified publication",
+        "INC-023 political compliance authority",
+        "existing Chromium/CDP browser harnesses"
+      ],
+      "context": "Implementation commit 4d0bc7472c6b4d9d2719f5275028f35de4341463 adds a two-profile Chromium/CDP journey, mock-only provider fixture, CI evidence upload, actionable reviewer-separation UX, truthful asynchronous copy progress and office-specific mayor/deputy messaging with critique alignment.",
+      "dependencies": [
+        "INC-021",
+        "INC-022",
+        "INC-023"
+      ],
+      "draft_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/17",
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30188644229",
+        "url": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/actions/runs/30188644229",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "two-profile political browser journey",
+        "machine-readable browser receipt and screenshots",
+        "actionable reviewer-separation UX",
+        "truthful async Writer progress",
+        "office-specific mayor and deputy copy",
+        "office_message_alignment critique check",
+        "exact-head CI browser artifact"
+      ],
+      "human_gates": [
+        "human review of screenshots and copy quality",
+        "jurisdiction-specific legal/campaign approval",
+        "exact neutral sandbox account/copy/media/window/rollback authorization",
+        "cumulative integration to protected main",
+        "deployment/release"
+      ],
+      "implementation_commit": "4d0bc7472c6b4d9d2719f5275028f35de4341463",
+      "merge_commit": "0b43be4f9b46d5ff7b272efca961d07db3a97433",
+      "merged_pr": "https://github.com/BernydotJar/AI-Native-Content-Agency-SaaS/pull/17",
+      "objective": "Browser-observe the complete political authority journey, repair reproducible UX defects and enforce office-specific political messaging without real provider effects.",
+      "prohibited_paths": [
+        "real provider publication",
+        "raw credentials or OAuth material in evidence",
+        "cloud apply or paid-media spend",
+        "force push or protected-branch mutation"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_MERGED_EXTERNAL_EFFECTS_DISABLED",
+      "read_only_paths": [
+        ".env.local",
+        ".local/**"
+      ],
+      "remote_head": "eb4481c89bab440daa25b11e49799a47a276b194",
+      "role": "Test Engineer / UX Reviewer / Critique Agent / Content Writer / Security Reviewer / Independent Verifier",
+      "status": "done",
+      "task_id": "INC-024",
+      "validation_commands": [
+        "npm test => 47 PASS",
+        "npm run lint => 0 warnings/errors",
+        "npm run build => PASS",
+        "npm run verify:accessibility-browser => PASS",
+        "npm run verify:social-publication-browser => PASS",
+        "npm run verify:political-browser => PASS source mode",
+        "POLITICAL_BROWSER_USE_INSTALLED=1 npm run verify:political-browser => PASS from installed wheel",
+        "./scripts/verify-python-locks.sh => 286 PASS, 25 PostgreSQL-only SKIP",
+        "GitHub Actions 30188644229 => 8/8 SUCCESS; installed-wheel political browser PASS"
+      ],
+      "workstream_id": "WS-10",
+      "write_lock": "released after implementation commit; documentation checkpoint only"
+    }
+  ],
+  "updated_at": "2026-07-26",
+  "workstreams": [
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-01",
+      "name": "Baseline and Product Architecture",
+      "next_ready_task": "INC-001",
+      "objective": "Reconcile branches, runtime truth, architecture and completion audit.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-02",
+      "name": "Specifications and Requirements Traceability",
+      "next_ready_task": "INC-001",
+      "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "in_progress",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-03",
+      "name": "Data Model, SQLite, PostgreSQL and Migration",
+      "next_ready_task": "INC-002",
+      "objective": "Prove durable correctness, migration, backup and restore.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-04",
+      "name": "Backend, APIs and Agent Runtime",
+      "next_ready_task": "INC-015",
+      "objective": "Close idempotency, structured errors, revocation and runtime gaps.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [
+        "backend/agency_runtime/campaign_intelligence.py",
+        "program/reports/inc-021-review.md",
+        "specs/021-campaign-intelligence/spec.md"
+      ],
+      "dependencies": [],
+      "evals": [
+        "citation fidelity",
+        "groundedness",
+        "missing evidence",
+        "permission denial"
+      ],
+      "id": "WS-05",
+      "name": "Frontend and Production Console",
+      "next_ready_task": "INC-017",
+      "objective": "Unify critical journeys and backend authority.",
+      "owner": "orchestrator",
+      "requirements": [
+        "EVAL-006",
+        "PROD-006"
+      ],
+      "risks": [
+        "R-033"
+      ],
+      "status": "review",
+      "validation": [
+        "./scripts/verify-python-locks.sh",
+        "npm run build",
+        "npm run lint",
+        "npm test"
+      ],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-06",
+      "name": "Design System, UX, Motion and Accessibility",
+      "next_ready_task": "INC-008",
+      "objective": "Add themes, complete states and accessibility gates.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/**",
+        "backend/tests/**",
+        "docs/privacy/**",
+        "docs/security/**",
+        "program/**",
+        "scripts/verify-postgresql-runtime.sh",
+        "specs/003-security-privacy/**",
+        "specs/012-postgresql-runtime-role/**",
+        "src/lib/runtimeApi*"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-07",
+      "name": "Identity, Security, Privacy and Tenant Isolation",
+      "next_ready_task": "INC-019",
+      "objective": "Threat/privacy models, retention and adversarial verification.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "review",
+      "validation": [],
+      "write_locks": [
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/observability.py"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [
+        "backend/agency_runtime/publication_media.py",
+        "backend/agency_runtime/publication_media_postgres.py",
+        "backend/agency_runtime/publication_media_store.py",
+        "program/reports/inc-021-review.md",
+        "program/reports/inc-022-review.md",
+        "specs/021-campaign-intelligence/spec.md",
+        "specs/022-governed-media-verification/spec.md"
+      ],
+      "dependencies": [],
+      "evals": [
+        "OAuth state/session binding",
+        "external-effect kill switch"
+      ],
+      "id": "WS-08",
+      "name": "Integrations, Contracts and Sandbox Boundaries",
+      "next_ready_task": "INC-023",
+      "objective": "Implement bounded integration protocols and durable external-effect authority without uncontrolled side effects.",
+      "owner": "orchestrator",
+      "requirements": [
+        "INT-004",
+        "SEC-014"
+      ],
+      "risks": [
+        "R-034",
+        "R-035",
+        "R-036",
+        "R-037",
+        "R-038"
+      ],
+      "status": "in_progress",
+      "validation": [
+        "./scripts/verify-python-locks.sh",
+        "exact-head PostgreSQL/OCI/Helm/Terraform/supply-chain CI",
+        "exact-head integration CI",
+        "npm run build",
+        "npm run lint",
+        "npm test"
+      ],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-09",
+      "name": "Platform, Deployment and Operations",
+      "next_ready_task": "INC-005",
+      "objective": "SLOs, alerts, rollback and authorized staging evidence.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "blocked",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [
+        "scripts/verify-political-browser.mjs",
+        "artifacts/political-browser/generated",
+        "program/reports/inc-024-political-browser-qa.md",
+        "specs/024-political-browser-qa/spec.md"
+      ],
+      "dependencies": [],
+      "evals": [
+        "two isolated browser identities",
+        "political final-confirmation gate",
+        "office-message semantic alignment"
+      ],
+      "id": "WS-10",
+      "name": "Testing, Evals, Red Team and Quality",
+      "next_ready_task": "INC-024",
+      "objective": "Expand functional, semantic, adversarial and independent gates.",
+      "owner": "orchestrator",
+      "requirements": [
+        "EVAL-007",
+        "PROD-008"
+      ],
+      "risks": [],
+      "status": "in_progress",
+      "validation": [
+        "npm run verify:political-browser",
+        "./scripts/verify-python-locks.sh",
+        "exact-head production-readiness CI"
+      ],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-11",
+      "name": "Legal, Licensing and Compliance",
+      "next_ready_task": "INC-011",
+      "objective": "Maintain license, privacy, third-party and legal-overclaim controls.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "pending",
+      "validation": [],
+      "write_locks": []
+    },
+    {
+      "acceptance_criteria": [
+        "evidence recorded",
+        "applicable validation passes"
+      ],
+      "allowed_paths": [
+        "program/**",
+        "specs/**"
+      ],
+      "artifacts": [],
+      "dependencies": [],
+      "evals": [],
+      "id": "WS-12",
+      "name": "Documentation, Versioning and Release Readiness",
+      "next_ready_task": "INC-019",
+      "objective": "Keep versions, claims, runbooks and release evidence coherent.",
+      "owner": "orchestrator",
+      "requirements": [],
+      "risks": [],
+      "status": "in_progress",
+      "validation": [],
+      "write_locks": []
+    }
+  ]
+}

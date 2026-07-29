@@ -47,10 +47,12 @@ class AgentStatus(str, Enum):
 
 
 class RunStatus(str, Enum):
+    QUEUED = "queued"
     RUNNING = "running"
     AWAITING_GREENLIGHT = "awaiting_greenlight"
     COMPLETED = "completed"
     REJECTED = "rejected"
+    REVOKED = "revoked"
     FAILED = "failed"
 
 
@@ -83,6 +85,20 @@ class MissionBrief:
     budget_cents: int = 0
     source_asset: str = "sandbox://brief/no-external-asset"
     campaign_goal: str = "awareness"
+    campaign_type: str = "commercial"
+    publication_mode: str = "organic"
+    locale: str = "es-GT"
+    jurisdiction: str = ""
+    office: str = ""
+    candidate_name: str = ""
+    locality: str = ""
+    problem: str = ""
+    proposal: str = ""
+    desired_action: str = ""
+    disclosure: str = ""
+    legal_review_status: str = "pending"
+    legal_reviewed_by: str = ""
+    evidence_claims: Tuple[Mapping[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         require_non_empty(self.title, "title")
@@ -92,6 +108,42 @@ class MissionBrief:
             raise ValueError("platforms must contain at least one platform")
         if self.budget_cents < 0:
             raise ValueError("budget_cents must not be negative")
+        if self.campaign_type not in {"commercial", "political"}:
+            raise ValueError("campaign_type must be commercial or political")
+        if self.publication_mode not in {"organic", "paid"}:
+            raise ValueError("publication_mode must be organic or paid")
+        require_non_empty(self.locale, "locale")
+        if self.legal_review_status not in {"pending", "approved"}:
+            raise ValueError("legal_review_status must be pending or approved")
+        if self.legal_review_status == "approved" and not self.legal_reviewed_by.strip():
+            raise ValueError("approved legal review requires legal_reviewed_by")
+        for claim in self.evidence_claims:
+            if not isinstance(claim, Mapping):
+                raise ValueError("evidence claims must be mappings")
+            for field_name in ("statement", "source", "locator"):
+                value = claim.get(field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError("evidence claim {} must not be empty".format(field_name))
+            verification_status = str(claim.get("verification_status", "unverified"))
+            if verification_status not in {"unverified", "verified"}:
+                raise ValueError("evidence claim verification_status is invalid")
+            if verification_status == "verified" and not str(claim.get("reviewed_by", "")).strip():
+                raise ValueError("verified evidence claims require reviewed_by")
+        if self.campaign_type == "political":
+            required = {
+                "jurisdiction": self.jurisdiction,
+                "office": self.office,
+                "candidate_name": self.candidate_name,
+                "locality": self.locality,
+                "problem": self.problem,
+                "proposal": self.proposal,
+                "desired_action": self.desired_action,
+                "disclosure": self.disclosure,
+            }
+            for field_name, value in required.items():
+                require_non_empty(value, field_name)
+            if not self.evidence_claims:
+                raise ValueError("political briefs require at least one evidence claim")
 
 
 @dataclass(frozen=True)
@@ -151,11 +203,60 @@ class Greenlight:
     reviewer: str
     note: str
     decided_at: str
+    approved_artifact_ids: Tuple[str, ...] = ()
+    approved_artifact_hashes: Tuple[str, ...] = ()
+    authorized_channels: Tuple[Platform, ...] = ()
+    authorized_budget_cents: int = 0
+    fencing_token: int = 1
+    revoked_at: Optional[str] = None
+    revoked_by: str = ""
+    revocation_reason: str = ""
 
     def __post_init__(self) -> None:
         require_non_empty(self.reviewer, "reviewer")
         require_non_empty(self.decided_at, "decided_at")
+        if len(self.approved_artifact_ids) != len(self.approved_artifact_hashes):
+            raise ValueError("approved artifact ids and hashes must have equal length")
+        if self.authorized_budget_cents < 0:
+            raise ValueError("authorized_budget_cents must not be negative")
+        if self.fencing_token < 1:
+            raise ValueError("fencing_token must be positive")
+        if self.revoked_at is None:
+            if self.revoked_by or self.revocation_reason:
+                raise ValueError("active Greenlight cannot contain revocation metadata")
+        else:
+            require_non_empty(self.revoked_by, "revoked_by")
+            require_non_empty(self.revocation_reason, "revocation_reason")
 
+    @property
+    def active(self) -> bool:
+        return (
+            self.decision is GreenlightDecision.APPROVED
+            and self.revoked_at is None
+        )
+
+
+@dataclass
+class RunExecution:
+    state: str = "inline"
+    next_station: str = "ceo"
+    lease_owner: str = ""
+    lease_expires_at: Optional[str] = None
+    fencing_token: int = 0
+    attempts: int = 0
+    checkpointed_at: Optional[str] = None
+    failure_detail: str = ""
+
+    def __post_init__(self) -> None:
+        if self.state not in {
+            "inline", "queued", "leased", "running",
+            "awaiting_greenlight", "completed", "failed"
+        }:
+            raise ValueError("run execution state is invalid")
+        if self.fencing_token < 0 or self.attempts < 0:
+            raise ValueError("run execution counters must not be negative")
+        if self.lease_owner and self.lease_expires_at is None:
+            raise ValueError("run execution lease requires an expiry")
 
 @dataclass
 class ExecutionRun:
@@ -169,6 +270,7 @@ class ExecutionRun:
     trace: List[TraceEvent] = field(default_factory=list)
     greenlight: Optional[Greenlight] = None
     completed_at: Optional[str] = None
+    execution: RunExecution = field(default_factory=RunExecution)
 
     def state_for(self, role: AgentRole) -> AgentState:
         return self.agent_states[role]

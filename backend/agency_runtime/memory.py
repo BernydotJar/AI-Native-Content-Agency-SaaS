@@ -5,7 +5,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, List, Sequence, Tuple, Union
+from typing import Callable, List, Protocol, Sequence, Tuple, Union
 
 from .models import (
     MemoryObservation,
@@ -23,6 +23,33 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+class MemoryStore(Protocol):
+    namespace: str
+
+    def observe(
+        self,
+        content: str,
+        provenance: Provenance,
+        confidence: float,
+        tags: Sequence[str] = (),
+    ) -> MemoryObservation: ...
+
+    def store(self, observation: MemoryObservation) -> MemoryRecord: ...
+
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        min_confidence: float = 0.0,
+    ) -> Tuple[MemorySearchResult, ...]: ...
+
+    def recall(self, memory_id: str) -> MemoryRecord: ...
+
+    def count(self) -> int: ...
+
+    def close(self) -> None: ...
+
+
 class SQLiteMemory:
     """Persistent Observe/Store/Search/Recall memory with source metadata.
 
@@ -35,11 +62,15 @@ class SQLiteMemory:
         self,
         path: Union[str, Path] = ":memory:",
         clock: Clock = utc_now,
+        namespace: str = "default",
     ) -> None:
         self.path = str(path)
         self._clock = clock
+        self.namespace = namespace.strip().lower()
+        if not self.namespace:
+            raise ValueError("namespace must not be empty")
         self._lock = threading.RLock()
-        self._connection = sqlite3.connect(self.path)
+        self._connection = sqlite3.connect(self.path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         if self.path != ":memory:":
@@ -56,7 +87,8 @@ class SQLiteMemory:
                 );
 
                 INSERT OR IGNORE INTO schema_meta(key, value)
-                VALUES ('schema_version', '1');
+                VALUES ('schema_version', '2');
+                UPDATE schema_meta SET value = '2' WHERE key = 'schema_version';
 
                 CREATE TABLE IF NOT EXISTS memories (
                     memory_id TEXT PRIMARY KEY,
@@ -74,6 +106,16 @@ class SQLiteMemory:
                 CREATE INDEX IF NOT EXISTS idx_memories_stored_at
                     ON memories(stored_at DESC);
                 """
+            )
+            columns = {
+                row[1] for row in self._connection.execute("PRAGMA table_info(memories)")
+            }
+            if "namespace" not in columns:
+                self._connection.execute(
+                    "ALTER TABLE memories ADD COLUMN namespace TEXT NOT NULL DEFAULT 'default'"
+                )
+            self._connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_memories_namespace ON memories(namespace)"
             )
 
     def observe(
@@ -93,6 +135,7 @@ class SQLiteMemory:
         observed_at = self._clock()
         observation_id = stable_id(
             "obs",
+            self.namespace,
             normalized_content,
             provenance,
             confidence,
@@ -109,7 +152,7 @@ class SQLiteMemory:
         )
 
     def store(self, observation: MemoryObservation) -> MemoryRecord:
-        memory_id = stable_id("mem", observation.observation_id)
+        memory_id = stable_id("mem", self.namespace, observation.observation_id)
         stored_at = self._clock()
         provenance_json = canonical_json(observation.provenance)
         tags_json = canonical_json(observation.tags)
@@ -124,8 +167,9 @@ class SQLiteMemory:
                     confidence,
                     tags_json,
                     observed_at,
-                    stored_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    stored_at,
+                    namespace
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -136,6 +180,7 @@ class SQLiteMemory:
                     tags_json,
                     observation.observed_at,
                     stored_at,
+                    self.namespace,
                 ),
             )
         return self.recall(memory_id)
@@ -156,7 +201,7 @@ class SQLiteMemory:
             raise ValueError("query must not be empty")
 
         clauses = []
-        parameters: List[object] = [min_confidence]
+        parameters: List[object] = [self.namespace, min_confidence]
         for token in tokens:
             clauses.append("(lower(content) LIKE ? OR lower(tags_json) LIKE ?)")
             wildcard = "%{}%".format(token)
@@ -164,7 +209,7 @@ class SQLiteMemory:
         parameters.append(limit)
         sql = """
             SELECT * FROM memories
-            WHERE confidence >= ? AND {}
+            WHERE namespace = ? AND confidence >= ? AND {}
             ORDER BY confidence DESC, stored_at DESC, memory_id ASC
             LIMIT ?
         """.format(" AND ".join(clauses))
@@ -190,7 +235,8 @@ class SQLiteMemory:
     def recall(self, memory_id: str) -> MemoryRecord:
         with self._lock:
             row = self._connection.execute(
-                "SELECT * FROM memories WHERE memory_id = ?", (memory_id,)
+                "SELECT * FROM memories WHERE namespace = ? AND memory_id = ?",
+                (self.namespace, memory_id),
             ).fetchone()
         if row is None:
             raise KeyError("memory not found: {}".format(memory_id))
@@ -198,7 +244,10 @@ class SQLiteMemory:
 
     def count(self) -> int:
         with self._lock:
-            row = self._connection.execute("SELECT COUNT(*) AS total FROM memories").fetchone()
+            row = self._connection.execute(
+                "SELECT COUNT(*) AS total FROM memories WHERE namespace = ?",
+                (self.namespace,),
+            ).fetchone()
         return int(row["total"])
 
     def close(self) -> None:

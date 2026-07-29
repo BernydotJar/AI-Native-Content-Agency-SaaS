@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-native-content-agency
+version: 0.7.0
+appVersion: "0.7.0"
+description: Kubernetes deployment for AI Native Content Agency
+type: application

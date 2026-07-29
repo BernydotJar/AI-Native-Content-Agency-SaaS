@@ -1,0 +1,376 @@
+{{- $backend := lower .Values.runtime.storage.backend -}}
+{{- if not (has $backend (list "sqlite" "postgresql")) }}
+{{- fail "runtime.storage.backend must be sqlite or postgresql" }}
+{{- end }}
+{{- if and (eq $backend "sqlite") (gt (int .Values.replicaCount) 1) }}
+{{- fail "the SQLite backend requires replicaCount=1; select postgresql before scaling replicas" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (not .Values.runtime.storage.postgresql.existingSecret) }}
+{{- fail "runtime.storage.postgresql.existingSecret is required for the PostgreSQL backend" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (not .Values.runtime.storage.postgresql.databaseUrlKey) }}
+{{- fail "runtime.storage.postgresql.databaseUrlKey is required for the PostgreSQL backend" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.poolMinSize) 1) (gt (int .Values.runtime.storage.postgresql.poolMinSize) 100)) }}
+{{- fail "runtime.storage.postgresql.poolMinSize must be between 1 and 100" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.poolMaxSize) (int .Values.runtime.storage.postgresql.poolMinSize)) (gt (int .Values.runtime.storage.postgresql.poolMaxSize) 100)) }}
+{{- fail "runtime.storage.postgresql.poolMaxSize must be between poolMinSize and 100" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (or (lt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 1) (gt (int .Values.runtime.storage.postgresql.connectTimeoutSeconds) 300)) }}
+{{- fail "runtime.storage.postgresql.connectTimeoutSeconds must be between 1 and 300" }}
+{{- end }}
+{{- if and (eq $backend "postgresql") (ne (lower .Values.runtime.storage.postgresql.schemaMode) "validate") }}
+{{- fail "runtime.storage.postgresql.schemaMode must be validate for long-running application pods" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (ne $backend "postgresql") }}
+{{- fail "podDisruptionBudget requires the PostgreSQL backend" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (lt (int .Values.replicaCount) 2) }}
+{{- fail "podDisruptionBudget requires replicaCount of at least 2" }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (or (lt (int .Values.podDisruptionBudget.minAvailable) 1) (gt (int .Values.podDisruptionBudget.minAvailable) (int .Values.replicaCount))) }}
+{{- fail "podDisruptionBudget.minAvailable must be between 1 and replicaCount" }}
+{{- end }}
+{{- if not .Values.runtime.auth.identityCredentialsKey }}
+{{- fail "runtime.auth.identityCredentialsKey is required for individual identity and RBAC" }}
+{{- end }}
+{{- $modelProvider := lower (trim .Values.runtime.model.selectedProvider) -}}
+{{- if and .Values.runtime.model.effectAuthorityEnabled (not .Values.runtime.model.executionEnabled) }}
+{{- fail "runtime.model.effectAuthorityEnabled requires runtime.model.executionEnabled" }}
+{{- end }}
+{{- if .Values.runtime.model.executionEnabled }}
+{{- if not (has $modelProvider (list "openai" "anthropic" "deepseek" "moonshot" "llama")) }}
+{{- fail "runtime.model.selectedProvider must be allowlisted when model execution is enabled" }}
+{{- end }}
+{{- if not .Values.runtime.model.egressAllowedHosts }}
+{{- fail "runtime.model.egressAllowedHosts is required when model execution is enabled" }}
+{{- end }}
+{{- if not .Values.runtime.model.existingSecret }}
+{{- fail "runtime.model.existingSecret is required when model execution is enabled" }}
+{{- end }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.model.maxOutputTokens) 1) (gt (int .Values.runtime.model.maxOutputTokens) 8192) }}
+{{- fail "runtime.model.maxOutputTokens must be between 1 and 8192" }}
+{{- end }}
+{{- if .Values.runtime.model.existingSecret }}
+{{- range $provider := list "openai" "anthropic" "deepseek" "moonshot" "llama" }}
+{{- if not (index $.Values.runtime.model.apiKeyKeys $provider) }}
+{{- fail (printf "runtime.model.apiKeyKeys.%s is required when runtime.model.existingSecret is set" $provider) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.runtime.social.existingSecret }}
+{{- if not .Values.runtime.social.x.consumerKeyKey }}
+{{- fail "runtime.social.x.consumerKeyKey is required when runtime.social.existingSecret is set" }}
+{{- end }}
+{{- if not .Values.runtime.social.x.consumerSecretKey }}
+{{- fail "runtime.social.x.consumerSecretKey is required when runtime.social.existingSecret is set" }}
+{{- end }}
+{{- if not .Values.runtime.social.instagram.appIdKey }}
+{{- fail "runtime.social.instagram.appIdKey is required when runtime.social.existingSecret is set" }}
+{{- end }}
+{{- if not .Values.runtime.social.instagram.appSecretKey }}
+{{- fail "runtime.social.instagram.appSecretKey is required when runtime.social.existingSecret is set" }}
+{{- end }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginMaxFailures) 1) (gt (int .Values.runtime.auth.loginMaxFailures) 100) }}
+{{- fail "runtime.auth.loginMaxFailures must be between 1 and 100" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginSourceMaxFailures) (int .Values.runtime.auth.loginMaxFailures)) (gt (int .Values.runtime.auth.loginSourceMaxFailures) 10000) }}
+{{- fail "runtime.auth.loginSourceMaxFailures must be between loginMaxFailures and 10000" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.loginWindowSeconds) 10) (gt (int .Values.runtime.auth.loginWindowSeconds) 86400) }}
+{{- fail "runtime.auth.loginWindowSeconds must be between 10 and 86400" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agency.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agency.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+{{- if eq $backend "sqlite" }}
+  strategy:
+    type: Recreate
+{{- else }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+{{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agency.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agency.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Values.observability.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: {{ .Values.observability.metrics.path | quote }}
+        prometheus.io/port: {{ .Values.observability.metrics.port | quote }}
+{{- end }}
+    spec:
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+{{- if eq $backend "sqlite" }}
+            - name: AGENCY_MEMORY_DB
+              value: {{ .Values.runtime.storage.sqlite.databasePath | quote }}
+{{- else }}
+            - name: AGENCY_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.storage.postgresql.existingSecret | quote }}
+                  key: {{ .Values.runtime.storage.postgresql.databaseUrlKey | quote }}
+            - name: AGENCY_DATABASE_POOL_MIN_SIZE
+              value: {{ .Values.runtime.storage.postgresql.poolMinSize | quote }}
+            - name: AGENCY_DATABASE_POOL_MAX_SIZE
+              value: {{ .Values.runtime.storage.postgresql.poolMaxSize | quote }}
+            - name: AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS
+              value: {{ .Values.runtime.storage.postgresql.connectTimeoutSeconds | quote }}
+            - name: AGENCY_POSTGRES_SCHEMA_MODE
+              value: {{ lower .Values.runtime.storage.postgresql.schemaMode | quote }}
+{{- end }}
+{{- if .Values.runtime.auth.tenantApiKeysKey }}
+            - name: AGENCY_TENANT_API_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
+                  key: {{ .Values.runtime.auth.tenantApiKeysKey | quote }}
+                  optional: true
+{{- end }}
+            - name: AGENCY_IDENTITY_CREDENTIALS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "runtime.auth.existingSecret is required" .Values.runtime.auth.existingSecret | quote }}
+                  key: {{ .Values.runtime.auth.identityCredentialsKey | quote }}
+            - name: AGENCY_LOGIN_MAX_FAILURES
+              value: {{ .Values.runtime.auth.loginMaxFailures | quote }}
+            - name: AGENCY_LOGIN_SOURCE_MAX_FAILURES
+              value: {{ .Values.runtime.auth.loginSourceMaxFailures | quote }}
+            - name: AGENCY_LOGIN_WINDOW_SECONDS
+              value: {{ .Values.runtime.auth.loginWindowSeconds | quote }}
+            - name: FORWARDED_ALLOW_IPS
+              value: {{ .Values.runtime.proxy.forwardedAllowIps | quote }}
+            - name: AGENCY_SESSION_COOKIE_NAME
+              value: {{ .Values.runtime.session.cookieName | quote }}
+            - name: AGENCY_SESSION_COOKIE_SECURE
+              value: {{ .Values.runtime.session.cookieSecure | quote }}
+            - name: AGENCY_SESSION_TTL_SECONDS
+              value: {{ .Values.runtime.session.ttlSeconds | quote }}
+            - name: AGENCY_MODEL_EXECUTION_ENABLED
+              value: {{ .Values.runtime.model.executionEnabled | quote }}
+            - name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED
+              value: {{ .Values.runtime.model.effectAuthorityEnabled | quote }}
+            - name: AGENCY_MODEL_PROVIDER
+              value: {{ $modelProvider | quote }}
+            - name: AGENCY_MODEL_EGRESS_ALLOWED_HOSTS
+              value: {{ .Values.runtime.model.egressAllowedHosts | quote }}
+            - name: AGENCY_MODEL_MAX_OUTPUT_TOKENS
+              value: {{ .Values.runtime.model.maxOutputTokens | quote }}
+            - name: AGENCY_OPENAI_MODEL
+              value: {{ .Values.runtime.model.models.openai | quote }}
+            - name: AGENCY_ANTHROPIC_MODEL
+              value: {{ .Values.runtime.model.models.anthropic | quote }}
+            - name: AGENCY_DEEPSEEK_MODEL
+              value: {{ .Values.runtime.model.models.deepseek | quote }}
+            - name: AGENCY_MOONSHOT_MODEL
+              value: {{ .Values.runtime.model.models.moonshot | quote }}
+            - name: AGENCY_LLAMA_MODEL
+              value: {{ .Values.runtime.model.models.llama | quote }}
+{{- if .Values.runtime.model.existingSecret }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.openai | quote }}
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.anthropic | quote }}
+                  optional: true
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.deepseek | quote }}
+                  optional: true
+            - name: MOONSHOT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.moonshot | quote }}
+                  optional: true
+            - name: LLAMA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.model.existingSecret | quote }}
+                  key: {{ .Values.runtime.model.apiKeyKeys.llama | quote }}
+                  optional: true
+{{- end }}
+            - name: AGENCY_POLITICAL_CONTENT_ENABLED
+              value: {{ .Values.runtime.social.politicalContentEnabled | quote }}
+            - name: AGENCY_SOCIAL_PUBLICATION_ENABLED
+              value: {{ .Values.runtime.social.publicationEnabled | quote }}
+            - name: AGENCY_POLITICAL_PUBLICATION_ENABLED
+              value: {{ .Values.runtime.social.politicalPublicationEnabled | quote }}
+            - name: AGENCY_POLITICAL_PAID_MEDIA_ENABLED
+              value: {{ .Values.runtime.social.politicalPaidMediaEnabled | quote }}
+            - name: AGENCY_INSTAGRAM_GRAPH_API_VERSION
+              value: {{ .Values.runtime.social.instagram.apiVersion | quote }}
+{{- if .Values.runtime.social.existingSecret }}
+            - name: AGENCY_X_CONSUMER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.consumerKeyKey | quote }}
+                  optional: true
+            - name: AGENCY_X_CONSUMER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.consumerSecretKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.appIdKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.appSecretKey | quote }}
+                  optional: true
+            - name: AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.encryptionKeysJsonKey | quote }}
+                  optional: true
+            - name: AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.activeEncryptionKeyIdKey | quote }}
+                  optional: true
+            - name: AGENCY_X_USER_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.userAccessTokenKey | quote }}
+                  optional: true
+            - name: AGENCY_X_USER_ACCESS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.userAccessTokenSecretKey | quote }}
+                  optional: true
+            - name: AGENCY_X_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.accountIdKey | quote }}
+                  optional: true
+            - name: AGENCY_X_ACCOUNT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.x.accountUsernameKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accessTokenKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accountIdKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_ACCOUNT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.accountUsernameKey | quote }}
+                  optional: true
+            - name: AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.social.existingSecret | quote }}
+                  key: {{ .Values.runtime.social.instagram.tokenExpiresAtKey | quote }}
+                  optional: true
+{{- end }}
+{{- if .Values.runtime.social.bootstrapTenantId }}
+            - name: AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID
+              value: {{ .Values.runtime.social.bootstrapTenantId | quote }}
+{{- end }}
+{{- if .Values.runtime.social.x.redirectUri }}
+            - name: AGENCY_X_REDIRECT_URI
+              value: {{ .Values.runtime.social.x.redirectUri | quote }}
+{{- end }}
+{{- if .Values.runtime.social.instagram.redirectUri }}
+            - name: AGENCY_INSTAGRAM_REDIRECT_URI
+              value: {{ .Values.runtime.social.instagram.redirectUri | quote }}
+{{- end }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+{{ toYaml .Values.containerSecurityContext | indent 12 }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+{{- if eq $backend "sqlite" }}
+            - name: runtime-data
+              mountPath: /var/lib/agency
+{{- end }}
+            - name: runtime-tmp
+              mountPath: /tmp
+      volumes:
+{{- if eq $backend "sqlite" }}
+        - name: runtime-data
+{{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "agency.fullname" . }}
+{{- else }}
+          emptyDir: {}
+{{- end }}
+{{- end }}
+        - name: runtime-tmp
+          emptyDir: {}

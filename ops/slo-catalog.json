@@ -1,0 +1,38 @@
+{
+  "schema_version": "agency-slo-catalog.v1",
+  "window_days": 30,
+  "slos": [
+    {
+      "id": "SLO-API-AVAILABILITY",
+      "kind": "availability",
+      "target": 0.999,
+      "error_budget_minutes": 43.2,
+      "indicator": "1 - 5xx requests / all HTTP requests",
+      "owner": "WS-09"
+    },
+    {
+      "id": "SLO-READINESS",
+      "kind": "availability",
+      "target": 0.9995,
+      "error_budget_minutes": 21.6,
+      "indicator": "successful readiness probes / all readiness probes",
+      "owner": "WS-09"
+    },
+    {
+      "id": "SLO-API-LATENCY-P95",
+      "kind": "latency",
+      "target_fraction": 0.95,
+      "threshold_seconds": 1.0,
+      "indicator": "p95 agency_http_request_duration_seconds",
+      "owner": "WS-09"
+    },
+    {
+      "id": "SLO-BACKUP-FRESHNESS",
+      "kind": "freshness",
+      "maximum_age_seconds": 90000,
+      "rpo_seconds": 86400,
+      "indicator": "age of agency_backup_last_success_timestamp_seconds",
+      "owner": "WS-03"
+    }
+  ]
+}

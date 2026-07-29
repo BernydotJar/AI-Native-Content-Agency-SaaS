@@ -1,0 +1,142 @@
+# SQLite remains the safe local default. Production horizontal availability uses
+# runtime.storage.backend=postgresql and a pre-provisioned database URL Secret.
+replicaCount: 1
+
+image:
+  repository: ai-native-content-agency
+  tag: local
+  pullPolicy: IfNotPresent
+
+runtime:
+  # FastAPI ASGI body limit; allowed range is 1 KiB to 10 MiB.
+  maxRequestBodyBytes: 1048576
+  storage:
+    backend: "sqlite"
+    sqlite:
+      databasePath: "/var/lib/agency/runtime.sqlite3"
+    postgresql:
+      existingSecret: ""
+      databaseUrlKey: "database-url"
+      poolMinSize: 1
+      poolMaxSize: 10
+      connectTimeoutSeconds: 15
+      # Long-running pods validate an operator-initialized schema and never run DDL.
+      schemaMode: "validate"
+  auth:
+    existingSecret: "ai-native-content-agency-runtime"
+    # Legacy tenant-level keys can overlap during migration. Set to "" to disable.
+    tenantApiKeysKey: "tenant-api-keys.json"
+    # Individual identity JSON is required by the production chart.
+    identityCredentialsKey: "identity-credentials.json"
+    loginMaxFailures: 5
+    loginSourceMaxFailures: 50
+    loginWindowSeconds: 300
+  proxy:
+    # Trust only known proxy addresses/CIDRs so source-based limits cannot be spoofed.
+    forwardedAllowIps: "127.0.0.1"
+  session:
+    cookieName: "agency_session"
+    cookieSecure: true
+    ttlSeconds: 28800
+  model:
+    # Both switches remain off until provider/privacy/economic authority is explicitly approved.
+    executionEnabled: false
+    effectAuthorityEnabled: false
+    selectedProvider: ""
+    egressAllowedHosts: ""
+    maxOutputTokens: 512
+    # Optional pre-provisioned Secret. The chart never creates or stores provider keys.
+    existingSecret: ""
+    apiKeyKeys:
+      openai: "openai-api-key"
+      anthropic: "anthropic-api-key"
+      deepseek: "deepseek-api-key"
+      moonshot: "moonshot-api-key"
+      llama: "llama-api-key"
+    models:
+      openai: ""
+      anthropic: ""
+      deepseek: ""
+      moonshot: ""
+      llama: ""
+  social:
+    # Political generation, publication and paid activation are independent kill switches.
+    politicalContentEnabled: false
+    # External publication remains off until an operator explicitly enables the durable authority.
+    publicationEnabled: false
+    # General publication never implicitly enables political effects.
+    politicalPublicationEnabled: false
+    # Paid political media requires a separate ads authority and stays off here.
+    politicalPaidMediaEnabled: false
+    # Optional pre-provisioned Secret. The chart never creates or stores social credentials.
+    existingSecret: ""
+    encryptionKeysJsonKey: "social-token-encryption-keys.json"
+    activeEncryptionKeyIdKey: "social-token-active-key-id"
+    bootstrapTenantId: ""
+    x:
+      consumerKeyKey: "x-consumer-key"
+      consumerSecretKey: "x-consumer-secret"
+      userAccessTokenKey: "x-user-access-token"
+      userAccessTokenSecretKey: "x-user-access-token-secret"
+      accountIdKey: "x-account-id"
+      accountUsernameKey: "x-account-username"
+      redirectUri: ""
+    instagram:
+      apiVersion: "v24.0"
+      appIdKey: "instagram-app-id"
+      appSecretKey: "instagram-app-secret"
+      accessTokenKey: "instagram-access-token"
+      accountIdKey: "instagram-account-id"
+      accountUsernameKey: "instagram-account-username"
+      tokenExpiresAtKey: "instagram-token-expires-at"
+      redirectUri: ""
+
+# Used only by the SQLite backend. PostgreSQL stores all runtime state externally.
+persistence:
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  storageClassName: ""
+
+observability:
+  metrics:
+    enabled: true
+  prometheusRule:
+    # Requires an existing Prometheus Operator. The chart never installs one.
+    enabled: false
+    # Empty uses the release namespace.
+    namespace: ""
+    path: "/metrics"
+    port: "8080"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+podDisruptionBudget:
+  # Enable for PostgreSQL-backed multi-replica deployments.
+  enabled: false
+  minAvailable: 1

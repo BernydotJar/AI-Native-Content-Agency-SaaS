@@ -1,0 +1,10 @@
+{
+  "runId": "run-cba8478f1a7be8a6",
+  "providerCallsBeforeConfirmation": 0,
+  "providerCallsAfterSuccess": 1,
+  "providerCallsAfterDifferentKeyReplay": 1,
+  "durableIntentCount": 1,
+  "durableStatus": "succeeded",
+  "instagramBlockedWithoutApprovedMedia": true,
+  "realProviderHttp": false
+}

@@ -1,0 +1,5 @@
+# Exact historical false positives retained without rewriting published history.
+# Each fingerprint is scoped to one commit, path, rule, and line.
+e2d3e3c9d5a255fb55289d5b5bfd0786ec609df4:program/decision-log.md:generic-api-key:24
+6b128097dead107a6d554ddacd9d299a33d3e39a:backend/tests/test_identity_access.py:generic-api-key:351
+6b128097dead107a6d554ddacd9d299a33d3e39a:docs/OPERATIONS.md:generic-api-key:32
