@@ -2934,10 +2934,18 @@ def create_app(
     def read_trends(
         geo: str = Query(default="GT", pattern=r"^GT$"),
         limit: int = Query(default=8, ge=1, le=10),
+        topic: str = Query(
+            default="general",
+            pattern=r"^(general|ai|marketing|business)$",
+        ),
         principal: TenantPrincipal = Depends(require_identity_reader),
     ) -> Dict[str, object]:
         try:
-            snapshot = app.state.trend_radar.read(geo=geo, limit=limit)
+            snapshot = app.state.trend_radar.read(
+                geo=geo,
+                limit=limit,
+                topic=topic,
+            )
         except TrendRadarUnavailable as error:
             raise PublicApiError(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

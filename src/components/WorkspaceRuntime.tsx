@@ -26,6 +26,7 @@ import type {
   RuntimeBrief,
   RuntimePlatform,
   RuntimeRun,
+  RuntimeTrendPilotSeed,
 } from "../lib/runtimeApi";
 
 interface WorkspaceRuntimeProps {
@@ -35,6 +36,7 @@ interface WorkspaceRuntimeProps {
   onEntitlementsChange?: (entitlements: readonly string[]) => void;
   connectionRequest?: number;
   connectionReturnFocusRef?: RefObject<HTMLElement | null>;
+  briefSeed?: RuntimeTrendPilotSeed | null;
 }
 
 type SessionPhase = "restoring" | "signed_out" | "authenticated";
@@ -204,6 +206,7 @@ export function WorkspaceRuntime({
   onEntitlementsChange = ignoreEntitlements,
   connectionRequest = 0,
   connectionReturnFocusRef,
+  briefSeed = null,
 }: WorkspaceRuntimeProps) {
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>("restoring");
   const [session, setSession] = useState<BrowserRuntimeSession | null>(null);
@@ -219,6 +222,7 @@ export function WorkspaceRuntime({
   const [notice, setNotice] = useState<OperatorNotice | null>(null);
   const commandKeys = useRef(new Map<string, string>());
   const handledConnectionRequestRef = useRef(0);
+  const appliedBriefSeedRef = useRef("");
   const connectButtonRef = useRef<HTMLButtonElement>(null);
   const connectionDialogRef = useRef<HTMLElement>(null);
   const usernameInputRef = useRef<HTMLInputElement>(null);
@@ -264,6 +268,22 @@ export function WorkspaceRuntime({
   };
 
   const clearCommandKey = (scope: string) => commandKeys.current.delete(scope);
+
+  useEffect(() => {
+    if (!briefSeed || appliedBriefSeedRef.current === briefSeed.id) return;
+    appliedBriefSeedRef.current = briefSeed.id;
+    commandKeys.current.delete("run:create");
+    setBrief({
+      ...briefSeed.brief,
+      platforms: [...briefSeed.brief.platforms],
+      evidence_claims: briefSeed.brief.evidence_claims?.map((claim) => ({ ...claim })),
+    });
+    setNotice({
+      title: "Piloto preparado desde el radar",
+      detail: `${briefSeed.source_label}. Revisa el brief y ejecuta la simulación; ninguna publicación se activa desde esta acción.`,
+      kind: "info",
+    });
+  }, [briefSeed]);
 
   const clearProtectedState = useCallback(() => {
     setSession(null);
@@ -581,6 +601,13 @@ export function WorkspaceRuntime({
 
       <div className="grid gap-0 xl:grid-cols-[minmax(360px,0.78fr)_minmax(0,1.22fr)]">
         <form onSubmit={launchRun} className="border-b border-white/[0.07] p-5 xl:border-b-0 xl:border-r">
+          {briefSeed && appliedBriefSeedRef.current === briefSeed.id && (
+            <div role="status" className="mb-4 rounded-xl border border-sky-300/20 bg-sky-300/[0.05] p-3 text-[11px] leading-5 text-sky-100">
+              <p className="font-bold">Modo piloto · brief precargado</p>
+              <p className="mt-1 text-sky-100/70">{briefSeed.source_label}</p>
+              <p className="mt-1 text-sky-100/55">La corrida genera artefactos para revisión. Publicar permanece sujeto a la autoridad del runtime y está deshabilitado.</p>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
             <label className="text-xs font-semibold text-zinc-300">
               Tipo de campaña

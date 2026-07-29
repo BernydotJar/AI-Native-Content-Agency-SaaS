@@ -140,20 +140,37 @@ export interface RuntimeProviderCatalog {
   gateway: RuntimeProviderGatewayStatus;
 }
 
+export type RuntimeTrendTopic = "general" | "ai" | "marketing" | "business";
+
+export interface RuntimeTrendNewsItem {
+  title: string;
+  source: string;
+  url: string;
+}
+
 export interface RuntimeTrendItem {
   title: string;
   approx_traffic: string;
   published_at: string;
   news_source: string;
+  news_items: RuntimeTrendNewsItem[];
+  signal_type: "search_trend" | "news_signal";
 }
 
 export interface RuntimeTrendSnapshot {
   tenant_id: string;
   geo: "GT";
-  source: "Google Trends RSS";
+  topic: RuntimeTrendTopic;
+  source: "Google Trends RSS" | "Google News RSS";
   source_url: string;
   fetched_at: string;
   trends: RuntimeTrendItem[];
+}
+
+export interface RuntimeTrendPilotSeed {
+  id: string;
+  source_label: string;
+  brief: RuntimeBrief;
 }
 
 export interface RuntimeIntegrationSummary {
@@ -281,7 +298,7 @@ export interface RuntimeApi {
   revokeRun(runId: string, csrfToken: string, idempotencyKey: string): Promise<RuntimeRun>;
   auditEvents(): Promise<RuntimeAuditEvent[]>;
   providerCatalog(): Promise<RuntimeProviderCatalog>;
-  trendRadar(): Promise<RuntimeTrendSnapshot>;
+  trendRadar(topic?: RuntimeTrendTopic): Promise<RuntimeTrendSnapshot>;
   integrations(): Promise<RuntimeIntegrationSummary[]>;
   socialChannels(): Promise<RuntimeSocialChannel[]>;
   socialPublications(runId: string): Promise<RuntimeSocialPublication[]>;
@@ -508,8 +525,11 @@ export function createRuntimeApi(fetchImpl: FetchLike = fetch): RuntimeApi {
     providerCatalog() {
       return requestJson<RuntimeProviderCatalog>(fetchImpl, "/api/v1/providers");
     },
-    trendRadar() {
-      return requestJson<RuntimeTrendSnapshot>(fetchImpl, "/api/v1/trends?geo=GT&limit=8");
+    trendRadar(topic = "general") {
+      return requestJson<RuntimeTrendSnapshot>(
+        fetchImpl,
+        `/api/v1/trends?geo=GT&limit=8&topic=${encodeURIComponent(topic)}`,
+      );
     },
     async integrations() {
       const payload = await requestJson<{ integrations: RuntimeIntegrationSummary[] }>(fetchImpl, "/api/v1/integrations");

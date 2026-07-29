@@ -316,6 +316,27 @@ describe("runtime API client", () => {
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("API_KEY");
   });
 
+  it("requests only an allowlisted trend lane through the authenticated client", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      tenant_id: "tenant-alpha",
+      geo: "GT",
+      topic: "ai",
+      source: "Google News RSS",
+      source_url: "https://news.google.com/rss/search?q=inteligencia+artificial+Guatemala",
+      fetched_at: "2026-07-28T21:00:00+00:00",
+      trends: [],
+    }));
+    const api = createRuntimeApi(fetchMock as typeof fetch);
+
+    await expect(api.trendRadar("ai")).resolves.toEqual(
+      expect.objectContaining({ topic: "ai", source: "Google News RSS" }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/trends?geo=GT&limit=8&topic=ai",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("starts and disconnects social OAuth with cookie credentials and CSRF", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({

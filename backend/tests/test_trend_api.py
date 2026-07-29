@@ -20,6 +20,18 @@ RSS = b"""<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>
 """
+NEWS_RSS = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>AI in Guatemala</title>
+      <link>https://news.google.com/rss/articles/example</link>
+      <pubDate>Tue, 28 Jul 2026 14:00:00 GMT</pubDate>
+      <source>Example Technology</source>
+    </item>
+  </channel>
+</rss>
+"""
 
 
 class TrendApiTests(unittest.TestCase):
@@ -53,8 +65,26 @@ class TrendApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["tenant_id"], "tenant-alpha")
         self.assertEqual(response.json()["source"], "Google Trends RSS")
+        self.assertEqual(response.json()["topic"], "general")
         self.assertEqual(response.json()["trends"][0]["title"], "Guatemala innovation")
         self.assertNotIn(API_KEY, response.text)
+
+    def test_reads_allowlisted_editorial_topic_and_rejects_arbitrary_queries(self):
+        with self.client(httpx.Response(200, content=NEWS_RSS)) as client:
+            response = client.get(
+                "/api/v1/trends?geo=GT&limit=1&topic=ai",
+                headers={"Authorization": "Bearer {}".format(API_KEY)},
+            )
+            rejected = client.get(
+                "/api/v1/trends?topic=custom-query",
+                headers={"Authorization": "Bearer {}".format(API_KEY)},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["source"], "Google News RSS")
+        self.assertEqual(response.json()["topic"], "ai")
+        self.assertEqual(response.json()["trends"][0]["signal_type"], "news_signal")
+        self.assertEqual(rejected.status_code, 422)
 
     def test_maps_provider_failure_to_safe_public_error(self):
         with self.client(httpx.Response(503, content=b"upstream details")) as client:
