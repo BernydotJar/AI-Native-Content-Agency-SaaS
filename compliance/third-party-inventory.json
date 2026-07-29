@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "5aa25e0b6cb76c5cc8ce1f754fa15cbb668aff528f863b00e61d12c8169a57c2"
+      "sha256": "f41d1f7d89eaec8de7ba8938a094dffe2b9bc2a2b96c117f2b4e862455dc8d5c"
     },
     {
       "path": ".github/workflows/publish-gcp-image.yml",
@@ -53,7 +53,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "389874b1f33779ea6de59da1f0a0f2f52317cb582dbc73ea3dbc2980b313c39e"
+      "sha256": "fc6e33b15f82ad08eadf0476511860f6731d8fa61a5bdd3f2f8e68c67e84a7d4"
     }
   ],
   "external_candidates": [

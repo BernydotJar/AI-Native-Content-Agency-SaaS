@@ -148,3 +148,34 @@ Finish validation and publish the INC-037 receipt to PR #30. Then obtain explici
 authorization for the stacked PRs. After the approved changes reach `main`, manually run
 the image publisher with confirmation. A separate database and secret-migration decision
 must precede any Cloud Run deployment or stable OAuth callback cutover.
+
+## 2026-07-29 — Graph Harness SDLC adoption
+
+- Protected `main` cumulative head before this increment: `c8b177c9b615b7b14e726d52c9d94f121ab9b64a`.
+- Active feature branch: `feature/graph-harness-adoption-v1`.
+- Canonical framework revision: `1bebce3db35303072049233786464bb01163c98b`.
+- Graph nodes: 25.
+- Graph events: 15.
+- `INC-038` derived status: `review`.
+- Passed gates: spec, implementation, production and review.
+- Intentionally open gate: close.
+- Local program, graph, lint, 58 frontend tests and production build: PASS.
+- Exact-head CI, human closure and merge: pending.
+- No product runtime, UI, database schema, cloud resource, secret, social effect, model effect or publication authority changed.
+
+### Localized repair after exact-head run 30427783709
+
+- Failed gates: backend test discovery in `verify` and `postgresql-shared-state`.
+- Root causes: stale fixed task count (`24`) and missing submodule initialization in the PostgreSQL checkout.
+- Graph action: `failure.recorded`, `INC-038` invalidated, revision advanced from 0 to 1; no other node was invalidated.
+- Repair: task cardinality expectation updated to 25, adapter import made explicit, PostgreSQL job initializes the pinned gitlink.
+- Graph events after repair: 30.
+- Derived state after repair: `INC-038=review`; close gate remains open.
+
+## 2026-07-29 — INC-038 closed through Graph Harness
+
+- Framework PR #1 merged as `1bebce3db35303072049233786464bb01163c98b`.
+- Application pre-closure exact-head run `30465318928` passed 8/8 jobs.
+- Graph Harness events: 49; `INC-038` revision: 2; derived status: `done`.
+- All five gates pass, including `close-gate`.
+- Release decision remains `DENY_RELEASE`; deployment and external effects remain unauthorized.

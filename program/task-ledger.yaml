@@ -1,5 +1,5 @@
 {
-  "branch": "agent/inc-024-political-browser-qa",
+  "branch": "feature/graph-harness-adoption-v1",
   "schema_version": "program-task-ledger.v1",
   "tasks": [
     {
@@ -1605,9 +1605,98 @@
       ],
       "workstream_id": "WS-10",
       "write_lock": "released after implementation commit; documentation checkpoint only"
+    },
+    {
+      "acceptance_criteria": [
+        "framework revision is exact and immutable",
+        "domain ledgers remain authoritative inputs",
+        "graph and event chain validate",
+        "spec implementation production and review gates pass",
+        "close gate remains open",
+        "existing product behavior is unchanged"
+      ],
+      "allowed_paths": [
+        ".gitmodules",
+        "vendor/graph-harness-sdlc",
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "package-lock.json",
+        "scripts/verify_graph_harness.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "program/**",
+        "specs/038-graph-harness-adoption/**",
+        "README.md",
+        "AGENTS.md",
+        "RTK.md"
+      ],
+      "authoritative_inputs": [
+        "user directive",
+        "BernydotJar/Graph-harness-sdlc@1bebce3db35303072049233786464bb01163c98b",
+        "program/task-ledger.yaml",
+        "program/task-graph.yaml"
+      ],
+      "context": "User explicitly selected Graph Harness SDLC as the execution runtime. The canonical framework is pinned at 1bebce3db35303072049233786464bb01163c98b.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30465318928",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "pinned framework gitlink",
+        "typed project projection",
+        "append-only execution ledger",
+        "derived state projection",
+        "CI graph gate",
+        "review evidence"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "close feature",
+        "merge",
+        "release",
+        "deployment",
+        "spending",
+        "secret mutation",
+        "external effects"
+      ],
+      "implementation_commit": "58c3761",
+      "objective": "Adopt Graph Harness SDLC as the executable governance runtime without duplicating framework concepts.",
+      "prohibited_paths": [
+        "protected branch mutation",
+        "framework runtime duplication",
+        "production deployment",
+        "external infrastructure",
+        "spending",
+        "secret mutation",
+        "external effects"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_CLOSURE_PENDING_FINAL_TREE",
+      "read_only_paths": [
+        "backend/agency_runtime/**",
+        "src/**",
+        "infra/**",
+        ".env.local",
+        ".local/**"
+      ],
+      "role": "Graph Runtime Integrator / Production Reviewer",
+      "status": "done",
+      "task_id": "INC-038",
+      "validation_commands": [
+        "python3 scripts/validate-program-state.py",
+        "python3 scripts/verify_graph_harness.py",
+        "python3 -m unittest backend.tests.test_graph_harness_adapter -v",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-01",
+      "write_lock": "single writer: graph-harness orchestrator"
     }
   ],
-  "updated_at": "2026-07-26",
+  "updated_at": "2026-07-29",
   "workstreams": [
     {
       "acceptance_criteria": [

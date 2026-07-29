@@ -1,0 +1,281 @@
+{
+  "checkpoint_count": 4,
+  "event_count": 49,
+  "last_event_id": "ea6851a4-14b8-475b-86d4-325aed996b5e",
+  "mode": "SHIP",
+  "nodes": {
+    "INC-001": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-002": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-003": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-004": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-005": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "blocked"
+    },
+    "INC-006": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "blocked"
+    },
+    "INC-007": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-008": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "blocked"
+    },
+    "INC-009": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-010": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "pending"
+    },
+    "INC-011": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "blocked"
+    },
+    "INC-012": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-013": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-014": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-015": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-016": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-017": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-018": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-019": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-020": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "review"
+    },
+    "INC-021": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-022": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-023": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-024": {
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": null,
+      "revision": 0,
+      "status": "done"
+    },
+    "INC-038": {
+      "active_approval_count": 0,
+      "active_evidence": {
+        "03d50e52-a4dd-4dee-b142-697caec488f5": {
+          "artifact": "specs/038-graph-harness-adoption",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "af5901c71ebb69b0441439804a2b1b6b05d520ea5996dafbdf9d6f49a5f79889"
+        },
+        "531c99c6-d21f-4395-bc8a-6e830c389e5b": {
+          "artifact": "program/reports/inc-038-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "14261c77eb62380c9fb92467bb11f06d2fd30910bed2aa3a6f481faffa463fe2"
+        },
+        "9f461fb6-9da2-4ce3-b1df-238fc0a795a4": {
+          "artifact": "merged Graph Harness runtime pin and application adapter",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "9cb8189265259564ab583b92b03c51d00aecd56d3f1f299ae8102633fc08f3a8"
+        },
+        "e566c2aa-7721-43f4-99dc-a782fd6f61bc": {
+          "artifact": "program/reports/inc-038-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
+        },
+        "e919e4f5-3b93-48c2-a7fb-db72e6d3d97a": {
+          "artifact": "program/reports/inc-038-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "a678dff58dcf818c8c6e0ca8115caeaffb5585de67af8e9f119c5c45ee450a1e"
+        },
+        "f14156c0-8783-40b2-991a-3fb1973e0057": {
+          "artifact": "program/reports/inc-038-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "72805057971121f78bd3b1b2440ee20371a3ced1c59e9fcb1ebce1c3222d845f"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "531c99c6-d21f-4395-bc8a-6e830c389e5b"
+          ],
+          "result": "PASS"
+        },
+        "implementation-gate": {
+          "evidence_ids": [
+            "9f461fb6-9da2-4ce3-b1df-238fc0a795a4",
+            "f14156c0-8783-40b2-991a-3fb1973e0057"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "e919e4f5-3b93-48c2-a7fb-db72e6d3d97a"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "e566c2aa-7721-43f4-99dc-a782fd6f61bc"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "03d50e52-a4dd-4dee-b142-697caec488f5"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "d4e08019-ad0e-4a55-829b-b9050e8576c1",
+      "revision": 2,
+      "status": "done"
+    }
+  },
+  "project_id": "ai-native-content-agency-saas",
+  "ready_nodes": [],
+  "repair_plan_count": 2,
+  "schema_version": "graph-harness.state.v1"
+}

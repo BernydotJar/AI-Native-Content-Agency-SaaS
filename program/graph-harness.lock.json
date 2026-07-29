@@ -1,0 +1,7 @@
+{
+  "commit": "1bebce3db35303072049233786464bb01163c98b",
+  "event_schema": "graph-harness.event.v1",
+  "project_schema": "graph-harness.project.v1",
+  "repository": "https://github.com/BernydotJar/Graph-harness-sdlc.git",
+  "state_schema": "graph-harness.state.v1"
+}
