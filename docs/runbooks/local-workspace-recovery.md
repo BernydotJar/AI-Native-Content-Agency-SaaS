@@ -12,16 +12,18 @@ cd /workspace
 ```
 
 The command forces publication switches to `false`, restores the local product,
-reuses or recreates a Quick Tunnel with HTTP/2, refreshes the provider callback
-URLs, restarts the API whenever the public hostname or `.env.local` changes,
-and verifies both local and public health. This includes newly saved provider
-credentials, so Docker Compose is not required to reload X or Instagram config.
+starts the social-connection backup watcher, starts the configured named Cloudflare
+Tunnel or falls back to a Quick Tunnel, refreshes the provider callback URLs, restarts
+the API whenever the public hostname or `.env.local` changes, and verifies both local
+and public health. This includes newly saved provider credentials, so Docker Compose
+is not required to reload X or Instagram config.
 
 Useful commands:
 
 ```bash
 ./scripts/workspace-up.sh status
 ./scripts/workspace-up.sh url
+./scripts/workspace-up.sh backup
 cat .local/product.log
 cat .local/api.log
 cat .local/cloudflared.log
@@ -33,9 +35,18 @@ A `trycloudflare.com` Quick Tunnel is intentionally ephemeral. Recovery can be
 automated, but the hostname cannot be guaranteed. A changed hostname must also
 be present in each provider's OAuth redirect allowlist.
 
-For a durable OAuth callback, use a named Cloudflare Tunnel or another stable
-public hostname. Configure the same stable hostname in CampaignOS, Meta and X.
-Do not store tunnel credentials or provider secrets in tracked files.
+For a durable OAuth callback, configure a named Cloudflare Tunnel and its stable
+hostname in the untracked `.env.local` file:
+
+```bash
+AGENCY_CLOUDFLARE_TUNNEL_TOKEN=
+AGENCY_CLOUDFLARE_PUBLIC_URL=https://campaignos.example.com
+```
+
+Both values are required together. `workspace-up.sh` copies the token to a private
+`0600` file and starts `cloudflared` with `--token-file`, so the token is not placed in
+the process arguments or logs. Configure the same stable hostname in Meta and X. Never
+store tunnel credentials or provider secrets in tracked files.
 
 ## Local identity credential
 
@@ -67,3 +78,27 @@ perder transacciones. Después del reinicio, verifica la variable efectiva del p
 los conteos de sesiones, auditoría y conexiones sociales. Una autorización OAuth que ya
 se perdió del volumen anterior no se reconstruye a partir de logs o receipts: exige una
 nueva autorización interactiva.
+
+
+## Backup automático de conexiones sociales
+
+`workspace-up.sh up` inicia `scripts/watch-social-connection-backups.py`. El watcher
+calcula un digest local de la tabla `social_connections`, incluyendo el ciphertext pero
+sin imprimirlo. Sólo crea un backup SQLite consistente cuando ese estado cambia: nueva
+cuenta, rotación de token o desconexión. Los backups y manifests quedan en:
+
+```text
+/workspace/.local/social-connection-backups/
+```
+
+El manifest más reciente se registra en
+`.local/latest-social-backup-manifest`; los archivos usan permisos privados. El watcher
+no sustituye un backup productivo cifrado/off-host, pero protege el workspace persistente
+contra otra pérdida por reemplazo del runtime. Para forzar una comprobación inmediata:
+
+```bash
+./scripts/workspace-up.sh backup
+```
+
+Antes de restaurar, detén el API y sigue el runbook de backup/restore. Nunca copies sólo
+el archivo SQLite principal cuando existe WAL.

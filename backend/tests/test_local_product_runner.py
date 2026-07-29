@@ -54,6 +54,15 @@ class LocalProductRunnerTests(unittest.TestCase):
             'AGENCY_MEMORY_DB:-/tmp/ai-native-content-agency-local.sqlite3',
             source,
         )
+        self.assertIn("watch-social-connection-backups.py", workspace_source)
+        self.assertIn("AGENCY_CLOUDFLARE_TUNNEL_TOKEN", workspace_source)
+        self.assertIn("AGENCY_CLOUDFLARE_PUBLIC_URL", workspace_source)
+        self.assertIn("--token-file", workspace_source)
+        self.assertNotIn('--token "$token"', workspace_source)
+        self.assertNotIn(
+            "stop_stale_tunnel() {\n  stop_stale_tunnel",
+            workspace_source,
+        )
         self.assertIn("AGENCY_SESSION_COOKIE_SAMESITE", source)
         self.assertIn("AGENCY_SESSION_COOKIE_SECURE", source)
         self.assertNotIn("set -x", source)

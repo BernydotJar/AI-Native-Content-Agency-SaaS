@@ -5,7 +5,7 @@ Updated: 2026-07-28
 ## Exact repository state
 
 - Workspace: `7759306b-d1ea-40ed-92dc-b78424c749ba`
-- Active branch: `agent/inc-034-modern-onboarding-trends`
+- Active branch: `agent/inc-035-social-runtime-recovery`
 - Main merge base: `dcb1d1c567ad688b7fd78a219411b42d5806034c`
 - Previous stacked checkpoint: `728a5bdb756321ef91fa39cc7e734965b1b3d5a5`
 - INC-034 implementation commit: `a11ea1619ab9a2d341ee84d6497c46b9fa1752ab`
@@ -15,8 +15,13 @@ Updated: 2026-07-28
 - Remote browser-contract fix: `296c8e3a2791586d893b680cd6af38913156958a`
 - Draft PR: #27
 - Exact-head CI for browser-contract fix: workflow `30390791007`, 8/8 SUCCESS
-- Worktree after implementation commit: documentation checkpoint in progress
-- Audited `git_push` helper: blocked before GitHub by nested Docker `iptables` initialization; Git Data API fallback verified 25/25 blobs and modes
+- INC-035 local implementation commit: `ad4a9cb`
+- INC-035 remote branch: `agent/inc-035-social-runtime-recovery`
+- INC-035 remote implementation commit: `8a913bf49b8d55a7ed86666aed924759f48b086b`
+- INC-035 draft PR: #28, stacked on `agent/inc-034-modern-onboarding-trends-remote`
+- INC-035 implementation CI: workflow `30392865935`, 8/8 SUCCESS
+- Repository-owned Git Data publication: 10 changed paths and 459 complete remote paths verified
+- Audited `git_push` helper: reconfirmed blocked before GitHub by nested Docker `iptables` initialization
 - Nested containers created: none
 - New social publication, ad activation, model effect, cloud apply or paid resource: none
 
@@ -39,7 +44,8 @@ The implementation now provides:
 
 ## Verification
 
-- Hash-locked installed wheel: 313 PASS; 25 PostgreSQL-only skips expected.
+- Hash-locked installed wheel before INC-035: 313 PASS; 25 PostgreSQL-only skips expected.
+- INC-035 complete backend suite: 320 PASS; 25 PostgreSQL-only skips expected.
 - Frontend: 54 PASS.
 - Oxlint: zero warnings/errors.
 - Production build: PASS.
@@ -54,21 +60,26 @@ The implementation now provides:
 ## Runtime state
 
 - Local root and health: HTTP 200.
+- Public Quick Tunnel health: HTTP 200 at the current runtime hostname.
 - Runtime database: `/workspace/.local/ai-native-content-agency-local.sqlite3`.
 - Runtime process environment points to that exact persistent database.
-- X connection: `not_connected`.
-- Instagram connection: `not_connected`.
+- SQLite integrity: `ok`.
+- Social-connection backup watchdog: running.
+- Latest consistent local social-state backup: available.
+- X: `ready_for_authentication`, `not_connected`, OAuth start available.
+- Instagram: `ready_for_authentication`, `not_connected`, OAuth start available.
 - Social publication: `false`.
 - Political publication: `false`.
 - Political paid media: `false`.
-- Public health: unavailable.
-- Quick tunnel: stopped after newly issued hostnames failed DNS resolution.
+- External effects enabled: `false`.
 
 The prior launcher stored SQLite in `/tmp`. Replacing the workstation runtime removed the
 previous OAuth connection rows, and no recoverable database containing them remained in
-the persistent workspace. INC-034 did not invoke disconnect, OAuth or publication. X and
-Instagram require new interactive authorization only after a stable HTTPS callback is
-available.
+the persistent workspace. INC-035 prevents recurrence with persistent state and a
+connection-change backup watcher. The user grants still require one new interactive OAuth
+authorization after the exact callback is allowlisted in Meta and X. Named Cloudflare
+Tunnel support is implemented for a durable hostname; the current Quick Tunnel remains a
+laboratory fallback.
 
 Release recommendation: `DENY_RELEASE`
 
@@ -76,8 +87,7 @@ Cloud recommendation: `DENY_APPLY`
 
 ## Exact resume condition
 
-Publish this final evidence checkpoint on PR #27 and confirm exact-head CI remains green.
-Before any future
-social OAuth action, establish
-a stable HTTPS callback, update the provider consoles and authorize each account
-interactively. Do not publish or enable paid media as part of INC-034.
+Update the Meta and X provider consoles with one stable named-tunnel hostname (preferred)
+or the currently active Quick Tunnel callback, then authorize each account once through
+CampaignOS. Verify two durable encrypted connection rows and a new backup manifest before
+any future publication window. Do not publish or enable paid media as part of INC-035.

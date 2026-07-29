@@ -14,8 +14,15 @@ API_PID_FILE="$STATE_DIR/api.pid"
 TUNNEL_PID_FILE="$STATE_DIR/cloudflared.pid"
 RUNTIME_ENV_HASH_FILE="$STATE_DIR/runtime-env.sha256"
 LOCK_FILE="$STATE_DIR/workspace-up.lock"
+SOCIAL_BACKUP_DIR="$STATE_DIR/social-connection-backups"
+SOCIAL_BACKUP_STATE_FILE="$STATE_DIR/social-connection-state.sha256"
+SOCIAL_BACKUP_MANIFEST_FILE="$STATE_DIR/latest-social-backup-manifest"
+SOCIAL_BACKUP_LOG="$STATE_DIR/social-connection-backup.log"
+SOCIAL_BACKUP_PID_FILE="$STATE_DIR/social-connection-backup.pid"
+TUNNEL_TOKEN_FILE="$STATE_DIR/cloudflared-token"
 LOCAL_BASE_URL="http://127.0.0.1:${PORT:-4175}"
 RUNTIME_BIN="${AGENCY_LOCAL_RUNTIME_VENV:-/tmp/ai-native-content-agency-runtime}/bin/agency-api"
+CLOUDFLARED_BIN="${AGENCY_CLOUDFLARED_BIN:-$STATE_DIR/bin/cloudflared}"
 
 mkdir -p "$STATE_DIR"
 exec 9>"$LOCK_FILE"
@@ -164,8 +171,22 @@ start_product() {
   }
 }
 
+latest_quick_tunnel_url() {
+  grep -hEo 'https://[a-z0-9-]+\.trycloudflare\.com' \
+    "$TUNNEL_LOG" "$TUNNEL_STDOUT" 2>/dev/null | tail -n 1 || true
+}
+
 current_public_url() {
-  if [[ -s "$PUBLIC_URL_FILE" ]]; then
+  local named_url discovered_url
+  named_url="$(read_env_value AGENCY_CLOUDFLARE_PUBLIC_URL)"
+  if [[ -n "$named_url" ]]; then
+    printf '%s\n' "${named_url%/}"
+    return 0
+  fi
+  discovered_url="$(latest_quick_tunnel_url)"
+  if tunnel_process_alive && [[ -n "$discovered_url" ]] && health_ok "$discovered_url"; then
+    printf '%s\n' "$discovered_url"
+  elif [[ -s "$PUBLIC_URL_FILE" ]]; then
     cat "$PUBLIC_URL_FILE"
   else
     read_env_value AGENCY_PUBLIC_MEDIA_BASE_URL
@@ -177,7 +198,7 @@ tunnel_process_alive() {
   if [[ -s "$TUNNEL_PID_FILE" ]]; then
     pid="$(cat "$TUNNEL_PID_FILE")"
   else
-    pid="$(pgrep -f '^cloudflared tunnel --protocol http2 --url http://127\.0\.0\.1:[0-9]+ ' | head -n 1 || true)"
+    pid="$(pgrep -f 'cloudflared tunnel .*run|cloudflared tunnel --protocol http2 --url http://127\.0\.0\.1:[0-9]+' | head -n 1 || true)"
     if [[ "$pid" =~ ^[0-9]+$ ]]; then
       printf '%s\n' "$pid" >"$TUNNEL_PID_FILE"
     fi
@@ -186,9 +207,64 @@ tunnel_process_alive() {
   kill -0 "$pid" 2>/dev/null
 }
 
+stop_stale_tunnel() {
+  if [[ -s "$TUNNEL_PID_FILE" ]]; then
+    local stale_pid
+    stale_pid="$(cat "$TUNNEL_PID_FILE")"
+    if [[ "$stale_pid" =~ ^[0-9]+$ ]]; then
+      kill "$stale_pid" 2>/dev/null || true
+    fi
+  fi
+  rm -f "$TUNNEL_PID_FILE"
+}
+
+validate_public_url() {
+  local value="$1"
+  [[ "$value" =~ ^https://[A-Za-z0-9.-]+$ ]] || fail 'public URL must be an HTTPS origin without a path'
+}
+
+start_named_tunnel() {
+  local token public_url
+  token="$(read_env_value AGENCY_CLOUDFLARE_TUNNEL_TOKEN)"
+  public_url="$(read_env_value AGENCY_CLOUDFLARE_PUBLIC_URL)"
+  [[ -n "$token" && -n "$public_url" ]] || fail 'named Cloudflare tunnel requires token and public URL'
+  public_url="${public_url%/}"
+  validate_public_url "$public_url"
+  if tunnel_process_alive && health_ok "$public_url"; then
+    printf '%s\n' "$public_url"
+    return 0
+  fi
+  [[ -x "$CLOUDFLARED_BIN" ]] || fail 'cloudflared binary is unavailable'
+  stop_stale_tunnel
+  umask 077
+  printf '%s' "$token" >"$TUNNEL_TOKEN_FILE"
+  chmod 600 "$TUNNEL_TOKEN_FILE"
+  : >"$TUNNEL_LOG"
+  : >"$TUNNEL_STDOUT"
+  nohup "$CLOUDFLARED_BIN" tunnel --no-autoupdate --protocol http2 \
+    --logfile "$TUNNEL_LOG" --loglevel info \
+    run --token-file "$TUNNEL_TOKEN_FILE" --url "$LOCAL_BASE_URL" \
+    >"$TUNNEL_STDOUT" 2>&1 < /dev/null 9>&- &
+  printf '%s\n' "$!" >"$TUNNEL_PID_FILE"
+  for _ in $(seq 1 90); do
+    if tunnel_process_alive && health_ok "$public_url"; then
+      printf '%s\n' "$public_url"
+      return 0
+    fi
+    sleep 1
+  done
+  tail -n 80 "$TUNNEL_LOG" "$TUNNEL_STDOUT" >&2 || true
+  fail 'named Cloudflare tunnel did not become healthy'
+}
+
 start_quick_tunnel() {
-  local existing_url
+  local existing_url discovered_url
   existing_url="$(current_public_url || true)"
+  discovered_url="$(latest_quick_tunnel_url)"
+  if tunnel_process_alive && [[ -n "$discovered_url" ]] && health_ok "$discovered_url"; then
+    printf '%s\n' "$discovered_url"
+    return 0
+  fi
   if tunnel_process_alive && [[ "$existing_url" == https://*.trycloudflare.com ]] && health_ok "$existing_url"; then
     printf '%s\n' "$existing_url"
     return 0
@@ -202,7 +278,7 @@ start_quick_tunnel() {
   fi
   : >"$TUNNEL_LOG"
   : >"$TUNNEL_STDOUT"
-  nohup cloudflared tunnel --protocol http2 --url "$LOCAL_BASE_URL" \
+  nohup "$CLOUDFLARED_BIN" tunnel --protocol http2 --url "$LOCAL_BASE_URL" \
     --logfile "$TUNNEL_LOG" --loglevel info \
     >"$TUNNEL_STDOUT" 2>&1 < /dev/null 9>&- &
   printf '%s\n' "$!" >"$TUNNEL_PID_FILE"
@@ -218,6 +294,70 @@ start_quick_tunnel() {
   done
   tail -n 80 "$TUNNEL_LOG" "$TUNNEL_STDOUT" >&2 || true
   fail 'quick tunnel did not become healthy'
+}
+
+start_tunnel() {
+  local token public_url
+  token="$(read_env_value AGENCY_CLOUDFLARE_TUNNEL_TOKEN)"
+  public_url="$(read_env_value AGENCY_CLOUDFLARE_PUBLIC_URL)"
+  if [[ -n "$token" || -n "$public_url" ]]; then
+    [[ -n "$token" && -n "$public_url" ]] || fail 'named Cloudflare tunnel configuration is incomplete'
+    start_named_tunnel
+  else
+    start_quick_tunnel
+  fi
+}
+
+social_backup_process_alive() {
+  local pid=""
+  if [[ -s "$SOCIAL_BACKUP_PID_FILE" ]]; then
+    pid="$(cat "$SOCIAL_BACKUP_PID_FILE")"
+  fi
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+start_social_backup_watchdog() {
+  local database_value
+  database_value="$(read_env_value AGENCY_MEMORY_DB)"
+  database_value="${database_value:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3}"
+  [[ -z "$(read_env_value AGENCY_DATABASE_URL)" ]] || return 0
+  [[ -f "$database_value" ]] || return 0
+  if social_backup_process_alive; then
+    return 0
+  fi
+  mkdir -p "$SOCIAL_BACKUP_DIR"
+  chmod 700 "$SOCIAL_BACKUP_DIR"
+  : >"$SOCIAL_BACKUP_LOG"
+  nohup setsid python3 "$ROOT_DIR/scripts/watch-social-connection-backups.py" \
+    --database "$database_value" \
+    --output-dir "$SOCIAL_BACKUP_DIR" \
+    --state-file "$SOCIAL_BACKUP_STATE_FILE" \
+    --manifest-file "$SOCIAL_BACKUP_MANIFEST_FILE" \
+    --poll-seconds 10 \
+    >"$SOCIAL_BACKUP_LOG" 2>&1 < /dev/null 9>&- &
+  printf '%s\n' "$!" >"$SOCIAL_BACKUP_PID_FILE"
+  for _ in $(seq 1 20); do
+    if social_backup_process_alive && [[ -s "$SOCIAL_BACKUP_STATE_FILE" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  tail -n 80 "$SOCIAL_BACKUP_LOG" >&2 || true
+  fail 'social connection backup watchdog did not become ready'
+}
+
+backup_social_connections_once() {
+  local database_value
+  database_value="$(read_env_value AGENCY_MEMORY_DB)"
+  database_value="${database_value:-$ROOT_DIR/.local/ai-native-content-agency-local.sqlite3}"
+  [[ -z "$(read_env_value AGENCY_DATABASE_URL)" ]] || fail 'local social backup supports SQLite only'
+  python3 "$ROOT_DIR/scripts/watch-social-connection-backups.py" \
+    --database "$database_value" \
+    --output-dir "$SOCIAL_BACKUP_DIR" \
+    --state-file "$SOCIAL_BACKUP_STATE_FILE" \
+    --manifest-file "$SOCIAL_BACKUP_MANIFEST_FILE" \
+    --once
 }
 
 restart_api_with_current_environment() {
@@ -252,6 +392,17 @@ status() {
     printf 'public_health=not_configured\n'
   fi
   printf 'tunnel_process=%s\n' "$(tunnel_process_alive && printf running || printf stopped)"
+  if [[ -n "$(read_env_value AGENCY_CLOUDFLARE_TUNNEL_TOKEN)" ]]; then
+    printf 'tunnel_mode=named\n'
+  else
+    printf 'tunnel_mode=quick\n'
+  fi
+  printf 'social_backup_watchdog=%s\n' "$(social_backup_process_alive && printf running || printf stopped)"
+  if [[ -s "$SOCIAL_BACKUP_MANIFEST_FILE" ]]; then
+    printf 'latest_social_backup=available\n'
+  else
+    printf 'latest_social_backup=unavailable\n'
+  fi
   printf 'social_publication_enabled=%s\n' "$(read_env_value AGENCY_SOCIAL_PUBLICATION_ENABLED)"
   printf 'political_publication_enabled=%s\n' "$(read_env_value AGENCY_POLITICAL_PUBLICATION_ENABLED)"
   printf 'political_paid_media_enabled=%s\n' "$(read_env_value AGENCY_POLITICAL_PAID_MEDIA_ENABLED)"
@@ -261,9 +412,10 @@ status() {
 up() {
   force_fail_closed
   start_product
+  start_social_backup_watchdog
   local previous_url public_url
   previous_url="$(read_env_value AGENCY_PUBLIC_MEDIA_BASE_URL)"
-  public_url="$(start_quick_tunnel)"
+  public_url="$(start_tunnel)"
   printf '%s\n' "$public_url" >"$PUBLIC_URL_FILE"
   set_env_value AGENCY_PUBLIC_MEDIA_BASE_URL "$public_url"
   set_env_value AGENCY_INSTAGRAM_REDIRECT_URI "$public_url/api/v1/social-channels/instagram/oauth/callback"
@@ -284,5 +436,6 @@ case "${1:-up}" in
   up) up ;;
   status) status ;;
   url) current_public_url ;;
-  *) printf 'usage: %s [up|status|url]\n' "$0" >&2; exit 64 ;;
+  backup) backup_social_connections_once ;;
+  *) printf 'usage: %s [up|status|url|backup]\n' "$0" >&2; exit 64 ;;
 esac
