@@ -16,6 +16,11 @@ With only `project_id` supplied:
 - no service-account key is created;
 - no secret value is stored in Terraform state.
 
+When bootstrap is enabled, a project-scoped monthly budget is mandatory. Its amount is
+expressed in whole units of the billing account currency, with notifications at 5%, 25%
+and 100%. The current COP account uses `64000`, approximately USD 20 at bootstrap time.
+Budget notifications use billing-account IAM recipients and do not stop services.
+
 ## Authentication
 
 ```bash
@@ -39,9 +44,10 @@ terraform -chdir=infra/gcp test
 ## Phases
 
 1. Zero-resource plan with all feature flags false.
-2. Bootstrap APIs, Artifact Registry, Secret Manager containers, two least-privilege
-   service accounts and GitHub Workload Identity Federation.
-3. Build and push an immutable image.
+2. Bootstrap the project budget, APIs, Artifact Registry, Secret Manager containers,
+   two least-privilege service accounts and GitHub Workload Identity Federation.
+3. Build and push an immutable `linux/amd64` image. The repository deletes versions
+   older than 30 days while retaining at least the five most recent versions.
 4. Add secret values out-of-band with `gcloud secrets versions add`.
 5. Deploy Cloud Run privately and verify health.
 6. Open public invocation only after the security review.

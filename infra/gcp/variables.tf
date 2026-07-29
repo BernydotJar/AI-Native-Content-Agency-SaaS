@@ -8,6 +8,39 @@ variable "project_id" {
   }
 }
 
+variable "project_number" {
+  description = "Numeric Google Cloud project number used to scope the billing budget."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_bootstrap || can(regex("^[1-9][0-9]{5,19}$", var.project_number))
+    error_message = "enable_bootstrap requires the numeric Google Cloud project number."
+  }
+}
+
+variable "billing_account_id" {
+  description = "Open billing account ID used only to create a project-scoped budget."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_bootstrap || can(regex("^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$", var.billing_account_id))
+    error_message = "enable_bootstrap requires a billing account ID such as 012345-ABCDEF-6789AB."
+  }
+}
+
+variable "monthly_budget_units" {
+  description = "Monthly budget in whole units of the billing account currency. Thresholds are fixed at 5%, 25% and 100%."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = !var.enable_bootstrap || (var.monthly_budget_units >= 1 && var.monthly_budget_units <= 100000000 && floor(var.monthly_budget_units) == var.monthly_budget_units)
+    error_message = "enable_bootstrap requires monthly_budget_units to be a positive whole amount in the billing account currency."
+  }
+}
+
 variable "region" {
   description = "Google Cloud region for regional resources."
   type        = string

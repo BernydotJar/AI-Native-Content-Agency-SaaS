@@ -45,3 +45,4 @@ artifacts/accessibility/generated/
 !.env.example
 # Generated social browser evidence
 artifacts/social/generated/
+gha-creds-*.json

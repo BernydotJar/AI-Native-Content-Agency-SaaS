@@ -1,11 +1,14 @@
-project_id        = "replace-with-project-id"
-region            = "us-central1"
+project_id         = "replace-with-project-id"
+project_number     = "replace-with-project-number"
+billing_account_id = "012345-ABCDEF-6789AB"
+region             = "us-central1"
 environment       = "staging"
 github_repository = "BernydotJar/AI-Native-Content-Agency-SaaS"
 github_ref        = "refs/heads/main"
 
-enable_bootstrap = false
-enable_cloud_run = false
+enable_bootstrap  = false
+enable_cloud_run  = false
+monthly_budget_units = 20
 
 # After separate approval:
 # enable_bootstrap = true

@@ -53,17 +53,24 @@ The repository declares `MIT` in `LICENSE` with SHA-256 `b5915031a7d4c6d50a2e853
 
 ## GitHub Actions
 
-All workflow actions are build-only and pinned by full commit SHA.
+Workflow actions are full-SHA pinned. `production-readiness` is build-only;
+`publish-gcp-image` is an explicitly manual image publication path and has no
+runtime deployment or secret-read authority.
 
 | Action | Commit | Workflow |
 |---|---|---|
 | `actions/checkout` | `11d5960a326750d5838078e36cf38b85af677262` | `.github/workflows/production-readiness.yml` |
+| `actions/checkout` | `11d5960a326750d5838078e36cf38b85af677262` | `.github/workflows/publish-gcp-image.yml` |
 | `actions/setup-node` | `49933ea5288caeca8642d1e84afbd3f7d6820020` | `.github/workflows/production-readiness.yml` |
 | `actions/setup-python` | `a26af69be951a213d495a4c3e4e4022e16d87065` | `.github/workflows/production-readiness.yml` |
 | `actions/upload-artifact` | `ea165f8d65b6e75b540449e92b4886f43607fa02` | `.github/workflows/production-readiness.yml` |
 | `azure/setup-helm` | `bf6a7d304bc2fdb57e0331155b7ebf2c504acf0a` | `.github/workflows/production-readiness.yml` |
 | `docker/build-push-action` | `10e90e3645eae34f1e60eeb005ba3a3d33f178e8` | `.github/workflows/production-readiness.yml` |
+| `docker/build-push-action` | `10e90e3645eae34f1e60eeb005ba3a3d33f178e8` | `.github/workflows/publish-gcp-image.yml` |
 | `docker/setup-buildx-action` | `8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` | `.github/workflows/production-readiness.yml` |
+| `docker/setup-buildx-action` | `8d2750c68a42422c14e847fe6c8ac0403b4cbd6f` | `.github/workflows/publish-gcp-image.yml` |
+| `google-github-actions/auth` | `7c6bc770dae815cd3e89ee6cdf493a5fab2cc093` | `.github/workflows/publish-gcp-image.yml` |
+| `google-github-actions/setup-gcloud` | `aa5489c8933f4cc7a4f7d45035b3b1440c9c10db` | `.github/workflows/publish-gcp-image.yml` |
 | `hashicorp/setup-terraform` | `b9cd54a3c349d3f38e8881555d616ced269862dd` | `.github/workflows/production-readiness.yml` |
 
 ## External candidates

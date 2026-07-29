@@ -35,6 +35,13 @@ gcloud config set run/region us-central1
 gcloud auth application-default set-quota-project "$PROJECT_ID"
 ```
 
+Record the numeric project and open billing account IDs for the reviewed Terraform plan:
+
+```bash
+gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)'
+gcloud beta billing projects describe "$PROJECT_ID" --format='value(billingAccountName)'
+```
+
 ## Plan-only validation
 
 ```bash
@@ -47,6 +54,11 @@ terraform -chdir=infra/gcp show /tmp/campaignos-gcp-zero.tfplan
 
 The initial plan must contain zero resources. Any non-zero resource count is a stop
 condition.
+
+The bootstrap plan must include one project-scoped monthly budget in the billing-account
+currency with thresholds at 5%, 25% and 100%. For the current COP account, the reviewed
+amount is `64000`, producing alerts at COP 3,200, COP 16,000 and COP 64,000. A budget is
+not a hard spending cap.
 
 ## Cost boundary
 

@@ -21,7 +21,11 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "0b78fda297d62092c1c3590970587aac3b0a6e8343818fdfcf4674a92726be0b"
+      "sha256": "5aa25e0b6cb76c5cc8ce1f754fa15cbb668aff528f863b00e61d12c8169a57c2"
+    },
+    {
+      "path": ".github/workflows/publish-gcp-image.yml",
+      "sha256": "77ac7b970806a63a94e1da744d484bb73b7c078d1736201569a582b2e3554bee"
     },
     {
       "path": "artifacts/supply-chain/base-images.json",
@@ -70,6 +74,11 @@
       "workflow": ".github/workflows/production-readiness.yml"
     },
     {
+      "action": "actions/checkout",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "workflow": ".github/workflows/publish-gcp-image.yml"
+    },
+    {
       "action": "actions/setup-node",
       "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
       "workflow": ".github/workflows/production-readiness.yml"
@@ -95,9 +104,29 @@
       "workflow": ".github/workflows/production-readiness.yml"
     },
     {
+      "action": "docker/build-push-action",
+      "commit": "10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
+      "workflow": ".github/workflows/publish-gcp-image.yml"
+    },
+    {
       "action": "docker/setup-buildx-action",
       "commit": "8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
       "workflow": ".github/workflows/production-readiness.yml"
+    },
+    {
+      "action": "docker/setup-buildx-action",
+      "commit": "8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+      "workflow": ".github/workflows/publish-gcp-image.yml"
+    },
+    {
+      "action": "google-github-actions/auth",
+      "commit": "7c6bc770dae815cd3e89ee6cdf493a5fab2cc093",
+      "workflow": ".github/workflows/publish-gcp-image.yml"
+    },
+    {
+      "action": "google-github-actions/setup-gcloud",
+      "commit": "aa5489c8933f4cc7a4f7d45035b3b1440c9c10db",
+      "workflow": ".github/workflows/publish-gcp-image.yml"
     },
     {
       "action": "hashicorp/setup-terraform",
@@ -264,7 +293,7 @@
     "sha256": "b5915031a7d4c6d50a2e8530e2cf66f371c667793aebb7d3804d1410fdb08b2a",
     "spdx": "MIT"
   },
-  "reviewed_at": "2026-07-22T00:05:00Z",
+  "reviewed_at": "2026-07-29T01:10:41Z",
   "schema_version": "agency-third-party-inventory.v1",
   "transitive_inventory_evidence": {
     "npm": "package-lock.json and CI/SBOM",

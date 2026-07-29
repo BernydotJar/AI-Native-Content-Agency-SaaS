@@ -8,6 +8,11 @@ output "cloud_run_enabled" {
   value       = var.enable_cloud_run
 }
 
+output "monthly_budget_name" {
+  description = "Billing budget resource name after bootstrap apply."
+  value       = var.enable_bootstrap ? google_billing_budget.project[0].name : null
+}
+
 output "artifact_registry_repository" {
   description = "Docker repository path after bootstrap apply."
   value = var.enable_bootstrap ? format(
