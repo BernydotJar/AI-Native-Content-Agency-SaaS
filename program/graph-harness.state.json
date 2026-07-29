@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 3,
-  "event_count": 45,
-  "last_event_id": "39e1680f-fd56-4552-a638-24a2db530108",
+  "checkpoint_count": 4,
+  "event_count": 49,
+  "last_event_id": "ea6851a4-14b8-475b-86d4-325aed996b5e",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -205,6 +205,12 @@
           "result": "PASS",
           "sha256": "af5901c71ebb69b0441439804a2b1b6b05d520ea5996dafbdf9d6f49a5f79889"
         },
+        "531c99c6-d21f-4395-bc8a-6e830c389e5b": {
+          "artifact": "program/reports/inc-038-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "14261c77eb62380c9fb92467bb11f06d2fd30910bed2aa3a6f481faffa463fe2"
+        },
         "9f461fb6-9da2-4ce3-b1df-238fc0a795a4": {
           "artifact": "merged Graph Harness runtime pin and application adapter",
           "kind": "implementation",
@@ -231,6 +237,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "531c99c6-d21f-4395-bc8a-6e830c389e5b"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "9f461fb6-9da2-4ce3-b1df-238fc0a795a4",
@@ -257,9 +269,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "5d367535-6121-498e-b596-6fcdc63e1d88",
+      "last_event_id": "d4e08019-ad0e-4a55-829b-b9050e8576c1",
       "revision": 2,
-      "status": "review"
+      "status": "done"
     }
   },
   "project_id": "ai-native-content-agency-saas",

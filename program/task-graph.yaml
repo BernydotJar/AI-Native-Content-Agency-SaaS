@@ -233,7 +233,7 @@
         "INC-001"
       ],
       "id": "INC-038",
-      "status": "spec_ready"
+      "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",

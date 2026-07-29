@@ -1660,7 +1660,7 @@
           "program/task-ledger.yaml",
           "program/task-graph.yaml"
         ],
-        "canonical_status": "spec_ready",
+        "canonical_status": "done",
         "human_gates": [
           "close feature",
           "merge",

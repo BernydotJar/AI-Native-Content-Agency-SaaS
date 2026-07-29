@@ -171,3 +171,11 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Repair: task cardinality expectation updated to 25, adapter import made explicit, PostgreSQL job initializes the pinned gitlink.
 - Graph events after repair: 30.
 - Derived state after repair: `INC-038=review`; close gate remains open.
+
+## 2026-07-29 — INC-038 closed through Graph Harness
+
+- Framework PR #1 merged as `1bebce3db35303072049233786464bb01163c98b`.
+- Application pre-closure exact-head run `30465318928` passed 8/8 jobs.
+- Graph Harness events: 49; `INC-038` revision: 2; derived status: `done`.
+- All five gates pass, including `close-gate`.
+- Release decision remains `DENY_RELEASE`; deployment and external effects remain unauthorized.

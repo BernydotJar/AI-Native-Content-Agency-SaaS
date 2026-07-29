@@ -24,11 +24,11 @@ class GraphHarnessAdapterTests(unittest.TestCase):
         self.assertEqual(generated, checked_in)
         self.assertEqual(len(generated["nodes"]), 25)
 
-    def test_adoption_remains_review_with_close_gate_open(self) -> None:
+    def test_adoption_is_done_with_close_gate_passed(self) -> None:
         runtime = MODULE.GraphRuntime.from_paths(MODULE.PROJECT_PATH, MODULE.EVENTS_PATH)
         node = runtime.state().nodes[MODULE.ADOPTION_NODE]
-        self.assertEqual(node.status.value, "review")
-        self.assertNotIn("close-gate", node.gates)
+        self.assertEqual(node.status.value, "done")
+        self.assertEqual(node.gates["close-gate"].result.value, "PASS")
         self.assertEqual(node.gates["production-gate"].result.value, "PASS")
 
     def test_framework_gitlink_matches_lock(self) -> None:

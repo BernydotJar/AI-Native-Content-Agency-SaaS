@@ -320,14 +320,12 @@ def verify() -> None:
     if STATE_PATH.read_text(encoding="utf-8") != expected_state:
         raise ValidationError("graph-harness.state.json drift; regenerate from runtime events")
     adoption = runtime.state().nodes[ADOPTION_NODE]
-    if adoption.status is not NodeStatus.REVIEW:
-        raise ValidationError(f"{ADOPTION_NODE} must remain in review until close approval")
-    for gate_id in ("spec-gate", "implementation-gate", "production-gate", "review-gate"):
+    if adoption.status is not NodeStatus.DONE:
+        raise ValidationError(f"{ADOPTION_NODE} must be done after approved closure")
+    for gate_id in ("spec-gate", "implementation-gate", "production-gate", "review-gate", "close-gate"):
         gate = adoption.gates.get(gate_id)
         if gate is None or gate.result is not GateResult.PASS:
             raise ValidationError(f"{ADOPTION_NODE} gate {gate_id} has not passed")
-    if "close-gate" in adoption.gates:
-        raise ValidationError("close gate must remain open before explicit closure approval")
     print(
         f"Graph Harness validation passed: framework={lock['commit']} "
         f"nodes={len(runtime.project.nodes)} events={len(runtime.state().events)} "
