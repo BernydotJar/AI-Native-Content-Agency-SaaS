@@ -1,6 +1,6 @@
 # Risk Register
 
-Updated: 2026-07-24
+Updated: 2026-07-29
 
 | ID | Severity | Risk | Current control | Status |
 |---|---|---|---|---|
@@ -46,5 +46,5 @@ Updated: 2026-07-24
 | R-035 | HIGH | A provider media ID is mistaken for proof that the intended post is visible and correctly bound. | INC-022 requires FINISHED container state plus independent read-after-write account/content/permalink/timestamp verification before success. | Controlled by exact-head CI; real sandbox verification remains gated |
 | R-036 | HIGH | Public media remains available after rights withdrawal because CDN/browser caches treat it as immutable. | INC-022 removes `immutable`, limits cache max-age to 300 seconds, supports pre-Greenlight revocation, generic 404 and expiry. | Controlled with bounded propagation; production CDN configuration and post-publication deletion remain external gates |
 | R-037 | CRITICAL | A returned Instagram media ID is mistaken for proof that the intended content is visible on the intended account. | Container must reach FINISHED; published media is read independently and ID, username, caption hash, type, permalink and timestamp must match before intent completion. Mismatch is `unknown` and blocks replay. | Controlled locally; one real sandbox exercise requires explicit authorization |
-| R-038 | HIGH | Rotating the public-media signing key breaks replay of active bindings or produces inaccessible capabilities. | Signing key is externalized; runbook requires old-key retention for max TTL + retry window and staging verification. Keyring migration is tracked in OI-017. | Open for unattended live rotation; release remains denied |
-| R-039 | HIGH | Media bytes or rights metadata diverge between replicas or from the Greenlight envelope. | PostgreSQL schema v6 preserves the schema-v5 Media Vault and adds durable political confirmation hashes; publication re-reads media bytes and SHA-256 before provider HTTP. | INC-022 PostgreSQL exact-head CI passed; schema-v6 exact-head CI pending |
+| R-038 | HIGH | Rotating the public-media signing key breaks replay of active bindings or produces inaccessible capabilities. | INC-025 revision 2 persists the generating key ID, replays with historical keys, migrates legacy rows, fails closed on premature key removal and proves Secret-reference rotation/rollback locally. | Controlled locally; exact-head CI and human-gated production Secret rotation remain |
+| R-039 | HIGH | Media bytes, signing authority or rights metadata diverge between replicas or from the Greenlight envelope. | PostgreSQL schema v7 preserves bytes/hash/rights, adds durable public signing key IDs and revalidates media before provider HTTP; the full shared-state suite passes locally. | Controlled locally; exact-head schema-v7 CI pending |

@@ -56,6 +56,15 @@ class NeutralInstagramPublicationScriptTests(unittest.TestCase):
             "AGENCY_PUBLIC_MEDIA_SIGNING_KEY": "test-signing-key",
         }
         module.validate_prepare_flags(base)
+        keyring = {
+            **base,
+            "AGENCY_PUBLIC_MEDIA_SIGNING_KEY": "",
+            "AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON": "{\"media-v1\":\"opaque\"}",
+            "AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID": "media-v1",
+        }
+        module.validate_prepare_flags(keyring)
+        with self.assertRaises(module.NeutralPublicationError):
+            module.validate_prepare_flags({**keyring, "AGENCY_PUBLIC_MEDIA_SIGNING_KEY": "legacy"})
         with self.assertRaises(module.NeutralPublicationError):
             module.validate_execute_flags(base)
         enabled = {

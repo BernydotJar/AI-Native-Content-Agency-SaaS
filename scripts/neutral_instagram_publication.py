@@ -181,7 +181,11 @@ def validate_prepare_flags(env: Mapping[str, str]) -> None:
     require(not env_bool(env, "AGENCY_POLITICAL_PUBLICATION_ENABLED"), "political publication must remain disabled during prepare")
     require(not env_bool(env, "AGENCY_POLITICAL_PAID_MEDIA_ENABLED"), "paid political media must remain disabled")
     require(bool(env.get("AGENCY_PUBLIC_MEDIA_BASE_URL", "").strip()), "public media base URL is not configured")
-    require(bool(env.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEY", "").strip()), "public media signing key is not configured")
+    legacy_key = bool(env.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEY", ""))
+    keyring = bool(env.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON", "").strip())
+    active_key = bool(env.get("AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID", "").strip())
+    require(not (legacy_key and (keyring or active_key)), "public media signing configuration is ambiguous")
+    require(legacy_key or (keyring and active_key), "public media signing keyring is not configured")
 
 
 def validate_execute_flags(env: Mapping[str, str]) -> None:

@@ -229,6 +229,72 @@ variable "helm_timeout_seconds" {
   }
 }
 
+variable "public_media_base_url" {
+  description = "Optional HTTPS public base URL used for bounded publication-media capabilities."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.public_media_base_url == "" || can(regex("^https://[^?#]+$", var.public_media_base_url))
+    error_message = "public_media_base_url must be empty or HTTPS without query or fragment."
+  }
+}
+
+variable "public_media_ttl_seconds" {
+  description = "Lifetime of a public media capability in seconds."
+  type        = number
+  default     = 86400
+
+  validation {
+    condition     = var.public_media_ttl_seconds >= 900 && var.public_media_ttl_seconds <= 604800 && floor(var.public_media_ttl_seconds) == var.public_media_ttl_seconds
+    error_message = "public_media_ttl_seconds must be an integer between 900 and 604800."
+  }
+}
+
+variable "public_media_existing_secret" {
+  description = "Optional pre-provisioned Kubernetes Secret containing public-media signing configuration. Secret values never enter Terraform state."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.public_media_existing_secret == "" || can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.public_media_existing_secret))
+    error_message = "public_media_existing_secret must be empty or a valid Kubernetes Secret name."
+  }
+}
+
+variable "public_media_signing_keys_json_key" {
+  description = "Secret data-key name containing key-ID to base64url signing-key JSON."
+  type        = string
+  default     = "public-media-signing-keys.json"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.public_media_signing_keys_json_key))
+    error_message = "public_media_signing_keys_json_key must be empty or a valid Secret data key."
+  }
+}
+
+variable "public_media_active_signing_key_id_key" {
+  description = "Secret data-key name containing the active public-media signing key ID."
+  type        = string
+  default     = "public-media-active-signing-key-id"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.public_media_active_signing_key_id_key))
+    error_message = "public_media_active_signing_key_id_key must be empty or a valid Secret data key."
+  }
+}
+
+variable "public_media_legacy_signing_key_key" {
+  description = "Migration-only Secret data-key name containing the legacy raw signing key. Blank when using the keyring."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.public_media_legacy_signing_key_key))
+    error_message = "public_media_legacy_signing_key_key must be empty or a valid Secret data key."
+  }
+}
+
 variable "model_execution_enabled" {
   description = "Enables the bounded model gateway. Keep false until provider, privacy and cost controls are approved."
   type        = bool

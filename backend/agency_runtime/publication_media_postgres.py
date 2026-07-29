@@ -183,12 +183,12 @@ class PostgresPublicationMediaStore:
             INSERT INTO public.publication_media_objects(
                 media_id, tenant_id, run_id, channel_id, content_type,
                 byte_size, sha256, width, height, alt_text,
-                rights_attested_by, public_token_digest,
+                rights_attested_by, public_token_digest, public_signing_key_id,
                 idempotency_digest, binding_digest, content,
                 created_at, expires_at, revoked_at, revocation_reason
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """,
             (
@@ -204,6 +204,7 @@ class PostgresPublicationMediaStore:
                 record.alt_text,
                 record.rights_attested_by,
                 record.public_token_digest,
+                record.public_signing_key_id,
                 record.idempotency_digest or None,
                 record.binding_digest or None,
                 content,
@@ -233,6 +234,7 @@ def _record_from_mapping(row: Mapping[str, object]) -> PublicationMediaRecord:
         alt_text=str(row["alt_text"]),
         rights_attested_by=str(row["rights_attested_by"]),
         public_token_digest=str(row["public_token_digest"]),
+        public_signing_key_id=str(row["public_signing_key_id"]),
         idempotency_digest=(
             "" if row["idempotency_digest"] is None else str(row["idempotency_digest"])
         ),

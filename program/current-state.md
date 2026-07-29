@@ -245,3 +245,17 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness revision 3: implementation, production, review and close gates PASS; `INC-010=done`.
 - Program state: 21 done, 4 blocked, 0 ready.
 - `DENY_RELEASE` and `DENY_APPLY` remain unchanged.
+
+
+## 2026-07-29 — INC-025 public-media signing keyring local review
+
+- Branch: `agent/graph-completion-audit-v1`.
+- Graph Harness revision: 2 after two localized verifier repairs; unrelated nodes preserved.
+- Preferred configuration: bounded key-ID to base64url 32-byte key map plus active key ID.
+- Legacy single-key mode preserves exact historical HMAC bytes and is mutually exclusive with keyring mode.
+- SQLite and PostgreSQL schema v7 persist `public_signing_key_id`; old rows migrate to `legacy`.
+- Old binding replay remains byte-for-byte stable while a new key is active; new bindings use the active key; premature historical-key removal fails closed.
+- Local evidence: 341 locked-wheel tests PASS; 341/341 PostgreSQL tests PASS; 58 frontend tests, lint/build/program/graph/compliance/operability PASS.
+- OCI non-root package, Helm preferred/legacy guards, Terraform/K3s SQLite and PostgreSQL plan-apply-destroy PASS; signing values remain outside Git and Terraform state.
+- Clean-source supply-chain provenance, exact-head CI, Graph Harness close gate and merge remain pending.
+- Provider publication/deletion, production Secret mutation, deployment, spend, legal approval and all real external effects remain unauthorized.

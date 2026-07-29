@@ -167,6 +167,12 @@ curl -H "Authorization: Bearer $AGENCY_API_KEY" \
 
 The current ledger is append-only through application interfaces but is not cryptographically signed or exported to immutable storage. Retention, legal hold, subject pseudonymization, tamper-evident hashing, and external SIEM export remain future production controls.
 
+## Public publication-media signing keyring
+
+Public media delivery is optional and disabled when `AGENCY_PUBLIC_MEDIA_BASE_URL` is blank. Rotation-safe deployments configure `AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON` and `AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID`; the legacy `AGENCY_PUBLIC_MEDIA_SIGNING_KEY` is migration-only and mutually exclusive. Preferred keys decode to exactly 32 bytes and durable records store only the generating key ID and token digest. Raw key material is never returned by health, readiness, identity, audit or publication APIs.
+
+PostgreSQL schema v7 and the idempotent SQLite migration add `public_signing_key_id`. New capabilities use the active key; replay of a durable binding uses its stored key. Removing a key still referenced by an active record fails closed rather than silently signing with the active key. Helm and Terraform accept only a pre-existing Secret name and data-key names; creating or rotating the Secret remains a human-gated platform operation. See [Governed Publication Media Runbook](runbooks/publication-media.md) for staged rotation, legacy migration, proof and rollback.
+
 ## PostgreSQL schema and role boundary
 
 PostgreSQL application pods use `AGENCY_POSTGRES_SCHEMA_MODE=validate`. They require a pre-initialized schema and a non-owner runtime URL; readiness checks the required relations and schema version without running DDL.

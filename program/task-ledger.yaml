@@ -1783,6 +1783,107 @@
       ],
       "workstream_id": "WS-01",
       "write_lock": "single writer: graph-harness orchestrator"
+    },
+    {
+      "acceptance_criteria": [
+        "old binding replays byte-for-byte while a new key is active",
+        "new bindings use the active key identifier",
+        "removing a required historical key fails closed with no external effect",
+        "legacy rows migrate and replay through explicit legacy configuration",
+        "no key material appears in storage logs responses Git Terraform state or evidence",
+        "SQLite PostgreSQL package Helm Terraform and exact-head CI gates pass",
+        "zero open CRITICAL/HIGH findings in the INC-025 slice"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/publication_media_signing.py",
+        "backend/agency_runtime/publication_media_store.py",
+        "backend/agency_runtime/publication_media_postgres.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/tests/**publication_media*",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_program_state.py",
+        "docs/OPERATIONS.md",
+        "docs/runbooks/publication-media.md",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "scripts/run-local-product.sh",
+        "scripts/neutral_instagram_publication.py",
+        "program/**",
+        "specs/025-public-media-signing-keyring/**",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_local_product_runner.py",
+        "backend/tests/test_neutral_instagram_publication_script.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh"
+      ],
+      "authoritative_inputs": [
+        "program/critique-findings.json F-050",
+        "program/open-issues.md OI-017",
+        "docs/runbooks/publication-media.md",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/publication_media_store.py",
+        "backend/agency_runtime/publication_media_postgres.py",
+        "specs/025-public-media-signing-keyring/**"
+      ],
+      "context": "F-050 and OI-017 identify an unlocked production-security gap: publication-media replay is bound to one process-wide HMAC key and durable records do not identify the generating key. Provider deletion remains a separate legal/external-effect blocker.",
+      "dependencies": [
+        "INC-022"
+      ],
+      "expected_outputs": [
+        "strict public-media signing keyring",
+        "durable signing key identifier",
+        "SQLite and PostgreSQL schema migration",
+        "mixed-key replay and fail-closed rotation tests",
+        "Helm/Terraform secret-reference contract",
+        "rotation and rollback runbook",
+        "independent security and production review"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "production secret rotation",
+        "deployment or infrastructure apply",
+        "provider publication/deletion or other external effect"
+      ],
+      "implementation_commit": "WORKTREE@65df53ebe73ff831954a55f5f5e0b517126ef116",
+      "objective": "Implement durable public-media signing-key rotation without invalidating active capabilities or exposing secret material.",
+      "prohibited_paths": [
+        "production secrets",
+        "provider account state",
+        "real publication or deletion",
+        "cloud apply",
+        "destructive persistent migration",
+        "legal/privacy approval mutation"
+      ],
+      "publication_state": "REVISION_2_LOCAL_GATES_PASS_CLEAN_COMMIT_PENDING",
+      "read_only_paths": [
+        ".env.local",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "Security Engineer / Data Migration Reviewer / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-025",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "npm run lint && npm test -- --reporter=dot && npm run build",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "validation_summary": "Revision 2 local PASS: 341 locked-wheel tests; 341/341 PostgreSQL schema-v7 tests; 58 frontend tests; OCI non-root package; Helm keyring/legacy guards; Terraform/K3s SQLite and PostgreSQL plan-apply-destroy with no key values in state; supply-chain provenance pending clean commit; external effects 0.",
+      "workstream_id": "WS-08",
+      "write_lock": "orchestrator:INC-025"
     }
   ],
   "updated_at": "2026-07-29",
@@ -2004,7 +2105,7 @@
       ],
       "id": "WS-08",
       "name": "Integrations, Contracts and Sandbox Boundaries",
-      "next_ready_task": "INC-023",
+      "next_ready_task": "INC-025",
       "objective": "Implement bounded integration protocols and durable external-effect authority without uncontrolled side effects.",
       "owner": "orchestrator",
       "requirements": [

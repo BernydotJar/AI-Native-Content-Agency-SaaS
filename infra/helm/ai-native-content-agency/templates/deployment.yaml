@@ -35,6 +35,23 @@
 {{- if not .Values.runtime.auth.identityCredentialsKey }}
 {{- fail "runtime.auth.identityCredentialsKey is required for individual identity and RBAC" }}
 {{- end }}
+{{- $publicMediaConfigured := or .Values.runtime.publicMedia.baseUrl .Values.runtime.publicMedia.existingSecret -}}
+{{- if ne (not (empty .Values.runtime.publicMedia.baseUrl)) (not (empty .Values.runtime.publicMedia.existingSecret)) }}
+{{- fail "runtime.publicMedia.baseUrl and runtime.publicMedia.existingSecret must be configured together" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.publicMedia.ttlSeconds) 900) (gt (int .Values.runtime.publicMedia.ttlSeconds) 604800) }}
+{{- fail "runtime.publicMedia.ttlSeconds must be between 900 and 604800" }}
+{{- end }}
+{{- if $publicMediaConfigured }}
+{{- $hasPublicMediaKeyring := and .Values.runtime.publicMedia.signingKeysJsonKey .Values.runtime.publicMedia.activeSigningKeyIdKey -}}
+{{- $hasLegacyPublicMediaKey := not (empty .Values.runtime.publicMedia.legacySigningKeyKey) -}}
+{{- if and $hasPublicMediaKeyring $hasLegacyPublicMediaKey }}
+{{- fail "runtime.publicMedia keyring and legacy signing key are mutually exclusive" }}
+{{- end }}
+{{- if not (or $hasPublicMediaKeyring $hasLegacyPublicMediaKey) }}
+{{- fail "runtime.publicMedia requires keyring data keys or one legacy signing-key data key" }}
+{{- end }}
+{{- end }}
 {{- $modelProvider := lower (trim .Values.runtime.model.selectedProvider) -}}
 {{- if and .Values.runtime.model.effectAuthorityEnabled (not .Values.runtime.model.executionEnabled) }}
 {{- fail "runtime.model.effectAuthorityEnabled requires runtime.model.executionEnabled" }}
@@ -173,6 +190,30 @@ spec:
               value: {{ .Values.runtime.session.cookieSecure | quote }}
             - name: AGENCY_SESSION_TTL_SECONDS
               value: {{ .Values.runtime.session.ttlSeconds | quote }}
+{{- if .Values.runtime.publicMedia.baseUrl }}
+            - name: AGENCY_PUBLIC_MEDIA_BASE_URL
+              value: {{ .Values.runtime.publicMedia.baseUrl | quote }}
+            - name: AGENCY_PUBLIC_MEDIA_TTL_SECONDS
+              value: {{ .Values.runtime.publicMedia.ttlSeconds | quote }}
+{{- if .Values.runtime.publicMedia.legacySigningKeyKey }}
+            - name: AGENCY_PUBLIC_MEDIA_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.publicMedia.existingSecret | quote }}
+                  key: {{ .Values.runtime.publicMedia.legacySigningKeyKey | quote }}
+{{- else }}
+            - name: AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.publicMedia.existingSecret | quote }}
+                  key: {{ .Values.runtime.publicMedia.signingKeysJsonKey | quote }}
+            - name: AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.publicMedia.existingSecret | quote }}
+                  key: {{ .Values.runtime.publicMedia.activeSigningKeyIdKey | quote }}
+{{- end }}
+{{- end }}
             - name: AGENCY_MODEL_EXECUTION_ENABLED
               value: {{ .Values.runtime.model.executionEnabled | quote }}
             - name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED

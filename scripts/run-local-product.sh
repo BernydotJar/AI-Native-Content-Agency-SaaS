@@ -2,6 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+fail() {
+  printf '%s\n' "$1" >&2
+  exit 65
+}
 LOCAL_ENV_FILE="${AGENCY_ENV_FILE:-$ROOT_DIR/.env.local}"
 if [[ -f "$LOCAL_ENV_FILE" ]]; then
   if [[ "$LOCAL_ENV_FILE" == "$ROOT_DIR/"* ]]; then
@@ -188,11 +193,29 @@ if [[ "$MODE" == "check" ]]; then
   printf 'identity_source=%s\n' "$([[ -n "$GENERATED_LOCAL_KEY" ]] && printf ephemeral || printf environment)"
   printf 'session_cookie_secure=%s\n' "$AGENCY_SESSION_COOKIE_SECURE"
   public_media_base_url="${AGENCY_PUBLIC_MEDIA_BASE_URL:-}"
-  public_media_signing_key="${AGENCY_PUBLIC_MEDIA_SIGNING_KEY:-}"
+  public_media_signing_keys="${AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON:-}"
+  public_media_active_key="${AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID:-}"
+  public_media_legacy_key="${AGENCY_PUBLIC_MEDIA_SIGNING_KEY:-}"
   public_media_ttl="${AGENCY_PUBLIC_MEDIA_TTL_SECONDS:-86400}"
-  if { [ -n "$public_media_base_url" ] && [ -z "$public_media_signing_key" ]; } || \
-     { [ -z "$public_media_base_url" ] && [ -n "$public_media_signing_key" ]; }; then
-    fail "AGENCY_PUBLIC_MEDIA_BASE_URL and AGENCY_PUBLIC_MEDIA_SIGNING_KEY must be configured together"
+  if [ -n "$public_media_legacy_key" ] && { [ -n "$public_media_signing_keys" ] || [ -n "$public_media_active_key" ]; }; then
+    fail "legacy and keyring public media signing configuration are mutually exclusive"
+  fi
+  if { [ -n "$public_media_signing_keys" ] && [ -z "$public_media_active_key" ]; } || \
+     { [ -z "$public_media_signing_keys" ] && [ -n "$public_media_active_key" ]; }; then
+    fail "AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON and AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID must be configured together"
+  fi
+  public_media_signing_configured=false
+  public_media_signing_mode=disabled
+  if [ -n "$public_media_legacy_key" ]; then
+    public_media_signing_configured=true
+    public_media_signing_mode=legacy
+  elif [ -n "$public_media_signing_keys" ]; then
+    public_media_signing_configured=true
+    public_media_signing_mode=keyring
+  fi
+  if { [ -n "$public_media_base_url" ] && [ "$public_media_signing_configured" != true ]; } || \
+     { [ -z "$public_media_base_url" ] && [ "$public_media_signing_configured" = true ]; }; then
+    fail "AGENCY_PUBLIC_MEDIA_BASE_URL and a public media signing configuration must be configured together"
   fi
   case "$public_media_ttl" in
     ''|*[!0-9]*) fail "AGENCY_PUBLIC_MEDIA_TTL_SECONDS must be an integer" ;;
@@ -205,6 +228,7 @@ if [[ "$MODE" == "check" ]]; then
   else
     printf 'public_media_configured=false\n'
   fi
+  printf 'public_media_signing_mode=%s\n' "$public_media_signing_mode"
   printf 'public_media_ttl_seconds=%s\n' "$public_media_ttl"
   printf 'session_cookie_samesite=%s\n' "$AGENCY_SESSION_COOKIE_SAMESITE"
   printf 'build_lock_strategy=primary_then_hash_locked_compatibility\n'
