@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 19,
-  "event_count": 316,
-  "last_event_id": "a2e74175-27dc-4614-8eab-41eec0854289",
+  "checkpoint_count": 20,
+  "event_count": 320,
+  "last_event_id": "675e91e0-1f46-40b2-90e3-d5c88607586a",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -920,6 +920,12 @@
           "result": "PASS",
           "sha256": "e1b2ef4439edfd5e3add4719169b41b1cd3aa6331dc9e7b4e0394d278ebee371"
         },
+        "a05d22b0-befb-425f-8a5f-4a1ac5170d28": {
+          "artifact": "program/reports/inc-030-remote-review.md",
+          "kind": "closure",
+          "result": "BLOCKED",
+          "sha256": "ec14dc4c59037b8aec33ce8a9d69f4e917f3de8210b905b238925764a26b6b87"
+        },
         "cdf2b280-c90d-45aa-8fc6-34274c7f5e85": {
           "artifact": "program/reports/inc-030-review.md",
           "kind": "verification",
@@ -934,6 +940,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "a05d22b0-befb-425f-8a5f-4a1ac5170d28"
+          ],
+          "result": "BLOCKED"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "59cf593a-1e1f-4f64-9c8d-9e3201785498",
@@ -961,9 +973,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "cd7b5d9f-06b8-4921-b1b0-91d1c17642c0",
+      "last_event_id": "fbf94dff-37c1-495f-8ffc-d8e1dffe259a",
       "revision": 0,
-      "status": "review"
+      "status": "blocked"
     },
     "INC-038": {
       "active_approval_count": 0,

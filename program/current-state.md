@@ -368,3 +368,17 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Full-history fetch is restricted to CI jobs that execute historical evidence; exact PR-head SHA remains asserted.
 - Clean implementation commit, supply-chain provenance, exact-head CI, close gate and merge remain pending.
 - Production migration, deployment, secrets, cloud resources, spend and external effects remain unauthorized; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
+
+## INC-030 exact-head CI passed; merge and production-migration gates remain
+
+- PR #39 head: `8a87a8538cde73e376008cc79d1d3dbf5d5922dd`.
+- GitHub Actions run `30567232424`: 8/8 production-readiness jobs PASS.
+- Runtime schema history SHA-256: `e372d426f51dbc2fe45ddfe9ba793c72a46e255a4f0a1e1fdca5f7034664e3d3`.
+- SQLite historical matrix v1-v9: PASS from the installed current wheel.
+- PostgreSQL historical matrix v1-v9: PASS inside the ephemeral shared-state job.
+- Retained semantic report SHA-256: `95995e856ffd450f62c0f46300f364ae944da5414e34b8db7c9ce8b3dc02adac`; 20/20, exact source binding, clean worktree, external effects 0.
+- Retained provenance SHA-256: `0074164ac3f09729b4b7faf600e794956fe10c89ecabf0d5b1156ede96d636c4`; invocation binds the exact head.
+- Policy summary SHA-256: `44973f9b9d5bfba08a294a9af5e067757cff7d7e550ae5e0d3ee4c7900bd3bc0`; status PASS.
+- Graph Harness revision 0: spec, implementation, production, and review gates PASS; close gate BLOCKED; `INC-030=blocked`.
+- Blockers are the stacked merge chain `#39 -> #38 -> #37 -> #36 -> #35 -> main` and explicit human authority for any production migration.
+- `DENY_RELEASE`, `DENY_APPLY`, disabled external effects, and all production/legal/accessibility/staging gates remain unchanged.
