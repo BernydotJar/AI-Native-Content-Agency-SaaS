@@ -2160,7 +2160,7 @@
         "legal non-repudiation claim",
         "branch-protection mutation"
       ],
-      "publication_state": "LOCAL_REVIEW_READY_REMOTE_CI_PENDING",
+      "publication_state": "LOCAL_REVIEW_PASS_EXACT_HEAD_CI_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2170,7 +2170,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Database Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-028",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2183,7 +2183,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Revision 4 local gates pass: 371 locked-wheel tests, 366 PostgreSQL tests, schema v9 chain/backfill/migration/backup, signed checkpoint API, non-root OCI package, Helm/Terraform/K3s Secret refs, 58 frontend tests and all program/compliance/operability gates. Exact-head CI pending.",
+      "validation_summary": "Revision 4 exact-tree local gates pass on fd232f5ba245a28f08b15e4f46819a3905201c6f: 371 wheel tests, 371 PostgreSQL tests, schema v9, signed checkpoint package smoke, Helm/Terraform/K3s and clean provenance. Exact-head CI and external custody pending.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-028"
     }
