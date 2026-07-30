@@ -2054,7 +2054,7 @@
         "legal/privacy approval mutation",
         "branch-protection mutation"
       ],
-      "publication_state": "REVISION_4_SUPPLY_CHAIN_REPAIR_RUNNING",
+      "publication_state": "LOCAL_REVIEW_PASS_EXACT_HEAD_CI_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2063,7 +2063,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Data Integrity Reviewer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-027",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2077,7 +2077,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Revision 3 local gates pass: 357 locked-wheel tests with 26 PostgreSQL-only skips, 356/356 PostgreSQL tests, schema v8 migration/backup/restore, non-root OCI package, Helm/Terraform/K3s apply-destroy, 58 frontend tests, lint/build and all program/compliance/operability gates. Exact-head remote CI pending.",
+      "validation_summary": "Revision 4 exact-tree local gates pass on 08bf16b5d4678a73dc9c4558029cc2b5eba01668: 358 locked-wheel tests, 357 PostgreSQL tests, schema v8 migration/backup/restore, OCI, Helm/Terraform/K3s, supply-chain provenance with source_dirty=false and three exact expiring Python exceptions. Exact-head remote CI pending.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-027"
     }

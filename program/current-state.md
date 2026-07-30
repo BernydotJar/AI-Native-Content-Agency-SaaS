@@ -312,9 +312,10 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 
 ## INC-027 authenticated request quota
 
-- Status: `running`, revision 3; local implementation and production gates pass, exact-head CI pending.
+- Status: `review`, revision 4; all current-revision local gates pass on `08bf16b5d4678a73dc9c4558029cc2b5eba01668`; exact-head CI and merge authority remain pending.
 - Durable hashed principal and tenant fixed-window buckets execute after authentication and before CSRF/authorization auditing.
 - The first configured requests pass; the next returns safe HTTP 429 with `Retry-After` and adds no denial-audit row.
-- PostgreSQL schema v8 shares quota across replicas; SQLite migration, backup/restore, OCI, Helm, Terraform and K3s evidence pass.
-- Three localized repairs affected only INC-027: stale schema/cardinality assertions, raw DB-API test access and an obsolete package health assertion.
+- PostgreSQL schema v8 shares quota across replicas; migration, least privilege, backup/restore, OCI, Helm, Terraform and K3s evidence pass.
+- Four localized repairs affected only INC-027: stale schema/cardinality assertions, raw DB-API test access, obsolete package health assertions and two newly fixable Python tarfile findings.
+- Supply chain passes with `source_dirty=false`; three exact Python compatibility exceptions expire on 2026-08-21 and the runtime tarfile-surface guard passes.
 - Release and cloud recommendations remain `DENY_RELEASE` and `DENY_APPLY`.

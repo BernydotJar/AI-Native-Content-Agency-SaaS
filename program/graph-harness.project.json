@@ -1872,7 +1872,7 @@
           "backend/agency_runtime/observability.py",
           "specs/027-authenticated-request-quota/**"
         ],
-        "canonical_status": "running",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "production rollout or quota tuning",
