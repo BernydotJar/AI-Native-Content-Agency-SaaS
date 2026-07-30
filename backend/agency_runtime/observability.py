@@ -90,6 +90,7 @@ class RuntimeMetrics:
         self._greenlights: Counter[str] = Counter()
         self._sessions: Counter[str] = Counter()
         self._authentication: Counter[str] = Counter()
+        self._authenticated_requests: Counter[str] = Counter()
         self._security_denials: Counter[str] = Counter()
         self._social_publications: Counter[str] = Counter()
 
@@ -130,6 +131,12 @@ class RuntimeMetrics:
         with self._lock:
             self._authentication[outcome] += 1
 
+    def authenticated_request(self, outcome: str) -> None:
+        if outcome not in {"allowed", "rate_limited"}:
+            raise ValueError("unsupported authenticated request outcome")
+        with self._lock:
+            self._authenticated_requests[outcome] += 1
+
     def security_denial(self, reason: str) -> None:
         if reason not in {"authorization", "csrf"}:
             raise ValueError("unsupported security denial reason")
@@ -159,6 +166,7 @@ class RuntimeMetrics:
             greenlights = dict(self._greenlights)
             sessions = dict(self._sessions)
             authentication = dict(self._authentication)
+            authenticated_requests = dict(self._authenticated_requests)
             security_denials = dict(self._security_denials)
             social_publications = dict(self._social_publications)
 
@@ -258,6 +266,18 @@ class RuntimeMetrics:
         for outcome, value in sorted(authentication.items()):
             lines.append(
                 "agency_authentication_attempts_total{} {}".format(
+                    _labels({"outcome": outcome}), value
+                )
+            )
+        lines.extend(
+            [
+                "# HELP agency_authenticated_request_quota_total Authenticated request quota outcomes without identity labels.",
+                "# TYPE agency_authenticated_request_quota_total counter",
+            ]
+        )
+        for outcome, value in sorted(authenticated_requests.items()):
+            lines.append(
+                "agency_authenticated_request_quota_total{} {}".format(
                     _labels({"outcome": outcome}), value
                 )
             )

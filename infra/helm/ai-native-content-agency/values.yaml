@@ -31,6 +31,9 @@ runtime:
     loginMaxFailures: 5
     loginSourceMaxFailures: 50
     loginWindowSeconds: 300
+    authenticatedRequestMaxPerPrincipal: 600
+    authenticatedRequestMaxPerTenant: 6000
+    authenticatedRequestWindowSeconds: 60
   proxy:
     # Trust only known proxy addresses/CIDRs so source-based limits cannot be spoofed.
     forwardedAllowIps: "127.0.0.1"

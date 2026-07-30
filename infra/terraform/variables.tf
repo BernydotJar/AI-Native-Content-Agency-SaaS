@@ -206,6 +206,39 @@ variable "login_window_seconds" {
   }
 }
 
+variable "authenticated_request_max_per_principal" {
+  description = "Maximum authenticated requests for one tenant subject within the fixed window."
+  type        = number
+  default     = 600
+
+  validation {
+    condition     = var.authenticated_request_max_per_principal >= 10 && var.authenticated_request_max_per_principal <= 100000 && floor(var.authenticated_request_max_per_principal) == var.authenticated_request_max_per_principal
+    error_message = "authenticated_request_max_per_principal must be an integer between 10 and 100000."
+  }
+}
+
+variable "authenticated_request_max_per_tenant" {
+  description = "Maximum authenticated requests for one tenant across all subjects within the fixed window."
+  type        = number
+  default     = 6000
+
+  validation {
+    condition     = var.authenticated_request_max_per_tenant >= 10 && var.authenticated_request_max_per_tenant <= 1000000 && floor(var.authenticated_request_max_per_tenant) == var.authenticated_request_max_per_tenant
+    error_message = "authenticated_request_max_per_tenant must be an integer between 10 and 1000000."
+  }
+}
+
+variable "authenticated_request_window_seconds" {
+  description = "Durable authenticated request quota window in seconds."
+  type        = number
+  default     = 60
+
+  validation {
+    condition     = var.authenticated_request_window_seconds >= 1 && var.authenticated_request_window_seconds <= 3600 && floor(var.authenticated_request_window_seconds) == var.authenticated_request_window_seconds
+    error_message = "authenticated_request_window_seconds must be an integer between 1 and 3600."
+  }
+}
+
 variable "session_cookie_secure" {
   description = "Require HTTPS before browsers send the HttpOnly session cookie. Disable only for isolated local HTTP validation."
   type        = bool

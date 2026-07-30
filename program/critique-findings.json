@@ -98,11 +98,11 @@
     },
     {
       "description": "A valid principal can amplify denial-audit storage because no general authenticated request quota exists.",
-      "evidence": "Credential authentication is rate limited; successful principals can repeatedly invoke forbidden actions.",
+      "evidence": "INC-027 spec defines atomic hashed principal and tenant quotas before denial auditing; implementation and verification pending.",
       "id": "F-013",
-      "owner": "INC-005",
+      "owner": "INC-027",
       "severity": "MEDIUM",
-      "status": "OPEN"
+      "status": "IN_PROGRESS"
     },
     {
       "description": "Approver and viewer roles had no path to load an existing tenant-scoped run, leaving server-authorized review authority unusable from the production console.",
@@ -402,6 +402,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "7810f302ef2a4c32332139e9ea95e668b55cc225",
+  "source_commit": "6609cd499bb41b610da1577ed93dbfe1602061bc",
   "updated_at": "2026-07-30"
 }

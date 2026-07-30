@@ -100,6 +100,15 @@
 {{- if or (lt (int .Values.runtime.auth.loginWindowSeconds) 10) (gt (int .Values.runtime.auth.loginWindowSeconds) 86400) }}
 {{- fail "runtime.auth.loginWindowSeconds must be between 10 and 86400" }}
 {{- end }}
+{{- if or (lt (int .Values.runtime.auth.authenticatedRequestMaxPerPrincipal) 10) (gt (int .Values.runtime.auth.authenticatedRequestMaxPerPrincipal) 100000) }}
+{{- fail "runtime.auth.authenticatedRequestMaxPerPrincipal must be between 10 and 100000" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.authenticatedRequestMaxPerTenant) (int .Values.runtime.auth.authenticatedRequestMaxPerPrincipal)) (gt (int .Values.runtime.auth.authenticatedRequestMaxPerTenant) 1000000) }}
+{{- fail "runtime.auth.authenticatedRequestMaxPerTenant must be between the principal limit and 1000000" }}
+{{- end }}
+{{- if or (lt (int .Values.runtime.auth.authenticatedRequestWindowSeconds) 1) (gt (int .Values.runtime.auth.authenticatedRequestWindowSeconds) 3600) }}
+{{- fail "runtime.auth.authenticatedRequestWindowSeconds must be between 1 and 3600" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -182,6 +191,12 @@ spec:
               value: {{ .Values.runtime.auth.loginSourceMaxFailures | quote }}
             - name: AGENCY_LOGIN_WINDOW_SECONDS
               value: {{ .Values.runtime.auth.loginWindowSeconds | quote }}
+            - name: AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL
+              value: {{ .Values.runtime.auth.authenticatedRequestMaxPerPrincipal | quote }}
+            - name: AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT
+              value: {{ .Values.runtime.auth.authenticatedRequestMaxPerTenant | quote }}
+            - name: AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS
+              value: {{ .Values.runtime.auth.authenticatedRequestWindowSeconds | quote }}
             - name: FORWARDED_ALLOW_IPS
               value: {{ .Values.runtime.proxy.forwardedAllowIps | quote }}
             - name: AGENCY_SESSION_COOKIE_NAME

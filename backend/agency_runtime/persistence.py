@@ -96,6 +96,12 @@ class AuthenticationRateLimitError(PermissionError):
         self.retry_after_seconds = max(1, retry_after_seconds)
 
 
+class AuthenticatedRequestRateLimitError(PermissionError):
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__("authenticated request rate limit exceeded")
+        self.retry_after_seconds = max(1, retry_after_seconds)
+
+
 class RunStateConflictError(RuntimeError):
     pass
 
@@ -185,6 +191,12 @@ class SQLiteRunStore:
 
                 CREATE INDEX IF NOT EXISTS idx_authentication_failures_bucket_time
                     ON authentication_failures(bucket_hash, occurred_at ASC);
+
+                CREATE TABLE IF NOT EXISTS authenticated_request_rate_limits (
+                    bucket_hash TEXT PRIMARY KEY,
+                    window_started_at TEXT NOT NULL,
+                    request_count INTEGER NOT NULL CHECK (request_count >= 0)
+                );
                 """
             )
             self._ensure_session_identity_columns_locked()
@@ -721,6 +733,83 @@ class SQLiteRunStore:
                 (bucket_hash,),
             ).fetchone()
         return int(row["total"])
+
+    def consume_authenticated_request_quota(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
+        if not bucket_limits:
+            raise ValueError("at least one authenticated request bucket is required")
+        if any(not bucket_hash for bucket_hash, _ in bucket_limits):
+            raise ValueError("authenticated request bucket hash is required")
+        if len({bucket_hash for bucket_hash, _ in bucket_limits}) != len(bucket_limits):
+            raise ValueError("authenticated request bucket hashes must be unique")
+        if any(max_requests < 1 for _, max_requests in bucket_limits):
+            raise ValueError("max authenticated requests must be positive")
+        if window_seconds < 1:
+            raise ValueError("authenticated request window must be positive")
+
+        occurred_at = self._clock()
+        now = datetime.fromisoformat(occurred_at)
+        cutoff = (now - timedelta(seconds=window_seconds)).isoformat()
+        updates: list[Tuple[str, str, int]] = []
+        with self._lock, self._connection:
+            self._connection.execute(
+                "DELETE FROM authenticated_request_rate_limits WHERE window_started_at < ?",
+                (cutoff,),
+            )
+            for bucket_hash, max_requests in sorted(bucket_limits):
+                row = self._connection.execute(
+                    """
+                    SELECT window_started_at, request_count
+                    FROM authenticated_request_rate_limits
+                    WHERE bucket_hash = ?
+                    """,
+                    (bucket_hash,),
+                ).fetchone()
+                if row is None:
+                    updates.append((bucket_hash, occurred_at, 1))
+                    continue
+                window_started = datetime.fromisoformat(str(row["window_started_at"]))
+                if window_started + timedelta(seconds=window_seconds) <= now:
+                    updates.append((bucket_hash, occurred_at, 1))
+                    continue
+                if int(row["request_count"]) >= max_requests:
+                    retry_at = window_started + timedelta(seconds=window_seconds)
+                    retry_after = int((retry_at - now).total_seconds()) + 1
+                    raise AuthenticatedRequestRateLimitError(retry_after)
+                updates.append(
+                    (
+                        bucket_hash,
+                        str(row["window_started_at"]),
+                        int(row["request_count"]) + 1,
+                    )
+                )
+
+            self._connection.executemany(
+                """
+                INSERT INTO authenticated_request_rate_limits(
+                    bucket_hash, window_started_at, request_count
+                ) VALUES (?, ?, ?)
+                ON CONFLICT(bucket_hash) DO UPDATE SET
+                    window_started_at = excluded.window_started_at,
+                    request_count = excluded.request_count
+                """,
+                updates,
+            )
+
+    def authenticated_request_quota_count(self, bucket_hash: str) -> int:
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT request_count AS total
+                FROM authenticated_request_rate_limits
+                WHERE bucket_hash = ?
+                """,
+                (bucket_hash,),
+            ).fetchone()
+        return 0 if row is None else int(row["total"])
 
     def session_count(self, tenant_id: str, include_revoked: bool = False) -> int:
         sql = "SELECT COUNT(*) AS total FROM runtime_sessions WHERE tenant_id = ?"

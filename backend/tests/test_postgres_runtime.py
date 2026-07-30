@@ -98,7 +98,14 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
         ]
 
     def app(
-        self, identities=None, *, max_failures=5, source_max_failures=50,
+        self,
+        identities=None,
+        *,
+        max_failures=5,
+        source_max_failures=50,
+        authenticated_request_max_per_principal=600,
+        authenticated_request_max_per_tenant=6000,
+        authenticated_request_window_seconds=60,
         worker_poll_interval=0.35,
     ):
         return create_app(
@@ -111,6 +118,9 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             login_max_failures=max_failures,
             login_source_max_failures=source_max_failures,
             login_window_seconds=60,
+            authenticated_request_max_per_principal=authenticated_request_max_per_principal,
+            authenticated_request_max_per_tenant=authenticated_request_max_per_tenant,
+            authenticated_request_window_seconds=authenticated_request_window_seconds,
             postgres_pool_min_size=1,
             postgres_pool_max_size=3,
             postgres_connect_timeout_seconds=10,
@@ -175,7 +185,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             with raw_connection(MIGRATION_DATABASE_URL) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "UPDATE runtime_schema_meta SET value = '7' WHERE key = 'schema_version'"
+                    "UPDATE runtime_schema_meta SET value = '8' WHERE key = 'schema_version'"
                 )
 
     def test_two_instances_share_run_audit_and_greenlight_state(self):
@@ -526,6 +536,42 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 sorted(item["payload"]["fencing_token"] for item in checkpoints),
                 [1, 2],
             )
+
+    def test_authenticated_request_quota_is_shared_and_atomic_between_instances(self):
+        app_one = self.app(
+            authenticated_request_max_per_principal=10,
+            authenticated_request_max_per_tenant=100,
+        )
+        app_two = self.app(
+            authenticated_request_max_per_principal=10,
+            authenticated_request_max_per_tenant=100,
+        )
+        with TestClient(app_one) as first, TestClient(app_two) as second:
+            for index in range(10):
+                client = first if index % 2 == 0 else second
+                response = client.get("/api/v1/me", headers=auth(self.viewer_key))
+                self.assertEqual(response.status_code, 200)
+            limited = second.get("/api/v1/me", headers=auth(self.viewer_key))
+            self.assertEqual(limited.status_code, 429)
+            self.assertEqual(limited.json()["code"], "request_rate_limited")
+            self.assertGreaterEqual(int(limited.headers["Retry-After"]), 1)
+
+        with raw_connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                """
+                SELECT bucket_hash, request_count
+                FROM authenticated_request_rate_limits
+                WHERE request_count > 0
+                ORDER BY bucket_hash
+                """
+            )
+            rows = cursor.fetchall()
+        matching = [row for row in rows if int(row[1]) == 10]
+        self.assertGreaterEqual(len(matching), 2)
+        serialized = repr(matching)
+        self.assertNotIn(self.tenant, serialized)
+        self.assertNotIn("viewer-", serialized)
 
     def test_session_and_rate_limit_are_shared_between_instances(self):
         with TestClient(self.app(max_failures=2)) as first, TestClient(

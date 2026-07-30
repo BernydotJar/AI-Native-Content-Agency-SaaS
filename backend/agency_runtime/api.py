@@ -79,6 +79,7 @@ from .publication_media_store import (
 )
 from .run_worker import DurableRunWorker
 from .persistence import (
+    AuthenticatedRequestRateLimitError,
     AuditEvent,
     AuditEventConflictError,
     AuditWrite,
@@ -575,6 +576,16 @@ class RuntimeService:
     ) -> None:
         with self._lock:
             self.run_store.record_authentication_failure(
+                bucket_limits, window_seconds=window_seconds
+            )
+
+    def consume_authenticated_request_quota(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
+        with self._lock:
+            self.run_store.consume_authenticated_request_quota(
                 bucket_limits, window_seconds=window_seconds
             )
 
@@ -1874,6 +1885,9 @@ def create_app(
     login_max_failures: Optional[int] = None,
     login_source_max_failures: Optional[int] = None,
     login_window_seconds: Optional[int] = None,
+    authenticated_request_max_per_principal: Optional[int] = None,
+    authenticated_request_max_per_tenant: Optional[int] = None,
+    authenticated_request_window_seconds: Optional[int] = None,
     postgres_pool_min_size: Optional[int] = None,
     postgres_pool_max_size: Optional[int] = None,
     postgres_connect_timeout_seconds: Optional[float] = None,
@@ -1964,6 +1978,36 @@ def create_app(
         )
     if rate_window_seconds < 10 or rate_window_seconds > 86400:
         raise ValueError("login window must be between 10 and 86400 seconds")
+    request_max_per_principal = (
+        int(os.environ.get("AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL", "600"))
+        if authenticated_request_max_per_principal is None
+        else authenticated_request_max_per_principal
+    )
+    request_max_per_tenant = (
+        int(os.environ.get("AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT", "6000"))
+        if authenticated_request_max_per_tenant is None
+        else authenticated_request_max_per_tenant
+    )
+    request_quota_window_seconds = (
+        int(os.environ.get("AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS", "60"))
+        if authenticated_request_window_seconds is None
+        else authenticated_request_window_seconds
+    )
+    if request_max_per_principal < 10 or request_max_per_principal > 100000:
+        raise ValueError(
+            "authenticated request principal limit must be between 10 and 100000"
+        )
+    if (
+        request_max_per_tenant < request_max_per_principal
+        or request_max_per_tenant > 1000000
+    ):
+        raise ValueError(
+            "authenticated request tenant limit must be between the principal limit and 1000000"
+        )
+    if request_quota_window_seconds < 1 or request_quota_window_seconds > 3600:
+        raise ValueError(
+            "authenticated request window must be between 1 and 3600 seconds"
+        )
     body_limit = (
         int(
             os.environ.get(
@@ -2271,6 +2315,9 @@ def create_app(
     app.state.public_media_active_signing_key_id = (
         "" if media_signing_keyring is None else media_signing_keyring.active_key_id
     )
+    app.state.authenticated_request_max_per_principal = request_max_per_principal
+    app.state.authenticated_request_max_per_tenant = request_max_per_tenant
+    app.state.authenticated_request_window_seconds = request_quota_window_seconds
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -2417,6 +2464,28 @@ def create_app(
             ),
         )
 
+    def _authenticated_request_buckets(
+        principal: TenantPrincipal,
+    ) -> Tuple[Tuple[str, int], ...]:
+        principal_bucket = hashlib.sha256(
+            canonical_json(
+                (
+                    "authenticated-request-principal",
+                    principal.tenant_id,
+                    principal.subject_id,
+                )
+            ).encode("utf-8")
+        ).hexdigest()
+        tenant_bucket = hashlib.sha256(
+            canonical_json(("authenticated-request-tenant", principal.tenant_id)).encode(
+                "utf-8"
+            )
+        ).hexdigest()
+        return (
+            (principal_bucket, request_max_per_principal),
+            (tenant_bucket, request_max_per_tenant),
+        )
+
     def _rate_limited_authenticate(request: Request, api_key: str) -> TenantPrincipal:
         buckets = _authentication_buckets(request, api_key)
         try:
@@ -2504,6 +2573,20 @@ def create_app(
         request.state.role = principal.role
         request.state.auth_method = principal.auth_method
         request.state.session_id = principal.session_id
+        try:
+            service.consume_authenticated_request_quota(
+                _authenticated_request_buckets(principal),
+                request_quota_window_seconds,
+            )
+        except AuthenticatedRequestRateLimitError as error:
+            metrics.authenticated_request("rate_limited")
+            raise PublicApiError(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                code="request_rate_limited",
+                detail="authenticated request temporarily rate limited",
+                headers={"Retry-After": str(error.retry_after_seconds)},
+            ) from error
+        metrics.authenticated_request("allowed")
         return principal
 
     def _record_security_denial(
@@ -2777,6 +2860,7 @@ def create_app(
             "model_effect_authority_enabled": model_effect_authority.enabled,
             "auth_configured": authenticator.configured,
             "individual_identity_configured": authenticator.individual_identity_configured,
+            "authenticated_request_quota_enabled": True,
         }
 
     @app.get("/readyz", tags=["operations"])
@@ -2807,6 +2891,11 @@ def create_app(
                 "credential_max_failures": max_failures,
                 "source_max_failures": source_max_failures,
                 "window_seconds": rate_window_seconds,
+            },
+            "authenticated_request_quota": {
+                "principal_max_requests": request_max_per_principal,
+                "tenant_max_requests": request_max_per_tenant,
+                "window_seconds": request_quota_window_seconds,
             },
         }
 

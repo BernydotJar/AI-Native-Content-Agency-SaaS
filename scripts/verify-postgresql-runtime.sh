@@ -102,6 +102,7 @@ REVOKE ALL ON TABLE public.runtime_runs FROM PUBLIC;
 REVOKE ALL ON TABLE public.audit_events FROM PUBLIC;
 REVOKE ALL ON TABLE public.runtime_sessions FROM PUBLIC;
 REVOKE ALL ON TABLE public.authentication_rate_limits FROM PUBLIC;
+REVOKE ALL ON TABLE public.authenticated_request_rate_limits FROM PUBLIC;
 REVOKE ALL ON TABLE public.memories FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_oauth_states FROM PUBLIC;
 REVOKE ALL ON TABLE public.social_connections FROM PUBLIC;
@@ -115,6 +116,7 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_runs TO :"runtime_role";
 GRANT SELECT, INSERT ON TABLE public.audit_events TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_sessions TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authentication_rate_limits TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authenticated_request_rate_limits TO :"runtime_role";
 GRANT SELECT, INSERT ON TABLE public.memories TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_oauth_states TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.social_connections TO :"runtime_role";
@@ -401,6 +403,7 @@ try:
             "audit_events": {"SELECT", "INSERT"},
             "runtime_sessions": {"SELECT", "INSERT", "UPDATE"},
             "authentication_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
+            "authenticated_request_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "memories": {"SELECT", "INSERT"},
             "social_oauth_states": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "social_connections": {"SELECT", "INSERT", "UPDATE", "DELETE"},
@@ -452,7 +455,7 @@ AGENCY_DATABASE_URL="$DATABASE_URL" \
 SCHEMA_INCOMPATIBLE_STATUS=$?
 set -e
 "$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
-  --command "UPDATE public.runtime_schema_meta SET value = '7' WHERE key = 'schema_version'" \
+  --command "UPDATE public.runtime_schema_meta SET value = '8' WHERE key = 'schema_version'" \
   >/dev/null
 if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
   printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
@@ -635,6 +638,10 @@ service.record_authentication_failure(
     (("migration-ip-bucket", 10), ("migration-identity-bucket", 10)),
     window_seconds=300,
 )
+service.consume_authenticated_request_quota(
+    (("a" * 64, 10), ("b" * 64, 100)),
+    window_seconds=60,
+)
 service.close()
 
 memory = SQLiteMemory(legacy, namespace="tenant-migration")
@@ -670,6 +677,9 @@ with sqlite3.connect(legacy) as connection:
         "authentication_failure_total": connection.execute(
             "SELECT COUNT(*) FROM authentication_failures"
         ).fetchone()[0],
+        "authenticated_request_rate_limits": connection.execute(
+            "SELECT COUNT(*) FROM authenticated_request_rate_limits"
+        ).fetchone()[0],
         "memories": connection.execute(
             "SELECT COUNT(*) FROM memories"
         ).fetchone()[0],
@@ -680,6 +690,7 @@ required = (
     "runtime_sessions",
     "authentication_rate_limits",
     "authentication_failure_total",
+    "authenticated_request_rate_limits",
     "memories",
 )
 missing = [name for name in required if source_counts[name] < 1]
@@ -741,6 +752,9 @@ with sqlite3.connect(restored) as connection:
         ).fetchone()[0],
         "authentication_failure_total": connection.execute(
             "SELECT COUNT(*) FROM authentication_failures"
+        ).fetchone()[0],
+        "authenticated_request_rate_limits": connection.execute(
+            "SELECT COUNT(*) FROM authenticated_request_rate_limits"
         ).fetchone()[0],
         "memories": connection.execute("SELECT COUNT(*) FROM memories").fetchone()[0],
     }
@@ -826,6 +840,7 @@ try:
             "audit_events",
             "runtime_sessions",
             "authentication_rate_limits",
+            "authenticated_request_rate_limits",
             "memories",
             "social_oauth_states",
             "social_connections",
@@ -854,7 +869,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "7":
+        if schema is None or schema["value"] != "8":
             raise SystemExit("unexpected schema version: {}".format(schema))
 finally:
     runtime.close()
@@ -962,6 +977,7 @@ try:
             "audit_events",
             "runtime_sessions",
             "authentication_rate_limits",
+            "authenticated_request_rate_limits",
             "memories",
             "social_oauth_states",
             "social_connections",
@@ -990,7 +1006,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "7":
+        if schema is None or schema["value"] != "8":
             raise SystemExit("unexpected restored schema version: {}".format(schema))
         restored_run = connection.execute(
             "SELECT tenant_id, status FROM runtime_runs LIMIT 1"
@@ -1006,7 +1022,7 @@ printf 'postgresql_backup_restore=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"
 printf 'driver=pg8000\n'
-printf 'schema_version=7\n'
+printf 'schema_version=8\n'
 printf 'wheel_install=pass\n'
 printf 'postgres_integration=pass\n'
 printf 'sqlite_migration=pass\n'

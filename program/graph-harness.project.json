@@ -1803,6 +1803,99 @@
     },
     {
       "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/observability.py",
+        "backend/tests/test_identity_access.py",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_local_product_runner.py",
+        "backend/tests/test_authenticated_request_quota.py",
+        "docs/OPERATIONS.md",
+        "docs/runbooks/authenticated-request-quota.md",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "scripts/run-local-product.sh",
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "program/**",
+        "specs/027-authenticated-request-quota/**",
+        "scripts/migrate-sqlite-to-postgresql.py"
+      ],
+      "capability": "Security Engineer / Data Integrity Reviewer / Independent Verifier",
+      "depends_on": [
+        "INC-003",
+        "INC-004"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-027",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "first N authenticated requests pass and N+1 returns safe 429",
+          "quota rejection occurs before CSRF/authorization audit and creates no new audit row",
+          "bearer and session for one subject share a principal bucket",
+          "tenant aggregate quota prevents multi-principal amplification",
+          "only bucket digests are persisted",
+          "expired windows reset",
+          "PostgreSQL replicas enforce one shared limit",
+          "schema v8 backup/restore and package gates pass",
+          "exact-head CI passes with zero external effects"
+        ],
+        "authoritative_inputs": [
+          "program/critique-findings.json F-013",
+          "backend/agency_runtime/api.py",
+          "backend/agency_runtime/persistence.py",
+          "backend/agency_runtime/postgres.py",
+          "backend/agency_runtime/observability.py",
+          "specs/027-authenticated-request-quota/**"
+        ],
+        "canonical_status": "running",
+        "human_gates": [
+          "merge",
+          "production rollout or quota tuning",
+          "deployment or infrastructure apply",
+          "release"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run validate:program && npm run validate:graph",
+          "npm run validate:compliance && npm run validate:operability",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-07",
+        "write_lock": "orchestrator:INC-027"
+      },
+      "status": "spec_ready",
+      "title": "Bound authenticated request and denial-audit amplification with a durable per-principal and per-tenant quota shared across replicas."
+    },
+    {
+      "allowed_paths": [
         ".gitmodules",
         "vendor/graph-harness-sdlc",
         ".github/workflows/production-readiness.yml",

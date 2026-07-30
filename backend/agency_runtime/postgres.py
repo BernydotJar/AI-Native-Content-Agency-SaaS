@@ -24,6 +24,7 @@ from .models import (
     Provenance,
 )
 from .persistence import (
+    AuthenticatedRequestRateLimitError,
     AuditEvent,
     AuditEventConflictError,
     AuditWrite,
@@ -38,7 +39,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "7"
+POSTGRES_SCHEMA_VERSION = "8"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -47,6 +48,7 @@ POSTGRES_REQUIRED_TABLES = (
     "audit_events",
     "runtime_sessions",
     "authentication_rate_limits",
+    "authenticated_request_rate_limits",
     "memories",
     "social_oauth_states",
     "social_connections",
@@ -99,6 +101,9 @@ POSTGRES_REQUIRED_COLUMNS = {
     ),
     "authentication_rate_limits": frozenset(
         {"bucket_hash", "window_started_at", "failure_count"}
+    ),
+    "authenticated_request_rate_limits": frozenset(
+        {"bucket_hash", "window_started_at", "request_count"}
     ),
     "memories": frozenset(
         {
@@ -695,6 +700,13 @@ class PostgresRuntimeDatabase:
             )
             """,
             """
+            CREATE TABLE IF NOT EXISTS public.authenticated_request_rate_limits (
+                bucket_hash TEXT PRIMARY KEY,
+                window_started_at TIMESTAMPTZ NOT NULL,
+                request_count INTEGER NOT NULL CHECK (request_count >= 0)
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS public.memories (
                 namespace TEXT NOT NULL,
                 memory_id TEXT NOT NULL,
@@ -910,7 +922,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4', '5', '6')
+                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4', '5', '6', '7')
                 """,
                 (SCHEMA_VERSION,),
             )
@@ -1528,6 +1540,85 @@ class PostgresRunStore:
             row = connection.execute(
                 """
                 SELECT failure_count AS total FROM authentication_rate_limits
+                WHERE bucket_hash = %s
+                """,
+                (bucket_hash,),
+            ).fetchone()
+        return 0 if row is None else int(row["total"])
+
+    def consume_authenticated_request_quota(
+        self,
+        bucket_limits: Tuple[Tuple[str, int], ...],
+        window_seconds: int,
+    ) -> None:
+        if not bucket_limits:
+            raise ValueError("at least one authenticated request bucket is required")
+        if any(not bucket_hash for bucket_hash, _ in bucket_limits):
+            raise ValueError("authenticated request bucket hash is required")
+        if len({bucket_hash for bucket_hash, _ in bucket_limits}) != len(bucket_limits):
+            raise ValueError("authenticated request bucket hashes must be unique")
+        if any(max_requests < 1 for _, max_requests in bucket_limits):
+            raise ValueError("max authenticated requests must be positive")
+        if window_seconds < 1:
+            raise ValueError("authenticated request window must be positive")
+
+        now = _datetime(self._clock())
+        cutoff = now - timedelta(seconds=window_seconds)
+        updates: list[Tuple[str, datetime, int]] = []
+        with self.database.pool.connection() as connection:
+            connection.execute(
+                "DELETE FROM authenticated_request_rate_limits WHERE window_started_at < %s",
+                (cutoff,),
+            )
+            for bucket_hash, _ in sorted(bucket_limits):
+                connection.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                    (bucket_hash,),
+                )
+            for bucket_hash, max_requests in sorted(bucket_limits):
+                row = connection.execute(
+                    """
+                    SELECT window_started_at, request_count
+                    FROM authenticated_request_rate_limits
+                    WHERE bucket_hash = %s
+                    FOR UPDATE
+                    """,
+                    (bucket_hash,),
+                ).fetchone()
+                if row is None:
+                    updates.append((bucket_hash, now, 1))
+                    continue
+                window_started = row["window_started_at"]
+                if window_started + timedelta(seconds=window_seconds) <= now:
+                    updates.append((bucket_hash, now, 1))
+                    continue
+                if int(row["request_count"]) >= max_requests:
+                    retry_at = window_started + timedelta(seconds=window_seconds)
+                    retry_after = int((retry_at - now).total_seconds()) + 1
+                    raise AuthenticatedRequestRateLimitError(retry_after)
+                updates.append(
+                    (bucket_hash, window_started, int(row["request_count"]) + 1)
+                )
+
+            for bucket_hash, window_started_at, request_count in updates:
+                connection.execute(
+                    """
+                    INSERT INTO authenticated_request_rate_limits(
+                        bucket_hash, window_started_at, request_count
+                    ) VALUES (%s, %s, %s)
+                    ON CONFLICT (bucket_hash) DO UPDATE SET
+                        window_started_at = EXCLUDED.window_started_at,
+                        request_count = EXCLUDED.request_count
+                    """,
+                    (bucket_hash, window_started_at, request_count),
+                )
+
+    def authenticated_request_quota_count(self, bucket_hash: str) -> int:
+        with self.database.pool.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT request_count AS total
+                FROM authenticated_request_rate_limits
                 WHERE bucket_hash = %s
                 """,
                 (bucket_hash,),
