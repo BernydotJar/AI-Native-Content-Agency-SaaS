@@ -141,6 +141,21 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.auditIntegrity.existingSecret"
+    value = var.audit_checkpoint_existing_secret
+  }
+
+  set {
+    name  = "runtime.auditIntegrity.signingKeysJsonKey"
+    value = var.audit_checkpoint_signing_keys_json_key
+  }
+
+  set {
+    name  = "runtime.auditIntegrity.activeKeyIdKey"
+    value = var.audit_checkpoint_active_key_id_key
+  }
+
+  set {
     name  = "runtime.publicMedia.baseUrl"
     value = var.public_media_base_url
   }
@@ -374,6 +389,14 @@ resource "helm_release" "app" {
     precondition {
       condition     = var.authenticated_request_max_per_tenant >= var.authenticated_request_max_per_principal
       error_message = "authenticated_request_max_per_tenant must be greater than or equal to authenticated_request_max_per_principal."
+    }
+
+    precondition {
+      condition = length(trimspace(var.audit_checkpoint_existing_secret)) == 0 || (
+        length(trimspace(var.audit_checkpoint_signing_keys_json_key)) > 0 &&
+        length(trimspace(var.audit_checkpoint_active_key_id_key)) > 0
+      )
+      error_message = "audit checkpoint Secret configuration requires both data-key names."
     }
 
     precondition {

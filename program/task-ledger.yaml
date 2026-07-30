@@ -2080,6 +2080,112 @@
       "validation_summary": "Exact-head run 30525081524 passed 8/8 on 3e23089afb99e066211762e831dbd75d1275f6da; retained semantic and supply-chain artifacts pass with zero effects. Node is blocked only by parent PR #35 and explicit branch-protection/merge authority.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-027"
+    },
+    {
+      "acceptance_criteria": [
+        "all new events contain valid previous/event hashes",
+        "existing events backfill deterministically",
+        "mutation deletion reordering and linkage corruption are detected",
+        "PostgreSQL replicas append one valid tenant chain",
+        "checkpoint signature verifies with exact key ID",
+        "partial or weak key config fails startup",
+        "keys remain outside Git and Terraform state",
+        "schema v9 migration/backup/restore pass",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/audit_integrity.py",
+        "backend/tests/test_audit_integrity.py",
+        "backend/tests/test_observability.py",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_local_product_runner.py",
+        "docs/OPERATIONS.md",
+        "docs/runbooks/audit-ledger-integrity.md",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "scripts/run-local-product.sh",
+        "scripts/manage-runtime-backup.py",
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "program/**",
+        "specs/028-audit-ledger-integrity/**"
+      ],
+      "authoritative_inputs": [
+        "program/critique-findings.json F-012",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/api.py",
+        "scripts/manage-runtime-backup.py",
+        "specs/028-audit-ledger-integrity/**"
+      ],
+      "context": "F-012 remains open because database owners can alter transactional audit rows without deterministic tamper evidence or an independently exportable signed head.",
+      "dependencies": [
+        "INC-003",
+        "INC-004"
+      ],
+      "expected_outputs": [
+        "versioned canonical audit hash contract",
+        "SQLite/PostgreSQL per-tenant chain and backfill",
+        "schema v9",
+        "fail-closed verifier",
+        "HMAC keyring and signed checkpoint API",
+        "migration/backup/package evidence",
+        "security and production review"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "production checkpoint key provisioning/rotation",
+        "immutable off-host destination",
+        "KMS/HSM custody",
+        "release"
+      ],
+      "objective": "Add per-tenant cryptographic audit chaining, deterministic verification and signed exportable checkpoints without claiming immutable external custody.",
+      "prohibited_paths": [
+        "production deployment",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "destructive migration",
+        "legal non-repudiation claim",
+        "branch-protection mutation"
+      ],
+      "publication_state": "LOCAL_REVIEW_READY_REMOTE_CI_PENDING",
+      "read_only_paths": [
+        ".env.local",
+        "production secrets",
+        "external immutable storage",
+        "KMS/HSM configuration",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "Security Engineer / Database Engineer / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-028",
+      "validation_commands": [
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "./scripts/verify-production-package.sh",
+        "./scripts/verify-local-infrastructure.sh",
+        "./scripts/verify-supply-chain.sh",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "validation_summary": "Revision 4 local gates pass: 371 locked-wheel tests, 366 PostgreSQL tests, schema v9 chain/backfill/migration/backup, signed checkpoint API, non-root OCI package, Helm/Terraform/K3s Secret refs, 58 frontend tests and all program/compliance/operability gates. Exact-head CI pending.",
+      "workstream_id": "WS-07",
+      "write_lock": "orchestrator:INC-028"
     }
   ],
   "updated_at": "2026-07-30",
@@ -2262,12 +2368,12 @@
       "evals": [],
       "id": "WS-07",
       "name": "Identity, Security, Privacy and Tenant Isolation",
-      "next_ready_task": "INC-027",
+      "next_ready_task": "INC-028",
       "objective": "Threat/privacy models, retention and adversarial verification.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "blocked",
+      "status": "in_progress",
       "validation": [],
       "write_locks": [
         "backend/agency_runtime/api.py",

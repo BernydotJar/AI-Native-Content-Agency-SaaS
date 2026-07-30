@@ -89,6 +89,9 @@ postgresql_database_url_key      = "database-url"
 postgresql_pool_min_size         = 1
 postgresql_pool_max_size         = 10
 postgresql_connect_timeout_seconds = 15
+audit_checkpoint_existing_secret          = "ai-native-content-agency-audit"
+audit_checkpoint_signing_keys_json_key    = "audit-checkpoint-signing-keys.json"
+audit_checkpoint_active_key_id_key        = "audit-checkpoint-active-key-id"
 public_media_base_url                  = "https://media.example.test"
 public_media_ttl_seconds               = 86400
 public_media_existing_secret           = "ai-native-content-agency-public-media"
@@ -195,6 +198,11 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   --from-literal='instagram-app-secret=local-instagram-secret-not-for-external-use' \
   >/dev/null
 kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
+  ai-native-content-agency-audit \
+  --from-literal='audit-checkpoint-signing-keys.json={"audit-v1":"CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"}' \
+  --from-literal='audit-checkpoint-active-key-id=audit-v1' \
+  >/dev/null
+kubectl --kubeconfig "$KUBECONFIG_PATH" -n "$NAMESPACE" create secret generic \
   ai-native-content-agency-public-media \
   --from-literal='public-media-signing-keys.json={"media-v1":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}' \
   --from-literal='public-media-active-signing-key-id=media-v1' \
@@ -228,6 +236,9 @@ assert 'runtime.model.executionEnabled' in serialized
 assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'runtime.publicMedia.existingSecret' in serialized
 assert 'ai-native-content-agency-public-media' in serialized
+assert 'runtime.auditIntegrity.existingSecret' in serialized
+assert 'ai-native-content-agency-audit' in serialized
+assert 'CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk' not in serialized
 assert 'false' in serialized.lower()
 assert 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8' not in serialized
 for forbidden in (
@@ -328,6 +339,14 @@ assert environment["AGENCY_SOCIAL_BOOTSTRAP_TENANT_ID"]["value"] == "tenant-alph
 assert environment["AGENCY_SOCIAL_PUBLICATION_ENABLED"]["value"] == "false"
 assert environment["AGENCY_MODEL_EXECUTION_ENABLED"]["value"] == "false"
 assert environment["AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED"]["value"] == "false"
+assert environment["AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-audit",
+    "key": "audit-checkpoint-signing-keys.json",
+}
+assert environment["AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-audit",
+    "key": "audit-checkpoint-active-key-id",
+}
 assert environment["AGENCY_PUBLIC_MEDIA_BASE_URL"]["value"] == "https://media.example.test"
 assert environment["AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON"]["valueFrom"]["secretKeyRef"] == {
     "name": "ai-native-content-agency-public-media",
@@ -380,6 +399,9 @@ postgresql_pool_min_size         = 1
 postgresql_pool_max_size         = 8
 postgresql_connect_timeout_seconds = 20
 postgresql_schema_mode           = "validate"
+audit_checkpoint_existing_secret          = "ai-native-content-agency-audit"
+audit_checkpoint_signing_keys_json_key    = "audit-checkpoint-signing-keys.json"
+audit_checkpoint_active_key_id_key        = "audit-checkpoint-active-key-id"
 public_media_base_url                  = "https://media.example.test"
 public_media_ttl_seconds               = 86400
 public_media_existing_secret           = "ai-native-content-agency-public-media"
@@ -434,6 +456,9 @@ assert 'runtime.model.executionEnabled' in serialized
 assert 'runtime.model.effectAuthorityEnabled' in serialized
 assert 'runtime.publicMedia.existingSecret' in serialized
 assert 'ai-native-content-agency-public-media' in serialized
+assert 'runtime.auditIntegrity.existingSecret' in serialized
+assert 'ai-native-content-agency-audit' in serialized
+assert 'CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk' not in serialized
 assert 'false' in serialized.lower()
 assert 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8' not in serialized
 for forbidden in (
@@ -496,6 +521,14 @@ assert environment["AGENCY_X_REDIRECT_URI"]["value"].startswith("http://127.0.0.
 assert environment["AGENCY_INSTAGRAM_REDIRECT_URI"]["value"].startswith("http://127.0.0.1:4175/")
 assert environment["AGENCY_MODEL_EXECUTION_ENABLED"]["value"] == "false"
 assert environment["AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED"]["value"] == "false"
+assert environment["AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-audit",
+    "key": "audit-checkpoint-signing-keys.json",
+}
+assert environment["AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID"]["valueFrom"]["secretKeyRef"] == {
+    "name": "ai-native-content-agency-audit",
+    "key": "audit-checkpoint-active-key-id",
+}
 assert environment["AGENCY_PUBLIC_MEDIA_BASE_URL"]["value"] == "https://media.example.test"
 assert environment["AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON"]["valueFrom"]["secretKeyRef"] == {
     "name": "ai-native-content-agency-public-media",
@@ -554,5 +587,6 @@ printf 'authenticated_request_quota_configuration=pass\n'
 printf 'model_effect_default_disabled=pass\n'
 printf 'model_provider_secret_refs=pass\n'
 printf 'public_media_keyring_secret_refs=pass\n'
+printf 'audit_checkpoint_secret_refs=pass\n'
 printf 'workload_execution=not_validated_agentless_control_plane\n'
 printf 'cleanup=pass\n'

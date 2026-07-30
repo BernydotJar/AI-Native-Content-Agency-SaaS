@@ -109,6 +109,9 @@
 {{- if or (lt (int .Values.runtime.auth.authenticatedRequestWindowSeconds) 1) (gt (int .Values.runtime.auth.authenticatedRequestWindowSeconds) 3600) }}
 {{- fail "runtime.auth.authenticatedRequestWindowSeconds must be between 1 and 3600" }}
 {{- end }}
+{{- if and .Values.runtime.auditIntegrity.existingSecret (or (empty .Values.runtime.auditIntegrity.signingKeysJsonKey) (empty .Values.runtime.auditIntegrity.activeKeyIdKey)) }}
+{{- fail "runtime.auditIntegrity requires both Secret data-key names" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -197,6 +200,18 @@ spec:
               value: {{ .Values.runtime.auth.authenticatedRequestMaxPerTenant | quote }}
             - name: AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS
               value: {{ .Values.runtime.auth.authenticatedRequestWindowSeconds | quote }}
+{{- if .Values.runtime.auditIntegrity.existingSecret }}
+            - name: AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.auditIntegrity.existingSecret | quote }}
+                  key: {{ .Values.runtime.auditIntegrity.signingKeysJsonKey | quote }}
+            - name: AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runtime.auditIntegrity.existingSecret | quote }}
+                  key: {{ .Values.runtime.auditIntegrity.activeKeyIdKey | quote }}
+{{- end }}
             - name: FORWARDED_ALLOW_IPS
               value: {{ .Values.runtime.proxy.forwardedAllowIps | quote }}
             - name: AGENCY_SESSION_COOKIE_NAME

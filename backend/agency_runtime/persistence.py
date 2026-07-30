@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import Callable, Iterator, Mapping, Optional, Tuple, Union
 
 from .memory import utc_now
+from .audit_integrity import (
+    GENESIS_AUDIT_HASH,
+    AuditChainCheckpoint,
+    AuditIntegrityError,
+    audit_event_hash,
+)
 from .models import ExecutionRun
 from .serialization import execution_run_from_document, execution_run_to_document
 from .utils import canonical_json, require_non_empty
@@ -54,6 +60,8 @@ class AuditEvent:
     resource_id: str
     actor: str
     payload: Mapping[str, object]
+    previous_hash: str
+    event_hash: str
 
 
 @dataclass(frozen=True)
@@ -157,13 +165,22 @@ class SQLiteRunStore:
                     resource_type TEXT NOT NULL,
                     resource_id TEXT NOT NULL,
                     actor TEXT NOT NULL,
-                    payload_json TEXT NOT NULL
+                    payload_json TEXT NOT NULL,
+                    previous_hash TEXT NOT NULL DEFAULT '',
+                    event_hash TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_audit_events_tenant_sequence
                     ON audit_events(tenant_id, sequence ASC);
                 CREATE INDEX IF NOT EXISTS idx_audit_events_resource
                     ON audit_events(tenant_id, resource_type, resource_id, sequence ASC);
+
+                CREATE TABLE IF NOT EXISTS audit_chain_heads (
+                    tenant_id TEXT PRIMARY KEY,
+                    event_count INTEGER NOT NULL CHECK (event_count >= 0),
+                    head_event_id TEXT NOT NULL,
+                    head_hash TEXT NOT NULL
+                );
 
                 CREATE TABLE IF NOT EXISTS runtime_sessions (
                     session_id TEXT PRIMARY KEY,
@@ -200,6 +217,90 @@ class SQLiteRunStore:
                 """
             )
             self._ensure_session_identity_columns_locked()
+            self._ensure_audit_chain_locked()
+
+    def _ensure_audit_chain_locked(self) -> None:
+        columns = {
+            str(row["name"])
+            for row in self._connection.execute(
+                "PRAGMA table_info(audit_events)"
+            ).fetchall()
+        }
+        for name in ("previous_hash", "event_hash"):
+            if name not in columns:
+                self._connection.execute(
+                    "ALTER TABLE audit_events ADD COLUMN {} TEXT NOT NULL DEFAULT ''".format(
+                        name
+                    )
+                )
+        rows = self._connection.execute(
+            "SELECT * FROM audit_events ORDER BY tenant_id ASC, sequence ASC"
+        ).fetchall()
+        previous_by_tenant: dict[str, str] = {}
+        count_by_tenant: dict[str, int] = {}
+        head_event_by_tenant: dict[str, str] = {}
+        for row in rows:
+            tenant_id = str(row["tenant_id"])
+            previous_hash = previous_by_tenant.get(tenant_id, GENESIS_AUDIT_HASH)
+            payload = json.loads(str(row["payload_json"]))
+            expected = audit_event_hash(
+                event_id=str(row["event_id"]),
+                tenant_id=tenant_id,
+                request_id=str(row["request_id"]),
+                occurred_at=str(row["occurred_at"]),
+                action=str(row["action"]),
+                resource_type=str(row["resource_type"]),
+                resource_id=str(row["resource_id"]),
+                actor=str(row["actor"]),
+                payload=payload,
+                previous_hash=previous_hash,
+            )
+            stored_previous = str(row["previous_hash"])
+            stored_event = str(row["event_hash"])
+            if not stored_previous and not stored_event:
+                self._connection.execute(
+                    """
+                    UPDATE audit_events
+                    SET previous_hash = ?, event_hash = ?
+                    WHERE sequence = ?
+                    """,
+                    (previous_hash, expected, int(row["sequence"])),
+                )
+            elif stored_previous != previous_hash or stored_event != expected:
+                raise AuditIntegrityError(
+                    "stored SQLite audit chain failed verification"
+                )
+            previous_by_tenant[tenant_id] = expected
+            count_by_tenant[tenant_id] = count_by_tenant.get(tenant_id, 0) + 1
+            head_event_by_tenant[tenant_id] = str(row["event_id"])
+
+        stored_heads = {
+            str(row["tenant_id"]): row
+            for row in self._connection.execute(
+                "SELECT * FROM audit_chain_heads"
+            ).fetchall()
+        }
+        if set(stored_heads) - set(count_by_tenant):
+            raise AuditIntegrityError("SQLite audit chain head has no events")
+        for tenant_id, event_count in count_by_tenant.items():
+            expected_head = previous_by_tenant[tenant_id]
+            expected_event_id = head_event_by_tenant[tenant_id]
+            stored = stored_heads.get(tenant_id)
+            if stored is None:
+                self._connection.execute(
+                    """
+                    INSERT INTO audit_chain_heads(
+                        tenant_id, event_count, head_event_id, head_hash
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                    (tenant_id, event_count, expected_event_id, expected_head),
+                )
+            elif (
+                int(stored["event_count"]) != event_count
+                or str(stored["head_event_id"]) != expected_event_id
+                or str(stored["head_hash"]) != expected_head
+            ):
+                raise AuditIntegrityError("SQLite audit chain head is invalid")
 
     def _ensure_session_identity_columns_locked(self) -> None:
         columns = {
@@ -236,31 +337,63 @@ class SQLiteRunStore:
         )
 
     def _append_audit_locked(self, tenant_id: str, audit: AuditWrite) -> None:
+        event_id = audit.event_id or "audit-{}".format(uuid.uuid4().hex)
+        occurred_at = self._clock()
+        payload_json = canonical_json(audit.payload)
+        row = self._connection.execute(
+            """
+            SELECT event_count, head_hash FROM audit_chain_heads
+            WHERE tenant_id = ?
+            """,
+            (tenant_id,),
+        ).fetchone()
+        previous_hash = GENESIS_AUDIT_HASH if row is None else str(row["head_hash"])
+        previous_count = 0 if row is None else int(row["event_count"])
+        event_hash = audit_event_hash(
+            event_id=event_id,
+            tenant_id=tenant_id,
+            request_id=audit.request_id,
+            occurred_at=occurred_at,
+            action=audit.action,
+            resource_type=audit.resource_type,
+            resource_id=audit.resource_id,
+            actor=audit.actor,
+            payload=dict(audit.payload),
+            previous_hash=previous_hash,
+        )
         self._connection.execute(
             """
             INSERT INTO audit_events(
-                event_id,
-                tenant_id,
-                request_id,
-                occurred_at,
-                action,
-                resource_type,
-                resource_id,
-                actor,
-                payload_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                event_id, tenant_id, request_id, occurred_at, action,
+                resource_type, resource_id, actor, payload_json,
+                previous_hash, event_hash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                audit.event_id or "audit-{}".format(uuid.uuid4().hex),
+                event_id,
                 tenant_id,
                 audit.request_id,
-                self._clock(),
+                occurred_at,
                 audit.action,
                 audit.resource_type,
                 audit.resource_id,
                 audit.actor,
-                canonical_json(audit.payload),
+                payload_json,
+                previous_hash,
+                event_hash,
             ),
+        )
+        self._connection.execute(
+            """
+            INSERT INTO audit_chain_heads(
+                tenant_id, event_count, head_event_id, head_hash
+            ) VALUES (?, ?, ?, ?)
+            ON CONFLICT(tenant_id) DO UPDATE SET
+                event_count = excluded.event_count,
+                head_event_id = excluded.head_event_id,
+                head_hash = excluded.head_hash
+            """,
+            (tenant_id, previous_count + 1, event_id, event_hash),
         )
 
     def append_audit(self, tenant_id: str, audit: AuditWrite) -> None:
@@ -445,6 +578,63 @@ class SQLiteRunStore:
                 (tenant_id, after_sequence, limit),
             ).fetchall()
         return tuple(self._row_to_audit_event(row) for row in rows)
+
+    def verify_audit_chain(self, tenant_id: str) -> AuditChainCheckpoint:
+        require_non_empty(tenant_id, "tenant_id")
+        with self._lock:
+            rows = self._connection.execute(
+                """
+                SELECT * FROM audit_events
+                WHERE tenant_id = ?
+                ORDER BY sequence ASC
+                """,
+                (tenant_id,),
+            ).fetchall()
+        previous_hash = GENESIS_AUDIT_HASH
+        head_event_id = ""
+        for row in rows:
+            payload = json.loads(str(row["payload_json"]))
+            stored_previous = str(row["previous_hash"])
+            stored_event = str(row["event_hash"])
+            if stored_previous != previous_hash:
+                raise AuditIntegrityError("audit previous hash linkage is invalid")
+            expected = audit_event_hash(
+                event_id=str(row["event_id"]),
+                tenant_id=tenant_id,
+                request_id=str(row["request_id"]),
+                occurred_at=str(row["occurred_at"]),
+                action=str(row["action"]),
+                resource_type=str(row["resource_type"]),
+                resource_id=str(row["resource_id"]),
+                actor=str(row["actor"]),
+                payload=payload,
+                previous_hash=previous_hash,
+            )
+            if stored_event != expected:
+                raise AuditIntegrityError("audit event hash is invalid")
+            previous_hash = stored_event
+            head_event_id = str(row["event_id"])
+        with self._lock:
+            head = self._connection.execute(
+                "SELECT * FROM audit_chain_heads WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+        if not rows:
+            if head is not None:
+                raise AuditIntegrityError("audit chain head exists without events")
+        elif head is None or (
+            int(head["event_count"]) != len(rows)
+            or str(head["head_event_id"]) != head_event_id
+            or str(head["head_hash"]) != previous_hash
+        ):
+            raise AuditIntegrityError("audit chain head does not match events")
+        return AuditChainCheckpoint(
+            tenant_id=tenant_id,
+            event_count=len(rows),
+            head_event_id=head_event_id,
+            head_hash=previous_hash,
+            verified_at=self._clock(),
+        )
 
     def audit_event(self, tenant_id: str, event_id: str) -> Optional[AuditEvent]:
         require_non_empty(tenant_id, "tenant_id")
@@ -864,4 +1054,6 @@ class SQLiteRunStore:
             resource_id=str(row["resource_id"]),
             actor=str(row["actor"]),
             payload=json.loads(row["payload_json"]),
+            previous_hash=str(row["previous_hash"]),
+            event_hash=str(row["event_hash"]),
         )

@@ -18,6 +18,8 @@ X_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/x/oauth/cal
 INSTAGRAM_TEST_REDIRECT=http://127.0.0.1:${HOST_PORT}/api/v1/social-channels/instagram/oauth/callback
 SOCIAL_TEST_ACTIVE_KEY_ID=package-social-v1
 SOCIAL_TEST_ENCRYPTION_KEYS_JSON='{"package-social-v1":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}'
+AUDIT_TEST_ACTIVE_KEY_ID=package-audit-v1
+AUDIT_TEST_SIGNING_KEYS_JSON='{"package-audit-v1":"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8"}'
 IDENTITY_JSON=$(AUTH_KEY="$AUTH_KEY" VIEWER_KEY="$VIEWER_KEY" python3 -c 'import json, os; print(json.dumps([
     {"tenant_id":"local-verification","subject_id":"package-admin","role":"admin","key_id":"package-admin-v1","api_key":os.environ["AUTH_KEY"],"active":True,"entitlements":["theme:premium"]},
     {"tenant_id":"local-verification","subject_id":"package-viewer","role":"viewer","key_id":"package-viewer-v1","api_key":os.environ["VIEWER_KEY"],"active":True},
@@ -109,12 +111,37 @@ if grep -q 'name: AGENCY_PUBLIC_MEDIA_' "$TMP_DIR/rendered.yaml"; then
   printf 'default render unexpectedly contains public media configuration\n' >&2
   exit 3
 fi
+if grep -q 'name: AGENCY_AUDIT_CHECKPOINT_' "$TMP_DIR/rendered.yaml"; then
+  printf 'default render unexpectedly contains audit checkpoint Secret refs\n' >&2
+  exit 3
+fi
 grep -A1 'name: AGENCY_MODEL_EXECUTION_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
 grep -A1 'name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
 if grep -q 'name: OPENAI_API_KEY\|name: ANTHROPIC_API_KEY\|name: DEEPSEEK_API_KEY\|name: MOONSHOT_API_KEY\|name: LLAMA_API_KEY' "$TMP_DIR/rendered.yaml"; then
   printf 'default render unexpectedly contains model provider Secret refs\n' >&2
   exit 3
 fi
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.auditIntegrity.existingSecret=agency-audit-integrity \
+  > "$TMP_DIR/audit-integrity.yaml"
+grep -q 'name: AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON' "$TMP_DIR/audit-integrity.yaml"
+grep -A5 'name: AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON' "$TMP_DIR/audit-integrity.yaml" | grep -q 'name: "agency-audit-integrity"'
+grep -q 'key: "audit-checkpoint-signing-keys.json"' "$TMP_DIR/audit-integrity.yaml"
+grep -q 'name: AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID' "$TMP_DIR/audit-integrity.yaml"
+grep -q 'key: "audit-checkpoint-active-key-id"' "$TMP_DIR/audit-integrity.yaml"
+if grep -q 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8' "$TMP_DIR/audit-integrity.yaml"; then
+  printf 'audit checkpoint render leaked signing key material\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.auditIntegrity.existingSecret=agency-audit-integrity \
+  --set-string runtime.auditIntegrity.activeKeyIdKey= >/dev/null 2>&1; then
+  printf 'Helm audit checkpoint Secret guard did not fail\n' >&2
+  exit 3
+fi
+printf 'audit_checkpoint_secret_refs=pass\n'
+printf 'audit_checkpoint_secret_guard=pass\n'
+
 "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.model.executionEnabled=true \
   --set runtime.model.effectAuthorityEnabled=true \
@@ -277,6 +304,8 @@ build_with_docker() {
     -e "AGENCY_LOGIN_MAX_FAILURES=3" \
     -e "AGENCY_LOGIN_SOURCE_MAX_FAILURES=10" \
     -e "AGENCY_LOGIN_WINDOW_SECONDS=60" \
+    -e "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON=$AUDIT_TEST_SIGNING_KEYS_JSON" \
+    -e "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID=$AUDIT_TEST_ACTIVE_KEY_ID" \
     -e "AGENCY_SESSION_COOKIE_SECURE=false" \
     -e "AGENCY_SESSION_TTL_SECONDS=600" \
     -e "AGENCY_X_CONSUMER_KEY=$X_TEST_KEY" \
@@ -311,6 +340,8 @@ build_with_buildah() {
     --env "AGENCY_LOGIN_MAX_FAILURES=3" \
     --env "AGENCY_LOGIN_SOURCE_MAX_FAILURES=10" \
     --env "AGENCY_LOGIN_WINDOW_SECONDS=60" \
+    --env "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON=$AUDIT_TEST_SIGNING_KEYS_JSON" \
+    --env "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID=$AUDIT_TEST_ACTIVE_KEY_ID" \
     --env "AGENCY_SESSION_COOKIE_SECURE=false" \
     --env "AGENCY_SESSION_TTL_SECONDS=600" \
     --env "AGENCY_X_CONSUMER_KEY=$X_TEST_KEY" \
@@ -618,6 +649,8 @@ set -e
 [ "$publication_disabled_status" = "409" ]
 curl -fsS -b "$TMP_DIR/cookies.txt" \
   "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events" > "$TMP_DIR/audit.json"
+curl -fsS -b "$TMP_DIR/cookies.txt" \
+  "http://127.0.0.1:${HOST_PORT}/api/v1/audit-events/integrity" > "$TMP_DIR/audit-checkpoint.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/metrics" > "$TMP_DIR/metrics.txt"
 curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/revoke.headers" \
   -X DELETE -H "X-CSRF-Token: $CSRF_TOKEN" \
@@ -634,7 +667,11 @@ python3 - "$TMP_DIR/health.json" "$TMP_DIR/ready.json" "$TMP_DIR/session.json" \
   "$TMP_DIR/approval.headers" "$TMP_DIR/revoked.json" "$post_revoke_status" \
   "$TMP_DIR/viewer-denied.json" "$viewer_create_status" \
   "$TMP_DIR/publication-disabled.json" "$publication_disabled_status" \
-  "$TMP_DIR/model-effect-disabled.json" "$model_effect_disabled_status" <<'PYCHECK'
+  "$TMP_DIR/model-effect-disabled.json" "$model_effect_disabled_status" \
+  "$TMP_DIR/audit-checkpoint.json" <<'PYCHECK'
+import base64
+import hashlib
+import hmac
 import json
 import sys
 
@@ -672,6 +709,8 @@ publication_disabled_status = sys.argv[17]
 with open(sys.argv[18], encoding="utf-8") as handle:
     model_effect_disabled = json.load(handle)
 model_effect_disabled_status = sys.argv[19]
+with open(sys.argv[20], encoding="utf-8") as handle:
+    audit_checkpoint = json.load(handle)
 
 assert health == {
     "status": "ok",
@@ -682,6 +721,8 @@ assert health == {
     "auth_configured": True,
     "individual_identity_configured": True,
     "authenticated_request_quota_enabled": True,
+    "audit_integrity_chain_enabled": True,
+    "audit_checkpoint_signing_configured": True,
 }
 assert ready["status"] == "ready"
 assert ready["auth_configured"] is True
@@ -697,6 +738,11 @@ assert ready["authenticated_request_quota"] == {
     "principal_max_requests": 600,
     "tenant_max_requests": 6000,
     "window_seconds": 60,
+}
+assert ready["audit_integrity"] == {
+    "chain_enabled": True,
+    "checkpoint_signing_configured": True,
+    "active_key_id": "package-audit-v1",
 }
 assert viewer_create_status == "403"
 assert publication_disabled_status == "409"
@@ -753,6 +799,39 @@ assert [item["request_id"] for item in audit["events"]] == [
     "package-create-0001",
     "package-approve-0001",
 ]
+assert audit["events"][0]["previous_hash"] == "0" * 64
+for previous, current in zip(audit["events"], audit["events"][1:]):
+    assert current["previous_hash"] == previous["event_hash"]
+assert audit_checkpoint["schema_version"] == "audit-checkpoint.v1"
+assert audit_checkpoint["tenant_id"] == "local-verification"
+assert audit_checkpoint["event_count"] == len(audit["events"])
+assert audit_checkpoint["head_event_id"] == audit["events"][-1]["event_id"]
+assert audit_checkpoint["head_hash"] == audit["events"][-1]["event_hash"]
+assert audit_checkpoint["key_id"] == "package-audit-v1"
+checkpoint_document = {
+    key: audit_checkpoint[key]
+    for key in (
+        "schema_version",
+        "tenant_id",
+        "event_count",
+        "head_event_id",
+        "head_hash",
+        "verified_at",
+    )
+}
+canonical = json.dumps(
+    checkpoint_document,
+    sort_keys=True,
+    separators=(",", ":"),
+    ensure_ascii=False,
+).encode("utf-8")
+key = base64.urlsafe_b64decode(
+    "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+)
+expected_signature = base64.urlsafe_b64encode(
+    hmac.new(key, canonical, hashlib.sha256).digest()
+).rstrip(b"=").decode("ascii")
+assert hmac.compare_digest(expected_signature, audit_checkpoint["signature"])
 assert [item["actor"] for item in audit["events"]] == [
     "api-key:package-viewer",
     "api-key:package-admin",
@@ -789,6 +868,7 @@ print("social_publication_default_disabled=pass")
 print("model_effect_default_disabled=pass")
 print("sandbox_package=pass")
 print("durable_audit=pass")
+print("audit_chain_checkpoint=pass")
 print("prometheus_metrics=pass")
 print("authenticated_request_quota_package=pass")
 print("session_revocation=pass")

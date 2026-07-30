@@ -24,6 +24,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .audit_integrity import (
+    AuditCheckpointSigningConfigurationError,
+    AuditCheckpointSigningKeyring,
+    AuditIntegrityError,
+)
 from .auth import (
     AuthenticationError,
     AuthorizationError,
@@ -1781,6 +1786,10 @@ class RuntimeService:
                 tenant_id=tenant_id, after_sequence=after_sequence, limit=limit
             )
 
+    def verify_audit_chain(self, tenant_id: str):
+        with self._lock:
+            return self.run_store.verify_audit_chain(tenant_id)
+
     def close(self) -> None:
         with self._lock:
             for runtime in self._tenant_runtimes.values():
@@ -1888,6 +1897,8 @@ def create_app(
     authenticated_request_max_per_principal: Optional[int] = None,
     authenticated_request_max_per_tenant: Optional[int] = None,
     authenticated_request_window_seconds: Optional[int] = None,
+    audit_checkpoint_signing_keys_json: Optional[str] = None,
+    audit_checkpoint_active_key_id: Optional[str] = None,
     postgres_pool_min_size: Optional[int] = None,
     postgres_pool_max_size: Optional[int] = None,
     postgres_connect_timeout_seconds: Optional[float] = None,
@@ -2008,6 +2019,22 @@ def create_app(
         raise ValueError(
             "authenticated request window must be between 1 and 3600 seconds"
         )
+    raw_audit_checkpoint_keys = (
+        audit_checkpoint_signing_keys_json
+        if audit_checkpoint_signing_keys_json is not None
+        else os.environ.get("AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON", "")
+    )
+    audit_checkpoint_active_key = (
+        audit_checkpoint_active_key_id
+        if audit_checkpoint_active_key_id is not None
+        else os.environ.get("AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID", "")
+    )
+    try:
+        audit_checkpoint_keyring = AuditCheckpointSigningKeyring.from_environment(
+            raw_audit_checkpoint_keys, audit_checkpoint_active_key
+        )
+    except AuditCheckpointSigningConfigurationError as error:
+        raise ValueError("audit checkpoint signing configuration is invalid") from error
     body_limit = (
         int(
             os.environ.get(
@@ -2318,6 +2345,10 @@ def create_app(
     app.state.authenticated_request_max_per_principal = request_max_per_principal
     app.state.authenticated_request_max_per_tenant = request_max_per_tenant
     app.state.authenticated_request_window_seconds = request_quota_window_seconds
+    app.state.audit_checkpoint_signing_configured = audit_checkpoint_keyring is not None
+    app.state.audit_checkpoint_active_key_id = (
+        "" if audit_checkpoint_keyring is None else audit_checkpoint_keyring.active_key_id
+    )
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -2861,6 +2892,8 @@ def create_app(
             "auth_configured": authenticator.configured,
             "individual_identity_configured": authenticator.individual_identity_configured,
             "authenticated_request_quota_enabled": True,
+            "audit_integrity_chain_enabled": True,
+            "audit_checkpoint_signing_configured": audit_checkpoint_keyring is not None,
         }
 
     @app.get("/readyz", tags=["operations"])
@@ -2896,6 +2929,15 @@ def create_app(
                 "principal_max_requests": request_max_per_principal,
                 "tenant_max_requests": request_max_per_tenant,
                 "window_seconds": request_quota_window_seconds,
+            },
+            "audit_integrity": {
+                "chain_enabled": True,
+                "checkpoint_signing_configured": audit_checkpoint_keyring is not None,
+                "active_key_id": (
+                    ""
+                    if audit_checkpoint_keyring is None
+                    else audit_checkpoint_keyring.active_key_id
+                ),
             },
         }
 
@@ -3971,6 +4013,26 @@ def create_app(
             "next_after_sequence": page[-1].sequence if page else after_sequence,
             "has_more": len(events) > limit,
         }
+
+    @app.get("/api/v1/audit-events/integrity", tags=["audit"])
+    def audit_integrity_checkpoint(
+        principal: TenantPrincipal = Depends(require_audit_reader),
+    ) -> Dict[str, object]:
+        if audit_checkpoint_keyring is None:
+            raise PublicApiError(
+                status_code=status.HTTP_409_CONFLICT,
+                code="audit_checkpoint_signing_unavailable",
+                detail="audit checkpoint signing is not configured",
+            )
+        try:
+            checkpoint = service.verify_audit_chain(principal.tenant_id)
+        except AuditIntegrityError as error:
+            raise PublicApiError(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                code="audit_integrity_verification_failed",
+                detail="audit ledger integrity verification failed",
+            ) from error
+        return dict(audit_checkpoint_keyring.sign(checkpoint).document())
 
     @app.post(
         "/api/v1/runs", status_code=status.HTTP_201_CREATED, tags=["runs"]

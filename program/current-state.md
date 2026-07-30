@@ -319,3 +319,14 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Four localized repairs affected only INC-027: stale schema/cardinality assertions, raw DB-API test access, obsolete package health assertions and two newly fixable Python tarfile findings.
 - Supply chain passes with `source_dirty=false`; three exact Python compatibility exceptions expire on 2026-08-21 and the runtime tarfile-surface guard passes.
 - Release and cloud recommendations remain `DENY_RELEASE` and `DENY_APPLY`.
+
+## INC-028 audit ledger integrity
+
+- Status: `running`, revision 4; local implementation and production gates pass, exact-head CI pending.
+- SQLite and PostgreSQL schema v9 maintain per-tenant SHA-256 chains plus durable heads, detecting field mutation, deletion, truncation and reordering.
+- PostgreSQL serializes only same-tenant appends and verifies the chain across replicas.
+- Existing rows backfill deterministically; SQLite-to-PostgreSQL migration recomputes hashes and backup/restore preserves events plus heads.
+- Optional HMAC-SHA256 checkpoints expose event count, head event/hash, key ID and signature only to `audit:read` identities.
+- Helm/Terraform use Secret refs only; package and K3s gates prove no signing material in render or Terraform state.
+- Four localized repairs affected only INC-028: canonical base64url enforcement, AuditWrite/AuditEvent model placement, schema-v9 restoration and API fixture creation.
+- Immutable off-host custody, KMS/HSM and legal non-repudiation remain external; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
