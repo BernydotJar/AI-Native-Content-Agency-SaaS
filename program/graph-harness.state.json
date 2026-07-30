@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 18,
-  "event_count": 305,
-  "last_event_id": "8a61744b-00de-496d-a0f2-73aa29a1e5fa",
+  "checkpoint_count": 19,
+  "event_count": 316,
+  "last_event_id": "a2e74175-27dc-4614-8eab-41eec0854289",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -896,6 +896,36 @@
     "INC-030": {
       "active_approval_count": 1,
       "active_evidence": {
+        "11880a5c-1b78-43c8-a463-7666f967e9f8": {
+          "artifact": "program/reports/inc-030-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "ae5e89a2d06c9502c2e56e3c2362aca33251e01754113620b95e82dd6c1cd2e0"
+        },
+        "13d22898-bec9-4534-a403-38186c6c0f01": {
+          "artifact": "program/reports/inc-030-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "265323dd5a264635a977571ce166623ea06471d97f77cef793c39688a5e34605"
+        },
+        "59cf593a-1e1f-4f64-9c8d-9e3201785498": {
+          "artifact": "runtime schema history and historical execution matrix",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "12a7ebf73e158cdec02e24218bbea7bdc928d588bdc93451fbceeca99f297357"
+        },
+        "820d757a-15fd-433c-9fa2-a95ffe047c97": {
+          "artifact": "specs/030-schema-compatibility-audit",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "e1b2ef4439edfd5e3add4719169b41b1cd3aa6331dc9e7b4e0394d278ebee371"
+        },
+        "cdf2b280-c90d-45aa-8fc6-34274c7f5e85": {
+          "artifact": "program/reports/inc-030-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "ae5e89a2d06c9502c2e56e3c2362aca33251e01754113620b95e82dd6c1cd2e0"
+        },
         "e2e0705a-d56f-4ed6-adf0-5d2f6f2c60d3": {
           "artifact": "specs/030-schema-compatibility-audit",
           "kind": "spec",
@@ -904,16 +934,36 @@
         }
       },
       "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "59cf593a-1e1f-4f64-9c8d-9e3201785498",
+            "cdf2b280-c90d-45aa-8fc6-34274c7f5e85"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "13d22898-bec9-4534-a403-38186c6c0f01"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "11880a5c-1b78-43c8-a463-7666f967e9f8",
+            "cdf2b280-c90d-45aa-8fc6-34274c7f5e85"
+          ],
+          "result": "PASS"
+        },
         "spec-gate": {
           "evidence_ids": [
-            "e2e0705a-d56f-4ed6-adf0-5d2f6f2c60d3"
+            "820d757a-15fd-433c-9fa2-a95ffe047c97"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "8a61744b-00de-496d-a0f2-73aa29a1e5fa",
+      "last_event_id": "cd7b5d9f-06b8-4921-b1b0-91d1c17642c0",
       "revision": 0,
-      "status": "running"
+      "status": "review"
     },
     "INC-038": {
       "active_approval_count": 0,

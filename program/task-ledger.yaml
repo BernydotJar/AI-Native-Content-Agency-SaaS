@@ -2339,7 +2339,7 @@
         "schema downgrade",
         "destructive historical rewrite"
       ],
-      "publication_state": "LOCAL_IMPLEMENTATION_IN_PROGRESS",
+      "publication_state": "CLEAN_EXACT_TREE_REVIEW_EXACT_HEAD_CI_PENDING",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2349,7 +2349,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Schema Compatibility Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-030",
       "validation_commands": [
         "python3 scripts/verify-schema-compatibility.py",
@@ -2359,6 +2359,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
+      "validation_summary": "Clean implementation commit f91fff6a4da70805564c6378fbb522d76d080565 passes exact Git-bound SQLite v1-v9 and PostgreSQL v1-v9 matrices, 379 locked-wheel tests, 379 PostgreSQL tests, OCI, K3s/Terraform and clean supply-chain provenance. Exact-head CI and merge remain pending.",
       "workstream_id": "WS-03",
       "write_lock": "orchestrator:INC-030"
     }
