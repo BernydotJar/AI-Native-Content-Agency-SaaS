@@ -343,3 +343,15 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Localized repair 2 renewed exact compliance hashes for the changed workflow and package command.
 - Clean-tree supply-chain evidence, exact-head CI, remote review, close gate, and merge remain pending.
 - `DENY_RELEASE`, `DENY_APPLY`, disabled provider effects, and all existing human/external gates remain unchanged.
+
+## INC-029 exact-head CI passed; merge gate remains
+
+- PR #38 head: `7c2cc9b7779bca509a4087e51e815ba6a41dbad8`.
+- GitHub Actions run `30564603802`: 8/8 production-readiness jobs PASS.
+- Canonical API contract SHA-256: `c9f0532e19bd5a8bad074f51c7fa7404e1eae76805ffa8659c2997ea51af68e9`.
+- Retained semantic report SHA-256: `c3c061564239c4f1bf5c3dccd1280717d6cc2af216d4b1125a2999bb5bcfe953`; 20/20 expectations, exact source binding, clean worktree, external effects 0.
+- Retained provenance SHA-256: `d704cefb2e62d91880c3c897d4f70b4f4bd8d0800759de6e07b2bd1cba333af1`; `sourceDirty=false`, network publication false.
+- Policy summary SHA-256: `44973f9b9d5bfba08a294a9af5e067757cff7d7e550ae5e0d3ee4c7900bd3bc0`; status PASS.
+- Graph Harness revision 2: spec, implementation, production, and review gates PASS; close gate BLOCKED; `INC-029=blocked`.
+- Blocker is exclusively the stacked merge chain `#38 -> #37 -> #36 -> #35 -> main` and explicit human merge authority.
+- `DENY_RELEASE`, `DENY_APPLY`, disabled external effects, and all production/legal/accessibility/staging gates remain unchanged.
