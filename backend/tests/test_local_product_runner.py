@@ -114,6 +114,35 @@ class LocalProductRunnerTests(unittest.TestCase):
         self.assertNotEqual(denied.returncode, 0)
         self.assertIn("refuses non-loopback host", denied.stderr)
 
+    def test_runner_accepts_rotation_safe_public_media_keyring_without_printing_secrets(self):
+        secret = base64.urlsafe_b64encode(bytes(range(32))).decode("ascii").rstrip("=")
+        with tempfile.TemporaryDirectory() as tempdir:
+            environment = {
+                "PATH": "/usr/local/bin:/usr/bin:/bin",
+                "AGENCY_PYTHON_BIN": sys.executable,
+                "AGENCY_ENV_FILE": str(Path(tempdir) / "absent.env"),
+                "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                "AGENCY_PUBLIC_MEDIA_BASE_URL": "https://media.example.test",
+                "AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON": json.dumps({"media-v1": secret}),
+                "AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID": "media-v1",
+                "AGENCY_PUBLIC_MEDIA_SIGNING_KEY": "",
+            }
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"], cwd=ROOT, env=environment,
+                capture_output=True, text=True, check=False, timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("public_media_configured=true", completed.stdout)
+        self.assertIn("public_media_signing_mode=keyring", completed.stdout)
+        self.assertNotIn(secret, completed.stdout + completed.stderr)
+        ambiguous = subprocess.run(
+            [str(SCRIPT), "--check"], cwd=ROOT,
+            env={**environment, "AGENCY_PUBLIC_MEDIA_SIGNING_KEY": "legacy-key-material-that-is-long-enough-0001"},
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+        self.assertNotEqual(ambiguous.returncode, 0)
+        self.assertIn("mutually exclusive", ambiguous.stderr)
+
     def test_runner_uses_secure_lax_cookie_for_public_https_social_callback(self):
         with tempfile.TemporaryDirectory() as tempdir:
             env_file = Path(tempdir) / ".env.local"

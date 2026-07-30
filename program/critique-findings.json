@@ -273,135 +273,135 @@
       "status": "CLOSED"
     },
     {
-      "id": "F-035",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-014",
       "description": "Provider protocol clients could leak credentials prompts or upstream bodies, or retry and duplicate spend.",
-      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests."
+      "evidence": "56f9ee84cb46e479bf3c46658306599102ae0051; strict MockTransport contracts, fixed sanitized errors, repr-hidden credentials, trust_env=false, redirects=false, one attempt only and secret-free receipt hashes pass in 145 locked/PostgreSQL tests.",
+      "id": "F-035",
+      "owner": "INC-014",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-036",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-017",
       "description": "Repeated missions returned a misleading conflict and publishable copy was hidden behind generic diagnostics.",
-      "evidence": "9b0b65927fe9609e1f55835728332bb3e2aa09ca; audited 200 replay, resource lock and channel output pass."
+      "evidence": "9b0b65927fe9609e1f55835728332bb3e2aa09ca; audited 200 replay, resource lock and channel output pass.",
+      "id": "F-036",
+      "owner": "INC-017",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-037",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-018",
       "description": "Synchronous orchestration prevents truthful intermediate topology progress and station-level crash recovery.",
-      "evidence": "3cc304d10b64b8cb32bffeee52f36e583c46f844; Prefer respond-async returns 202, SQLite restart/lease recovery and PostgreSQL two-worker fencing pass, production image records fences 1..14, and Chromium observes seven processing stations plus fourteen durable checkpoint values. No browser timer invents station state."
+      "evidence": "3cc304d10b64b8cb32bffeee52f36e583c46f844; Prefer respond-async returns 202, SQLite restart/lease recovery and PostgreSQL two-worker fencing pass, production image records fences 1..14, and Chromium observes seven processing stations plus fourteen durable checkpoint values. No browser timer invents station state.",
+      "id": "F-037",
+      "owner": "INC-018",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-038",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-019",
       "description": "No tenant social OAuth, encrypted token store or connected-account control existed.",
-      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; X/Instagram OAuth, AES-GCM tokens, schema v2, admin UI and disconnect pass 183 locked/PostgreSQL and 35 frontend tests."
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; X/Instagram OAuth, AES-GCM tokens, schema v2, admin UI and disconnect pass 183 locked/PostgreSQL and 35 frontend tests.",
+      "id": "F-038",
+      "owner": "INC-019",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-039",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-020",
       "description": "Connected-account publication required durable intent, exact artifact/media/Greenlight binding, provider receipt, replay protection and unknown-outcome reconciliation.",
-      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; schema v3 SQLite/PostgreSQL stores, bounded X/Instagram adapters, unique binding authority, one-call compatible replay, unknown blocking, idempotent reconciliation, revocation and exact Chromium/package MockTransport gates pass. Real publication remains disabled and human-authorized."
-    },
-    {
-      "id": "F-040",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-019",
-      "description": "OAuth state or tokens could replay, cross tenants or leak through persistence/API/logs.",
-      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; tenant/session/channel binding, atomic single-use state, AES-GCM AAD, sanitized errors and Gitleaks zero pass."
-    },
-    {
-      "id": "F-041",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-019",
-      "description": "Browser sessions used SameSite=Strict, so X/Instagram cross-site OAuth callback GETs lost the HttpOnly session and returned authentication_failed before token exchange.",
-      "evidence": "6d5e59b; Secure SameSite=Lax policy, strict-policy startup rejection, exact callback visibility, safe phase diagnostics and real Chromium cross-site X/Instagram callback gates pass with mock provider transport."
-    },
-    {
-      "id": "F-042",
-      "severity": "HIGH",
-      "status": "CLOSED",
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; schema v3 SQLite/PostgreSQL stores, bounded X/Instagram adapters, unique binding authority, one-call compatible replay, unknown blocking, idempotent reconciliation, revocation and exact Chromium/package MockTransport gates pass. Real publication remains disabled and human-authorized.",
+      "id": "F-039",
       "owner": "INC-020",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "OAuth state or tokens could replay, cross tenants or leak through persistence/API/logs.",
+      "evidence": "e3bca9c95a3080e1e7677454996d9ad56469b4f4; tenant/session/channel binding, atomic single-use state, AES-GCM AAD, sanitized errors and Gitleaks zero pass.",
+      "id": "F-040",
+      "owner": "INC-019",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
+      "description": "Browser sessions used SameSite=Strict, so X/Instagram cross-site OAuth callback GETs lost the HttpOnly session and returned authentication_failed before token exchange.",
+      "evidence": "6d5e59b; Secure SameSite=Lax policy, strict-policy startup rejection, exact callback visibility, safe phase diagnostics and real Chromium cross-site X/Instagram callback gates pass with mock provider transport.",
+      "id": "F-041",
+      "owner": "INC-019",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
       "description": "The asynchronous worker acquired the durable run-store lock before resolving the tenant runtime while GET /runs acquired the service lock first, allowing a lock inversion after prior inline work.",
-      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; faulthandler reproduced the cycle at poll 14, runtime resolution moved before the durable lock, deterministic order test passes, the prior-inline plus async reproduction reaches Greenlight and the installed-image 14-checkpoint smoke passes."
+      "evidence": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7; faulthandler reproduced the cycle at poll 14, runtime resolution moved before the durable lock, deterministic order test passes, the prior-inline plus async reproduction reaches Greenlight and the installed-image 14-checkpoint smoke passes.",
+      "id": "F-042",
+      "owner": "INC-020",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-043",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-021",
       "description": "Generic mixed-language campaign fixtures could be mistaken for production political content.",
-      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political context, Spanish channel variants, claim mapping and truthful review states; locked/backend/frontend gates pass."
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds structured political context, Spanish channel variants, claim mapping and truthful review states; locked/backend/frontend gates pass.",
+      "id": "F-043",
+      "owner": "INC-021",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-044",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-021",
       "description": "A client could self-attest evidence or legal approval by supplying reviewer text.",
-      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 requires greenlight:decide and overwrites reviewer identity server-side; operator attempt returns 403."
-    },
-    {
-      "id": "F-045",
-      "severity": "HIGH",
-      "status": "CLOSED",
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 requires greenlight:decide and overwrites reviewer identity server-side; operator attempt returns 403.",
+      "id": "F-044",
       "owner": "INC-021",
+      "severity": "HIGH",
+      "status": "CLOSED"
+    },
+    {
       "description": "General social publication enablement could accidentally authorize political effects.",
-      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds a separate default-off political authority in app/Helm/Terraform; red-team test records zero provider calls."
+      "evidence": "6ebbd634bd32408db0a7678289b0f906cda014c0 adds a separate default-off political authority in app/Helm/Terraform; red-team test records zero provider calls.",
+      "id": "F-045",
+      "owner": "INC-021",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-046",
-      "severity": "MEDIUM",
-      "status": "OPEN",
-      "owner": "INC-022",
       "description": "Instagram has no governed publication_media generator/delivery contract and the receipt lacks independent post read-after-write verification.",
-      "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition."
+      "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition.",
+      "id": "F-046",
+      "owner": "INC-022",
+      "severity": "MEDIUM",
+      "status": "OPEN"
     },
     {
-      "id": "F-047",
-      "severity": "HIGH",
-      "status": "CLOSED",
-      "owner": "INC-022",
       "description": "Media plans existed without immutable provider-fetchable bytes or Greenlight hash binding.",
-      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac adds decoded JPEG Media Vault, artifact binding, upload/revoke UI and durable stores."
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac adds decoded JPEG Media Vault, artifact binding, upload/revoke UI and durable stores.",
+      "id": "F-047",
+      "owner": "INC-022",
+      "severity": "HIGH",
+      "status": "CLOSED"
     },
     {
-      "id": "F-048",
-      "severity": "CRITICAL",
-      "status": "CLOSED",
-      "owner": "INC-022",
       "description": "Instagram media ID was treated as success without container completion or independent read verification.",
-      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac requires FINISHED and verifies ID/account/caption hash/type/permalink/timestamp; mismatch is unknown."
-    },
-    {
-      "id": "F-049",
-      "severity": "HIGH",
-      "status": "CLOSED",
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac requires FINISHED and verifies ID/account/caption hash/type/permalink/timestamp; mismatch is unknown.",
+      "id": "F-048",
       "owner": "INC-022",
-      "description": "Public immutable caching conflicted with media-rights revocation.",
-      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac removes immutable, caps max-age at 300 and supports pre-Greenlight revocation."
+      "severity": "CRITICAL",
+      "status": "CLOSED"
     },
     {
-      "id": "F-050",
+      "description": "Public immutable caching conflicted with media-rights revocation.",
+      "evidence": "3d8ed72332d29b161a48c1201e627a9c016ec6ac removes immutable, caps max-age at 300 and supports pre-Greenlight revocation.",
+      "id": "F-049",
+      "owner": "INC-022",
       "severity": "HIGH",
-      "status": "OPEN",
-      "owner": "future media operations",
-      "description": "Post-publication provider deletion and independent HMAC keyring rotation are not implemented.",
-      "evidence": "OI-016/OI-017 and publication-media runbook define exact resume conditions; release remains denied."
+      "status": "CLOSED"
+    },
+    {
+      "description": "Post-publication provider deletion and rights-withdrawal policy remain undefined and require legal authority plus a separately authorized external effect.",
+      "evidence": "INC-025 revision 2 implements the independent HMAC keyring, durable public_signing_key_id, SQLite/PostgreSQL schema v7 migration, mixed-key replay, fail-closed historical-key removal, Secret-reference packaging and rotation/rollback runbook. OI-016 remains blocked on legal retention/deletion decisions, provider capability and an authorized sandbox deletion exercise.",
+      "id": "F-050",
+      "owner": "INC-011",
+      "severity": "HIGH",
+      "status": "OPEN"
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "3d8ed72332d29b161a48c1201e627a9c016ec6ac",
-  "updated_at": "2026-07-25"
+  "source_commit": "bf32be4b697f8c12bc476f204fbfa2ddc55c5399",
+  "updated_at": "2026-07-29"
 }

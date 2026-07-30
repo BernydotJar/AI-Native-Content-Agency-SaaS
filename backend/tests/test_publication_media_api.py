@@ -20,6 +20,13 @@ def alt_header(value: str) -> str:
     return base64.urlsafe_b64encode(value.encode("utf-8")).decode("ascii").rstrip("=")
 
 
+def signing_keys(**keys: int) -> str:
+    return json.dumps({
+        key_id: base64.urlsafe_b64encode(bytes([value]) * 32).rstrip(b"=").decode("ascii")
+        for key_id, value in keys.items()
+    })
+
+
 BRIEF = {
     "title": "Governed media upload",
     "objective": "Attach exact image bytes before Greenlight",
@@ -105,6 +112,27 @@ class PublicationMediaApiTests(unittest.TestCase):
             )
         with self.assertRaises(ValueError):
             create_app(
+                database_path=str(Path(self.temp.name) / "partial-keyring.sqlite3"),
+                identity_credentials=identities(),
+                session_cookie_secure=False,
+                public_media_base_url="https://media.example.test",
+                public_media_signing_keys_json=signing_keys(**{"media-v1": 1}),
+                public_media_active_signing_key_id="",
+                social_environment={},
+            )
+        with self.assertRaises(ValueError):
+            create_app(
+                database_path=str(Path(self.temp.name) / "ambiguous-keyring.sqlite3"),
+                identity_credentials=identities(),
+                session_cookie_secure=False,
+                public_media_base_url="https://media.example.test",
+                public_media_signing_key="test-public-media-signing-key-32-bytes-minimum",
+                public_media_signing_keys_json=signing_keys(**{"media-v1": 1}),
+                public_media_active_signing_key_id="media-v1",
+                social_environment={},
+            )
+        with self.assertRaises(ValueError):
+            create_app(
                 database_path=str(Path(self.temp.name) / "insecure-url.sqlite3"),
                 identity_credentials=identities(),
                 session_cookie_secure=False,
@@ -169,6 +197,102 @@ class PublicationMediaApiTests(unittest.TestCase):
                 len([item for item in replay.json()["artifacts"] if item["kind"] == "publication_media"]),
                 1,
             )
+
+    def test_signing_key_rotation_preserves_old_binding_and_uses_new_active_key(self):
+        raw = FIXTURE.read_bytes()
+        app_v1 = create_app(
+            database_path=str(self.database),
+            identity_credentials=identities(),
+            session_cookie_secure=False,
+            public_media_base_url="https://media.example.test",
+            public_media_signing_keys_json=signing_keys(**{"media-v1": 1}),
+            public_media_active_signing_key_id="media-v1",
+            social_environment={},
+        )
+        with TestClient(app_v1) as client:
+            csrf = client.post("/api/v1/sessions", json={"api_key": ADMIN_KEY}).json()["csrf_token"]
+            created = client.post(
+                "/api/v1/runs", json=dict(BRIEF, title="Rotating media key v1"),
+                headers={"X-CSRF-Token": csrf, "Idempotency-Key": "rotation-run-v1"},
+            )
+            run = created.json()
+            first = client.post(
+                f"/api/v1/runs/{run['run_id']}/publication-media/instagram", content=raw,
+                headers={
+                    "Content-Type": "image/jpeg", "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "rotation-upload-v1",
+                    "X-Media-Alt-Text-Base64": alt_header("Tarjeta para rotación v1."),
+                    "X-Media-Rights-Confirmed": "true",
+                },
+            )
+            self.assertEqual(first.status_code, 201, first.text)
+            first_media = next(x for x in first.json()["artifacts"] if x["kind"] == "publication_media")
+            first_url = first_media["payload"]["media_url"]
+
+        app_v2 = create_app(
+            database_path=str(self.database),
+            identity_credentials=identities(), session_cookie_secure=False,
+            public_media_base_url="https://media.example.test",
+            public_media_signing_keys_json=signing_keys(**{"media-v1": 1, "media-v2": 2}),
+            public_media_active_signing_key_id="media-v2", social_environment={},
+        )
+        with TestClient(app_v2) as client:
+            csrf = client.post("/api/v1/sessions", json={"api_key": ADMIN_KEY}).json()["csrf_token"]
+            replay = client.post(
+                f"/api/v1/runs/{run['run_id']}/publication-media/instagram", content=raw,
+                headers={
+                    "Content-Type": "image/jpeg", "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "rotation-upload-v1-second-command",
+                    "X-Media-Alt-Text-Base64": alt_header("Tarjeta para rotación v1."),
+                    "X-Media-Rights-Confirmed": "true",
+                },
+            )
+            self.assertEqual(replay.status_code, 200, replay.text)
+            replay_media = next(x for x in replay.json()["artifacts"] if x["kind"] == "publication_media")
+            self.assertEqual(replay_media["payload"]["media_url"], first_url)
+            row = app_v2.state.runtime_service.media_store.get("tenant-alpha", replay_media["payload"]["media_id"])
+            assert row is not None
+            self.assertEqual(row.public_signing_key_id, "media-v1")
+
+            second_run = client.post(
+                "/api/v1/runs", json=dict(BRIEF, title="Rotating media key v2"),
+                headers={"X-CSRF-Token": csrf, "Idempotency-Key": "rotation-run-v2"},
+            ).json()
+            second = client.post(
+                f"/api/v1/runs/{second_run['run_id']}/publication-media/instagram", content=raw,
+                headers={
+                    "Content-Type": "image/jpeg", "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "rotation-upload-v2",
+                    "X-Media-Alt-Text-Base64": alt_header("Tarjeta para rotación v2."),
+                    "X-Media-Rights-Confirmed": "true",
+                },
+            )
+            self.assertEqual(second.status_code, 201, second.text)
+            second_media = next(x for x in second.json()["artifacts"] if x["kind"] == "publication_media")
+            second_row = app_v2.state.runtime_service.media_store.get("tenant-alpha", second_media["payload"]["media_id"])
+            assert second_row is not None
+            self.assertEqual(second_row.public_signing_key_id, "media-v2")
+
+        app_without_old = create_app(
+            database_path=str(self.database), identity_credentials=identities(),
+            session_cookie_secure=False, public_media_base_url="https://media.example.test",
+            public_media_signing_keys_json=signing_keys(**{"media-v2": 2}),
+            public_media_active_signing_key_id="media-v2", social_environment={},
+        )
+        with TestClient(app_without_old) as client:
+            csrf = client.post("/api/v1/sessions", json={"api_key": ADMIN_KEY}).json()["csrf_token"]
+            blocked = client.post(
+                f"/api/v1/runs/{run['run_id']}/publication-media/instagram", content=raw,
+                headers={
+                    "Content-Type": "image/jpeg", "X-CSRF-Token": csrf,
+                    "Idempotency-Key": "rotation-upload-v1-missing-key",
+                    "X-Media-Alt-Text-Base64": alt_header("Tarjeta para rotación v1."),
+                    "X-Media-Rights-Confirmed": "true",
+                },
+            )
+            self.assertEqual(blocked.status_code, 503, blocked.text)
+            self.assertEqual(blocked.json()["code"], "publication_media_unavailable")
+            self.assertNotIn("media-v1", blocked.text)
 
     def test_upload_greenlight_publish_verify_and_replay(self):
         calls = []

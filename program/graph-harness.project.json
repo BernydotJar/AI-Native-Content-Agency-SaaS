@@ -1633,6 +1633,98 @@
     },
     {
       "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/publication_media_signing.py",
+        "backend/agency_runtime/publication_media_store.py",
+        "backend/agency_runtime/publication_media_postgres.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/tests/**publication_media*",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_program_state.py",
+        "docs/OPERATIONS.md",
+        "docs/runbooks/publication-media.md",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "scripts/run-local-product.sh",
+        "scripts/neutral_instagram_publication.py",
+        "program/**",
+        "specs/025-public-media-signing-keyring/**",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_local_product_runner.py",
+        "backend/tests/test_neutral_instagram_publication_script.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "scripts/manage-runtime-backup.py",
+        "scripts/verify-postgresql-runtime.sh"
+      ],
+      "capability": "Security Engineer / Data Migration Reviewer / Independent Verifier",
+      "depends_on": [
+        "INC-022"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-025",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "old binding replays byte-for-byte while a new key is active",
+          "new bindings use the active key identifier",
+          "removing a required historical key fails closed with no external effect",
+          "legacy rows migrate and replay through explicit legacy configuration",
+          "no key material appears in storage logs responses Git Terraform state or evidence",
+          "SQLite PostgreSQL package Helm Terraform and exact-head CI gates pass",
+          "zero open CRITICAL/HIGH findings in the INC-025 slice"
+        ],
+        "authoritative_inputs": [
+          "program/critique-findings.json F-050",
+          "program/open-issues.md OI-017",
+          "docs/runbooks/publication-media.md",
+          "backend/agency_runtime/api.py",
+          "backend/agency_runtime/publication_media_store.py",
+          "backend/agency_runtime/publication_media_postgres.py",
+          "specs/025-public-media-signing-keyring/**"
+        ],
+        "canonical_status": "done",
+        "human_gates": [
+          "merge",
+          "production secret rotation",
+          "deployment or infrastructure apply",
+          "provider publication/deletion or other external effect"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run validate:program && npm run validate:graph",
+          "npm run validate:compliance && npm run validate:operability",
+          "npm run lint && npm test -- --reporter=dot && npm run build",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-08",
+        "write_lock": "orchestrator:INC-025"
+      },
+      "status": "spec_ready",
+      "title": "Implement durable public-media signing-key rotation without invalidating active capabilities or exposing secret material."
+    },
+    {
+      "allowed_paths": [
         ".gitmodules",
         "vendor/graph-harness-sdlc",
         ".github/workflows/production-readiness.yml",

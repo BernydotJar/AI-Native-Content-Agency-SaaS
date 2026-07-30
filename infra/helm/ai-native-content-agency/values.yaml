@@ -38,6 +38,16 @@ runtime:
     cookieName: "agency_session"
     cookieSecure: true
     ttlSeconds: 28800
+  publicMedia:
+    # Public media delivery is optional and requires a pre-provisioned Secret.
+    baseUrl: ""
+    ttlSeconds: 86400
+    existingSecret: ""
+    # Preferred rotation-safe keyring data keys. Values never enter chart values.
+    signingKeysJsonKey: "public-media-signing-keys.json"
+    activeSigningKeyIdKey: "public-media-active-signing-key-id"
+    # Migration-only single-key data key. Blank the preferred keys before using it.
+    legacySigningKeyKey: ""
   model:
     # Both switches remain off until provider/privacy/economic authority is explicitly approved.
     executionEnabled: false

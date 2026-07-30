@@ -126,6 +126,36 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.publicMedia.baseUrl"
+    value = var.public_media_base_url
+  }
+
+  set {
+    name  = "runtime.publicMedia.ttlSeconds"
+    value = tostring(var.public_media_ttl_seconds)
+  }
+
+  set {
+    name  = "runtime.publicMedia.existingSecret"
+    value = var.public_media_existing_secret
+  }
+
+  set {
+    name  = "runtime.publicMedia.signingKeysJsonKey"
+    value = var.public_media_signing_keys_json_key
+  }
+
+  set {
+    name  = "runtime.publicMedia.activeSigningKeyIdKey"
+    value = var.public_media_active_signing_key_id_key
+  }
+
+  set {
+    name  = "runtime.publicMedia.legacySigningKeyKey"
+    value = var.public_media_legacy_signing_key_key
+  }
+
+  set {
     name  = "runtime.model.executionEnabled"
     value = tostring(var.model_execution_enabled)
   }
@@ -324,6 +354,26 @@ resource "helm_release" "app" {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures
       error_message = "login_source_max_failures must be greater than or equal to login_max_failures."
+    }
+
+    precondition {
+      condition     = (length(trimspace(var.public_media_base_url)) == 0) == (length(trimspace(var.public_media_existing_secret)) == 0)
+      error_message = "public_media_base_url and public_media_existing_secret must be configured together."
+    }
+
+    precondition {
+      condition = length(trimspace(var.public_media_existing_secret)) == 0 || (
+        (
+          length(trimspace(var.public_media_legacy_signing_key_key)) == 0 &&
+          length(trimspace(var.public_media_signing_keys_json_key)) > 0 &&
+          length(trimspace(var.public_media_active_signing_key_id_key)) > 0
+          ) || (
+          length(trimspace(var.public_media_legacy_signing_key_key)) > 0 &&
+          length(trimspace(var.public_media_signing_keys_json_key)) == 0 &&
+          length(trimspace(var.public_media_active_signing_key_id_key)) == 0
+        )
+      )
+      error_message = "public media secret keys must select exactly one keyring or legacy mode."
     }
 
     precondition {

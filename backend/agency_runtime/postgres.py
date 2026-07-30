@@ -38,7 +38,7 @@ from .serialization import execution_run_from_document, execution_run_to_documen
 from .utils import canonical_json, require_confidence, require_non_empty, stable_id
 
 Clock = Callable[[], str]
-POSTGRES_SCHEMA_VERSION = "6"
+POSTGRES_SCHEMA_VERSION = "7"
 SCHEMA_VERSION = POSTGRES_SCHEMA_VERSION
 POSTGRES_SCHEMA_MODES = frozenset({"initialize", "validate"})
 POSTGRES_REQUIRED_TABLES = (
@@ -186,6 +186,7 @@ POSTGRES_REQUIRED_COLUMNS = {
             "alt_text",
             "rights_attested_by",
             "public_token_digest",
+            "public_signing_key_id",
             "idempotency_digest",
             "binding_digest",
             "content",
@@ -817,6 +818,7 @@ class PostgresRuntimeDatabase:
                 alt_text TEXT NOT NULL,
                 rights_attested_by TEXT NOT NULL,
                 public_token_digest TEXT NOT NULL UNIQUE,
+                public_signing_key_id TEXT NOT NULL DEFAULT 'legacy',
                 idempotency_digest TEXT,
                 binding_digest TEXT,
                 content BYTEA NOT NULL,
@@ -828,6 +830,10 @@ class PostgresRuntimeDatabase:
                 UNIQUE (tenant_id, binding_digest),
                 UNIQUE (tenant_id, run_id, channel_id, sha256)
             )
+            """,
+            """
+            ALTER TABLE public.publication_media_objects
+                ADD COLUMN IF NOT EXISTS public_signing_key_id TEXT NOT NULL DEFAULT 'legacy'
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_publication_media_tenant_run
@@ -904,7 +910,7 @@ class PostgresRuntimeDatabase:
                 """
                 UPDATE public.runtime_schema_meta
                 SET value = %s
-                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4', '5')
+                WHERE key = 'schema_version' AND value IN ('1', '2', '3', '4', '5', '6')
                 """,
                 (SCHEMA_VERSION,),
             )

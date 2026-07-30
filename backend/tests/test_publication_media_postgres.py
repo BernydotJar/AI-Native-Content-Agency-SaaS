@@ -76,6 +76,7 @@ class PostgresPublicationMediaStoreTests(unittest.TestCase):
             "alt_text": "Tarjeta de prueba con fondo azul oscuro.",
             "rights_attested_by": "media-admin",
             "public_token_digest": digest("{}:public-token".format(self.tenant)),
+            "public_signing_key_id": "media-v1",
             "idempotency_digest": digest("{}:idempotency".format(self.tenant)),
             "binding_digest": digest("{}:binding".format(self.tenant)),
             "created_at": NOW,
@@ -99,6 +100,7 @@ class PostgresPublicationMediaStoreTests(unittest.TestCase):
         self.assertEqual({item.record.media_id for item in reservations}, {self.media_id})
         loaded, content = self.store_b.get_public(record.public_token_digest)
         self.assertEqual(loaded.sha256, record.sha256)
+        self.assertEqual(loaded.public_signing_key_id, "media-v1")
         self.assertEqual(content, self.raw)
         self.assertIsNone(self.store_b.get("other-tenant", self.media_id))
 

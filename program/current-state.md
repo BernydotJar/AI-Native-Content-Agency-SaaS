@@ -245,3 +245,38 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness revision 3: implementation, production, review and close gates PASS; `INC-010=done`.
 - Program state: 21 done, 4 blocked, 0 ready.
 - `DENY_RELEASE` and `DENY_APPLY` remain unchanged.
+
+
+## 2026-07-29 — INC-025 public-media signing keyring local review
+
+- Branch: `agent/graph-completion-audit-v1`.
+- Graph Harness revision: 2 after two localized verifier repairs; unrelated nodes preserved.
+- Preferred configuration: bounded key-ID to base64url 32-byte key map plus active key ID.
+- Legacy single-key mode preserves exact historical HMAC bytes and is mutually exclusive with keyring mode.
+- SQLite and PostgreSQL schema v7 persist `public_signing_key_id`; old rows migrate to `legacy`.
+- Old binding replay remains byte-for-byte stable while a new key is active; new bindings use the active key; premature historical-key removal fails closed.
+- Local evidence: 341 locked-wheel tests PASS; 341/341 PostgreSQL tests PASS; 58 frontend tests, lint/build/program/graph/compliance/operability PASS.
+- OCI non-root package, Helm preferred/legacy guards, Terraform/K3s SQLite and PostgreSQL plan-apply-destroy PASS; signing values remain outside Git and Terraform state.
+- Clean-source supply-chain provenance, exact-head CI, Graph Harness close gate and merge remain pending.
+- Provider publication/deletion, production Secret mutation, deployment, spend, legal approval and all real external effects remain unauthorized.
+
+
+## 2026-07-29 — INC-025 exact-tree implementation checkpoint
+
+- Implementation commit: `bf32be4b697f8c12bc476f204fbfa2ddc55c5399`.
+- Exact tree: `76eaaa464aa485d66318cd3b493f4dcaae8da6f5`.
+- Graph Harness revision: 2; local implementation, verification, production and review evidence ready to record.
+- 341 locked-wheel tests and 341/341 PostgreSQL schema-v7 tests PASS.
+- OCI/Helm/Terraform/K3s PASS; ephemeral resources destroyed; external effects 0.
+- Clean-source supply chain PASS: 33 packages evaluated, policy/provenance/offline Cosign verified, registry publication false.
+- Exact-head CI, close gate and merge remain pending. `DENY_RELEASE` and `DENY_APPLY` remain unchanged.
+
+
+## 2026-07-29 — INC-025 closed through Graph Harness
+
+- Exact PR head: `7f56f711abc5d13fb609e2fee5b04176ea4c4319`.
+- GitHub Actions run `30500998431` passed 8/8 jobs.
+- Remote provenance `3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112` and policy `1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb` were inspected; 33 packages evaluated.
+- Semantic artifact `6c872912a227341c396905c1dd39a3b2b70ca63482eb85cb8451d977997d21b6` is exact-head, clean, 20/20 and zero-effects.
+- Graph Harness revision 2 close gate: PASS; node status: `done`.
+- Production Secret rotation, deployment, publication/deletion and legal approval remain unauthorized.

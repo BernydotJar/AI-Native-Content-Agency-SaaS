@@ -52,6 +52,7 @@ class SQLitePublicationMediaStoreTests(unittest.TestCase):
             alt_text="Tarjeta de prueba con fondo azul oscuro.",
             rights_attested_by="media-admin",
             public_token_digest=hashlib.sha256(b"opaque-public-token").hexdigest(),
+            public_signing_key_id="media-v1",
             created_at=NOW,
             expires_at=EXPIRES,
             revoked_at=None,
@@ -70,6 +71,57 @@ class SQLitePublicationMediaStoreTests(unittest.TestCase):
         self.assertEqual(loaded.media_id, self.record.media_id)
         self.assertEqual(content, self.raw)
         self.assertNotIn(b"opaque-public-token", self.path.read_bytes())
+
+
+    def test_legacy_sqlite_row_migrates_to_explicit_legacy_key_id(self):
+        self.store.close()
+        import sqlite3
+
+        connection = sqlite3.connect(self.path)
+        with connection:
+            connection.execute("DROP TABLE publication_media_objects")
+            connection.execute(
+                """
+                CREATE TABLE publication_media_objects (
+                    media_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, run_id TEXT NOT NULL,
+                    channel_id TEXT NOT NULL, content_type TEXT NOT NULL, byte_size INTEGER NOT NULL,
+                    sha256 TEXT NOT NULL, width INTEGER NOT NULL, height INTEGER NOT NULL,
+                    alt_text TEXT NOT NULL, rights_attested_by TEXT NOT NULL,
+                    public_token_digest TEXT NOT NULL UNIQUE, idempotency_digest TEXT,
+                    binding_digest TEXT, content BLOB NOT NULL, created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL, revoked_at TEXT,
+                    revocation_reason TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
+            connection.execute(
+                """
+                INSERT INTO publication_media_objects(
+                    media_id, tenant_id, run_id, channel_id, content_type, byte_size, sha256,
+                    width, height, alt_text, rights_attested_by, public_token_digest, content,
+                    created_at, expires_at, revoked_at, revocation_reason
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.record.media_id, self.record.tenant_id, self.record.run_id,
+                    self.record.channel_id, self.record.content_type, self.record.byte_size,
+                    self.record.sha256, self.record.width, self.record.height, self.record.alt_text,
+                    self.record.rights_attested_by, self.record.public_token_digest, self.raw,
+                    self.record.created_at, self.record.expires_at, None, "",
+                ),
+            )
+        connection.close()
+        self.store = SQLitePublicationMediaStore(self.path, clock=lambda: NOW)
+        loaded = self.store.get(self.record.tenant_id, self.record.media_id)
+        assert loaded is not None
+        self.assertEqual(loaded.public_signing_key_id, "legacy")
+        columns = {
+            row[1]
+            for row in self.store._connection.execute(
+                "PRAGMA table_info(publication_media_objects)"
+            ).fetchall()
+        }
+        self.assertIn("public_signing_key_id", columns)
 
     def test_random_and_expired_public_capabilities_fail_closed(self):
         self.store.create(self.record, self.raw)

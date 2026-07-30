@@ -706,9 +706,44 @@
       "observed": "Run 30480645671 passed 8/8 at exact PR head cf8f8c351b48f22b2755d285193ff5b6f76e00d8; retained corpus.v2 artifact 2d7a61f5a8978fccdc24fe7b54111c295963c7dafcba58a8fb33b26cbafd9836 passed 20/20, worktree clean, zero effects; both review threads resolved",
       "result": "PASS",
       "scope": "exact-head PostgreSQL, OCI, Helm, Terraform, workflow and supply chain"
+    },
+    {
+      "command": "locked-wheel publication-media signing/store/API tests",
+      "id": "INC025-KEYRING-ROTATION",
+      "observed": "Preferred keyring validates exact 32-byte base64url keys; legacy HMAC token is byte-compatible; old binding replays unchanged with a new active key; new binding stores new key ID; missing historical key returns generic 503; malformed/ambiguous configuration fails startup.",
+      "result": "PASS",
+      "scope": "HMAC keyring, legacy compatibility and durable replay"
+    },
+    {
+      "command": "./scripts/verify-postgresql-runtime.sh",
+      "id": "INC025-POSTGRES-SCHEMA7",
+      "observed": "341/341 tests PASS; schema v7; legacy rows migrate to key ID legacy; PostgreSQL replicas preserve public_signing_key_id; backup/restore and non-owner runtime boundaries pass.",
+      "result": "PASS",
+      "scope": "SQLite/PostgreSQL migration and replica durability"
+    },
+    {
+      "command": "verify-production-package and verify-local-infrastructure",
+      "id": "INC025-PACKAGE-INFRA",
+      "observed": "Non-root OCI smoke PASS; default chart omits media config; preferred and legacy renders are exclusive; K3s Terraform SQLite/PostgreSQL plan-apply-destroy PASS; key material absent from Terraform plan/state; external effects false.",
+      "result": "PASS",
+      "scope": "OCI, Helm, Terraform and secret-reference boundary"
+    },
+    {
+      "command": "CONTAINER_BUILDER=buildah ./scripts/verify-supply-chain.sh after implementation commit",
+      "id": "INC025-SUPPLY-CHAIN",
+      "observed": "Source bf32be4b697f8c12bc476f204fbfa2ddc55c5399; tree 76eaaa464aa485d66318cd3b493f4dcaae8da6f5; source_dirty=false; 33 packages evaluated; vulnerability/license policy PASS; provenance 6584d7e803ab0b49a1b9ec8a957fd7107591047526fe23d202d2db2d2b531f4d; OCI archive 62f3ed1a4093c616022f099c710fc0131d33bf5fdd4caecc875ed4073728b08a; offline Cosign verification PASS; registry_publication=false.",
+      "result": "PASS",
+      "scope": "clean-source SBOM, vulnerability, license, provenance and signature"
+    },
+    {
+      "command": "GitHub Actions production-readiness run 30500998431",
+      "id": "INC025-REMOTE-EXACT-HEAD",
+      "observed": "8/8 jobs PASS on 7f56f711abc5d13fb609e2fee5b04176ea4c4319; provenance 3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112; policy PASS/33 packages; semantic exact-head clean 20/20 zero-effects; no unresolved review threads",
+      "result": "PASS",
+      "scope": "remote exact-head release gates and retained artifacts"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "6e69b8eb13a6196bba8db3c2039ab4dc09609aa0",
+  "source_commit": "7f56f711abc5d13fb609e2fee5b04176ea4c4319",
   "updated_at": "2026-07-29"
 }

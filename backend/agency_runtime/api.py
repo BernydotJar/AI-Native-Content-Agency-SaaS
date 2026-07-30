@@ -68,6 +68,10 @@ from .publication_media import (
     validate_publication_media,
 )
 from .publication_media_postgres import PostgresPublicationMediaStore
+from .publication_media_signing import (
+    PublicMediaSigningConfigurationError,
+    PublicMediaSigningKeyring,
+)
 from .publication_media_store import (
     PublicationMediaConflictError,
     PublicationMediaRecord,
@@ -882,7 +886,7 @@ class RuntimeService:
         subject_id: str,
         idempotency_key: str,
         public_base_url: str,
-        signing_key: str,
+        signing_keyring: PublicMediaSigningKeyring,
         ttl_seconds: int,
     ) -> CommandResult:
         if self.media_store is None:
@@ -964,7 +968,7 @@ class RuntimeService:
                 binding_digest,
                 length=48,
             )
-            token = _public_media_token(signing_key, media_id, expires_at)
+            signing_key_id, token = signing_keyring.sign_active(media_id, expires_at)
             token_digest = hashlib.sha256(token.encode("ascii")).hexdigest()
             proposed = PublicationMediaRecord(
                 media_id=media_id,
@@ -979,6 +983,7 @@ class RuntimeService:
                 alt_text=normalized_alt,
                 rights_attested_by=subject_id,
                 public_token_digest=token_digest,
+                public_signing_key_id=signing_key_id,
                 idempotency_digest=idempotency_digest,
                 binding_digest=binding_digest,
                 created_at=created_at,
@@ -1003,8 +1008,8 @@ class RuntimeService:
                 )
             reservation = self.media_store.reserve(proposed, content)
             record = reservation.record
-            token = _public_media_token(
-                signing_key, record.media_id, record.expires_at
+            token = signing_keyring.sign(
+                record.public_signing_key_id, record.media_id, record.expires_at
             )
             if (
                 hashlib.sha256(token.encode("ascii")).hexdigest()
@@ -1844,14 +1849,6 @@ def _actor(principal: TenantPrincipal) -> str:
     return "{}:{}".format(prefix, principal.subject_id)
 
 
-def _public_media_token(signing_key: str, media_id: str, expires_at: str) -> str:
-    digest = hmac.new(
-        signing_key.encode("utf-8"),
-        canonical_json(("publication-media", media_id, expires_at)).encode("utf-8"),
-        hashlib.sha256,
-    ).digest()
-    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
-
 
 def _environment_bool(name: str, default: bool) -> bool:
     raw_value = os.environ.get(name)
@@ -1884,6 +1881,8 @@ def create_app(
     max_request_body_bytes: Optional[int] = None,
     public_media_base_url: Optional[str] = None,
     public_media_signing_key: Optional[str] = None,
+    public_media_signing_keys_json: Optional[str] = None,
+    public_media_active_signing_key_id: Optional[str] = None,
     public_media_ttl_seconds: Optional[int] = None,
     provider_environment: Optional[Mapping[str, str]] = None,
     model_transport: Optional[httpx.BaseTransport] = None,
@@ -1986,11 +1985,29 @@ def create_app(
         if public_media_base_url is not None
         else os.environ.get("AGENCY_PUBLIC_MEDIA_BASE_URL", "").strip()
     )
-    media_signing_key = (
+    legacy_media_signing_key = (
         public_media_signing_key
         if public_media_signing_key is not None
         else os.environ.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEY", "")
     )
+    raw_media_signing_keys = (
+        public_media_signing_keys_json
+        if public_media_signing_keys_json is not None
+        else os.environ.get("AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON", "")
+    )
+    active_media_signing_key_id = (
+        public_media_active_signing_key_id
+        if public_media_active_signing_key_id is not None
+        else os.environ.get("AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID", "")
+    )
+    try:
+        media_signing_keyring = PublicMediaSigningKeyring.from_environment(
+            raw_media_signing_keys,
+            active_media_signing_key_id,
+            legacy_media_signing_key,
+        )
+    except PublicMediaSigningConfigurationError as error:
+        raise ValueError("public media signing configuration is invalid") from error
     media_ttl_seconds = (
         int(os.environ.get("AGENCY_PUBLIC_MEDIA_TTL_SECONDS", "86400"))
         if public_media_ttl_seconds is None
@@ -1998,9 +2015,9 @@ def create_app(
     )
     if media_ttl_seconds < 900 or media_ttl_seconds > 604800:
         raise ValueError("public media ttl must be between 900 and 604800 seconds")
-    if bool(media_base_url) != bool(media_signing_key):
+    if bool(media_base_url) != bool(media_signing_keyring):
         raise ValueError(
-            "public media base URL and signing key must be configured together"
+            "public media base URL and signing keyring must be configured together"
         )
     if media_base_url:
         parsed_media_base = urlsplit(media_base_url)
@@ -2013,8 +2030,6 @@ def create_app(
             or (parsed_media_base.scheme != "https" and not loopback)
         ):
             raise ValueError("public media base URL must be HTTPS or loopback HTTP")
-        if len(media_signing_key.encode("utf-8")) < 32:
-            raise ValueError("public media signing key must contain at least 32 bytes")
         media_base_url = media_base_url.rstrip("/")
 
     if tenant_api_keys is not None or identity_credentials is not None:
@@ -2252,7 +2267,10 @@ def create_app(
     app.state.political_paid_media_enabled = political_paid_media_enabled
     app.state.public_media_base_url = media_base_url
     app.state.public_media_ttl_seconds = media_ttl_seconds
-    app.state.public_media_configured = bool(media_base_url and media_signing_key)
+    app.state.public_media_configured = bool(media_base_url and media_signing_keyring)
+    app.state.public_media_active_signing_key_id = (
+        "" if media_signing_keyring is None else media_signing_keyring.active_key_id
+    )
     app.state.session_cookie_name = cookie_name
     app.state.session_cookie_secure = cookie_secure
     app.state.session_cookie_samesite = cookie_samesite
@@ -3423,7 +3441,7 @@ def create_app(
         ),
         principal: TenantPrincipal = Depends(require_social_publisher),
     ) -> Dict[str, object]:
-        if not media_base_url or not media_signing_key:
+        if not media_base_url or media_signing_keyring is None:
             raise PublicApiError(
                 status_code=status.HTTP_409_CONFLICT,
                 code="publication_media_unavailable",
@@ -3463,7 +3481,7 @@ def create_app(
                 subject_id=principal.subject_id,
                 idempotency_key=idempotency_key,
                 public_base_url=media_base_url,
-                signing_key=media_signing_key,
+                signing_keyring=media_signing_keyring,
                 ttl_seconds=media_ttl_seconds,
             )
         except PublicationMediaValidationError as error:

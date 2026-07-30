@@ -42,6 +42,7 @@ class PublicationMediaRecord:
     alt_text: str
     rights_attested_by: str
     public_token_digest: str
+    public_signing_key_id: str
     created_at: str
     expires_at: str
     revoked_at: Optional[str]
@@ -85,6 +86,7 @@ class SQLitePublicationMediaStore:
                     alt_text TEXT NOT NULL,
                     rights_attested_by TEXT NOT NULL,
                     public_token_digest TEXT NOT NULL UNIQUE,
+                    public_signing_key_id TEXT NOT NULL DEFAULT 'legacy',
                     idempotency_digest TEXT,
                     binding_digest TEXT,
                     content BLOB NOT NULL,
@@ -102,6 +104,17 @@ class SQLitePublicationMediaStore:
                     ON publication_media_objects(public_token_digest, expires_at, revoked_at);
                 """
             )
+            columns = {
+                str(row[1])
+                for row in self._connection.execute(
+                    "PRAGMA table_info(publication_media_objects)"
+                ).fetchall()
+            }
+            if "public_signing_key_id" not in columns:
+                self._connection.execute(
+                    "ALTER TABLE publication_media_objects "
+                    "ADD COLUMN public_signing_key_id TEXT NOT NULL DEFAULT 'legacy'"
+                )
 
     def create(
         self, record: PublicationMediaRecord, content: bytes
@@ -234,10 +247,10 @@ class SQLitePublicationMediaStore:
             INSERT INTO publication_media_objects(
                 media_id, tenant_id, run_id, channel_id, content_type,
                 byte_size, sha256, width, height, alt_text,
-                rights_attested_by, public_token_digest,
+                rights_attested_by, public_token_digest, public_signing_key_id,
                 idempotency_digest, binding_digest, content,
                 created_at, expires_at, revoked_at, revocation_reason
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record.media_id,
@@ -252,6 +265,7 @@ class SQLitePublicationMediaStore:
                 record.alt_text,
                 record.rights_attested_by,
                 record.public_token_digest,
+                record.public_signing_key_id,
                 record.idempotency_digest or None,
                 record.binding_digest or None,
                 sqlite3.Binary(content),
@@ -307,6 +321,8 @@ def validate_publication_media_record(record: PublicationMediaRecord, content: b
         raise ValueError("publication media hash is invalid")
     if not _SHA256.fullmatch(record.public_token_digest):
         raise ValueError("publication media token digest is invalid")
+    if not _IDENTIFIER.fullmatch(record.public_signing_key_id):
+        raise ValueError("publication media signing key identifier is invalid")
     for optional_digest in (record.idempotency_digest, record.binding_digest):
         if optional_digest and not _SHA256.fullmatch(optional_digest):
             raise ValueError("publication media command digest is invalid")
@@ -341,6 +357,7 @@ def _record_from_row(row: sqlite3.Row) -> PublicationMediaRecord:
         alt_text=str(row["alt_text"]),
         rights_attested_by=str(row["rights_attested_by"]),
         public_token_digest=str(row["public_token_digest"]),
+        public_signing_key_id=str(row["public_signing_key_id"]),
         idempotency_digest=(
             "" if row["idempotency_digest"] is None else str(row["idempotency_digest"])
         ),

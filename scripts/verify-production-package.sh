@@ -102,6 +102,10 @@ if grep -q 'name: AGENCY_X_CONSUMER_KEY\|name: AGENCY_INSTAGRAM_APP_ID' "$TMP_DI
   printf 'default render unexpectedly contains social credentials\n' >&2
   exit 3
 fi
+if grep -q 'name: AGENCY_PUBLIC_MEDIA_' "$TMP_DIR/rendered.yaml"; then
+  printf 'default render unexpectedly contains public media configuration\n' >&2
+  exit 3
+fi
 grep -A1 'name: AGENCY_MODEL_EXECUTION_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
 grep -A1 'name: AGENCY_MODEL_EFFECT_AUTHORITY_ENABLED' "$TMP_DIR/rendered.yaml" | grep -q 'value: "false"'
 if grep -q 'name: OPENAI_API_KEY\|name: ANTHROPIC_API_KEY\|name: DEEPSEEK_API_KEY\|name: MOONSHOT_API_KEY\|name: LLAMA_API_KEY' "$TMP_DIR/rendered.yaml"; then
@@ -143,6 +147,46 @@ if grep -q "$X_TEST_SECRET\|$INSTAGRAM_TEST_SECRET" "$TMP_DIR/social.yaml"; then
   exit 3
 fi
 printf 'social_secret_refs=pass\n'
+
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.publicMedia.baseUrl=https://media.example.test \
+  --set-string runtime.publicMedia.existingSecret=agency-public-media \
+  > "$TMP_DIR/public-media-keyring.yaml"
+grep -q 'name: AGENCY_PUBLIC_MEDIA_BASE_URL' "$TMP_DIR/public-media-keyring.yaml"
+grep -q 'name: AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON' "$TMP_DIR/public-media-keyring.yaml"
+grep -A5 'name: AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON' "$TMP_DIR/public-media-keyring.yaml" | grep -q 'name: "agency-public-media"'
+grep -q 'name: AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID' "$TMP_DIR/public-media-keyring.yaml"
+if grep -q 'name: AGENCY_PUBLIC_MEDIA_SIGNING_KEY$' "$TMP_DIR/public-media-keyring.yaml"; then
+  printf 'keyring render unexpectedly contains legacy signing key\n' >&2
+  exit 3
+fi
+"$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.publicMedia.baseUrl=https://media.example.test \
+  --set-string runtime.publicMedia.existingSecret=agency-public-media \
+  --set-string runtime.publicMedia.signingKeysJsonKey= \
+  --set-string runtime.publicMedia.activeSigningKeyIdKey= \
+  --set-string runtime.publicMedia.legacySigningKeyKey=public-media-signing-key \
+  > "$TMP_DIR/public-media-legacy.yaml"
+grep -q 'name: AGENCY_PUBLIC_MEDIA_SIGNING_KEY' "$TMP_DIR/public-media-legacy.yaml"
+if grep -q 'name: AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON' "$TMP_DIR/public-media-legacy.yaml"; then
+  printf 'legacy render unexpectedly contains keyring configuration\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.publicMedia.baseUrl=https://media.example.test >/dev/null 2>&1; then
+  printf 'Helm public-media Secret guard did not fail\n' >&2
+  exit 3
+fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set-string runtime.publicMedia.baseUrl=https://media.example.test \
+  --set-string runtime.publicMedia.existingSecret=agency-public-media \
+  --set-string runtime.publicMedia.legacySigningKeyKey=public-media-signing-key >/dev/null 2>&1; then
+  printf 'Helm public-media ambiguity guard did not fail\n' >&2
+  exit 3
+fi
+printf 'public_media_default_disabled=pass\n'
+printf 'public_media_keyring_secret_refs=pass\n'
+printf 'public_media_legacy_migration_guard=pass\n'
 
 "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.storage.backend=postgresql \
@@ -518,13 +562,23 @@ curl -fsS -b "$TMP_DIR/cookies.txt" -D "$TMP_DIR/run.headers" \
 RUN_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["run_id"])' "$TMP_DIR/run.json")
 WRITER_ARTIFACT_ID=$(python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); print(next(item["artifact_id"] for item in data["artifacts"] if item["created_by"] == "writer"))' "$TMP_DIR/run.json")
 set +e
+MODEL_EFFECT_PAYLOAD=$(python3 - "$WRITER_ARTIFACT_ID" <<'PYMODELREQUEST'
+import json
+import sys
+print(json.dumps({
+    "source_artifact_id": sys.argv[1],
+    "instruction": "Package default-disabled verification",
+    "max_cost_micros": 0,
+}, separators=(",", ":")))
+PYMODELREQUEST
+)
 model_effect_disabled_status=$(curl -sS -o "$TMP_DIR/model-effect-disabled.json" -w '%{http_code}' \
   -b "$TMP_DIR/cookies.txt" \
   -H 'Content-Type: application/json' \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H 'Idempotency-Key: package-model-effect-disabled-0001' \
   -H 'X-Request-ID: package-model-effect-disabled-0001' \
-  -d "{"source_artifact_id":"$WRITER_ARTIFACT_ID","instruction":"Package default-disabled verification","max_cost_micros":0}" \
+  --data-binary "$MODEL_EFFECT_PAYLOAD" \
   "http://127.0.0.1:${HOST_PORT}/api/v1/runs/${RUN_ID}/model-effects/writer")
 set -e
 [ "$model_effect_disabled_status" = "409" ]
