@@ -22,3 +22,15 @@ The release decision no longer contains a manually curated partial list. Its blo
 ## External Effects
 
 Repository metadata updates are authorized and reversible/non-destructive. No product deployment, cloud apply, production Secret mutation, provider publication/deletion, customer data, spend or legal approval occurs.
+
+
+## Exact-Tree Production Evidence
+
+- Implementation commit: `7810f302ef2a4c32332139e9ea95e668b55cc225`
+- Tree: `e10684bed75168775e1df5e5e412512a04ce8408`
+- Governance/program/graph/compliance/operability: PASS.
+- Locked wheel: 347 PASS; 25 PostgreSQL-only skips.
+- Frontend: 58 PASS; lint/build PASS.
+- Workflow lint: PASS.
+- Supply chain: source dirty false; 33 packages; policy PASS; provenance `c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891`; offline Cosign PASS; registry publication false.
+- Current historical live policy and open remote records remain intentionally rejected before close.

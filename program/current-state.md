@@ -292,3 +292,12 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Local evidence: 347 backend tests, 58 frontend tests, governance/program/graph/compliance/operability, workflow lint and focused adversarial tests PASS.
 - Clean implementation commit, exact-head CI, live policy readback and remote non-destructive closure remain pending.
 - `DENY_RELEASE`, `DENY_APPLY` and all production/external-effect gates remain unchanged.
+
+
+## 2026-07-30 — INC-026 exact-tree review
+
+- Implementation commit: `7810f302ef2a4c32332139e9ea95e668b55cc225`; tree `e10684bed75168775e1df5e5e412512a04ce8408`.
+- Graph status pending transition to review after evidence recording.
+- 347 backend and 58 frontend tests PASS; governance/program/graph/compliance/operability/workflow PASS.
+- Clean supply-chain provenance `c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891`; policy `1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb`; source dirty false.
+- Exact-head CI, live branch-protection apply/readback, superseded remote closure and close gate remain pending.

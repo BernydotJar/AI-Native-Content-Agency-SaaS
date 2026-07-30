@@ -1939,7 +1939,7 @@
         "non-destructive closure of superseded GitHub work",
         "production or external effect when applicable"
       ],
-      "implementation_commit": "PENDING",
+      "implementation_commit": "7810f302ef2a4c32332139e9ea95e668b55cc225",
       "objective": "Reconcile single-owner branch protection, release blockers and superseded GitHub work into an auditable terminal repository state.",
       "prohibited_paths": [
         "production",
@@ -1950,7 +1950,7 @@
         "historical PR merge",
         "legal/privacy approvals"
       ],
-      "publication_state": "LOCAL_GATES_PASS_CLEAN_COMMIT_PENDING",
+      "publication_state": "LOCAL_EXACT_TREE_PASS_REMOTE_CI_PENDING",
       "read_only_paths": [
         "product runtime and UI",
         "production infrastructure",
@@ -1958,7 +1958,7 @@
         "historical branches and commits"
       ],
       "role": "Graph Engineer / Repository Administrator / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-026",
       "validation_commands": [
         "npm run validate:governance",
@@ -1969,7 +1969,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Local PASS: governance/program/graph/compliance/operability, 347 locked-wheel tests, 58 frontend tests, workflow lint and 15 focused negative tests. Current live policy and open remote records fail their intended pre-close gates. Clean-tree and exact-head evidence pending.",
+      "validation_summary": "Exact commit 7810f302ef2a4c32332139e9ea95e668b55cc225, tree e10684bed75168775e1df5e5e412512a04ce8408: governance/program/graph/compliance/operability PASS; 347 locked-wheel tests; 58 frontend tests; workflow lint PASS; supply-chain source_dirty=false, provenance c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891, policy 1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb; live policy apply and remote closures pending.",
       "workstream_id": "WS-02",
       "write_lock": "orchestrator:INC-026"
     }

@@ -766,12 +766,19 @@
     {
       "command": "verify-repository-governance.py --protection-json",
       "id": "INC026-LIVE-PROTECTION",
-      "observed": "Current historical live policy is rejected as expected; exact-head CI and policy apply pending.",
+      "observed": "Current historical live policy is rejected as expected; exact-head CI and committed-policy apply/readback pending.",
       "result": "PENDING_EXACT_HEAD",
       "scope": "live branch-protection readback"
+    },
+    {
+      "command": "strict local full gate on clean implementation commit",
+      "id": "INC026-CLEAN-TREE",
+      "observed": "commit 7810f302ef2a4c32332139e9ea95e668b55cc225; tree e10684bed75168775e1df5e5e412512a04ce8408; 347 backend tests; 58 frontend tests; governance/program/graph/compliance/operability/workflow PASS; source_dirty=false; provenance c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891; policy 1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb",
+      "result": "PASS",
+      "scope": "exact-tree governance, release and supply-chain gates"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "de4c93fd5c7a91651aaf7814bf117c18eb619ef3",
+  "source_commit": "7810f302ef2a4c32332139e9ea95e668b55cc225",
   "updated_at": "2026-07-30"
 }

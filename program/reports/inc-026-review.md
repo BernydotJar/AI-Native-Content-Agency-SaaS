@@ -62,3 +62,15 @@ Remaining gates:
 5. committed remote closure receipt and final exact-head CI.
 
 `DENY_RELEASE`, `DENY_APPLY`, production, secrets, provider effects, spend and legal approvals remain out of scope.
+
+
+## Exact-Tree Verification
+
+- Implementation commit: `7810f302ef2a4c32332139e9ea95e668b55cc225`
+- Tree: `e10684bed75168775e1df5e5e412512a04ce8408`
+- Governance/program/graph/compliance/operability: PASS.
+- Locked wheel: 347 PASS; 25 PostgreSQL-only skips.
+- Frontend: 58 PASS; lint/build PASS.
+- Workflow lint: PASS.
+- Supply chain: source dirty false; 33 packages; policy PASS; provenance `c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891`; offline Cosign PASS; registry publication false.
+- Current historical live policy and open remote records remain intentionally rejected before close.
