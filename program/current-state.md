@@ -312,7 +312,7 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 
 ## INC-027 authenticated request quota
 
-- Status: `review`, revision 4; all current-revision local gates pass on `08bf16b5d4678a73dc9c4558029cc2b5eba01668`; exact-head CI and merge authority remain pending.
+- Status: `blocked`, revision 4; exact-head run `30525081524` passed 8/8 on `3e23089afb99e066211762e831dbd75d1275f6da`; only parent PR #35 and explicit merge/branch-protection authority remain.
 - Durable hashed principal and tenant fixed-window buckets execute after authentication and before CSRF/authorization auditing.
 - The first configured requests pass; the next returns safe HTTP 429 with `Retry-After` and adds no denial-audit row.
 - PostgreSQL schema v8 shares quota across replicas; migration, least privilege, backup/restore, OCI, Helm, Terraform and K3s evidence pass.

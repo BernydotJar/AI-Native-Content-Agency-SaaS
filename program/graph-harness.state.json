@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 14,
-  "event_count": 228,
-  "last_event_id": "649577f1-d3f1-4d87-9a09-4d831ee4ddf2",
+  "checkpoint_count": 15,
+  "event_count": 233,
+  "last_event_id": "8daa8474-d0c7-4b8c-bf24-e4d8d0a171b5",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -664,6 +664,12 @@
           "result": "PASS",
           "sha256": "f4ef65b804bbcd76e5dc309ee33ee030650d74e80cc832d6a368ce78afbc5455"
         },
+        "81f71687-919a-4e69-863d-45621816e24a": {
+          "artifact": "program/reports/inc-027-remote-review.md",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "56757dae1c65d773d3e589392fbf283948a6f4c18fa86b10e6defd49dc2e22ee"
+        },
         "84d0a7a5-0d69-4cd2-960b-a2db694d9825": {
           "artifact": "program/reports/inc-027-production-review.md",
           "kind": "review",
@@ -675,9 +681,22 @@
           "kind": "production",
           "result": "PASS",
           "sha256": "a610578359fe1f9b113c1fc84f10994253afccabbb92f53928b1d277123bc1fa"
+        },
+        "b4c09524-c2ca-46c2-b387-4281428ded9d": {
+          "artifact": "GitHub Actions run 30525081524 and retained artifacts",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "417edf58d74ddbd2b718f53c5b841f9e73809b6b80d0555e0577041ba22896a3"
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "b4c09524-c2ca-46c2-b387-4281428ded9d",
+            "81f71687-919a-4e69-863d-45621816e24a"
+          ],
+          "result": "BLOCKED"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "65cc7391-a869-48b6-a5b4-d699ff5473ae",
@@ -706,9 +725,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "649577f1-d3f1-4d87-9a09-4d831ee4ddf2",
+      "last_event_id": "59786340-ee43-46b2-acd8-7e3ca4608c68",
       "revision": 4,
-      "status": "review"
+      "status": "blocked"
     },
     "INC-038": {
       "active_approval_count": 0,

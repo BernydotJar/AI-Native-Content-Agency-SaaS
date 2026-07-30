@@ -266,7 +266,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-027",
-      "status": "review"
+      "status": "blocked"
     }
   ],
   "schema_version": "program-task-graph.v1",
