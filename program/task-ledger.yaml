@@ -2274,6 +2274,93 @@
       "validation_summary": "PR #38 exact-head run 30564603802 passed all eight jobs on 7c2cc9b7779bca509a4087e51e815ba6a41dbad8. Retained semantic evidence is 20/20, clean and zero-effect; supply-chain provenance binds the same clean SHA. Node is blocked only by the stacked PR #38 -> #37 -> #36 -> #35 merge authority.",
       "workstream_id": "WS-04",
       "write_lock": "orchestrator:INC-029"
+    },
+    {
+      "acceptance_criteria": [
+        "versions 1-9 are contiguous and bound to exact commits",
+        "historical source declares the recorded version",
+        "SQLite v1-v9 data upgrades and audit chains verify",
+        "PostgreSQL v1-v9 data upgrades to schema v9 and runtime role validates",
+        "unknown/future/reordered/duplicate versions fail closed",
+        "matrix runs against installed current wheel",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        "contracts/runtime-schema-history.json",
+        "scripts/verify-schema-compatibility.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-python-locks.sh",
+        "backend/tests/test_schema_compatibility.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "compliance/third-party-inventory.json",
+        "docs/SCHEMA_COMPATIBILITY.md",
+        "program/**",
+        "specs/030-schema-compatibility-audit/**"
+      ],
+      "authoritative_inputs": [
+        "contracts/runtime-schema-history.json",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "program/requirements-traceability.csv ENG-002",
+        "specs/030-schema-compatibility-audit/**"
+      ],
+      "context": "ENG-002 remains weak because individual feature migrations pass but no canonical v1-v9 historical matrix binds exact sources, data preservation and runtime authority.",
+      "dependencies": [
+        "INC-002",
+        "INC-024"
+      ],
+      "expected_outputs": [
+        "canonical runtime schema history",
+        "historical SQLite upgrade verifier",
+        "historical PostgreSQL upgrade matrix",
+        "negative compatibility tests",
+        "installed-wheel and CI evidence",
+        "compatibility review report"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "production migration",
+        "release",
+        "deployment or external effect when applicable"
+      ],
+      "objective": "Execute a formal SQLite and PostgreSQL compatibility matrix across every supported runtime schema version.",
+      "prohibited_paths": [
+        "production migration",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "branch-protection mutation",
+        "schema downgrade",
+        "destructive historical rewrite"
+      ],
+      "publication_state": "LOCAL_IMPLEMENTATION_IN_PROGRESS",
+      "read_only_paths": [
+        "production databases",
+        "production secrets",
+        ".env.local",
+        "provider credentials",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "Schema Compatibility Engineer / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-030",
+      "validation_commands": [
+        "python3 scripts/verify-schema-compatibility.py",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-03",
+      "write_lock": "orchestrator:INC-030"
     }
   ],
   "updated_at": "2026-07-30",

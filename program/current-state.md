@@ -355,3 +355,16 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Graph Harness revision 2: spec, implementation, production, and review gates PASS; close gate BLOCKED; `INC-029=blocked`.
 - Blocker is exclusively the stacked merge chain `#38 -> #37 -> #36 -> #35 -> main` and explicit human merge authority.
 - `DENY_RELEASE`, `DENY_APPLY`, disabled external effects, and all production/legal/accessibility/staging gates remain unchanged.
+
+## INC-030 runtime schema compatibility — local review
+
+- Branch: `agent/schema-compatibility-audit-v1`, stacked on PR #38.
+- Graph status: `running`, revision 0.
+- Canonical history binds PostgreSQL schema versions 1–9 to exact historical Git sources.
+- SQLite historical upgrade matrix v1–v9: PASS with tenant event preservation and current audit-chain verification.
+- PostgreSQL historical upgrade matrix v1–v9: PASS with isolated databases, v9 upgrade and data/chain preservation.
+- Installed-wheel suite: 379 tests PASS; PostgreSQL suite: 379/379 PASS.
+- Non-root OCI package and K3s/Terraform SQLite/PostgreSQL plan-apply-destroy PASS; ephemeral resources destroyed.
+- Full-history fetch is restricted to CI jobs that execute historical evidence; exact PR-head SHA remains asserted.
+- Clean implementation commit, supply-chain provenance, exact-head CI, close gate and merge remain pending.
+- Production migration, deployment, secrets, cloud resources, spend and external effects remain unauthorized; `DENY_RELEASE` and `DENY_APPLY` are unchanged.

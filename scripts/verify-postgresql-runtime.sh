@@ -279,6 +279,15 @@ CREATE ROLE :"runtime_role"
   LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 SQL
 
+log "executing historical PostgreSQL schema compatibility matrix"
+SCHEMA_COMPATIBILITY_USE_INSTALLED=1 "$VENV/bin/python" \
+  "$REPOSITORY_ROOT/scripts/verify-schema-compatibility.py" \
+  --python "$VENV/bin/python" \
+  --skip-sqlite \
+  --postgres-admin-url "$ADMIN_URL" \
+  --postgres-database-prefix "agency_schema_${RUN_ID}"
+printf 'postgresql_schema_history_matrix=pass\n'
+
 SHARED_MIGRATION_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${SHARED_DB}?sslmode=disable"
 DATABASE_URL="postgresql://${RUNTIME_ROLE}@127.0.0.1:${PG_PORT}/${SHARED_DB}?sslmode=disable"
 MIGRATION_URL="postgresql://${MIGRATION_ROLE}@127.0.0.1:${PG_PORT}/${MIGRATION_DB}?sslmode=disable"

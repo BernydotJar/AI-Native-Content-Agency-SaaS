@@ -286,6 +286,15 @@
       "graph_initial_status": "spec_ready",
       "id": "INC-029",
       "status": "blocked"
+    },
+    {
+      "depends_on": [
+        "INC-002",
+        "INC-024"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-030",
+      "status": "in_progress"
     }
   ],
   "schema_version": "program-task-graph.v1",

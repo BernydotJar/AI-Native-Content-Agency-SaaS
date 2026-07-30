@@ -1,0 +1,15 @@
+{
+  "schema_version": "agency-runtime-schema-history.v1",
+  "current_version": 9,
+  "versions": [
+    {"version": 1, "commit": "df7fc7f", "capability": "separate PostgreSQL schema and runtime authority"},
+    {"version": 2, "commit": "e3bca9c", "capability": "encrypted social OAuth account connections"},
+    {"version": 3, "commit": "8eb0cf7", "capability": "durable exact-once social publication intents"},
+    {"version": 4, "commit": "6eb7fa0", "capability": "durable model effect authority"},
+    {"version": 5, "commit": "798d68d", "capability": "governed publication media and verified receipts"},
+    {"version": 6, "commit": "2315ac3", "capability": "durable political compliance authority"},
+    {"version": 7, "commit": "de4c93f", "capability": "rotation-safe public media signing key identifiers"},
+    {"version": 8, "commit": "98babac", "capability": "durable authenticated request quotas"},
+    {"version": 9, "commit": "fd232f5", "capability": "per-tenant audit hash chains and durable heads"}
+  ]
+}

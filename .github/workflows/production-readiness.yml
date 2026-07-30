@@ -47,6 +47,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           submodules: recursive
       - name: Verify exact source checkout
         env:
@@ -93,6 +94,10 @@ jobs:
         env:
           API_CONTRACT_PYTHON_BIN: python
           API_CONTRACT_USE_INSTALLED: "1"
+      - run: npm run validate:schema-compatibility
+        env:
+          SCHEMA_COMPATIBILITY_PYTHON_BIN: python
+          SCHEMA_COMPATIBILITY_USE_INSTALLED: "1"
       - run: npm run validate:semantic-evals
         env:
           SEMANTIC_EVAL_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -135,6 +140,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           submodules: recursive
       - name: Verify exact source checkout
         env:

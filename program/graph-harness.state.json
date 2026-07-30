@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 18,
-  "event_count": 299,
-  "last_event_id": "38324194-8823-4411-8dab-d663fab22383",
+  "event_count": 305,
+  "last_event_id": "8a61744b-00de-496d-a0f2-73aa29a1e5fa",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -892,6 +892,28 @@
       "last_event_id": "0c49566e-077f-4a35-bb4f-d1a2281fd3e8",
       "revision": 2,
       "status": "blocked"
+    },
+    "INC-030": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "e2e0705a-d56f-4ed6-adf0-5d2f6f2c60d3": {
+          "artifact": "specs/030-schema-compatibility-audit",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "9e78ea590382bd92d8abf0bac2266294339349e1f88582899d364ff8d3e1eced"
+        }
+      },
+      "gates": {
+        "spec-gate": {
+          "evidence_ids": [
+            "e2e0705a-d56f-4ed6-adf0-5d2f6f2c60d3"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "8a61744b-00de-496d-a0f2-73aa29a1e5fa",
+      "revision": 0,
+      "status": "running"
     },
     "INC-038": {
       "active_approval_count": 0,
