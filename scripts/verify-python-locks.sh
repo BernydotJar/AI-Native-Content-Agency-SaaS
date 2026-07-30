@@ -31,6 +31,8 @@ TEST_PYTHON="$TMP_DIR/test-venv/bin/python"
 "$TEST_PYTHON" -m pip install --disable-pip-version-check --no-deps \
   "$TMP_DIR"/wheels/*.whl
 "$TEST_PYTHON" -m pip check
+API_CONTRACT_USE_INSTALLED=1 "$TEST_PYTHON" \
+  "$REPOSITORY_ROOT/scripts/verify-api-contract.py"
 SEMANTIC_ARGS=()
 if [[ "${SEMANTIC_EVAL_ALLOW_DIRTY:-0}" == "1" ]]; then
   SEMANTIC_ARGS+=(--allow-dirty)

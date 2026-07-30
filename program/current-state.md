@@ -330,3 +330,16 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Helm/Terraform use Secret refs only; package and K3s gates prove no signing material in render or Terraform state.
 - Four localized repairs affected only INC-028: canonical base64url enforcement, AuditWrite/AuditEvent model placement, schema-v9 restoration and API fixture creation.
 - Immutable off-host custody, KMS/HSM and legal non-repudiation remain external; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
+
+## INC-029 versioned API contract — local production review
+
+- Branch: `agent/versioned-api-contract-v1` stacked on PR #37.
+- Graph status: `running`, revision 2 after two localized repairs.
+- Canonical contract: `contracts/openapi-v1.json`, SHA-256 `c9f0532e19bd5a8bad074f51c7fa7404e1eae76805ffa8659c2997ea51af68e9`.
+- Contract surface: OpenAPI 3.1.0, API version 0.7.0, 30 paths, 31 operations, 14 schemas, 310 standard error declarations.
+- Runtime conformance covers 400/401/403/404/409/413/422/429/500/503 with safe correlation and redaction.
+- Development-tree evidence: 376 locked-wheel tests PASS, 376 PostgreSQL tests PASS, schema v9 migration/backup/restore PASS, OCI installed-contract equality PASS, 58 frontend tests plus lint/build PASS.
+- Localized repair 1 added explicit `X-Request-ID` to exception-handler responses.
+- Localized repair 2 renewed exact compliance hashes for the changed workflow and package command.
+- Clean-tree supply-chain evidence, exact-head CI, remote review, close gate, and merge remain pending.
+- `DENY_RELEASE`, `DENY_APPLY`, disabled provider effects, and all existing human/external gates remain unchanged.

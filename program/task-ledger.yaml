@@ -2186,6 +2186,93 @@
       "validation_summary": "Exact-head run 30527647518 passed 8/8 on 73fd7b7f83cecd87d7ad37a60ff43c7693ec7a42; retained semantic/provenance artifacts pass with zero effects. Node is blocked only by stacked merge authority, immutable off-host checkpoint custody, KMS/HSM and accountable retention/legal acceptance.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-028"
+    },
+    {
+      "acceptance_criteria": [
+        "canonical OpenAPI regeneration is byte deterministic",
+        "all business paths are under /api/v1",
+        "every operation declares common structured errors",
+        "400/401/403/404/409/413/422/429/500/503 runtime responses conform",
+        "validation details are sanitized and bounded",
+        "drift and unversioned path negatives fail",
+        "installed wheel and package contract hashes match",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/api.py",
+        "backend/tests/test_api_contract.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "scripts/verify-api-contract.py",
+        "scripts/verify-python-locks.sh",
+        "scripts/verify-production-package.sh",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "docs/API_CONTRACT.md",
+        "program/**",
+        "specs/029-versioned-api-contract/**",
+        "compliance/third-party-inventory.json",
+        "contracts/**"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv ENG-003",
+        "backend/agency_runtime/api.py",
+        "scripts/verify-production-package.sh",
+        "specs/029-versioned-api-contract/**"
+      ],
+      "context": "ENG-003 remains incomplete because runtime routes and safe errors exist but no canonical OpenAPI snapshot or global drift gate binds the installed API contract.",
+      "dependencies": [
+        "INC-003",
+        "INC-015",
+        "INC-019"
+      ],
+      "expected_outputs": [
+        "typed common error schemas",
+        "canonical contracts/openapi-v1.json",
+        "deterministic drift verifier",
+        "runtime error conformance tests",
+        "installed-wheel and package evidence",
+        "API contract runbook/review"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "breaking API approval",
+        "release",
+        "production or external effect when applicable"
+      ],
+      "objective": "Publish and enforce a deterministic versioned OpenAPI and structured error contract for the installed API.",
+      "prohibited_paths": [
+        "production deployment",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "branch-protection mutation",
+        "breaking API change"
+      ],
+      "publication_state": "LOCAL_IMPLEMENTATION_IN_PROGRESS_REVISION_2",
+      "read_only_paths": [
+        ".env.local",
+        "production secrets",
+        "provider credentials",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "API Contract Engineer / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-029",
+      "validation_commands": [
+        "python3 scripts/verify-api-contract.py",
+        "./scripts/verify-python-locks.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "./scripts/verify-production-package.sh",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-04",
+      "write_lock": "orchestrator:INC-029"
     }
   ],
   "updated_at": "2026-07-30",

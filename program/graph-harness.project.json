@@ -1992,6 +1992,84 @@
     },
     {
       "allowed_paths": [
+        "backend/agency_runtime/api.py",
+        "backend/tests/test_api_contract.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "scripts/verify-api-contract.py",
+        "scripts/verify-python-locks.sh",
+        "scripts/verify-production-package.sh",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "docs/API_CONTRACT.md",
+        "program/**",
+        "specs/029-versioned-api-contract/**",
+        "compliance/third-party-inventory.json",
+        "contracts/**"
+      ],
+      "capability": "API Contract Engineer / Independent Verifier",
+      "depends_on": [
+        "INC-003",
+        "INC-015",
+        "INC-019"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-029",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "canonical OpenAPI regeneration is byte deterministic",
+          "all business paths are under /api/v1",
+          "every operation declares common structured errors",
+          "400/401/403/404/409/413/422/429/500/503 runtime responses conform",
+          "validation details are sanitized and bounded",
+          "drift and unversioned path negatives fail",
+          "installed wheel and package contract hashes match",
+          "exact-head CI passes with zero external effects"
+        ],
+        "authoritative_inputs": [
+          "program/requirements-traceability.csv ENG-003",
+          "backend/agency_runtime/api.py",
+          "scripts/verify-production-package.sh",
+          "specs/029-versioned-api-contract/**"
+        ],
+        "canonical_status": "running",
+        "human_gates": [
+          "merge",
+          "breaking API approval",
+          "release",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "python3 scripts/verify-api-contract.py",
+          "./scripts/verify-python-locks.sh",
+          "npm run validate:program && npm run validate:graph",
+          "npm run validate:compliance && npm run validate:operability",
+          "./scripts/verify-production-package.sh",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-04",
+        "write_lock": "orchestrator:INC-029"
+      },
+      "status": "spec_ready",
+      "title": "Publish and enforce a deterministic versioned OpenAPI and structured error contract for the installed API."
+    },
+    {
+      "allowed_paths": [
         ".gitmodules",
         "vendor/graph-harness-sdlc",
         ".github/workflows/production-readiness.yml",
