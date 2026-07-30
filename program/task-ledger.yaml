@@ -2009,7 +2009,10 @@
         "scripts/verify-local-infrastructure.sh",
         "program/**",
         "specs/027-authenticated-request-quota/**",
-        "scripts/migrate-sqlite-to-postgresql.py"
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "artifacts/supply-chain/vulnerability-baseline.json",
+        "backend/tests/test_supply_chain_policy.py",
+        "docs/SUPPLY_CHAIN_SECURITY.md"
       ],
       "authoritative_inputs": [
         "program/critique-findings.json F-013",
@@ -2051,7 +2054,7 @@
         "legal/privacy approval mutation",
         "branch-protection mutation"
       ],
-      "publication_state": "LOCAL_REVIEW_READY_REMOTE_CI_PENDING",
+      "publication_state": "REVISION_4_SUPPLY_CHAIN_REPAIR_RUNNING",
       "read_only_paths": [
         ".env.local",
         "production secrets",

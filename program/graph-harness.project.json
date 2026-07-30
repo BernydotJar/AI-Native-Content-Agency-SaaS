@@ -1826,7 +1826,10 @@
         "scripts/verify-local-infrastructure.sh",
         "program/**",
         "specs/027-authenticated-request-quota/**",
-        "scripts/migrate-sqlite-to-postgresql.py"
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "artifacts/supply-chain/vulnerability-baseline.json",
+        "backend/tests/test_supply_chain_policy.py",
+        "docs/SUPPLY_CHAIN_SECURITY.md"
       ],
       "capability": "Security Engineer / Data Integrity Reviewer / Independent Verifier",
       "depends_on": [

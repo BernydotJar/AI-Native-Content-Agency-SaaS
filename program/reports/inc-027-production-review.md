@@ -18,3 +18,7 @@
 ## Release gate
 
 `DENY_RELEASE` remains mandatory. This increment is production-relevant code with complete deterministic local evidence, but no production rollout, human release approval or exact-head remote artifact exists yet.
+
+## Revision 4 supply-chain repair
+
+A refreshed vulnerability database classified `CVE-2026-11940` and `CVE-2026-11972` as fixable because Python 3.15.0b4 appeared. The product remains on stable Python 3.13.14: 3.15.0b4 is a pre-release outside the supported runtime line. Both findings require attacker-controlled tar processing, while the runtime imports no `tarfile`, accepts no tar archive and exposes no extraction path. Exact baseline exceptions expire on 2026-08-21 and a source-level test fails if any tarfile import or extraction call is introduced. A stable compatible image or any new tar surface requires immediate reevaluation.

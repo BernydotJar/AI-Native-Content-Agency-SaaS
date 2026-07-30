@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 14,
-  "event_count": 214,
-  "last_event_id": "3abd3b64-2d97-41b6-8283-506ed9e2245b",
+  "event_count": 218,
+  "last_event_id": "fec188fc-5cee-4829-977a-d0c98428bb7a",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -647,8 +647,8 @@
       "active_approval_count": 0,
       "active_evidence": {},
       "gates": {},
-      "last_event_id": "3abd3b64-2d97-41b6-8283-506ed9e2245b",
-      "revision": 3,
+      "last_event_id": "fec188fc-5cee-4829-977a-d0c98428bb7a",
+      "revision": 4,
       "status": "running"
     },
     "INC-038": {
@@ -731,6 +731,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 10,
+  "repair_plan_count": 11,
   "schema_version": "graph-harness.state.v1"
 }

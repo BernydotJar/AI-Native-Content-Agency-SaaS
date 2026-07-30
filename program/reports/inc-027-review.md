@@ -55,3 +55,7 @@ No unrelated node or evidence was invalidated.
 ## Limitations
 
 No production traffic profile, production rollout, persistent staging observation or quota tuning occurred. Exact-head CI and retained remote evidence are required before node closure. Release, deployment and effect authority remain denied.
+
+## Revision 4 supply-chain repair
+
+A refreshed vulnerability database classified `CVE-2026-11940` and `CVE-2026-11972` as fixable because Python 3.15.0b4 appeared. The product remains on stable Python 3.13.14: 3.15.0b4 is a pre-release outside the supported runtime line. Both findings require attacker-controlled tar processing, while the runtime imports no `tarfile`, accepts no tar archive and exposes no extraction path. Exact baseline exceptions expire on 2026-08-21 and a source-level test fails if any tarfile import or extraction call is introduced. A stable compatible image or any new tar surface requires immediate reevaluation.
