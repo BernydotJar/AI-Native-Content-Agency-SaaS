@@ -1779,7 +1779,7 @@
           ".github/workflows/production-readiness.yml",
           "specs/026-repository-governance-reconciliation/**"
         ],
-        "canonical_status": "review",
+        "canonical_status": "blocked",
         "human_gates": [
           "merge",
           "live branch-protection mutation",

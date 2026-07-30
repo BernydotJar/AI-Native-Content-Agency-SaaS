@@ -301,3 +301,11 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - 347 backend and 58 frontend tests PASS; governance/program/graph/compliance/operability/workflow PASS.
 - Clean supply-chain provenance `c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891`; policy `1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb`; source dirty false.
 - Exact-head CI, live branch-protection apply/readback, superseded remote closure and close gate remain pending.
+
+## INC-026 repository governance reconciliation
+
+- Exact-head PR #35 run `30521828441` passed all eight production-readiness jobs on `679e59dd128055529d1df16e7a6aff0b283a0bcb`.
+- Retained supply-chain and semantic artifacts bind that clean SHA; external effects observed: `0`.
+- Historical PRs #2-#11 and issue #1 are closed as superseded; none was merged and no branch was deleted.
+- Live `main` protection remains unchanged: one approving review, last-push approval and four obsolete required checks.
+- `INC-026` is `blocked` pending explicit human authority to change branch protection / merge policy.

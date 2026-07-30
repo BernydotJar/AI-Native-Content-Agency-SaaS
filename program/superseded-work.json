@@ -5,7 +5,7 @@
     "mapped_node": "INC-001",
     "number": 1,
     "reason": "Production Foundation objectives are represented by the current Graph Harness program; remaining GCP/release gates are explicit blocked nodes.",
-    "remote_state": "open"
+    "remote_state": "closed"
   },
   "pull_requests": [
     {
@@ -15,7 +15,7 @@
       "merged": false,
       "number": 2,
       "reason": "donor architecture superseded by the selected runtime and Graph Harness program",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -24,7 +24,7 @@
       "merged": false,
       "number": 3,
       "reason": "cumulative production-readiness implementation absorbed and advanced on main",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -33,7 +33,7 @@
       "merged": false,
       "number": 4,
       "reason": "INC-004 integrated and done",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -42,7 +42,7 @@
       "merged": false,
       "number": 5,
       "reason": "safe operability implementation integrated; persistent staging/production evidence remains in blocked INC-005",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -51,7 +51,7 @@
       "merged": false,
       "number": 6,
       "reason": "INC-007 integrated and done",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -60,7 +60,7 @@
       "merged": false,
       "number": 7,
       "reason": "theme implementation integrated; manual accessibility evidence remains in blocked INC-008",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -69,7 +69,7 @@
       "merged": false,
       "number": 8,
       "reason": "INC-009 integration review contract integrated and done",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -78,7 +78,7 @@
       "merged": false,
       "number": 9,
       "reason": "compliance implementation integrated; accountable legal/privacy decisions remain in blocked INC-011",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -87,7 +87,7 @@
       "merged": false,
       "number": 10,
       "reason": "INC-016 integrated and done",
-      "remote_state": "open"
+      "remote_state": "closed"
     },
     {
       "disposition": "superseded",
@@ -96,7 +96,7 @@
       "merged": false,
       "number": 11,
       "reason": "INC-019 OAuth implementation integrated and done",
-      "remote_state": "open"
+      "remote_state": "closed"
     }
   ],
   "schema_version": "superseded-work.v1",

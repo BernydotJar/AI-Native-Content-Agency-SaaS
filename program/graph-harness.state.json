@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 13,
-  "event_count": 191,
-  "last_event_id": "65c64e2a-7c61-4e91-88ff-e6e7472b8f36",
+  "checkpoint_count": 14,
+  "event_count": 196,
+  "last_event_id": "9fb432f6-1b18-43dc-82a2-e556d9b148eb",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -568,6 +568,18 @@
           "result": "PASS",
           "sha256": "96542a604f6e844fe4f3d32861d8e3d32c750b36cd80423b51a90558632effa3"
         },
+        "3b4e9cce-bf23-4271-ada7-20cfd5a64a7f": {
+          "artifact": "program/reports/inc-026-partial-reconciliation.md",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "ed9d56c5941bd6295f7d0bd8cd62dd244a80bd6ab5b89d5b66215ad828247fc8"
+        },
+        "4fadeb3b-4ab4-49bc-b401-66acfee8b0ff": {
+          "artifact": "program/superseded-work.json",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "3af8c95127fd3875b434c5e3617ed882d08c3e3b0c82a4cbeadde7991a45ed27"
+        },
         "5f8d544d-df9e-450f-8e88-c84a01eb62a2": {
           "artifact": "repository governance validator, policy and release reconciliation",
           "kind": "implementation",
@@ -591,6 +603,12 @@
           "kind": "spec",
           "result": "PASS",
           "sha256": "c9dbd1686523a5cca5cf5373d790c1734cdc62a64f7e732088e026cbdfee3926"
+        },
+        "f3b3b05b-a4a2-4974-82c1-5fa89f8f39b4": {
+          "artifact": "GitHub Actions run 30521828441 and retained artifacts",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "48c4bbc867511768ee6695f72e1d6deddcb8f698c6dcecfe590b7b7872846be1"
         }
       },
       "gates": {
@@ -621,9 +639,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "d824f664-af89-4038-a128-6b7fbe9589cf",
+      "last_event_id": "e268bfce-3151-45a9-849b-f876c1c3c91f",
       "revision": 0,
-      "status": "review"
+      "status": "blocked"
     },
     "INC-038": {
       "active_approval_count": 0,
