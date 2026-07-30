@@ -322,7 +322,7 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 
 ## INC-028 audit ledger integrity
 
-- Status: `review`, revision 4; all local gates pass on `fd232f5ba245a28f08b15e4f46819a3905201c6f`; exact-head CI, merge and immutable checkpoint custody remain pending.
+- Status: `blocked`, revision 4; exact-head run `30527647518` passed 8/8 on `73fd7b7f83cecd87d7ad37a60ff43c7693ec7a42`; only stacked merge authority and immutable/KMS/legal custody remain.
 - SQLite and PostgreSQL schema v9 maintain per-tenant SHA-256 chains plus durable heads, detecting field mutation, deletion, truncation and reordering.
 - PostgreSQL serializes only same-tenant appends and verifies the chain across replicas.
 - Existing rows backfill deterministically; SQLite-to-PostgreSQL migration recomputes hashes and backup/restore preserves events plus heads.

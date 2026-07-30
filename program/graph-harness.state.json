@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 15,
-  "event_count": 265,
-  "last_event_id": "3454b76e-9373-449f-9808-15462d19156c",
+  "checkpoint_count": 16,
+  "event_count": 270,
+  "last_event_id": "fe705bb7-e39d-43f7-9ba7-7f61b5967dfe",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -732,11 +732,23 @@
     "INC-028": {
       "active_approval_count": 0,
       "active_evidence": {
+        "08f3c7fc-40e8-4067-8c00-0683beabd0a2": {
+          "artifact": "program/reports/inc-028-remote-review.md",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "fccc088e1d2ce46613c9680b853dd90adce4e255f7a05465427d476ed1adc50e"
+        },
         "571995a1-80c7-4d5f-b4a6-4c9b55b12226": {
           "artifact": "program/reports/inc-028-production-review.md",
           "kind": "review",
           "result": "PASS",
           "sha256": "af1dd3c625d4eab411846d56637254b76d11657f2b3ae223efcdc919350cedef"
+        },
+        "818804d7-1e43-4b6f-80ff-f5cbe85d54f4": {
+          "artifact": "GitHub Actions run 30527647518 and retained artifacts",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "32ba84346f15083ef024c529387d52068d9f1106f186ab8916921993fd67438c"
         },
         "9dc5241c-9b25-4266-bcdb-cea7beca463f": {
           "artifact": "artifacts/supply-chain/generated/provenance.intoto.json",
@@ -764,6 +776,13 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "818804d7-1e43-4b6f-80ff-f5cbe85d54f4",
+            "08f3c7fc-40e8-4067-8c00-0683beabd0a2"
+          ],
+          "result": "BLOCKED"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "f5668622-9ee7-4d79-85e2-3562990f8cfa",
@@ -792,9 +811,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "3454b76e-9373-449f-9808-15462d19156c",
+      "last_event_id": "5fe1728a-c637-4904-a0b5-c5d92438a7bd",
       "revision": 4,
-      "status": "review"
+      "status": "blocked"
     },
     "INC-038": {
       "active_approval_count": 0,

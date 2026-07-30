@@ -1965,7 +1965,7 @@
           "scripts/manage-runtime-backup.py",
           "specs/028-audit-ledger-integrity/**"
         ],
-        "canonical_status": "review",
+        "canonical_status": "blocked",
         "human_gates": [
           "merge",
           "production checkpoint key provisioning/rotation",
