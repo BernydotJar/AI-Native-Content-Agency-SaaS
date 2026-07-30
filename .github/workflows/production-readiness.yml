@@ -59,6 +59,7 @@ jobs:
       - run: npm ci
       - run: npm run validate:program
       - run: npm run validate:graph
+      - run: npm run validate:governance
       - run: npm run validate:compliance
       - run: npm run validate:operability
       - run: npm run lint

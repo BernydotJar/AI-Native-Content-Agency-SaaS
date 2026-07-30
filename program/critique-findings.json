@@ -82,11 +82,11 @@
     },
     {
       "description": "Prompt-injection, groundedness, citation fidelity, harmful-use and legal-overclaim semantic/adversarial evals are incomplete.",
-      "evidence": "Deterministic unit/integration tests exist, but no complete semantic eval harness or release threshold exists.",
+      "evidence": "INC-010 revision 3 merged in PR #33 at 65df53ebe73ff831954a55f5f5e0b517126ef116; corpus v2 binds 20 exact semantic cases and independent report tamper checks; exact-head CI run 30480923763 passed 8/8.",
       "id": "F-011",
       "owner": "INC-010",
       "severity": "HIGH",
-      "status": "OPEN"
+      "status": "CLOSED"
     },
     {
       "description": "The audit ledger is transactional but is not hash-chained, signed or exported to immutable storage.",
@@ -362,11 +362,11 @@
     },
     {
       "description": "Instagram has no governed publication_media generator/delivery contract and the receipt lacks independent post read-after-write verification.",
-      "evidence": "INC-021 deliberately stops at media_plan; OI-014 and INC-022 define the exact resume condition.",
+      "evidence": "INC-022 implementation is integrated on main: durable publication media, bounded capability, FINISHED polling, independent read-after-write verification and durable history. Real provider effects remain separately gated.",
       "id": "F-046",
       "owner": "INC-022",
       "severity": "MEDIUM",
-      "status": "OPEN"
+      "status": "CLOSED"
     },
     {
       "description": "Media plans existed without immutable provider-fetchable bytes or Greenlight hash binding.",
@@ -393,8 +393,8 @@
       "status": "CLOSED"
     },
     {
-      "description": "Post-publication provider deletion and rights-withdrawal policy remain undefined and require legal authority plus a separately authorized external effect.",
-      "evidence": "INC-025 revision 2 implements the independent HMAC keyring, durable public_signing_key_id, SQLite/PostgreSQL schema v7 migration, mixed-key replay, fail-closed historical-key removal, Secret-reference packaging and rotation/rollback runbook. OI-016 remains blocked on legal retention/deletion decisions, provider capability and an authorized sandbox deletion exercise.",
+      "description": "Post-publication provider deletion and rights-withdrawal policy remain undefined and require legal authority plus a separately authorized provider effect.",
+      "evidence": "INC-025 merged in PR #34 at de4c93fd5c7a91651aaf7814bf117c18eb619ef3 and closes independent signing-key rotation. OI-016 remains blocked on accountable retention/deletion decisions, provider capability and an authorized sandbox deletion exercise.",
       "id": "F-050",
       "owner": "INC-011",
       "severity": "HIGH",
@@ -402,6 +402,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "bf32be4b697f8c12bc476f204fbfa2ddc55c5399",
-  "updated_at": "2026-07-29"
+  "source_commit": "de4c93fd5c7a91651aaf7814bf117c18eb619ef3",
+  "updated_at": "2026-07-30"
 }

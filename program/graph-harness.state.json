@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 12,
-  "event_count": 175,
-  "last_event_id": "4ba4b9b4-aaa3-47f9-909f-3b0fd3538de5",
+  "event_count": 181,
+  "last_event_id": "e64c8fb4-5aa1-45ab-b5cf-830f6ef78df8",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -552,6 +552,28 @@
       "last_event_id": "db64d791-5209-4578-8075-c3325aea4ff0",
       "revision": 2,
       "status": "done"
+    },
+    "INC-026": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "1436e950-3bd3-43c5-9503-1ff9e0a58dc4": {
+          "artifact": "specs/026-repository-governance-reconciliation",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "b64bceed3d7c4ef72730fe230fdf8ee0def5b78d7d6abbf1c18fbbab1d2e6d4b"
+        }
+      },
+      "gates": {
+        "spec-gate": {
+          "evidence_ids": [
+            "1436e950-3bd3-43c5-9503-1ff9e0a58dc4"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "e64c8fb4-5aa1-45ab-b5cf-830f6ef78df8",
+      "revision": 0,
+      "status": "running"
     },
     "INC-038": {
       "active_approval_count": 0,

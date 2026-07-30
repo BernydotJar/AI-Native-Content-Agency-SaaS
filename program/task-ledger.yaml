@@ -1884,9 +1884,97 @@
       "validation_summary": "GitHub Actions run 30500998431 passed 8/8 on exact PR head 7f56f711abc5d13fb609e2fee5b04176ea4c4319; remote supply-chain policy PASS with 33 packages, provenance 3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112; semantic artifact exact-head/clean/20-of-20/zero-effects; all local schema-v7 and rotation gates PASS.",
       "workstream_id": "WS-08",
       "write_lock": "orchestrator:INC-025"
+    },
+    {
+      "acceptance_criteria": [
+        "policy required checks exactly match workflow jobs",
+        "release blocked findings exactly equal unresolved HIGH findings",
+        "F-011 and F-046 close with merged evidence while F-050 remains external",
+        "issue 1 and PRs 2 through 11 close without merge or branch deletion",
+        "live main protection exactly matches policy",
+        "all deterministic and exact-head gates pass"
+      ],
+      "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_release_compliance.py",
+        "backend/tests/test_repository_governance.py",
+        "compliance/release-decision.json",
+        "docs/compliance/release-compliance-review.md",
+        "docs/runbooks/repository-governance.md",
+        "program/**",
+        "scripts/verify-release-compliance.py",
+        "scripts/verify-repository-governance.py",
+        "specs/026-repository-governance-reconciliation/**",
+        "compliance/third-party-inventory.json"
+      ],
+      "authoritative_inputs": [
+        "program/repository-governance.json",
+        "program/superseded-work.json",
+        "program/graph-harness.state.json",
+        "program/critique-findings.json",
+        "compliance/release-decision.json",
+        ".github/workflows/production-readiness.yml",
+        "specs/026-repository-governance-reconciliation/**"
+      ],
+      "context": "Main requires an impossible second-person approval and obsolete check names; issue #1 and PRs #2-#11 are stale; F-011/F-046 and release blocker mapping drift from merged evidence.",
+      "dependencies": [
+        "INC-025",
+        "INC-038"
+      ],
+      "expected_outputs": [
+        "committed repository-governance policy",
+        "dynamic release blocker verifier",
+        "superseded-work inventory",
+        "live branch-protection receipt",
+        "remote issue/PR closure receipt",
+        "independent review"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "live branch-protection mutation",
+        "non-destructive closure of superseded GitHub work",
+        "production or external effect when applicable"
+      ],
+      "implementation_commit": "PENDING",
+      "objective": "Reconcile single-owner branch protection, release blockers and superseded GitHub work into an auditable terminal repository state.",
+      "prohibited_paths": [
+        "production",
+        "credentials",
+        "billing",
+        "provider effects",
+        "branch deletion",
+        "historical PR merge",
+        "legal/privacy approvals"
+      ],
+      "publication_state": "LOCAL_GATES_PASS_CLEAN_COMMIT_PENDING",
+      "read_only_paths": [
+        "product runtime and UI",
+        "production infrastructure",
+        "production secrets",
+        "historical branches and commits"
+      ],
+      "role": "Graph Engineer / Repository Administrator / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-026",
+      "validation_commands": [
+        "npm run validate:governance",
+        "npm run validate:program",
+        "npm run validate:graph",
+        "npm run validate:compliance",
+        "./scripts/verify-python-locks.sh",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "validation_summary": "Local PASS: governance/program/graph/compliance/operability, 347 locked-wheel tests, 58 frontend tests, workflow lint and 15 focused negative tests. Current live policy and open remote records fail their intended pre-close gates. Clean-tree and exact-head evidence pending.",
+      "workstream_id": "WS-02",
+      "write_lock": "orchestrator:INC-026"
     }
   ],
-  "updated_at": "2026-07-29",
+  "updated_at": "2026-07-30",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -1925,7 +2013,7 @@
       "evals": [],
       "id": "WS-02",
       "name": "Specifications and Requirements Traceability",
-      "next_ready_task": "INC-001",
+      "next_ready_task": "INC-026",
       "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
       "owner": "orchestrator",
       "requirements": [],

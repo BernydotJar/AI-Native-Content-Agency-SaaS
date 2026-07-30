@@ -280,3 +280,15 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Semantic artifact `6c872912a227341c396905c1dd39a3b2b70ca63482eb85cb8451d977997d21b6` is exact-head, clean, 20/20 and zero-effects.
 - Graph Harness revision 2 close gate: PASS; node status: `done`.
 - Production Secret rotation, deployment, publication/deletion and legal approval remain unauthorized.
+
+
+## 2026-07-30 — INC-026 repository-governance local review
+
+- Active branch: `agent/repository-governance-reconciliation-v1`.
+- Graph Harness revision: 0; status: `running`.
+- Canonical single-owner policy requires all eight current jobs and no impossible second-person approval.
+- Release blockers are derived exactly from unresolved HIGH findings; F-011 and F-046 are closed, F-050 remains provider-deletion/legal.
+- Issue #1 and PRs #2–#11 are audited as superseded; none may be merged or deleted.
+- Local evidence: 347 backend tests, 58 frontend tests, governance/program/graph/compliance/operability, workflow lint and focused adversarial tests PASS.
+- Clean implementation commit, exact-head CI, live policy readback and remote non-destructive closure remain pending.
+- `DENY_RELEASE`, `DENY_APPLY` and all production/external-effect gates remain unchanged.
