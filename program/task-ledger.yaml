@@ -2251,7 +2251,7 @@
         "branch-protection mutation",
         "breaking API change"
       ],
-      "publication_state": "LOCAL_IMPLEMENTATION_IN_PROGRESS_REVISION_2",
+      "publication_state": "CLEAN_EXACT_TREE_REVIEW_EXACT_HEAD_CI_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2260,7 +2260,7 @@
         "compliance/release-decision.json"
       ],
       "role": "API Contract Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-029",
       "validation_commands": [
         "python3 scripts/verify-api-contract.py",
@@ -2271,6 +2271,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
+      "validation_summary": "Clean implementation commit 2520e7a36b90d8d6ecba7a71b18afe6067c1f170 passes canonical API contract verification, 376 locked-wheel tests, 376 PostgreSQL tests, non-root OCI installed-contract equality, 58 frontend tests, governance/compliance/operability and clean supply-chain provenance. Exact-head CI and merge remain pending.",
       "workstream_id": "WS-04",
       "write_lock": "orchestrator:INC-029"
     }
