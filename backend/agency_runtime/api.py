@@ -2552,6 +2552,34 @@ def create_app(
         metrics.authentication_attempt("succeeded")
         return principal
 
+    def _consume_authenticated_request_quota(
+        principal: TenantPrincipal,
+    ) -> None:
+        try:
+            service.consume_authenticated_request_quota(
+                _authenticated_request_buckets(principal),
+                request_quota_window_seconds,
+            )
+        except AuthenticatedRequestRateLimitError as error:
+            metrics.authenticated_request("rate_limited")
+            raise PublicApiError(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                code="request_rate_limited",
+                detail="authenticated request temporarily rate limited",
+                headers={"Retry-After": str(error.retry_after_seconds)},
+            ) from error
+        metrics.authenticated_request("allowed")
+
+    def _publish_principal_state(
+        request: Request,
+        principal: TenantPrincipal,
+    ) -> None:
+        request.state.tenant_id = principal.tenant_id
+        request.state.subject_id = principal.subject_id
+        request.state.role = principal.role
+        request.state.auth_method = principal.auth_method
+        request.state.session_id = principal.session_id
+
     def require_principal(
         request: Request,
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer),
@@ -2599,25 +2627,8 @@ def create_app(
                     detail="authentication failed",
                     headers={"WWW-Authenticate": "Bearer"},
                 ) from error
-        request.state.tenant_id = principal.tenant_id
-        request.state.subject_id = principal.subject_id
-        request.state.role = principal.role
-        request.state.auth_method = principal.auth_method
-        request.state.session_id = principal.session_id
-        try:
-            service.consume_authenticated_request_quota(
-                _authenticated_request_buckets(principal),
-                request_quota_window_seconds,
-            )
-        except AuthenticatedRequestRateLimitError as error:
-            metrics.authenticated_request("rate_limited")
-            raise PublicApiError(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                code="request_rate_limited",
-                detail="authenticated request temporarily rate limited",
-                headers={"Retry-After": str(error.retry_after_seconds)},
-            ) from error
-        metrics.authenticated_request("allowed")
+        _consume_authenticated_request_quota(principal)
+        _publish_principal_state(request, principal)
         return principal
 
     def _record_security_denial(
@@ -2965,6 +2976,7 @@ def create_app(
             )
         try:
             principal = _rate_limited_authenticate(request, session_request.api_key)
+            _consume_authenticated_request_quota(principal)
             if session_request.username is not None and not hmac.compare_digest(
                 session_request.username,
                 principal.subject_id,
@@ -2975,9 +2987,7 @@ def create_app(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="invalid session credential",
             ) from error
-        request.state.tenant_id = principal.tenant_id
-        request.state.subject_id = principal.subject_id
-        request.state.role = principal.role
+        _publish_principal_state(request, principal)
         issue = service.create_browser_session(
             principal=principal,
             ttl_seconds=ttl_seconds,

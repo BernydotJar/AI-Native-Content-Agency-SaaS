@@ -59,3 +59,14 @@ No production traffic profile, production rollout, persistent staging observatio
 ## Revision 4 supply-chain repair
 
 A refreshed vulnerability database classified `CVE-2026-11940` and `CVE-2026-11972` as fixable because Python 3.15.0b4 appeared. The product remains on stable Python 3.13.14: 3.15.0b4 is a pre-release outside the supported runtime line. Both findings require attacker-controlled tar processing, while the runtime imports no `tarfile`, accepts no tar archive and exposes no extraction path. Exact baseline exceptions expire on 2026-08-21 and a source-level test fails if any tarfile import or extraction call is introduced. A stable compatible image or any new tar surface requires immediate reevaluation.
+
+## Post-ready review repair — revision 5
+
+After PR #36 was retargeted to the squashed `main` ancestry, the automated review found two valid gaps on the historical head:
+
+1. successful `POST /api/v1/sessions` authentication did not consume the authenticated-request quota, allowing repeated durable session/audit creation outside the principal and tenant buckets;
+2. `require_principal` published tenant identity to `request.state` before quota consumption, so the structured completion log for a quota-rejected request could contain the raw tenant ID.
+
+The localized repair introduces one shared quota-consumption helper and a separate identity-publication helper. Bearer, browser-session and session-creation authentication now consume the same durable principal/tenant buckets before identity is made visible to request logging. A valid key with a mismatched username is also charged before returning the generic authentication failure. Regression coverage proves that session creation is the tenth shared request and that the following 429 completion log contains no `tenant_id`, tenant name or subject identifier.
+
+Graph Harness invalidated only `INC-027`, advanced it to revision 5 and preserved every unrelated node. No provider, deployment, secret, cloud or release effect was enabled.

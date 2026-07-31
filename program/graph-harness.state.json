@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 16,
+  "checkpoint_count": 15,
   "event_count": 270,
-  "last_event_id": "fe705bb7-e39d-43f7-9ba7-7f61b5967dfe",
+  "last_event_id": "cc9d70d1-7dc8-4658-8a0f-b644d2f65a43",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -586,6 +586,12 @@
           "result": "PASS",
           "sha256": "7df8455290eb0a0ddd7085bf6988a084d6cd608f59836b228675acd32deba922"
         },
+        "8d11f6b7-4826-4785-ad97-8b449471c332": {
+          "artifact": "program/reports/inc-026-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "08fe31652e64fda0632c5df1cd24d2bf44d54ebe39b87a11ff92de5f8d3f8097"
+        },
         "c77ff898-2534-49d8-9974-2bbc996363b4": {
           "artifact": "program/reports/inc-026-superseded-work-audit.md",
           "kind": "review",
@@ -612,6 +618,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "8d11f6b7-4826-4785-ad97-8b449471c332"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "5f8d544d-df9e-450f-8e88-c84a01eb62a2",
@@ -639,181 +651,151 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "e268bfce-3151-45a9-849b-f876c1c3c91f",
+      "last_event_id": "bb8a72d8-b656-458f-b571-bb380c5907c6",
       "revision": 0,
-      "status": "blocked"
+      "status": "done"
     },
     "INC-027": {
       "active_approval_count": 0,
       "active_evidence": {
-        "4e91e5f7-6576-4afb-b115-4966cdd3ecdd": {
-          "artifact": "specs/027-authenticated-request-quota",
-          "kind": "spec",
+        "0d6fa7bd-766b-444d-ae8b-2bb893f30693": {
+          "artifact": "program/reports/inc-027-review.md",
+          "kind": "review",
           "result": "PASS",
-          "sha256": "e5a758ca2595ebfadf4079e4764f2190186b42ca2b6d16de8055733eb4916846"
+          "sha256": "ecd10b55ca2bf7175103fdf54d1541429c9953b0d93099f73ee51719f7e2f4f6"
         },
-        "5d61029f-43f1-4976-a44c-bbe19be79045": {
+        "8c13075b-97df-4cd6-8b7f-d6d66257ccdb": {
           "artifact": "program/reports/inc-027-review.md",
           "kind": "verification",
           "result": "PASS",
-          "sha256": "6f951eb85c9c9a6b878a41d14886b5301f418ddb5cfc5dcaed77f5ed11f810e5"
+          "sha256": "ecd10b55ca2bf7175103fdf54d1541429c9953b0d93099f73ee51719f7e2f4f6"
         },
-        "65cc7391-a869-48b6-a5b4-d699ff5473ae": {
-          "artifact": "git tree 08bf16b5d4678a73dc9c4558029cc2b5eba01668",
-          "kind": "implementation",
+        "9200b7d5-f7e1-4775-838d-51125e142a6b": {
+          "artifact": "program/reports/inc-027-closure.md",
+          "kind": "closure",
           "result": "PASS",
-          "sha256": "f4ef65b804bbcd76e5dc309ee33ee030650d74e80cc832d6a368ce78afbc5455"
+          "sha256": "73c5d7192a34ce8987c4266ef7de6c7fa9cf9c994c4ed64ece3b5665cbed41d1"
         },
-        "81f71687-919a-4e69-863d-45621816e24a": {
-          "artifact": "program/reports/inc-027-remote-review.md",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "56757dae1c65d773d3e589392fbf283948a6f4c18fa86b10e6defd49dc2e22ee"
-        },
-        "84d0a7a5-0d69-4cd2-960b-a2db694d9825": {
+        "be2cf46e-a4a2-46d2-8cd6-8e84632d3c8b": {
           "artifact": "program/reports/inc-027-production-review.md",
-          "kind": "review",
+          "kind": "production",
           "result": "PASS",
           "sha256": "ee0d782f53c3e9d312ce1116ac2c4c322ce8c2cc9a82b8af7868f10fe96e6315"
         },
-        "9429325f-1e9d-4187-80a1-5c789420e7c0": {
-          "artifact": "artifacts/supply-chain/generated/provenance.intoto.json",
-          "kind": "production",
+        "ca9459bc-12eb-42c0-9009-b67aaa2004e7": {
+          "artifact": "specs/027-authenticated-request-quota",
+          "kind": "spec",
           "result": "PASS",
-          "sha256": "a610578359fe1f9b113c1fc84f10994253afccabbb92f53928b1d277123bc1fa"
+          "sha256": "df585ad9442c0150d776dd1f2dc539c06a664d1ceda7d566a486ed8cc17c9f72"
         },
-        "b4c09524-c2ca-46c2-b387-4281428ded9d": {
-          "artifact": "GitHub Actions run 30525081524 and retained artifacts",
-          "kind": "verification",
+        "cf18fb08-4551-46be-962c-30b5ffe0a9f7": {
+          "artifact": "quota session/log repair at 104828b",
+          "kind": "implementation",
           "result": "PASS",
-          "sha256": "417edf58d74ddbd2b718f53c5b841f9e73809b6b80d0555e0577041ba22896a3"
+          "sha256": "3b5c573a5cff747dc96d936d1d379098d02fb2aa0d7659c760d6c0ea5e792347"
         }
       },
       "gates": {
         "close-gate": {
           "evidence_ids": [
-            "b4c09524-c2ca-46c2-b387-4281428ded9d",
-            "81f71687-919a-4e69-863d-45621816e24a"
+            "9200b7d5-f7e1-4775-838d-51125e142a6b"
           ],
-          "result": "BLOCKED"
+          "result": "PASS"
         },
         "implementation-gate": {
           "evidence_ids": [
-            "65cc7391-a869-48b6-a5b4-d699ff5473ae",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
+            "cf18fb08-4551-46be-962c-30b5ffe0a9f7",
+            "8c13075b-97df-4cd6-8b7f-d6d66257ccdb"
           ],
           "result": "PASS"
         },
         "production-gate": {
           "evidence_ids": [
-            "9429325f-1e9d-4187-80a1-5c789420e7c0",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
+            "be2cf46e-a4a2-46d2-8cd6-8e84632d3c8b"
           ],
           "result": "PASS"
         },
         "review-gate": {
           "evidence_ids": [
-            "84d0a7a5-0d69-4cd2-960b-a2db694d9825",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
+            "0d6fa7bd-766b-444d-ae8b-2bb893f30693"
           ],
           "result": "PASS"
         },
         "spec-gate": {
           "evidence_ids": [
-            "4e91e5f7-6576-4afb-b115-4966cdd3ecdd"
+            "ca9459bc-12eb-42c0-9009-b67aaa2004e7"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "59786340-ee43-46b2-acd8-7e3ca4608c68",
-      "revision": 4,
-      "status": "blocked"
+      "last_event_id": "c86d2bba-0883-47e4-9730-eda51f4e7d90",
+      "revision": 5,
+      "status": "done"
     },
     "INC-028": {
-      "active_approval_count": 0,
+      "active_approval_count": 1,
       "active_evidence": {
-        "08f3c7fc-40e8-4067-8c00-0683beabd0a2": {
-          "artifact": "program/reports/inc-028-remote-review.md",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "fccc088e1d2ce46613c9680b853dd90adce4e255f7a05465427d476ed1adc50e"
-        },
-        "571995a1-80c7-4d5f-b4a6-4c9b55b12226": {
-          "artifact": "program/reports/inc-028-production-review.md",
+        "144bf70d-c04c-460c-a7c9-a6da59d0ff61": {
+          "artifact": "program/reports/inc-028-review.md",
           "kind": "review",
           "result": "PASS",
-          "sha256": "af1dd3c625d4eab411846d56637254b76d11657f2b3ae223efcdc919350cedef"
+          "sha256": "c3a1b0cda3f8d3a068d298c9a0826ec77bbf08015b66ae48e286e18238e5197d"
         },
-        "818804d7-1e43-4b6f-80ff-f5cbe85d54f4": {
-          "artifact": "GitHub Actions run 30527647518 and retained artifacts",
-          "kind": "verification",
+        "1ccb615d-b614-4025-af68-4de0a723adc9": {
+          "artifact": "git tree 2c83e4ff776942ee38c2046982be68447385bad7",
+          "kind": "implementation",
           "result": "PASS",
-          "sha256": "32ba84346f15083ef024c529387d52068d9f1106f186ab8916921993fd67438c"
+          "sha256": "5e09cb63b8b2254eb7798812232dca9a9fb9a86bf7c67fcb1931a42ad77e46ab"
         },
-        "9dc5241c-9b25-4266-bcdb-cea7beca463f": {
-          "artifact": "artifacts/supply-chain/generated/provenance.intoto.json",
+        "30d8716e-0b5d-4a99-b6a0-d622fd546e4d": {
+          "artifact": "program/reports/inc-028-production-review.md",
           "kind": "production",
           "result": "PASS",
-          "sha256": "2f882062d008630df7483dec8c226b2d7a1d072b754d6e29abde4b6b71f9e3f2"
+          "sha256": "ef34754d4b3320194fd559f6c02d4136b141b2f5e3ac3dc45fa5b1103c24627c"
         },
-        "c9cbdd16-84e4-449f-ae27-c3e33a6e7279": {
+        "5011422e-7ad3-42f6-8066-a40bd502107c": {
           "artifact": "specs/028-audit-ledger-integrity",
           "kind": "spec",
           "result": "PASS",
-          "sha256": "ed83fdb907561644c285864b631f8e58f5aca9cbb321ba430088500d4ae98495"
+          "sha256": "5640a488f01e57ef81e6cc87d9a9cfcde12905e9b8273a3d68ec5a419041bafe"
         },
-        "da7d54bd-151a-4e3a-8b1b-20b7d5c56eeb": {
+        "5836c73f-f879-4bfd-b651-d5e510d82b15": {
           "artifact": "program/reports/inc-028-review.md",
           "kind": "verification",
           "result": "PASS",
-          "sha256": "637d0c80106f7ea2e5a9df314267d3ab1ce7fd0786e6ac7d04a4653417c4bd36"
-        },
-        "f5668622-9ee7-4d79-85e2-3562990f8cfa": {
-          "artifact": "git tree fd232f5ba245a28f08b15e4f46819a3905201c6f",
-          "kind": "implementation",
-          "result": "PASS",
-          "sha256": "c443abfea9fc7cef8917137e07d70eab004e4ac2c875a64f276e56b27baed792"
+          "sha256": "c3a1b0cda3f8d3a068d298c9a0826ec77bbf08015b66ae48e286e18238e5197d"
         }
       },
       "gates": {
-        "close-gate": {
-          "evidence_ids": [
-            "818804d7-1e43-4b6f-80ff-f5cbe85d54f4",
-            "08f3c7fc-40e8-4067-8c00-0683beabd0a2"
-          ],
-          "result": "BLOCKED"
-        },
         "implementation-gate": {
           "evidence_ids": [
-            "f5668622-9ee7-4d79-85e2-3562990f8cfa",
-            "da7d54bd-151a-4e3a-8b1b-20b7d5c56eeb"
+            "1ccb615d-b614-4025-af68-4de0a723adc9",
+            "5836c73f-f879-4bfd-b651-d5e510d82b15"
           ],
           "result": "PASS"
         },
         "production-gate": {
           "evidence_ids": [
-            "9dc5241c-9b25-4266-bcdb-cea7beca463f",
-            "da7d54bd-151a-4e3a-8b1b-20b7d5c56eeb"
+            "30d8716e-0b5d-4a99-b6a0-d622fd546e4d"
           ],
           "result": "PASS"
         },
         "review-gate": {
           "evidence_ids": [
-            "571995a1-80c7-4d5f-b4a6-4c9b55b12226",
-            "da7d54bd-151a-4e3a-8b1b-20b7d5c56eeb"
+            "144bf70d-c04c-460c-a7c9-a6da59d0ff61"
           ],
           "result": "PASS"
         },
         "spec-gate": {
           "evidence_ids": [
-            "c9cbdd16-84e4-449f-ae27-c3e33a6e7279"
+            "5011422e-7ad3-42f6-8066-a40bd502107c"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "5fe1728a-c637-4904-a0b5-c5d92438a7bd",
-      "revision": 4,
-      "status": "blocked"
+      "last_event_id": "cc9d70d1-7dc8-4658-8a0f-b644d2f65a43",
+      "revision": 0,
+      "status": "review"
     },
     "INC-038": {
       "active_approval_count": 0,
@@ -895,6 +877,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 15,
+  "repair_plan_count": 12,
   "schema_version": "graph-harness.state.v1"
 }

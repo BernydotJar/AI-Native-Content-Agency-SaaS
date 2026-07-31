@@ -237,13 +237,6 @@
     },
     {
       "depends_on": [
-        "INC-001"
-      ],
-      "id": "INC-038",
-      "status": "done"
-    },
-    {
-      "depends_on": [
         "INC-022"
       ],
       "graph_initial_status": "spec_ready",
@@ -257,7 +250,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-026",
-      "status": "blocked"
+      "status": "done"
     },
     {
       "depends_on": [
@@ -266,7 +259,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-027",
-      "status": "blocked"
+      "status": "done"
     },
     {
       "depends_on": [
@@ -275,7 +268,14 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-028",
-      "status": "blocked"
+      "status": "review"
+    },
+    {
+      "depends_on": [
+        "INC-001"
+      ],
+      "id": "INC-038",
+      "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",

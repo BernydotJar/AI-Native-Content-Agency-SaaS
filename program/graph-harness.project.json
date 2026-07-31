@@ -1779,7 +1779,7 @@
           ".github/workflows/production-readiness.yml",
           "specs/026-repository-governance-reconciliation/**"
         ],
-        "canonical_status": "blocked",
+        "canonical_status": "done",
         "human_gates": [
           "merge",
           "live branch-protection mutation",
@@ -1872,7 +1872,7 @@
           "backend/agency_runtime/observability.py",
           "specs/027-authenticated-request-quota/**"
         ],
-        "canonical_status": "blocked",
+        "canonical_status": "done",
         "human_gates": [
           "merge",
           "production rollout or quota tuning",
@@ -1965,7 +1965,7 @@
           "scripts/manage-runtime-backup.py",
           "specs/028-audit-ledger-integrity/**"
         ],
-        "canonical_status": "blocked",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "production checkpoint key provisioning/rotation",
