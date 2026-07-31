@@ -1,0 +1,13 @@
+{
+  "schema_version": "agency-workload-rollback.v1",
+  "rollback_commit": "fe75c5f563e97cda38f4fe0a7c05f9c455000474",
+  "required_runtime_schema_version": 9,
+  "maximum_local_rto_seconds": 30,
+  "stable_path_contract": [
+    "/healthz",
+    "/readyz",
+    "/api/v1/runs",
+    "/api/v1/audit-events",
+    "/api/v1/audit-events/integrity"
+  ]
+}

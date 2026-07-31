@@ -352,3 +352,9 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - SQLite v1-v9 and PostgreSQL v1-v9 all preserve the historical audit event and current hash chain after upgrade to schema v9.
 - 383 installed-wheel tests and 383 PostgreSQL tests pass; OCI, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability pass.
 - Exact-head CI, remote review and merge of PR #39 remain pending. No production migration has been executed.
+
+## 2026-07-31 — PR #39 merged; INC-031 rebuilt
+
+- INC-030 revision 2 is done after canonical history refs, optimization-safe checks, 384 wheel/384 PostgreSQL tests, run 30660276585 8/8 and squash merge fe75c5f563e97cda38f4fe0a7c05f9c455000474.
+- INC-031 workload rollback drill is rebuilt on the merged API/schema stack and begins with fresh Graph Harness evidence.
+- Production rollback, deployment, restore and external traffic mutation remain separately human-gated.

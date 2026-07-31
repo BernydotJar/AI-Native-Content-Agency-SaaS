@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 18,
-  "event_count": 351,
-  "last_event_id": "328c1663-55f6-4479-af01-4558af774e0e",
+  "event_count": 360,
+  "last_event_id": "0abe235b-4d61-4c5c-8947-79f69802c14c",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -895,6 +895,12 @@
           "result": "PASS",
           "sha256": "85116d92b2b8581b29ee0934de7c8718a64996f55e0d67373ba72c360eb44e7b"
         },
+        "0d8b3cf6-ea00-45fe-804c-ca885297efce": {
+          "artifact": "PR #39 merge receipt and program/reports/inc-030-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "40a81eeb803ca1aea89feae262f6359e0923c0eadf937042bc1eed6fbb635b04"
+        },
         "82205398-e91a-4348-97d2-2ed9e5cc971d": {
           "artifact": "program/reports/inc-030-production-review.md",
           "kind": "production",
@@ -921,6 +927,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "0d8b3cf6-ea00-45fe-804c-ca885297efce"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "cd09bb41-7823-4c3f-828b-40bd3f90d0a6",
@@ -947,9 +959,31 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "10fcc06b-6e6a-470f-9526-f6e6603f6bc9",
+      "last_event_id": "c5603341-9be2-413b-a084-2ea66be4b950",
       "revision": 2,
-      "status": "review"
+      "status": "done"
+    },
+    "INC-031": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "8b4ef3ef-ca93-4e81-8348-17e9d158cf28": {
+          "artifact": "specs/031-workload-rollback-drill and contracts/workload-rollback-v1.json",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "9c84ca411f68818144b04e9fd598392172ee929029e8831f309ad19106f69b00"
+        }
+      },
+      "gates": {
+        "spec-gate": {
+          "evidence_ids": [
+            "8b4ef3ef-ca93-4e81-8348-17e9d158cf28"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "0abe235b-4d61-4c5c-8947-79f69802c14c",
+      "revision": 0,
+      "status": "running"
     },
     "INC-038": {
       "active_approval_count": 0,
