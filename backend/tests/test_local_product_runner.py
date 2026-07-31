@@ -114,6 +114,44 @@ class LocalProductRunnerTests(unittest.TestCase):
         self.assertNotEqual(denied.returncode, 0)
         self.assertIn("refuses non-loopback host", denied.stderr)
 
+    def test_runner_validates_authenticated_request_quota(self):
+        base = {
+            "PATH": "/usr/local/bin:/usr/bin:/bin",
+            "AGENCY_PYTHON_BIN": sys.executable,
+            "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+            "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL": "25",
+            "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT": "250",
+            "AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS": "30",
+        }
+        completed = subprocess.run(
+            [str(SCRIPT), "--check"], cwd=ROOT, env=base,
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("authenticated_request_principal_limit=25", completed.stdout)
+        self.assertIn("authenticated_request_tenant_limit=250", completed.stdout)
+        self.assertIn("authenticated_request_window_seconds=30", completed.stdout)
+
+        non_numeric = subprocess.run(
+            [str(SCRIPT), "--check"], cwd=ROOT,
+            env={**base, "AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS": "sixty"},
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+        self.assertNotEqual(non_numeric.returncode, 0)
+        self.assertIn("must be integers", non_numeric.stderr)
+
+        invalid_dependency = subprocess.run(
+            [str(SCRIPT), "--check"], cwd=ROOT,
+            env={
+                **base,
+                "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL": "100",
+                "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT": "99",
+            },
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+        self.assertNotEqual(invalid_dependency.returncode, 0)
+        self.assertIn("between the principal limit", invalid_dependency.stderr)
+
     def test_runner_accepts_rotation_safe_public_media_keyring_without_printing_secrets(self):
         secret = base64.urlsafe_b64encode(bytes(range(32))).decode("ascii").rstrip("=")
         with tempfile.TemporaryDirectory() as tempdir:

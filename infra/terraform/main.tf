@@ -116,6 +116,21 @@ resource "helm_release" "app" {
   }
 
   set {
+    name  = "runtime.auth.authenticatedRequestMaxPerPrincipal"
+    value = tostring(var.authenticated_request_max_per_principal)
+  }
+
+  set {
+    name  = "runtime.auth.authenticatedRequestMaxPerTenant"
+    value = tostring(var.authenticated_request_max_per_tenant)
+  }
+
+  set {
+    name  = "runtime.auth.authenticatedRequestWindowSeconds"
+    value = tostring(var.authenticated_request_window_seconds)
+  }
+
+  set {
     name  = "runtime.proxy.forwardedAllowIps"
     value = var.forwarded_allow_ips
   }
@@ -354,6 +369,11 @@ resource "helm_release" "app" {
     precondition {
       condition     = var.login_source_max_failures >= var.login_max_failures
       error_message = "login_source_max_failures must be greater than or equal to login_max_failures."
+    }
+
+    precondition {
+      condition     = var.authenticated_request_max_per_tenant >= var.authenticated_request_max_per_principal
+      error_message = "authenticated_request_max_per_tenant must be greater than or equal to authenticated_request_max_per_principal."
     }
 
     precondition {

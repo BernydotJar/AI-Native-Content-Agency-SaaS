@@ -257,6 +257,15 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-026",
+      "status": "blocked"
+    },
+    {
+      "depends_on": [
+        "INC-003",
+        "INC-004"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-027",
       "status": "review"
     }
   ],

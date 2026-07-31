@@ -1,9 +1,11 @@
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "evaluate-supply-chain.py"
+ROOT = Path(__file__).resolve().parents[2]
+MODULE_PATH = ROOT / "scripts" / "evaluate-supply-chain.py"
 SPEC = importlib.util.spec_from_file_location("evaluate_supply_chain", MODULE_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError("could not load supply-chain policy evaluator")
@@ -112,6 +114,35 @@ class SupplyChainPolicyTests(unittest.TestCase):
         )
         self.assertEqual(errors, [])
         self.assertEqual(len(summary["accepted_fix_exceptions"]), 1)
+
+    def test_python_tarfile_fix_exceptions_require_no_runtime_surface(self):
+        baseline = json.loads(
+            (ROOT / "artifacts/supply-chain/vulnerability-baseline.json").read_text()
+        )
+        accepted = {
+            item["vulnerability"]: item for item in baseline["accepted"]
+        }
+        for vulnerability in ("CVE-2026-11940", "CVE-2026-11972"):
+            entry = accepted[vulnerability]
+            self.assertEqual(entry["package"], "python")
+            self.assertEqual(entry["version"], "3.13.14")
+            self.assertIn("3.15.0b4", entry["reason"])
+            self.assertIn("2026-08-21", entry["fix_exception"])
+            self.assertIn("runtime tarfile-surface test", entry["fix_exception"])
+
+        forbidden = (
+            "import tarfile",
+            "from tarfile",
+            "tarfile.open(",
+            ".extractall(",
+            ".extract(",
+        )
+        runtime_files = sorted((ROOT / "backend/agency_runtime").rglob("*.py"))
+        self.assertTrue(runtime_files)
+        for path in runtime_files:
+            source = path.read_text(encoding="utf-8")
+            for token in forbidden:
+                self.assertNotIn(token, source, f"{path} introduced {token}")
 
     def test_denied_missing_and_stale_license_exceptions_are_rejected(self):
         _, errors = POLICY.evaluate_licenses(

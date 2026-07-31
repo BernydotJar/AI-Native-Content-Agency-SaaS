@@ -91,6 +91,9 @@ grep -q 'prometheus.io/scrape' "$TMP_DIR/rendered.yaml"
 grep -q 'containerPort: 8080' "$TMP_DIR/rendered.yaml"
 grep -q 'name: AGENCY_IDENTITY_CREDENTIALS_JSON' "$TMP_DIR/rendered.yaml"
 grep -q 'name: AGENCY_LOGIN_SOURCE_MAX_FAILURES' "$TMP_DIR/rendered.yaml"
+grep -A1 'name: AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL' "$TMP_DIR/rendered.yaml" | grep -q 'value: "600"'
+grep -A1 'name: AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT' "$TMP_DIR/rendered.yaml" | grep -q 'value: "6000"'
+grep -A1 'name: AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS' "$TMP_DIR/rendered.yaml" | grep -q 'value: "60"'
 grep -q 'name: FORWARDED_ALLOW_IPS' "$TMP_DIR/rendered.yaml"
 grep -q 'name: AGENCY_MEMORY_DB' "$TMP_DIR/rendered.yaml"
 if grep -q 'name: AGENCY_DATABASE_URL' "$TMP_DIR/rendered.yaml"; then
@@ -230,6 +233,15 @@ if "$HELM_BIN" template agency "$CHART_PATH" \
   printf 'Helm source rate-limit guard did not fail\n' >&2
   exit 3
 fi
+if "$HELM_BIN" template agency "$CHART_PATH" \
+  --set runtime.auth.authenticatedRequestMaxPerPrincipal=100 \
+  --set runtime.auth.authenticatedRequestMaxPerTenant=99 >/dev/null 2>&1; then
+  printf 'Helm authenticated request quota dependency guard did not fail\n' >&2
+  exit 3
+fi
+printf 'authenticated_request_quota_render=pass\n'
+printf 'authenticated_request_quota_guard=pass\n'
+
 if "$HELM_BIN" template agency "$CHART_PATH" \
   --set runtime.storage.backend=sqlite \
   --set replicaCount=2 >/dev/null 2>&1; then
@@ -669,6 +681,7 @@ assert health == {
     "model_effect_authority_enabled": False,
     "auth_configured": True,
     "individual_identity_configured": True,
+    "authenticated_request_quota_enabled": True,
 }
 assert ready["status"] == "ready"
 assert ready["auth_configured"] is True
@@ -678,6 +691,11 @@ assert "credential_count" not in ready
 assert ready["login_rate_limit"] == {
     "credential_max_failures": 3,
     "source_max_failures": 10,
+    "window_seconds": 60,
+}
+assert ready["authenticated_request_quota"] == {
+    "principal_max_requests": 600,
+    "tenant_max_requests": 6000,
     "window_seconds": 60,
 }
 assert viewer_create_status == "403"
@@ -751,6 +769,7 @@ assert "agency_runs_started_total 1" in metrics
 assert 'agency_greenlight_decisions_total{decision="approved"} 1' in metrics
 assert 'agency_browser_sessions_total{action="created"} 1' in metrics
 assert 'agency_authentication_attempts_total{outcome="succeeded"} 7' in metrics
+assert 'agency_authenticated_request_quota_total{outcome="allowed"}' in metrics
 assert "x-request-id: package-session-0001" in session_headers
 assert "x-request-id: package-create-0001" in run_headers
 assert "x-request-id: package-approve-0001" in approval_headers
@@ -771,6 +790,7 @@ print("model_effect_default_disabled=pass")
 print("sandbox_package=pass")
 print("durable_audit=pass")
 print("prometheus_metrics=pass")
+print("authenticated_request_quota_package=pass")
 print("session_revocation=pass")
 print("external_side_effects_enabled=false")
 PYCHECK

@@ -177,3 +177,7 @@ GitHub Action and disabled external-candidate inventory in
 release denied while human privacy/legal decisions remain unresolved.
 
 - `cryptography@49.0.0` is pinned and its Syft-reported `Apache-2.0 OR BSD-3-Clause` metadata is mapped exactly to the two allowlisted licenses; version/report drift fails closed.
+
+### Temporary Python tarfile exceptions — 2026-07-30
+
+`CVE-2026-11940` and `CVE-2026-11972` are accepted only until the current baseline expires on 2026-08-21. The scanner advertises Python 3.15.0b4, a pre-release outside the supported Python 3.13 runtime line. The application does not import `tarfile`, accept tar archives, or expose archive extraction. `test_python_tarfile_fix_exceptions_require_no_runtime_surface` makes that absence an executable condition of the exception. A stable compatible base image, a new tar-processing feature, or baseline expiry invalidates the acceptance and requires a new security review.

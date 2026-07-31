@@ -113,10 +113,13 @@ x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels
 instagram_app_id_secret_key      = "instagram-app-id"
 instagram_app_secret_secret_key  = "instagram-app-secret"
 instagram_redirect_uri           = "http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback"
-login_max_failures               = 5
-login_source_max_failures        = 50
-login_window_seconds             = 300
-forwarded_allow_ips              = "127.0.0.1"
+login_max_failures                        = 5
+login_source_max_failures                 = 50
+login_window_seconds                      = 300
+authenticated_request_max_per_principal   = 600
+authenticated_request_max_per_tenant      = 6000
+authenticated_request_window_seconds      = 60
+forwarded_allow_ips                       = "127.0.0.1"
 session_cookie_secure            = false
 helm_wait                        = false
 helm_timeout_seconds             = 60
@@ -294,6 +297,9 @@ assert identity == {
 assert environment["AGENCY_LOGIN_MAX_FAILURES"]["value"] == "5"
 assert environment["AGENCY_LOGIN_SOURCE_MAX_FAILURES"]["value"] == "50"
 assert environment["AGENCY_LOGIN_WINDOW_SECONDS"]["value"] == "300"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL"]["value"] == "600"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT"]["value"] == "6000"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS"]["value"] == "60"
 assert environment["FORWARDED_ALLOW_IPS"]["value"] == "127.0.0.1"
 for name, key in {
     "AGENCY_X_CONSUMER_KEY": "x-consumer-key",
@@ -398,10 +404,13 @@ x_redirect_uri                   = "http://127.0.0.1:4175/api/v1/social-channels
 instagram_app_id_secret_key      = "instagram-app-id"
 instagram_app_secret_secret_key  = "instagram-app-secret"
 instagram_redirect_uri           = "http://127.0.0.1:4175/api/v1/social-channels/instagram/oauth/callback"
-login_max_failures               = 5
-login_source_max_failures        = 50
-login_window_seconds             = 300
-forwarded_allow_ips              = "127.0.0.1"
+login_max_failures                        = 5
+login_source_max_failures                 = 50
+login_window_seconds                      = 300
+authenticated_request_max_per_principal   = 600
+authenticated_request_max_per_tenant      = 6000
+authenticated_request_window_seconds      = 60
+forwarded_allow_ips                       = "127.0.0.1"
 session_cookie_secure            = false
 helm_wait                        = false
 helm_timeout_seconds             = 60
@@ -474,6 +483,9 @@ assert environment["AGENCY_DATABASE_POOL_MIN_SIZE"]["value"] == "1"
 assert environment["AGENCY_DATABASE_POOL_MAX_SIZE"]["value"] == "8"
 assert environment["AGENCY_DATABASE_CONNECT_TIMEOUT_SECONDS"]["value"] == "20"
 assert environment["AGENCY_POSTGRES_SCHEMA_MODE"]["value"] == "validate"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL"]["value"] == "600"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT"]["value"] == "6000"
+assert environment["AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS"]["value"] == "60"
 assert environment["AGENCY_X_CONSUMER_KEY"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
 assert environment["AGENCY_INSTAGRAM_APP_SECRET"]["valueFrom"]["secretKeyRef"]["name"] == "ai-native-content-agency-social"
 assert environment["AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON"]["valueFrom"]["secretKeyRef"]["key"] == "social-token-encryption-keys.json"
@@ -538,6 +550,7 @@ printf 'postgresql_multi_replica_configuration=pass\n'
 printf 'terraform_postgresql_url_in_state=false\n'
 printf 'terraform_postgresql_plan_apply_destroy=pass\n'
 printf 'identity_rbac_configuration=pass\n'
+printf 'authenticated_request_quota_configuration=pass\n'
 printf 'model_effect_default_disabled=pass\n'
 printf 'model_provider_secret_refs=pass\n'
 printf 'public_media_keyring_secret_refs=pass\n'

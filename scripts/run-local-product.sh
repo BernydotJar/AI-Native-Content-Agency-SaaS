@@ -181,6 +181,9 @@ if [[ -z "${AGENCY_SESSION_COOKIE_SECURE+x}" ]]; then
   fi
 fi
 export FORWARDED_ALLOW_IPS=127.0.0.1
+export AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL="${AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL:-600}"
+export AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT="${AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT:-6000}"
+export AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS="${AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS:-60}"
 
 if [[ "$MODE" == "check" ]]; then
   printf 'local_product_config=pass\n'
@@ -192,6 +195,26 @@ if [[ "$MODE" == "check" ]]; then
   printf 'python_version=%s\n' "$PYTHON_VERSION"
   printf 'identity_source=%s\n' "$([[ -n "$GENERATED_LOCAL_KEY" ]] && printf ephemeral || printf environment)"
   printf 'session_cookie_secure=%s\n' "$AGENCY_SESSION_COOKIE_SECURE"
+  quota_principal="$AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL"
+  quota_tenant="$AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT"
+  quota_window="$AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS"
+  for quota_value in "$quota_principal" "$quota_tenant" "$quota_window"; do
+    case "$quota_value" in
+      ''|*[!0-9]*) fail "authenticated request quota values must be integers" ;;
+    esac
+  done
+  if [ "$quota_principal" -lt 10 ] || [ "$quota_principal" -gt 100000 ]; then
+    fail "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_PRINCIPAL must be between 10 and 100000"
+  fi
+  if [ "$quota_tenant" -lt "$quota_principal" ] || [ "$quota_tenant" -gt 1000000 ]; then
+    fail "AGENCY_AUTHENTICATED_REQUEST_MAX_PER_TENANT must be between the principal limit and 1000000"
+  fi
+  if [ "$quota_window" -lt 1 ] || [ "$quota_window" -gt 3600 ]; then
+    fail "AGENCY_AUTHENTICATED_REQUEST_WINDOW_SECONDS must be between 1 and 3600"
+  fi
+  printf 'authenticated_request_principal_limit=%s\n' "$quota_principal"
+  printf 'authenticated_request_tenant_limit=%s\n' "$quota_tenant"
+  printf 'authenticated_request_window_seconds=%s\n' "$quota_window"
   public_media_base_url="${AGENCY_PUBLIC_MEDIA_BASE_URL:-}"
   public_media_signing_keys="${AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON:-}"
   public_media_active_key="${AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID:-}"

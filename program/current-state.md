@@ -309,3 +309,13 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Historical PRs #2-#11 and issue #1 are closed as superseded; none was merged and no branch was deleted.
 - Live `main` protection remains unchanged: one approving review, last-push approval and four obsolete required checks.
 - `INC-026` is `blocked` pending explicit human authority to change branch protection / merge policy.
+
+## INC-027 authenticated request quota
+
+- Status: `blocked`, revision 4; exact-head run `30525081524` passed 8/8 on `3e23089afb99e066211762e831dbd75d1275f6da`; only parent PR #35 and explicit merge/branch-protection authority remain.
+- Durable hashed principal and tenant fixed-window buckets execute after authentication and before CSRF/authorization auditing.
+- The first configured requests pass; the next returns safe HTTP 429 with `Retry-After` and adds no denial-audit row.
+- PostgreSQL schema v8 shares quota across replicas; migration, least privilege, backup/restore, OCI, Helm, Terraform and K3s evidence pass.
+- Four localized repairs affected only INC-027: stale schema/cardinality assertions, raw DB-API test access, obsolete package health assertions and two newly fixable Python tarfile findings.
+- Supply chain passes with `source_dirty=false`; three exact Python compatibility exceptions expire on 2026-08-21 and the runtime tarfile-surface guard passes.
+- Release and cloud recommendations remain `DENY_RELEASE` and `DENY_APPLY`.

@@ -18,6 +18,7 @@ TABLES = (
     "audit_events",
     "runtime_sessions",
     "authentication_failures",
+    "authenticated_request_rate_limits",
     "memories",
     "social_oauth_states",
     "social_connections",
@@ -27,6 +28,7 @@ TARGET_TABLES = (
     "audit_events",
     "runtime_sessions",
     "authentication_rate_limits",
+    "authenticated_request_rate_limits",
     "memories",
     "social_oauth_states",
     "social_connections",
@@ -235,6 +237,26 @@ def migrate_rate_limits(
     return len(records), len(grouped)
 
 
+def migrate_authenticated_request_rate_limits(
+    source: sqlite3.Connection, target: Any
+) -> int:
+    records = rows(source, "authenticated_request_rate_limits")
+    for row in records:
+        target.execute(
+            """
+            INSERT INTO authenticated_request_rate_limits(
+                bucket_hash, window_started_at, request_count
+            ) VALUES (%s, %s, %s)
+            """,
+            (
+                row["bucket_hash"],
+                _datetime(str(row["window_started_at"])),
+                int(row["request_count"]),
+            ),
+        )
+    return len(records)
+
+
 def migrate_memories(
     source: sqlite3.Connection, target: Any
 ) -> int:
@@ -328,6 +350,7 @@ def verify_migration(
         "runtime_runs": "runtime_runs",
         "audit_events": "audit_events",
         "runtime_sessions": "runtime_sessions",
+        "authenticated_request_rate_limits": "authenticated_request_rate_limits",
         "memories": "memories",
         "social_oauth_states": "social_oauth_states",
         "social_connections": "social_connections",
@@ -425,6 +448,9 @@ def main() -> int:
                 "runtime_runs": migrate_runs(source, target),
                 "audit_events": migrate_audit(source, target),
                 "runtime_sessions": migrate_sessions(source, target),
+                "authenticated_request_rate_limits": migrate_authenticated_request_rate_limits(
+                    source, target
+                ),
                 "memories": migrate_memories(source, target),
                 "social_oauth_states": migrate_social_oauth_states(source, target),
                 "social_connections": migrate_social_connections(source, target),
