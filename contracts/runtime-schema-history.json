@@ -1,0 +1,60 @@
+{
+  "schema_version": "agency-runtime-schema-history.v2",
+  "current_version": 9,
+  "versions": [
+    {
+      "version": 1,
+      "commit": "df7fc7f878d8beb34fc956746a6bdfe34794f9f0",
+      "ref": "refs/tags/runtime-schema-v1",
+      "capability": "separate PostgreSQL schema and runtime authority"
+    },
+    {
+      "version": 2,
+      "commit": "e3bca9c95a3080e1e7677454996d9ad56469b4f4",
+      "ref": "refs/tags/runtime-schema-v2",
+      "capability": "encrypted social OAuth account connections"
+    },
+    {
+      "version": 3,
+      "commit": "8eb0cf7dee9b3400351a8b7d603a94666253f1e7",
+      "ref": "refs/tags/runtime-schema-v3",
+      "capability": "durable exact-once social publication intents"
+    },
+    {
+      "version": 4,
+      "commit": "6eb7fa070bcbe71c840ca316fc86d369d9d1691b",
+      "ref": "refs/tags/runtime-schema-v4",
+      "capability": "durable model effect authority"
+    },
+    {
+      "version": 5,
+      "commit": "798d68dab228d0445c3d31bb5c4ce6ad73da93f1",
+      "ref": "refs/tags/runtime-schema-v5",
+      "capability": "governed publication media and verified receipts"
+    },
+    {
+      "version": 6,
+      "commit": "2315ac32f63958b83f26754e95a88f18b65028a6",
+      "ref": "refs/tags/runtime-schema-v6",
+      "capability": "durable political compliance authority"
+    },
+    {
+      "version": 7,
+      "commit": "de4c93fd5c7a91651aaf7814bf117c18eb619ef3",
+      "ref": "refs/tags/runtime-schema-v7",
+      "capability": "rotation-safe public media signing key identifiers"
+    },
+    {
+      "version": 8,
+      "commit": "98babac2f12389866ba90d2d251e9dd1f038e48d",
+      "ref": "refs/tags/runtime-schema-v8",
+      "capability": "durable authenticated request quotas"
+    },
+    {
+      "version": 9,
+      "commit": "fd232f5254adae26cdbbb2c419ad03486444c56c",
+      "ref": "refs/tags/runtime-schema-v9",
+      "capability": "per-tenant audit hash chains and durable heads"
+    }
+  ]
+}
