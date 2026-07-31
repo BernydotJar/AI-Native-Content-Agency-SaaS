@@ -215,6 +215,18 @@ if [[ "$MODE" == "check" ]]; then
   printf 'authenticated_request_principal_limit=%s\n' "$quota_principal"
   printf 'authenticated_request_tenant_limit=%s\n' "$quota_tenant"
   printf 'authenticated_request_window_seconds=%s\n' "$quota_window"
+  audit_checkpoint_keys="${AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON:-}"
+  audit_checkpoint_active_key="${AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID:-}"
+  if { [ -n "$audit_checkpoint_keys" ] && [ -z "$audit_checkpoint_active_key" ]; } || \
+     { [ -z "$audit_checkpoint_keys" ] && [ -n "$audit_checkpoint_active_key" ]; }; then
+    fail "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON and AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID must be configured together"
+  fi
+  if [ -n "$audit_checkpoint_keys" ]; then
+    printf 'audit_checkpoint_signing_configured=true\n'
+    printf 'audit_checkpoint_active_key_id=%s\n' "$audit_checkpoint_active_key"
+  else
+    printf 'audit_checkpoint_signing_configured=false\n'
+  fi
   public_media_base_url="${AGENCY_PUBLIC_MEDIA_BASE_URL:-}"
   public_media_signing_keys="${AGENCY_PUBLIC_MEDIA_SIGNING_KEYS_JSON:-}"
   public_media_active_key="${AGENCY_PUBLIC_MEDIA_ACTIVE_SIGNING_KEY_ID:-}"

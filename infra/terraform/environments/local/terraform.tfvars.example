@@ -28,6 +28,11 @@ session_cookie_secure           = true
 helm_wait                       = true
 helm_timeout_seconds            = 300
 
+# Signed audit checkpoints are optional and reference a pre-provisioned Secret only.
+audit_checkpoint_existing_secret          = ""
+audit_checkpoint_signing_keys_json_key    = "audit-checkpoint-signing-keys.json"
+audit_checkpoint_active_key_id_key        = "audit-checkpoint-active-key-id"
+
 # Public media delivery is optional and references a pre-provisioned Secret only.
 public_media_base_url                 = ""
 public_media_ttl_seconds              = 86400

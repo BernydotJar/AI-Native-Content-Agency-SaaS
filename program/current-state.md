@@ -319,3 +319,24 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Four localized repairs affected only INC-027: stale schema/cardinality assertions, raw DB-API test access, obsolete package health assertions and two newly fixable Python tarfile findings.
 - Supply chain passes with `source_dirty=false`; three exact Python compatibility exceptions expire on 2026-08-21 and the runtime tarfile-surface guard passes.
 - Release and cloud recommendations remain `DENY_RELEASE` and `DENY_APPLY`.
+
+## INC-028 audit ledger integrity
+
+- Status: `running`, revision 4; local implementation and production gates pass, exact-head CI pending.
+- SQLite and PostgreSQL schema v9 maintain per-tenant SHA-256 chains plus durable heads, detecting field mutation, deletion, truncation and reordering.
+- PostgreSQL serializes only same-tenant appends and verifies the chain across replicas.
+- Existing rows backfill deterministically; SQLite-to-PostgreSQL migration recomputes hashes and backup/restore preserves events plus heads.
+- Optional HMAC-SHA256 checkpoints expose event count, head event/hash, key ID and signature only to `audit:read` identities.
+- Helm/Terraform use Secret refs only; package and K3s gates prove no signing material in render or Terraform state.
+- Four localized repairs affected only INC-028: canonical base64url enforcement, AuditWrite/AuditEvent model placement, schema-v9 restoration and API fixture creation.
+- Immutable off-host custody, KMS/HSM and legal non-repudiation remain external; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
+
+## 2026-07-31 — Ordered governance/quota merge and audit-integrity reconstruction
+
+- The live `main` protection now matches the committed single-owner policy: zero approving reviews, no last-push approval, strict eight-job checks, PR requirement, admin enforcement, linear history, conversation resolution, and no force-push/deletion.
+- PR #35 merged as `dc9b10e754c015a5bb8c251e8f9aa8732639ff41`; `INC-026` close-gate is PASS and the node is `done`.
+- PR #36 review found and repaired session-quota bypass and raw-tenant 429 logging. Exact-head run `30599987747` passed 8/8, threads were resolved, and PR #36 merged as `e73823de4556955d8db00dfbc10ba83db82f00fa`; `INC-027` revision 5 is `done`.
+- PR #37 audit-integrity code was reconstructed by three-way merge on the merged quota base. Historical Graph Harness projections were discarded; current `INC-028` revision 0 is the sole execution authority.
+- Development-tree verification passes: 372 locked-wheel tests, 372 PostgreSQL tests with schema v9/migration/backup/restore, non-root OCI package, 58 frontend tests, lint/build, governance, compliance and operability.
+- Exact-head CI and PR review for the rebuilt #37 head remain pending. Immutable external audit custody and production key operations remain unauthorized.
+- Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain `0`.

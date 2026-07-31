@@ -10,12 +10,14 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
-from agency_runtime.postgres import PostgresRuntimeDatabase, _datetime
+from agency_runtime.audit_integrity import GENESIS_AUDIT_HASH, audit_event_hash
+from agency_runtime.postgres import PostgresRunStore, PostgresRuntimeDatabase, _datetime
 from agency_runtime.utils import canonical_json
 
 TABLES = (
     "runtime_runs",
     "audit_events",
+    "audit_chain_heads",
     "runtime_sessions",
     "authentication_failures",
     "authenticated_request_rate_limits",
@@ -124,26 +126,82 @@ def migrate_runs(
 def migrate_audit(
     source: sqlite3.Connection, target: Any
 ) -> int:
-    records = rows(source, "audit_events")
+    if "audit_events" not in source_tables(source):
+        return 0
+    records = source.execute(
+        "SELECT * FROM audit_events ORDER BY tenant_id ASC, sequence ASC"
+    ).fetchall()
+    columns = {
+        str(row["name"])
+        for row in source.execute("PRAGMA table_info(audit_events)").fetchall()
+    }
+    previous_by_tenant: dict[str, str] = {}
+    count_by_tenant: dict[str, int] = {}
+    head_event_by_tenant: dict[str, str] = {}
     for row in records:
+        tenant_id = str(row["tenant_id"])
+        previous_hash = previous_by_tenant.get(tenant_id, GENESIS_AUDIT_HASH)
+        payload = parsed_json(row["payload_json"], expected=dict)
+        occurred_text = _datetime(str(row["occurred_at"])).isoformat()
+        event_hash = audit_event_hash(
+            event_id=str(row["event_id"]),
+            tenant_id=tenant_id,
+            request_id=str(row["request_id"]),
+            occurred_at=occurred_text,
+            action=str(row["action"]),
+            resource_type=str(row["resource_type"]),
+            resource_id=str(row["resource_id"]),
+            actor=str(row["actor"]),
+            payload=payload,
+            previous_hash=previous_hash,
+        )
+        if "previous_hash" in columns and row["previous_hash"]:
+            if str(row["previous_hash"]) != previous_hash:
+                raise RuntimeError("SQLite audit previous hash failed migration verification")
+        if "event_hash" in columns and row["event_hash"]:
+            if str(row["event_hash"]) != event_hash:
+                raise RuntimeError("SQLite audit event hash failed migration verification")
         target.execute(
             """
             INSERT INTO audit_events(
                 sequence, event_id, tenant_id, request_id, occurred_at, action,
-                resource_type, resource_id, actor, payload_json
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))
+                resource_type, resource_id, actor, payload_json,
+                previous_hash, event_hash
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                CAST(%s AS jsonb), %s, %s
+            )
             """,
             (
                 row["sequence"],
                 row["event_id"],
-                row["tenant_id"],
+                tenant_id,
                 row["request_id"],
                 _datetime(str(row["occurred_at"])),
                 row["action"],
                 row["resource_type"],
                 row["resource_id"],
                 row["actor"],
-                canonical_json(parsed_json(row["payload_json"], expected=dict)),
+                canonical_json(payload),
+                previous_hash,
+                event_hash,
+            ),
+        )
+        previous_by_tenant[tenant_id] = event_hash
+        count_by_tenant[tenant_id] = count_by_tenant.get(tenant_id, 0) + 1
+        head_event_by_tenant[tenant_id] = str(row["event_id"])
+    for tenant_id, event_count in count_by_tenant.items():
+        target.execute(
+            """
+            INSERT INTO audit_chain_heads(
+                tenant_id, event_count, head_event_id, head_hash
+            ) VALUES (%s, %s, %s, %s)
+            """,
+            (
+                tenant_id,
+                event_count,
+                head_event_by_tenant[tenant_id],
+                previous_by_tenant[tenant_id],
             ),
         )
     target.execute(
@@ -373,6 +431,26 @@ def verify_migration(
             "source": migrated_failure_events,
             "target": target_failure_events,
         }
+    with database.pool.connection() as connection:
+        tenants = [
+            str(row["tenant_id"])
+            for row in connection.execute(
+                "SELECT DISTINCT tenant_id FROM audit_events ORDER BY tenant_id"
+            ).fetchall()
+        ]
+        head_count = int(
+            connection.execute(
+                "SELECT COUNT(*) AS total FROM audit_chain_heads"
+            ).fetchone()["total"]
+        )
+    if head_count != len(tenants):
+        mismatches["audit_chain_heads"] = {
+            "source": len(tenants),
+            "target": head_count,
+        }
+    audit_store = PostgresRunStore(database)
+    for tenant_id in tenants:
+        audit_store.verify_audit_chain(tenant_id)
     if mismatches:
         raise RuntimeError(
             "migration count verification failed: {}".format(

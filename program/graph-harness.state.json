@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 15,
-  "event_count": 247,
-  "last_event_id": "676d7f34-5331-4e58-b0e7-5107db66de12",
+  "event_count": 262,
+  "last_event_id": "561a3f36-c044-49a4-a321-c3786846776a",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -586,6 +586,12 @@
           "result": "PASS",
           "sha256": "7df8455290eb0a0ddd7085bf6988a084d6cd608f59836b228675acd32deba922"
         },
+        "8d11f6b7-4826-4785-ad97-8b449471c332": {
+          "artifact": "program/reports/inc-026-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "08fe31652e64fda0632c5df1cd24d2bf44d54ebe39b87a11ff92de5f8d3f8097"
+        },
         "c77ff898-2534-49d8-9974-2bbc996363b4": {
           "artifact": "program/reports/inc-026-superseded-work-audit.md",
           "kind": "review",
@@ -612,6 +618,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "8d11f6b7-4826-4785-ad97-8b449471c332"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "5f8d544d-df9e-450f-8e88-c84a01eb62a2",
@@ -639,9 +651,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "e268bfce-3151-45a9-849b-f876c1c3c91f",
+      "last_event_id": "bb8a72d8-b656-458f-b571-bb380c5907c6",
       "revision": 0,
-      "status": "blocked"
+      "status": "done"
     },
     "INC-027": {
       "active_approval_count": 0,
@@ -657,6 +669,12 @@
           "kind": "verification",
           "result": "PASS",
           "sha256": "ecd10b55ca2bf7175103fdf54d1541429c9953b0d93099f73ee51719f7e2f4f6"
+        },
+        "9200b7d5-f7e1-4775-838d-51125e142a6b": {
+          "artifact": "program/reports/inc-027-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "73c5d7192a34ce8987c4266ef7de6c7fa9cf9c994c4ed64ece3b5665cbed41d1"
         },
         "be2cf46e-a4a2-46d2-8cd6-8e84632d3c8b": {
           "artifact": "program/reports/inc-027-production-review.md",
@@ -678,6 +696,12 @@
         }
       },
       "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "9200b7d5-f7e1-4775-838d-51125e142a6b"
+          ],
+          "result": "PASS"
+        },
         "implementation-gate": {
           "evidence_ids": [
             "cf18fb08-4551-46be-962c-30b5ffe0a9f7",
@@ -704,9 +728,31 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "676d7f34-5331-4e58-b0e7-5107db66de12",
+      "last_event_id": "c86d2bba-0883-47e4-9730-eda51f4e7d90",
       "revision": 5,
-      "status": "review"
+      "status": "done"
+    },
+    "INC-028": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "5011422e-7ad3-42f6-8066-a40bd502107c": {
+          "artifact": "specs/028-audit-ledger-integrity",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "5640a488f01e57ef81e6cc87d9a9cfcde12905e9b8273a3d68ec5a419041bafe"
+        }
+      },
+      "gates": {
+        "spec-gate": {
+          "evidence_ids": [
+            "5011422e-7ad3-42f6-8066-a40bd502107c"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "561a3f36-c044-49a4-a321-c3786846776a",
+      "revision": 0,
+      "status": "running"
     },
     "INC-038": {
       "active_approval_count": 0,

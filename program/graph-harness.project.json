@@ -1779,7 +1779,7 @@
           ".github/workflows/production-readiness.yml",
           "specs/026-repository-governance-reconciliation/**"
         ],
-        "canonical_status": "blocked",
+        "canonical_status": "done",
         "human_gates": [
           "merge",
           "live branch-protection mutation",
@@ -1872,7 +1872,7 @@
           "backend/agency_runtime/observability.py",
           "specs/027-authenticated-request-quota/**"
         ],
-        "canonical_status": "review",
+        "canonical_status": "done",
         "human_gates": [
           "merge",
           "production rollout or quota tuning",
@@ -1896,6 +1896,99 @@
       },
       "status": "spec_ready",
       "title": "Bound authenticated request and denial-audit amplification with a durable per-principal and per-tenant quota shared across replicas."
+    },
+    {
+      "allowed_paths": [
+        ".env.example",
+        "backend/agency_runtime/api.py",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "backend/agency_runtime/audit_integrity.py",
+        "backend/tests/test_audit_integrity.py",
+        "backend/tests/test_observability.py",
+        "backend/tests/test_postgres_runtime.py",
+        "backend/tests/test_postgres_schema_cli.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_local_product_runner.py",
+        "docs/OPERATIONS.md",
+        "docs/runbooks/audit-ledger-integrity.md",
+        "infra/helm/ai-native-content-agency/**",
+        "infra/terraform/**",
+        "scripts/run-local-product.sh",
+        "scripts/manage-runtime-backup.py",
+        "scripts/migrate-sqlite-to-postgresql.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-production-package.sh",
+        "scripts/verify-local-infrastructure.sh",
+        "program/**",
+        "specs/028-audit-ledger-integrity/**"
+      ],
+      "capability": "Security Engineer / Database Engineer / Independent Verifier",
+      "depends_on": [
+        "INC-003",
+        "INC-004"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-028",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "all new events contain valid previous/event hashes",
+          "existing events backfill deterministically",
+          "mutation deletion reordering and linkage corruption are detected",
+          "PostgreSQL replicas append one valid tenant chain",
+          "checkpoint signature verifies with exact key ID",
+          "partial or weak key config fails startup",
+          "keys remain outside Git and Terraform state",
+          "schema v9 migration/backup/restore pass",
+          "exact-head CI passes with zero external effects"
+        ],
+        "authoritative_inputs": [
+          "program/critique-findings.json F-012",
+          "backend/agency_runtime/persistence.py",
+          "backend/agency_runtime/postgres.py",
+          "backend/agency_runtime/api.py",
+          "scripts/manage-runtime-backup.py",
+          "specs/028-audit-ledger-integrity/**"
+        ],
+        "canonical_status": "running",
+        "human_gates": [
+          "merge",
+          "production checkpoint key provisioning/rotation",
+          "immutable off-host destination",
+          "KMS/HSM custody",
+          "release"
+        ],
+        "validation_commands": [
+          "./scripts/verify-python-locks.sh",
+          "./scripts/verify-postgresql-runtime.sh",
+          "npm run validate:program && npm run validate:graph",
+          "npm run validate:compliance && npm run validate:operability",
+          "./scripts/verify-production-package.sh",
+          "./scripts/verify-local-infrastructure.sh",
+          "./scripts/verify-supply-chain.sh",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-07",
+        "write_lock": "orchestrator:INC-028"
+      },
+      "status": "spec_ready",
+      "title": "Add per-tenant cryptographic audit chaining, deterministic verification and signed exportable checkpoints without claiming immutable external custody."
     },
     {
       "allowed_paths": [
