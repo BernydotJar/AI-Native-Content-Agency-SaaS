@@ -89,6 +89,10 @@ jobs:
       - run: python -m build --no-isolation --wheel --outdir /tmp/agency-wheels backend
       - run: python -m pip install --no-deps /tmp/agency-wheels/*.whl
       - run: python -m pip check
+      - run: npm run validate:api-contract
+        env:
+          API_CONTRACT_PYTHON_BIN: python
+          API_CONTRACT_USE_INSTALLED: "1"
       - run: npm run validate:semantic-evals
         env:
           SEMANTIC_EVAL_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}

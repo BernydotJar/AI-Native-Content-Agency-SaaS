@@ -179,6 +179,73 @@ class PublicApiError(HTTPException):
         self.code = code
 
 
+class PublicErrorResponse(BaseModel):
+    """Stable public error envelope shared by every API operation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=3, max_length=64, pattern=r"^[a-z][a-z0-9_]+$")
+    detail: str = Field(min_length=1, max_length=_MAX_PUBLIC_ERROR_DETAIL)
+    request_id: str = Field(min_length=1, max_length=128)
+
+
+class ValidationErrorItem(BaseModel):
+    """Sanitized validation metadata without rejected values or exception text."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: List[str | int] = Field(max_length=16)
+    type: str = Field(min_length=1, max_length=128)
+
+
+class ValidationErrorResponse(PublicErrorResponse):
+    errors: List[ValidationErrorItem] = Field(max_length=20)
+
+
+STANDARD_ERROR_RESPONSES = {
+    status.HTTP_400_BAD_REQUEST: {
+        "model": PublicErrorResponse,
+        "description": "The request is malformed or violates a safe protocol precondition.",
+    },
+    status.HTTP_401_UNAUTHORIZED: {
+        "model": PublicErrorResponse,
+        "description": "Authentication failed.",
+    },
+    status.HTTP_403_FORBIDDEN: {
+        "model": PublicErrorResponse,
+        "description": "The authenticated principal is not authorized.",
+    },
+    status.HTTP_404_NOT_FOUND: {
+        "model": PublicErrorResponse,
+        "description": "The requested resource was not found.",
+    },
+    status.HTTP_409_CONFLICT: {
+        "model": PublicErrorResponse,
+        "description": "The request conflicts with current durable state.",
+    },
+    status.HTTP_413_CONTENT_TOO_LARGE: {
+        "model": PublicErrorResponse,
+        "description": "The request body exceeds the configured bound.",
+    },
+    status.HTTP_422_UNPROCESSABLE_CONTENT: {
+        "model": ValidationErrorResponse,
+        "description": "Request validation failed with sanitized field metadata.",
+    },
+    status.HTTP_429_TOO_MANY_REQUESTS: {
+        "model": PublicErrorResponse,
+        "description": "A durable request or authentication quota was exceeded.",
+    },
+    status.HTTP_500_INTERNAL_SERVER_ERROR: {
+        "model": PublicErrorResponse,
+        "description": "An internal failure was safely redacted.",
+    },
+    status.HTTP_503_SERVICE_UNAVAILABLE: {
+        "model": PublicErrorResponse,
+        "description": "A required runtime dependency is unavailable.",
+    },
+}
+
+
 def _error_body(code: str, detail: str, request_id: str) -> Dict[str, object]:
     return {"code": code, "detail": detail, "request_id": request_id}
 
@@ -2319,6 +2386,7 @@ def create_app(
             "execution is also disabled by default; each requires a separate server flag "
             "plus durable intent authority. Media rendering remains disabled."
         ),
+        responses=STANDARD_ERROR_RESPONSES,
         lifespan=lifespan,
     )
     app.state.runtime_service = service
@@ -2357,6 +2425,13 @@ def create_app(
     def _request_id(request: Request) -> str:
         return getattr(request.state, "request_id", request_id_from_header(None))
 
+    def _error_headers(
+        request: Request, headers: Optional[Mapping[str, str]] = None
+    ) -> Dict[str, str]:
+        merged = dict(headers or {})
+        merged["X-Request-ID"] = _request_id(request)
+        return merged
+
     @app.exception_handler(PublicApiError)
     async def public_api_error_handler(
         request: Request, error: PublicApiError
@@ -2364,7 +2439,7 @@ def create_app(
         return JSONResponse(
             status_code=error.status_code,
             content=_error_body(error.code, str(error.detail), _request_id(request)),
-            headers=error.headers,
+            headers=_error_headers(request, error.headers),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -2374,7 +2449,7 @@ def create_app(
         sanitized = []
         for item in error.errors()[:20]:
             location = []
-            for component in item.get("loc", ()):
+            for component in item.get("loc", ())[:16]:
                 if isinstance(component, int):
                     location.append(component)
                 else:
@@ -2394,6 +2469,7 @@ def create_app(
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             content=content,
+            headers=_error_headers(request),
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -2406,7 +2482,7 @@ def create_app(
         return JSONResponse(
             status_code=error.status_code,
             content=_error_body(code, detail, _request_id(request)),
-            headers=error.headers,
+            headers=_error_headers(request, error.headers),
         )
 
     @app.exception_handler(Exception)
@@ -2423,6 +2499,7 @@ def create_app(
             content=_error_body(
                 "internal_error", "internal service error", _request_id(request)
             ),
+            headers=_error_headers(request),
         )
 
     app.add_middleware(RequestBodyLimitMiddleware, max_bytes=body_limit)

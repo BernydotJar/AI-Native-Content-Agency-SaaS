@@ -439,6 +439,25 @@ curl -fsS \
   "http://127.0.0.1:${HOST_PORT}/api/v1/social-channels" \
   > "$TMP_DIR/social-channels.json"
 curl -fsS "http://127.0.0.1:${HOST_PORT}/openapi.json" > "$TMP_DIR/openapi.json"
+python3 - "$TMP_DIR/openapi.json" "$REPOSITORY_ROOT/contracts/openapi-v1.json" <<'PYAPICONTRACT'
+import hashlib
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    installed = json.load(handle)
+with open(sys.argv[2], encoding="utf-8") as handle:
+    committed = json.load(handle)
+
+def canonical(document):
+    return json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+installed_bytes = canonical(installed).encode("utf-8")
+committed_bytes = canonical(committed).encode("utf-8")
+assert installed_bytes == committed_bytes
+print("installed_api_contract=pass")
+print("api_contract_sha256=" + hashlib.sha256(installed_bytes).hexdigest())
+PYAPICONTRACT
 set +e
 social_oauth_bearer_status=$(curl -sS -o "$TMP_DIR/social-oauth-bearer-denied.json" -w '%{http_code}' \
   -X POST -H "Authorization: Bearer $AUTH_KEY" \
