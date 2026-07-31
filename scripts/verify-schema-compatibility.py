@@ -175,19 +175,24 @@ finally:
 CURRENT_SQLITE_VERIFIER = r'''
 import os
 from agency_runtime.persistence import SQLiteRunStore
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
 version = int(os.environ["SCHEMA_VERSION_UNDER_TEST"])
 store = SQLiteRunStore(os.environ["SCHEMA_DATABASE_PATH"])
 try:
     events = store.audit_events("schema-compat-tenant", 0, 10)
-    assert len(events) == 1
+    require(len(events) == 1, "historical SQLite event cardinality changed")
     event = events[0]
-    assert event.action == "schema.compatibility.created"
-    assert event.resource_id == "v{}".format(version)
-    assert event.payload == {"version": version}
+    require(event.action == "schema.compatibility.created", "historical SQLite action changed")
+    require(event.resource_id == "v{}".format(version), "historical SQLite resource changed")
+    require(event.payload == {"version": version}, "historical SQLite payload changed")
     checkpoint = store.verify_audit_chain("schema-compat-tenant")
-    assert checkpoint.event_count == 1
-    assert checkpoint.head_event_id == event.event_id
-    assert checkpoint.head_hash == event.event_hash
+    require(checkpoint.event_count == 1, "historical SQLite checkpoint count changed")
+    require(checkpoint.head_event_id == event.event_id, "historical SQLite checkpoint event changed")
+    require(checkpoint.head_hash == event.event_hash, "historical SQLite checkpoint hash changed")
 finally:
     store.close()
 '''
@@ -229,6 +234,11 @@ runtime.close()
 CURRENT_POSTGRES_VERIFIER = r'''
 import os
 from agency_runtime.postgres import PostgresRunStore, PostgresRuntimeDatabase
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
 version = int(os.environ["SCHEMA_VERSION_UNDER_TEST"])
 database = PostgresRuntimeDatabase(
     os.environ["SCHEMA_DATABASE_URL"], min_size=1, max_size=2, schema_mode="validate"
@@ -236,15 +246,15 @@ database = PostgresRuntimeDatabase(
 store = PostgresRunStore(database)
 try:
     events = store.audit_events("schema-compat-tenant", 0, 10)
-    assert len(events) == 1
+    require(len(events) == 1, "historical PostgreSQL event cardinality changed")
     event = events[0]
-    assert event.action == "schema.compatibility.created"
-    assert event.resource_id == "v{}".format(version)
-    assert event.payload == {"version": version}
+    require(event.action == "schema.compatibility.created", "historical PostgreSQL action changed")
+    require(event.resource_id == "v{}".format(version), "historical PostgreSQL resource changed")
+    require(event.payload == {"version": version}, "historical PostgreSQL payload changed")
     checkpoint = store.verify_audit_chain("schema-compat-tenant")
-    assert checkpoint.event_count == 1
-    assert checkpoint.head_event_id == event.event_id
-    assert checkpoint.head_hash == event.event_hash
+    require(checkpoint.event_count == 1, "historical PostgreSQL checkpoint count changed")
+    require(checkpoint.head_event_id == event.event_id, "historical PostgreSQL checkpoint event changed")
+    require(checkpoint.head_hash == event.event_hash, "historical PostgreSQL checkpoint hash changed")
 finally:
     store.close()
 '''

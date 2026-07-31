@@ -294,7 +294,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-030",
-      "status": "review"
+      "status": "in_progress"
     }
   ],
   "schema_version": "program-task-graph.v1",

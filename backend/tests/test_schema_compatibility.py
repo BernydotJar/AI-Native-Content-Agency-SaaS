@@ -66,6 +66,29 @@ class SchemaCompatibilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "resolves to"):
             self.module.validate_manifest(moved_ref)
 
+    def test_matrix_checks_survive_optimized_python(self):
+        for snippet_name in ("CURRENT_SQLITE_VERIFIER", "CURRENT_POSTGRES_VERIFIER"):
+            with self.subTest(snippet=snippet_name):
+                snippet = getattr(self.module, snippet_name)
+                self.assertNotRegex(snippet, r"(?m)^\s*assert\s")
+                self.assertIn("raise RuntimeError", snippet)
+
+        import os
+        environment = dict(os.environ)
+        environment["PYTHONOPTIMIZE"] = "1"
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("schema_compatibility=pass", completed.stdout)
+        self.assertIn("historical_versions=9", completed.stdout)
+
     def test_sqlite_historical_matrix_preserves_data_and_chain(self):
         completed = subprocess.run(
             [sys.executable, str(SCRIPT)],

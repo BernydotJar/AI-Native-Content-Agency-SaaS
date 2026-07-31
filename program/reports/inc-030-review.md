@@ -37,3 +37,7 @@ Clean-tree evidence, exact-head GitHub Actions, remote review and squash merge r
 ## Revision 1 — retained history refs
 
 PR review identified that early schema commits were reachable only through incidental feature branches. The repair creates canonical non-release tags `runtime-schema-v1` through `runtime-schema-v9`, records full 40-character SHAs, and requires every tag to resolve exactly to its declared commit. CI explicitly fetches only those canonical history refs before running the matrix. Missing, noncanonical or moved refs fail closed.
+
+## Revision 2 — optimization-safe invariants
+
+Re-review identified that Python `assert` statements inside the SQLite/PostgreSQL verification snippets could disappear under `PYTHONOPTIMIZE`. All cardinality, action, resource, payload and checkpoint invariants now use explicit checks that raise `RuntimeError`. A regression runs the historical matrix with `PYTHONOPTIMIZE=1`; the full installed-wheel suite now contains 384 tests.
