@@ -2022,7 +2022,7 @@
         "backend/agency_runtime/observability.py",
         "specs/027-authenticated-request-quota/**"
       ],
-      "context": "F-013 remains open: authentication failures are rate limited, but a valid principal can repeatedly trigger CSRF/authorization denials and append unbounded audit rows.",
+      "context": "Revision 5 repairs PR #36 review findings: session creation consumes the durable principal/tenant quota and rate-limited HTTP logs do not publish raw tenant identity.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -2054,7 +2054,7 @@
         "legal/privacy approval mutation",
         "branch-protection mutation"
       ],
-      "publication_state": "EXACT_HEAD_PASS_MERGE_HUMAN_GATE",
+      "publication_state": "REPAIR_VERIFIED_EXACT_HEAD_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2063,7 +2063,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Data Integrity Reviewer / Independent Verifier",
-      "status": "blocked",
+      "status": "review",
       "task_id": "INC-027",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
