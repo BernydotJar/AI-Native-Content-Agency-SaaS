@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 15,
-  "event_count": 233,
-  "last_event_id": "8daa8474-d0c7-4b8c-bf24-e4d8d0a171b5",
+  "event_count": 236,
+  "last_event_id": "27ada8db-6be7-46f6-b016-cd95f1f37e46",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -645,89 +645,11 @@
     },
     "INC-027": {
       "active_approval_count": 0,
-      "active_evidence": {
-        "4e91e5f7-6576-4afb-b115-4966cdd3ecdd": {
-          "artifact": "specs/027-authenticated-request-quota",
-          "kind": "spec",
-          "result": "PASS",
-          "sha256": "e5a758ca2595ebfadf4079e4764f2190186b42ca2b6d16de8055733eb4916846"
-        },
-        "5d61029f-43f1-4976-a44c-bbe19be79045": {
-          "artifact": "program/reports/inc-027-review.md",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "6f951eb85c9c9a6b878a41d14886b5301f418ddb5cfc5dcaed77f5ed11f810e5"
-        },
-        "65cc7391-a869-48b6-a5b4-d699ff5473ae": {
-          "artifact": "git tree 08bf16b5d4678a73dc9c4558029cc2b5eba01668",
-          "kind": "implementation",
-          "result": "PASS",
-          "sha256": "f4ef65b804bbcd76e5dc309ee33ee030650d74e80cc832d6a368ce78afbc5455"
-        },
-        "81f71687-919a-4e69-863d-45621816e24a": {
-          "artifact": "program/reports/inc-027-remote-review.md",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "56757dae1c65d773d3e589392fbf283948a6f4c18fa86b10e6defd49dc2e22ee"
-        },
-        "84d0a7a5-0d69-4cd2-960b-a2db694d9825": {
-          "artifact": "program/reports/inc-027-production-review.md",
-          "kind": "review",
-          "result": "PASS",
-          "sha256": "ee0d782f53c3e9d312ce1116ac2c4c322ce8c2cc9a82b8af7868f10fe96e6315"
-        },
-        "9429325f-1e9d-4187-80a1-5c789420e7c0": {
-          "artifact": "artifacts/supply-chain/generated/provenance.intoto.json",
-          "kind": "production",
-          "result": "PASS",
-          "sha256": "a610578359fe1f9b113c1fc84f10994253afccabbb92f53928b1d277123bc1fa"
-        },
-        "b4c09524-c2ca-46c2-b387-4281428ded9d": {
-          "artifact": "GitHub Actions run 30525081524 and retained artifacts",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "417edf58d74ddbd2b718f53c5b841f9e73809b6b80d0555e0577041ba22896a3"
-        }
-      },
-      "gates": {
-        "close-gate": {
-          "evidence_ids": [
-            "b4c09524-c2ca-46c2-b387-4281428ded9d",
-            "81f71687-919a-4e69-863d-45621816e24a"
-          ],
-          "result": "BLOCKED"
-        },
-        "implementation-gate": {
-          "evidence_ids": [
-            "65cc7391-a869-48b6-a5b4-d699ff5473ae",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
-          ],
-          "result": "PASS"
-        },
-        "production-gate": {
-          "evidence_ids": [
-            "9429325f-1e9d-4187-80a1-5c789420e7c0",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
-          ],
-          "result": "PASS"
-        },
-        "review-gate": {
-          "evidence_ids": [
-            "84d0a7a5-0d69-4cd2-960b-a2db694d9825",
-            "5d61029f-43f1-4976-a44c-bbe19be79045"
-          ],
-          "result": "PASS"
-        },
-        "spec-gate": {
-          "evidence_ids": [
-            "4e91e5f7-6576-4afb-b115-4966cdd3ecdd"
-          ],
-          "result": "PASS"
-        }
-      },
-      "last_event_id": "59786340-ee43-46b2-acd8-7e3ca4608c68",
-      "revision": 4,
-      "status": "blocked"
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": "fa12a925-5aab-4a43-941f-9aeb1d6d9608",
+      "revision": 5,
+      "status": "repair_required"
     },
     "INC-038": {
       "active_approval_count": 0,
@@ -809,6 +731,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 11,
+  "repair_plan_count": 12,
   "schema_version": "graph-harness.state.v1"
 }
