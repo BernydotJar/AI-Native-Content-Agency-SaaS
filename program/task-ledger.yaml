@@ -2071,7 +2071,7 @@
         "legal non-repudiation claim",
         "branch-protection mutation"
       ],
-      "publication_state": "REVISION_1_EXACT_TREE_PASS_EXACT_HEAD_PENDING",
+      "publication_state": "MERGED_EXACT_HEAD_PASS",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2081,7 +2081,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Database Engineer / Independent Verifier",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-028",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2097,6 +2097,94 @@
       "validation_summary": "Revision 1 clean tree e304562 passes 375 locked-wheel tests, 375 PostgreSQL tests, schema v9 migration/backup/restore, reproducible OCI package, supply-chain source_dirty=false, and three PR-review regressions. Exact-head CI and re-review pending.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-028"
+    },
+    {
+      "acceptance_criteria": [
+        "canonical OpenAPI regeneration is byte deterministic",
+        "all business paths are under /api/v1",
+        "every operation declares common structured errors",
+        "400/401/403/404/409/413/422/429/500/503 runtime responses conform",
+        "validation details are sanitized and bounded",
+        "drift and unversioned path negatives fail",
+        "installed wheel and package contract hashes match",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        "backend/agency_runtime/api.py",
+        "backend/tests/test_api_contract.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "scripts/verify-api-contract.py",
+        "scripts/verify-python-locks.sh",
+        "scripts/verify-production-package.sh",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "docs/API_CONTRACT.md",
+        "program/**",
+        "specs/029-versioned-api-contract/**",
+        "compliance/third-party-inventory.json",
+        "contracts/**"
+      ],
+      "authoritative_inputs": [
+        "program/requirements-traceability.csv ENG-003",
+        "backend/agency_runtime/api.py",
+        "scripts/verify-production-package.sh",
+        "specs/029-versioned-api-contract/**"
+      ],
+      "context": "Functional API-contract tree rebuilt on merged audit revision 1; merge and fresh exact-head evidence remain pending.",
+      "dependencies": [
+        "INC-003",
+        "INC-015",
+        "INC-019"
+      ],
+      "expected_outputs": [
+        "typed common error schemas",
+        "canonical contracts/openapi-v1.json",
+        "deterministic drift verifier",
+        "runtime error conformance tests",
+        "installed-wheel and package evidence",
+        "API contract runbook/review"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "breaking API approval",
+        "release",
+        "production or external effect when applicable"
+      ],
+      "objective": "Publish and enforce a deterministic versioned OpenAPI and structured error contract for the installed API.",
+      "prohibited_paths": [
+        "production deployment",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "branch-protection mutation",
+        "breaking API change"
+      ],
+      "publication_state": "REVIEW_REPAIR_RUNNING",
+      "read_only_paths": [
+        ".env.local",
+        "production secrets",
+        "provider credentials",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "API Contract Engineer / Independent Verifier",
+      "status": "in_progress",
+      "task_id": "INC-029",
+      "validation_commands": [
+        "python3 scripts/verify-api-contract.py",
+        "./scripts/verify-python-locks.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "./scripts/verify-production-package.sh",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "validation_summary": "Revision 1 repairs PR #38 findings: 422 declares validation and safe domain envelopes; /api/v1 boundary rejects /api/v10 and /api/v1beta; 380 locked-wheel tests pass.",
+      "workstream_id": "WS-04",
+      "write_lock": "orchestrator:INC-029"
     },
     {
       "acceptance_criteria": [
@@ -2227,12 +2315,12 @@
       "evals": [],
       "id": "WS-02",
       "name": "Specifications and Requirements Traceability",
-      "next_ready_task": "INC-028",
+      "next_ready_task": "INC-029",
       "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "review",
+      "status": "blocked",
       "validation": [],
       "write_locks": []
     },
