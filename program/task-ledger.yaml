@@ -2341,7 +2341,7 @@
         "branch-protection mutation",
         "force push"
       ],
-      "publication_state": "EXACT_TREE_PASS_EXACT_HEAD_PENDING",
+      "publication_state": "EXACT_HEAD_PASS_MERGE_AND_PRODUCTION_ROLLBACK_HUMAN_GATE",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2351,7 +2351,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Release Reliability Engineer / Independent Verifier",
-      "status": "review",
+      "status": "blocked",
       "task_id": "INC-031",
       "validation_commands": [
         "python3 scripts/verify-workload-rollback.py --validate-only",
@@ -2363,7 +2363,7 @@
       ],
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-031",
-      "validation_summary": "Candidate 3d74f89 clean rollback to 6fc3d73 passes at 1271 ms with data/audit preservation; 386 wheel, 386 PostgreSQL, OCI, supply chain, 58 frontend tests and K3s/Terraform pass. Exact-head CI pending."
+      "validation_summary": "PR #40 run 30611637480 passes exact-head 8/8 on d0e8f0d; zero remote findings observed. Technical gates pass; ordered merge and production rollback authority remain blocked."
     },
     {
       "acceptance_criteria": [

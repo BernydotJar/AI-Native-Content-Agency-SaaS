@@ -2199,7 +2199,7 @@
           "Dockerfile",
           "specs/031-workload-rollback-drill/**"
         ],
-        "canonical_status": "review",
+        "canonical_status": "blocked",
         "human_gates": [
           "merge",
           "production rollback",

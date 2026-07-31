@@ -4,7 +4,7 @@ Date: 2026-07-31
 Candidate commit: `3d74f892735ecc533bd9fea21aa3307dfd167fc3`
 Rollback commit: `6fc3d73d73ee75d2f5fdbd5f3fe41e9368f9e9a7`
 Graph revision: 0 on the rebuilt stack
-Decision: PASS for technical review; exact-head CI and merge remain pending.
+Decision: PASS for technical review and exact-head CI; closure remains BLOCKED by merge and production rollback authority.
 
 ## Objective and result
 
@@ -39,4 +39,4 @@ The rebuilt execution starts at Graph revision 0 because historical event projec
 
 ## Remaining human gates
 
-PR #40 exact-head CI and review are pending. Merge ordering #38 -> #39 -> #40 is not authorized by this increment. Any rollback or traffic change outside local loopback, production restore, production key/secret operation, release or deployment requires separate accountable authorization.
+PR #40 exact-head run `30611637480` passed all eight required jobs on `d0e8f0d6df1c90f4e3f8d59c22071e33c6101221`. No review threads or reviews were published during the post-CI observation window. Merge ordering #38 -> #39 -> #40 is not authorized by this increment. Any rollback or traffic change outside local loopback, production restore, production key/secret operation, release or deployment requires separate accountable authorization.

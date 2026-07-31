@@ -349,3 +349,10 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Clean delivery evidence passes: 386 wheel tests, 386 PostgreSQL tests, schema v9 and v1-v9 compatibility, OCI, supply chain source_dirty=false, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability.
 - Exact-head CI and PR review remain pending. Merge of #38/#39/#40 and any production rollback remain separate human gates.
 - Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain 0.
+
+## 2026-07-31 — INC-031 exact-head CI and blocked close gate
+
+- PR #40 exact-head run `30611637480` passed all eight required jobs on `d0e8f0d6df1c90f4e3f8d59c22071e33c6101221`.
+- GitHub reported the PR mergeable/CLEAN. Post-CI polling observed zero review threads and zero submitted reviews.
+- Technical evidence is complete, but ordered merge of #38 -> #39 -> #40 and production rollback authority remain separate human gates.
+- `INC-031` is therefore blocked, not done. `DENY_RELEASE` / `DENY_APPLY` and external effects `0` remain unchanged.

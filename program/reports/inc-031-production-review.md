@@ -16,8 +16,9 @@
 | infrastructure | Helm/K3s/Terraform lifecycle and cleanup PASS | PASS |
 | provenance | source clean, SBOM/policy/signature PASS, registry publication false | PASS |
 | external effects | provider/model/social/cloud effects 0 | PASS |
-| exact-head CI | pending PR #40 | PENDING |
+| exact-head CI | run `30611637480`, head `d0e8f0d...`, eight required jobs | PASS |
 | production rollback authority | not granted | BLOCKED HUMAN |
 | merge #38 -> #39 -> #40 | not granted | BLOCKED HUMAN |
+| remote review findings | zero threads/reviews observed after CI polling | PASS WITH NO FINDINGS |
 
 This drill is local control evidence. It does not establish production RTO, production traffic switching, off-host backup availability or authority to execute a rollback. `DENY_RELEASE` and `DENY_APPLY` remain mandatory.
