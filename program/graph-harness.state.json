@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 17,
-  "event_count": 340,
-  "last_event_id": "385c7087-d084-41a8-96f9-dc26e2ab882f",
+  "checkpoint_count": 18,
+  "event_count": 351,
+  "last_event_id": "328c1663-55f6-4479-af01-4558af774e0e",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -888,11 +888,68 @@
     },
     "INC-030": {
       "active_approval_count": 0,
-      "active_evidence": {},
-      "gates": {},
-      "last_event_id": "385c7087-d084-41a8-96f9-dc26e2ab882f",
+      "active_evidence": {
+        "09ca8b5f-4419-49a0-b90d-b08b173a1bb9": {
+          "artifact": "PR #39 P1/P2 repairs and program/reports/inc-030-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "85116d92b2b8581b29ee0934de7c8718a64996f55e0d67373ba72c360eb44e7b"
+        },
+        "82205398-e91a-4348-97d2-2ed9e5cc971d": {
+          "artifact": "program/reports/inc-030-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "855dfba6de9367d447f49ac08b6777fcfccc9e90bddb64e8ad35fd42d6520417"
+        },
+        "88d52256-1443-4fa6-8693-fa0c93d55ecc": {
+          "artifact": "specs/030-schema-compatibility-audit",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "e1b2ef4439edfd5e3add4719169b41b1cd3aa6331dc9e7b4e0394d278ebee371"
+        },
+        "cd09bb41-7823-4c3f-828b-40bd3f90d0a6": {
+          "artifact": "git tree 1f006cfe46768870605ef1ee37310ec960ec4878",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "635c7f729dcf79720b40fca52ca62209d6a6623af0751ad70bdc48ae00ffc8e1"
+        },
+        "fa0f821c-05c3-42dd-b385-27a21b9af1e8": {
+          "artifact": "program/reports/inc-030-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "85116d92b2b8581b29ee0934de7c8718a64996f55e0d67373ba72c360eb44e7b"
+        }
+      },
+      "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "cd09bb41-7823-4c3f-828b-40bd3f90d0a6",
+            "fa0f821c-05c3-42dd-b385-27a21b9af1e8"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "82205398-e91a-4348-97d2-2ed9e5cc971d"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "09ca8b5f-4419-49a0-b90d-b08b173a1bb9"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "88d52256-1443-4fa6-8693-fa0c93d55ecc"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "10fcc06b-6e6a-470f-9526-f6e6603f6bc9",
       "revision": 2,
-      "status": "running"
+      "status": "review"
     },
     "INC-038": {
       "active_approval_count": 0,

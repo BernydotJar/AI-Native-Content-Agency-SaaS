@@ -2339,7 +2339,7 @@
         "schema downgrade",
         "destructive historical rewrite"
       ],
-      "publication_state": "REVISION_2_REPAIR_RUNNING",
+      "publication_state": "REVISION_2_EXACT_TREE_PASS",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2349,7 +2349,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Schema Compatibility Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-030",
       "validation_commands": [
         "python3 scripts/verify-schema-compatibility.py",
@@ -2359,7 +2359,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "Revision 2 replaces optimized-away asserts with explicit RuntimeError invariants; PYTHONOPTIMIZE=1 matrix and 384 installed-wheel tests pass.",
+      "validation_summary": "Revision 2 clean 4d61acb: canonical refs plus explicit optimization-safe invariants; 384 wheel and 384 PostgreSQL tests PASS. Exact-head CI pending.",
       "workstream_id": "WS-03",
       "write_lock": "orchestrator:INC-030"
     }
