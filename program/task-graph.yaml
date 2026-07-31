@@ -278,7 +278,14 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-029",
-      "status": "blocked"
+      "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-001"
+      ],
+      "id": "INC-038",
+      "status": "done"
     },
     {
       "depends_on": [
@@ -287,16 +294,9 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-030",
-      "status": "blocked"
-    },
-    {
-      "depends_on": [
-        "INC-001"
-      ],
-      "id": "INC-038",
-      "status": "done"
+      "status": "review"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-30"
+  "updated_at": "2026-07-31T18:57:00Z"
 }

@@ -1,32 +1,35 @@
 # INC-030 Independent Review — Runtime Schema Compatibility
 
-Date: 2026-07-30
+Date: 2026-07-31
 Graph revision: 0
 State at review: `running`
 
 ## Producer result
 
-- Added canonical schema history `contracts/runtime-schema-history.json` for versions 1 through 9.
-- Every version is bound to a real historical Git commit whose source declares the recorded `POSTGRES_SCHEMA_VERSION`.
-- Added one verifier that extracts historical `backend/` source with `git archive` and executes that source in isolated temporary environments.
-- SQLite cases create one historical tenant audit event, then the current runtime upgrades the database and verifies event preservation plus the current audit chain.
-- PostgreSQL cases create one isolated database per version, write the same historical event, upgrade with current migration authority, verify v9 data/chain, and drop the database.
-- The enclosing PostgreSQL harness separately revalidates current migration/runtime role separation and least-privilege grants.
+- Added canonical `contracts/runtime-schema-history.json` for versions 1 through 9.
+- Every version is bound to a real historical Git commit whose source declares that exact `POSTGRES_SCHEMA_VERSION`.
+- Historical source is extracted with `git archive`; schemas are not reimplemented or synthesized in the verifier.
+- SQLite and PostgreSQL each write a real historical audit event, then the installed current wheel upgrades the store to schema v9 and verifies event and audit-chain preservation.
+- Unknown, gapped, duplicate, future and wrong-source manifests fail closed.
 
-## Matrix evidence
+## Fresh verification on merged API-contract base
 
-- Historical versions: 9/9 contiguous.
-- SQLite upgrades: v1, v2, v3, v4, v5, v6, v7, v8, v9 PASS.
-- PostgreSQL upgrades: v1, v2, v3, v4, v5, v6, v7, v8, v9 PASS.
-- Installed current wheel is used for upgrade and verification gates.
-- Unknown/gapped, duplicate, future, and wrong-source manifests fail closed.
-- PostgreSQL full suite: 379/379 PASS; schema v9, SQLite migration, replay guard, least privilege, backup and restore PASS.
-- Locked-wheel suite: 379 PASS with only the existing 27 PostgreSQL-only skips outside the PostgreSQL job.
+- Base: `12332e4653f9db2949a5936dd1765cbd4436ff4c`.
+- SQLite historical upgrades v1–v9: 9/9 PASS.
+- PostgreSQL historical upgrades v1–v9: 9/9 PASS.
+- Installed-wheel suite: 383 tests PASS.
+- PostgreSQL 15.18 suite: 383/383 PASS.
+- Schema v9 initialize/validate, migration, replay guard, least privilege and backup/restore: PASS.
+- API contract revision 1 remains PASS.
+- Frontend: 58 tests, lint and production build PASS.
+- Program, Graph Harness, compliance, operability and actionlint: PASS.
 
 ## Critic and security review
 
-PASS locally. The verifier does not synthesize historical schemas, rewrite Git history, connect to production, or retain databases. Full history is fetched only by the CI jobs that execute the matrix, and exact PR-head checkout remains asserted. Administrative PostgreSQL authority is limited to the ephemeral harness; current runtime least privilege remains independently verified.
+The verifier requires full Git history, checks the source declaration at each recorded commit, uses isolated temporary databases and deletes every PostgreSQL database after its case. Administrative authority exists only inside the ephemeral verification harness. It does not connect to a production database, alter persistent infrastructure, rewrite history or execute a downgrade.
+
+No provider, model, publication, secret, deployment or paid effect is enabled by this increment.
 
 ## Open gates
 
-A clean implementation commit, clean-tree supply-chain provenance, exact-head CI, retained artifact inspection, merge authority, and close-gate remain pending.
+Clean-tree evidence, exact-head GitHub Actions, remote review and squash merge remain pending. A real production migration remains a separate human gate even after this node closes.
