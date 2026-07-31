@@ -2038,7 +2038,7 @@
         "scripts/manage-runtime-backup.py",
         "specs/028-audit-ledger-integrity/**"
       ],
-      "context": "Rebuilt semantically on merged quota revision 5; audit-integrity implementation is pending fresh exact-tree verification and exact-head CI.",
+      "context": "Revision 1 repairs three PR #37 findings: consistent checkpoint snapshots, source-head validation before migration, and fail-closed restored-chain verification.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -2071,7 +2071,7 @@
         "legal non-repudiation claim",
         "branch-protection mutation"
       ],
-      "publication_state": "EXACT_TREE_PASS_EXACT_HEAD_PENDING",
+      "publication_state": "REVIEW_REPAIR_RUNNING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2081,7 +2081,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Database Engineer / Independent Verifier",
-      "status": "review",
+      "status": "in_progress",
       "task_id": "INC-028",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",

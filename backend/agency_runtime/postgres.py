@@ -1412,6 +1412,10 @@ class PostgresRunStore:
     def verify_audit_chain(self, tenant_id: str) -> AuditChainCheckpoint:
         require_non_empty(tenant_id, "tenant_id")
         with self.database.pool.connection() as connection:
+            connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                ("audit-chain:" + tenant_id,),
+            )
             rows = connection.execute(
                 """
                 SELECT * FROM audit_events

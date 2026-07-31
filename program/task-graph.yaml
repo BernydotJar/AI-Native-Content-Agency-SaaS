@@ -268,7 +268,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-028",
-      "status": "review"
+      "status": "in_progress"
     },
     {
       "depends_on": [

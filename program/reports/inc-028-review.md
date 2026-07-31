@@ -50,3 +50,22 @@ The reconstruction introduced no conflict and preserved the two quota review rep
 ## Limitations
 
 Exact-head CI, PR review and ordered merge remain pending. Production signing-key provisioning/rotation, immutable off-host checkpoint retention, KMS/HSM custody, release, deployment and legal acceptance remain separate human/external gates.
+
+
+## PR #37 review repair — revision 1
+
+The rebuilt PR review found three valid correctness gaps:
+
+1. PostgreSQL checkpoint verification could read events and the durable head across two READ COMMITTED snapshots while another replica appended;
+2. SQLite-to-PostgreSQL migration verified surviving row hashes but did not compare a schema-v9 source head before rebuilding the target head, which could launder detectable tail deletion;
+3. SQLite/PostgreSQL restore paths validated file/schema shape but did not cryptographically verify restored event chains before returning `status: restored`.
+
+The localized repair:
+
+- acquires the same tenant-scoped transaction advisory lock for PostgreSQL verification as for append;
+- prepares and validates the complete source chain plus exact source heads before executing any target audit insert;
+- verifies chain linkage, event hashes, tenant sets and durable heads before SQLite installation and after copy;
+- enumerates restored PostgreSQL tenants and invokes the runtime verifier before reporting success;
+- converts driver/connection failures to a sanitized restore error and always closes the validation pool.
+
+New regressions prove verifier lock blocking, migration rejection before target writes, valid-checksum SQLite corruption rejection and PostgreSQL restore failure propagation. Development wheel and PostgreSQL suites pass 375 tests. No unrelated node was invalidated and no external effect occurred.

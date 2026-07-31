@@ -11,6 +11,8 @@ from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agency_runtime.persistence import AuditWrite, SQLiteRunStore
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = ROOT / "scripts" / "manage-runtime-backup.py"
@@ -82,6 +84,74 @@ class RuntimeBackupRestoreTests(unittest.TestCase):
                 self.assertEqual(
                     connection.execute("PRAGMA integrity_check").fetchone()[0], "ok"
                 )
+
+    def test_sqlite_restore_rejects_valid_checksum_with_truncated_audit_chain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source.sqlite3"
+            target = root / "restored.sqlite3"
+            store = SQLiteRunStore(source)
+            try:
+                for index in range(2):
+                    store.append_audit(
+                        "tenant-alpha",
+                        AuditWrite(
+                            request_id=f"backup-request-{index}",
+                            action="backup.audit",
+                            resource_type="probe",
+                            resource_id=f"probe-{index}",
+                            actor="subject:backup-reviewer",
+                            payload={"index": index},
+                            event_id=f"backup-audit-{index}",
+                        ),
+                    )
+            finally:
+                store.close()
+            with sqlite3.connect(source) as connection:
+                connection.execute(
+                    "DELETE FROM audit_events WHERE sequence = "
+                    "(SELECT MAX(sequence) FROM audit_events)"
+                )
+            manifest_path = BACKUP.create_sqlite_backup(
+                source, root / "backups", now=FIXED_TIME
+            )
+            with self.assertRaisesRegex(BACKUP.BackupError, "audit chain head"):
+                BACKUP.restore_sqlite_backup(manifest_path, target)
+            self.assertFalse(target.exists())
+
+    def test_postgresql_restore_does_not_report_success_when_chain_verification_fails(self):
+        manifest = {"sha256": "a" * 64}
+        environment = {"PGDATABASE": "restored"}
+        with (
+            mock.patch.object(
+                BACKUP,
+                "load_and_verify_manifest",
+                return_value=(manifest, Path("/tmp/runtime.dump")),
+            ),
+            mock.patch.object(
+                BACKUP,
+                "connection_from_environment",
+                return_value=(environment, "b" * 64),
+            ),
+            mock.patch.object(
+                BACKUP, "non_system_table_count", side_effect=[0, 5]
+            ),
+            mock.patch.object(BACKUP, "run_command", return_value=""),
+            mock.patch.object(BACKUP, "runtime_schema_version", return_value="9"),
+            mock.patch.object(
+                BACKUP,
+                "verify_postgresql_audit_chains",
+                side_effect=BACKUP.BackupError(
+                    "restored PostgreSQL audit chain validation failed"
+                ),
+            ) as verify_chains,
+        ):
+            with self.assertRaisesRegex(BACKUP.BackupError, "audit chain"):
+                BACKUP.restore_postgresql_backup(
+                    Path("/tmp/runtime.manifest.json"),
+                    "AGENCY_RESTORE_DATABASE_URL",
+                )
+        verify_chains.assert_called_once_with("AGENCY_RESTORE_DATABASE_URL")
 
     def test_backup_metrics_textfile_is_private_atomic_and_sanitized(self):
         with tempfile.TemporaryDirectory() as directory:

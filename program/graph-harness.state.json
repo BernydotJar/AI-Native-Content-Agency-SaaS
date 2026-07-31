@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 15,
-  "event_count": 270,
-  "last_event_id": "cc9d70d1-7dc8-4658-8a0f-b644d2f65a43",
+  "event_count": 274,
+  "last_event_id": "3f1fd342-d0d5-4ddd-8ccc-93f95dc84509",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -733,69 +733,12 @@
       "status": "done"
     },
     "INC-028": {
-      "active_approval_count": 1,
-      "active_evidence": {
-        "144bf70d-c04c-460c-a7c9-a6da59d0ff61": {
-          "artifact": "program/reports/inc-028-review.md",
-          "kind": "review",
-          "result": "PASS",
-          "sha256": "c3a1b0cda3f8d3a068d298c9a0826ec77bbf08015b66ae48e286e18238e5197d"
-        },
-        "1ccb615d-b614-4025-af68-4de0a723adc9": {
-          "artifact": "git tree 2c83e4ff776942ee38c2046982be68447385bad7",
-          "kind": "implementation",
-          "result": "PASS",
-          "sha256": "5e09cb63b8b2254eb7798812232dca9a9fb9a86bf7c67fcb1931a42ad77e46ab"
-        },
-        "30d8716e-0b5d-4a99-b6a0-d622fd546e4d": {
-          "artifact": "program/reports/inc-028-production-review.md",
-          "kind": "production",
-          "result": "PASS",
-          "sha256": "ef34754d4b3320194fd559f6c02d4136b141b2f5e3ac3dc45fa5b1103c24627c"
-        },
-        "5011422e-7ad3-42f6-8066-a40bd502107c": {
-          "artifact": "specs/028-audit-ledger-integrity",
-          "kind": "spec",
-          "result": "PASS",
-          "sha256": "5640a488f01e57ef81e6cc87d9a9cfcde12905e9b8273a3d68ec5a419041bafe"
-        },
-        "5836c73f-f879-4bfd-b651-d5e510d82b15": {
-          "artifact": "program/reports/inc-028-review.md",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "c3a1b0cda3f8d3a068d298c9a0826ec77bbf08015b66ae48e286e18238e5197d"
-        }
-      },
-      "gates": {
-        "implementation-gate": {
-          "evidence_ids": [
-            "1ccb615d-b614-4025-af68-4de0a723adc9",
-            "5836c73f-f879-4bfd-b651-d5e510d82b15"
-          ],
-          "result": "PASS"
-        },
-        "production-gate": {
-          "evidence_ids": [
-            "30d8716e-0b5d-4a99-b6a0-d622fd546e4d"
-          ],
-          "result": "PASS"
-        },
-        "review-gate": {
-          "evidence_ids": [
-            "144bf70d-c04c-460c-a7c9-a6da59d0ff61"
-          ],
-          "result": "PASS"
-        },
-        "spec-gate": {
-          "evidence_ids": [
-            "5011422e-7ad3-42f6-8066-a40bd502107c"
-          ],
-          "result": "PASS"
-        }
-      },
-      "last_event_id": "cc9d70d1-7dc8-4658-8a0f-b644d2f65a43",
-      "revision": 0,
-      "status": "review"
+      "active_approval_count": 0,
+      "active_evidence": {},
+      "gates": {},
+      "last_event_id": "3f1fd342-d0d5-4ddd-8ccc-93f95dc84509",
+      "revision": 1,
+      "status": "running"
     },
     "INC-038": {
       "active_approval_count": 0,
@@ -877,6 +820,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 12,
+  "repair_plan_count": 13,
   "schema_version": "graph-harness.state.v1"
 }
