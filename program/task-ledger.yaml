@@ -2188,6 +2188,94 @@
     },
     {
       "acceptance_criteria": [
+        "versions 1-9 are contiguous and bound to exact commits",
+        "historical source declares the recorded version",
+        "SQLite v1-v9 data upgrades and audit chains verify",
+        "PostgreSQL v1-v9 data upgrades to schema v9 and runtime role validates",
+        "unknown/future/reordered/duplicate versions fail closed",
+        "matrix runs against installed current wheel",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        "contracts/runtime-schema-history.json",
+        "scripts/verify-schema-compatibility.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "scripts/verify-python-locks.sh",
+        "backend/tests/test_schema_compatibility.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "compliance/third-party-inventory.json",
+        "docs/SCHEMA_COMPATIBILITY.md",
+        "program/**",
+        "specs/030-schema-compatibility-audit/**"
+      ],
+      "authoritative_inputs": [
+        "contracts/runtime-schema-history.json",
+        "backend/agency_runtime/persistence.py",
+        "backend/agency_runtime/postgres.py",
+        "scripts/verify-postgresql-runtime.sh",
+        "program/requirements-traceability.csv ENG-002",
+        "specs/030-schema-compatibility-audit/**"
+      ],
+      "context": "Historical schema matrix tree rebuilt on repaired stack; PR #39 merge and fresh exact-head evidence remain pending.",
+      "dependencies": [
+        "INC-002",
+        "INC-024"
+      ],
+      "expected_outputs": [
+        "canonical runtime schema history",
+        "historical SQLite upgrade verifier",
+        "historical PostgreSQL upgrade matrix",
+        "negative compatibility tests",
+        "installed-wheel and CI evidence",
+        "compatibility review report"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "production migration",
+        "release",
+        "deployment or external effect when applicable"
+      ],
+      "objective": "Execute a formal SQLite and PostgreSQL compatibility matrix across every supported runtime schema version.",
+      "prohibited_paths": [
+        "production migration",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "branch-protection mutation",
+        "schema downgrade",
+        "destructive historical rewrite"
+      ],
+      "publication_state": "REBUILT_ON_PR38_MERGE_PENDING",
+      "read_only_paths": [
+        "production databases",
+        "production secrets",
+        ".env.local",
+        "provider credentials",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "Schema Compatibility Engineer / Independent Verifier",
+      "status": "blocked",
+      "task_id": "INC-030",
+      "validation_commands": [
+        "python3 scripts/verify-schema-compatibility.py",
+        "./scripts/verify-python-locks.sh",
+        "./scripts/verify-postgresql-runtime.sh",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "git diff --check"
+      ],
+      "validation_summary": "PR #39 exact-head run 30567232424 passed all eight jobs on 8a87a8538cde73e376008cc79d1d3dbf5d5922dd. SQLite and PostgreSQL v1-v9 matrices passed from installed current code; retained semantic and supply-chain artifacts bind the same clean SHA. Node is blocked only by stacked merge authority and the separate human production-migration gate.",
+      "workstream_id": "WS-03",
+      "write_lock": "orchestrator:INC-030"
+    },
+    {
+      "acceptance_criteria": [
         "framework revision is exact and immutable",
         "domain ledgers remain authoritative inputs",
         "graph and event chain validate",
@@ -2338,12 +2426,12 @@
       "evals": [],
       "id": "WS-03",
       "name": "Data Model, SQLite, PostgreSQL and Migration",
-      "next_ready_task": "INC-002",
+      "next_ready_task": "INC-030",
       "objective": "Prove durable correctness, migration, backup and restore.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "review",
+      "status": "blocked",
       "validation": [],
       "write_locks": []
     },

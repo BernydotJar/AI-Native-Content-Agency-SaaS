@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 15,
-  "event_count": 289,
-  "last_event_id": "40c4f4c0-bf90-4a7a-8c45-6c877670fb18",
+  "event_count": 291,
+  "last_event_id": "2053e2d6-5e0d-4395-adc9-07ec6af7c86c",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -821,6 +821,21 @@
       },
       "gates": {},
       "last_event_id": "40c4f4c0-bf90-4a7a-8c45-6c877670fb18",
+      "revision": 0,
+      "status": "blocked"
+    },
+    "INC-030": {
+      "active_approval_count": 0,
+      "active_evidence": {
+        "4d58443a-babe-4464-9eb0-76a582430f82": {
+          "artifact": "PR #39",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "e4423913170b574b4ee2ae7e3f7b8b15f70b2dc40e72ce65d64368d2c8aad0a1"
+        }
+      },
+      "gates": {},
+      "last_event_id": "2053e2d6-5e0d-4395-adc9-07ec6af7c86c",
       "revision": 0,
       "status": "blocked"
     },

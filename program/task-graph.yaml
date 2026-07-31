@@ -282,6 +282,15 @@
     },
     {
       "depends_on": [
+        "INC-002",
+        "INC-024"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-030",
+      "status": "blocked"
+    },
+    {
+      "depends_on": [
         "INC-001"
       ],
       "id": "INC-038",
