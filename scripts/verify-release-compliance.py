@@ -35,7 +35,6 @@ SUPPORT_FILES = (
     "program/critique-findings.json",
 )
 DIRECT_PYTHON = ("cryptography", "fastapi", "httpx", "pillow", "pg8000", "uvicorn")
-REQUIRED_BLOCKERS = {"F-004", "F-007", "F-008", "F-010", "F-011"}
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 UTC_TIMESTAMP = re.compile(
@@ -570,20 +569,21 @@ def validate_release(root: Path, data: Mapping[str, Any]) -> None:
                 f"release authority {field} is not approved"
             )
     blockers = set(sequence(data.get("blocked_findings"), "blocked_findings"))
-    if not REQUIRED_BLOCKERS.issubset(blockers):
-        raise ComplianceValidationError("release blocker inventory is incomplete")
     findings = mapping(
         read_json(root / "program/critique-findings.json"), "critique findings"
     )
-    status = {
-        item.get("id"): item.get("status")
+    finding_items = [
+        item
         for item in sequence(findings.get("findings"), "findings")
         if isinstance(item, Mapping)
+    ]
+    unresolved_high = {
+        text(item.get("id"), "finding id")
+        for item in finding_items
+        if item.get("severity") == "HIGH"
+        and item.get("status") in {"OPEN", "BLOCKED_EXTERNAL"}
     }
-    if any(
-        status.get(identifier) not in {"OPEN", "BLOCKED_EXTERNAL"}
-        for identifier in REQUIRED_BLOCKERS
-    ):
+    if blockers != unresolved_high:
         raise ComplianceValidationError(
             "release decision differs from unresolved HIGH findings"
         )

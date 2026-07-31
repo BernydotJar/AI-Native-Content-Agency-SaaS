@@ -148,7 +148,8 @@ unresolved:
 | `F-007` | open | accountable screen-reader, rendered contrast, 400% zoom/reflow and visual review |
 | `F-008` | open | authorized scheduler, KMS/encryption, immutable off-host retention and real alert delivery |
 | `F-010` | open | approved jurisdiction, retention, deletion, correction, legal hold and data-subject workflow |
-| `F-011` | open | semantic/adversarial release eval harness and threshold |
+| `F-011` | closed | INC-010 revision 3 semantic/adversarial exact-head gate |
+| `F-050` | open | post-publication provider deletion and rights-withdrawal authority |
 
 The decision also records:
 

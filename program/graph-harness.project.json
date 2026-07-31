@@ -1725,6 +1725,84 @@
     },
     {
       "allowed_paths": [
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "backend/tests/test_graph_harness_adapter.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_release_compliance.py",
+        "backend/tests/test_repository_governance.py",
+        "compliance/release-decision.json",
+        "docs/compliance/release-compliance-review.md",
+        "docs/runbooks/repository-governance.md",
+        "program/**",
+        "scripts/verify-release-compliance.py",
+        "scripts/verify-repository-governance.py",
+        "specs/026-repository-governance-reconciliation/**",
+        "compliance/third-party-inventory.json"
+      ],
+      "capability": "Graph Engineer / Repository Administrator / Independent Verifier",
+      "depends_on": [
+        "INC-025",
+        "INC-038"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-026",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "policy required checks exactly match workflow jobs",
+          "release blocked findings exactly equal unresolved HIGH findings",
+          "F-011 and F-046 close with merged evidence while F-050 remains external",
+          "issue 1 and PRs 2 through 11 close without merge or branch deletion",
+          "live main protection exactly matches policy",
+          "all deterministic and exact-head gates pass"
+        ],
+        "authoritative_inputs": [
+          "program/repository-governance.json",
+          "program/superseded-work.json",
+          "program/graph-harness.state.json",
+          "program/critique-findings.json",
+          "compliance/release-decision.json",
+          ".github/workflows/production-readiness.yml",
+          "specs/026-repository-governance-reconciliation/**"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "live branch-protection mutation",
+          "non-destructive closure of superseded GitHub work",
+          "production or external effect when applicable"
+        ],
+        "validation_commands": [
+          "npm run validate:governance",
+          "npm run validate:program",
+          "npm run validate:graph",
+          "npm run validate:compliance",
+          "./scripts/verify-python-locks.sh",
+          "actionlint .github/workflows/*.yml",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-02",
+        "write_lock": "orchestrator:INC-026"
+      },
+      "status": "spec_ready",
+      "title": "Reconcile single-owner branch protection, release blockers and superseded GitHub work into an auditable terminal repository state."
+    },
+    {
+      "allowed_paths": [
         ".gitmodules",
         "vendor/graph-harness-sdlc",
         ".github/workflows/production-readiness.yml",

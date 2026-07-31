@@ -741,9 +741,44 @@
       "observed": "8/8 jobs PASS on 7f56f711abc5d13fb609e2fee5b04176ea4c4319; provenance 3ffcb74b2c8f62fdb8710799375145f3e2d70e60b578c918a2f60bb6bf66f112; policy PASS/33 packages; semantic exact-head clean 20/20 zero-effects; no unresolved review threads",
       "result": "PASS",
       "scope": "remote exact-head release gates and retained artifacts"
+    },
+    {
+      "command": "npm run validate:governance",
+      "id": "INC026-POLICY-WORKFLOW",
+      "observed": "Policy contains eight exact workflow job IDs; approval count zero; last-push approval false; all other branch controls fail closed.",
+      "result": "PASS",
+      "scope": "single-owner branch policy and workflow contexts"
+    },
+    {
+      "command": "npm run validate:compliance and focused negative tests",
+      "id": "INC026-DYNAMIC-BLOCKERS",
+      "observed": "Release decision equals the five unresolved HIGH findings exactly; missing or stale extra findings are rejected; DENY_RELEASE remains.",
+      "result": "PASS",
+      "scope": "release blocker exactness"
+    },
+    {
+      "command": "Git blob/path comparison and Graph Harness mapping audit",
+      "id": "INC026-SUPERSEDED-AUDIT",
+      "observed": "No historical PR is mergeable work: implementation is identical/advanced, obsolete, or mapped to explicit external blockers. Remote closure pending.",
+      "result": "PASS",
+      "scope": "issue #1 and PRs #2-#11"
+    },
+    {
+      "command": "verify-repository-governance.py --protection-json",
+      "id": "INC026-LIVE-PROTECTION",
+      "observed": "Current historical live policy is rejected as expected; exact-head CI and committed-policy apply/readback pending.",
+      "result": "PENDING_EXACT_HEAD",
+      "scope": "live branch-protection readback"
+    },
+    {
+      "command": "strict local full gate on clean implementation commit",
+      "id": "INC026-CLEAN-TREE",
+      "observed": "commit 7810f302ef2a4c32332139e9ea95e668b55cc225; tree e10684bed75168775e1df5e5e412512a04ce8408; 347 backend tests; 58 frontend tests; governance/program/graph/compliance/operability/workflow PASS; source_dirty=false; provenance c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891; policy 1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb",
+      "result": "PASS",
+      "scope": "exact-tree governance, release and supply-chain gates"
     }
   ],
   "schema_version": "program-eval-results.v1",
-  "source_commit": "7f56f711abc5d13fb609e2fee5b04176ea4c4319",
-  "updated_at": "2026-07-29"
+  "source_commit": "679e59dd128055529d1df16e7a6aff0b283a0bcb",
+  "updated_at": "2026-07-30"
 }

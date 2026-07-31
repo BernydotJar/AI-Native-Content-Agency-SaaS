@@ -8,7 +8,7 @@
     "F-007",
     "F-008",
     "F-010",
-    "F-011"
+    "F-050"
   ],
   "decision": "DENY_RELEASE",
   "independent_human_approval": false,
@@ -18,8 +18,8 @@
     "manual_accessibility_not_complete",
     "production_backup_controls_not_authorized",
     "retention_deletion_legal_hold_unapproved",
-    "semantic_adversarial_evals_incomplete",
-    "independent_final_review_missing"
+    "independent_final_review_missing",
+    "post_publication_provider_deletion_unapproved"
   ],
   "schema_version": "agency-release-decision.v1",
   "source_documents": [

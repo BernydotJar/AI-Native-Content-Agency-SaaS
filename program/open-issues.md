@@ -151,11 +151,11 @@ Exact resume condition: specify provider deletion protocol, exact-once intent/re
 
 Category: cryptography / operability
 
-Status: resolved locally by INC-025 revision 2; exact-head CI and merge pending.
+Status: closed by INC-025 revision 2, PR #34 and merge commit `de4c93fd5c7a91651aaf7814bf117c18eb619ef3`.
 
 The runtime now validates an active-key ID plus bounded keyring, persists `public_signing_key_id`, migrates legacy SQLite/PostgreSQL rows to `legacy`, replays each binding with its generating key and fails closed if a required historical key is absent. Local locked-wheel, PostgreSQL schema v7, OCI, Helm, Terraform/K3s and rotation/rollback gates pass without secret material in state or evidence.
 
-Closure condition: exact-head CI must pass on the clean published commit and Graph Harness close evidence must be recorded. Production Secret mutation, rollout and unattended rotation remain human-gated operations.
+Closure evidence: exact-head CI passed, retained provenance was inspected and Graph Harness close evidence was recorded. Production Secret mutation, rollout and unattended rotation remain human-gated operations.
 
 ## OI-018 — Authorized real sandbox publication
 

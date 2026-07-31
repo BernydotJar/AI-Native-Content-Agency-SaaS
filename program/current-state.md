@@ -280,3 +280,32 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Semantic artifact `6c872912a227341c396905c1dd39a3b2b70ca63482eb85cb8451d977997d21b6` is exact-head, clean, 20/20 and zero-effects.
 - Graph Harness revision 2 close gate: PASS; node status: `done`.
 - Production Secret rotation, deployment, publication/deletion and legal approval remain unauthorized.
+
+
+## 2026-07-30 — INC-026 repository-governance local review
+
+- Active branch: `agent/repository-governance-reconciliation-v1`.
+- Graph Harness revision: 0; status: `running`.
+- Canonical single-owner policy requires all eight current jobs and no impossible second-person approval.
+- Release blockers are derived exactly from unresolved HIGH findings; F-011 and F-046 are closed, F-050 remains provider-deletion/legal.
+- Issue #1 and PRs #2–#11 are audited as superseded; none may be merged or deleted.
+- Local evidence: 347 backend tests, 58 frontend tests, governance/program/graph/compliance/operability, workflow lint and focused adversarial tests PASS.
+- Clean implementation commit, exact-head CI, live policy readback and remote non-destructive closure remain pending.
+- `DENY_RELEASE`, `DENY_APPLY` and all production/external-effect gates remain unchanged.
+
+
+## 2026-07-30 — INC-026 exact-tree review
+
+- Implementation commit: `7810f302ef2a4c32332139e9ea95e668b55cc225`; tree `e10684bed75168775e1df5e5e412512a04ce8408`.
+- Graph status pending transition to review after evidence recording.
+- 347 backend and 58 frontend tests PASS; governance/program/graph/compliance/operability/workflow PASS.
+- Clean supply-chain provenance `c03cad30f9167059b90c2cbb7ef7488ea305ca9883a6089b668a03a01c731891`; policy `1497bd6b65756988ef36877e132c5619b5d1f0b4b3a0f8d80c5fdfbddf356adb`; source dirty false.
+- Exact-head CI, live branch-protection apply/readback, superseded remote closure and close gate remain pending.
+
+## INC-026 repository governance reconciliation
+
+- Exact-head PR #35 run `30521828441` passed all eight production-readiness jobs on `679e59dd128055529d1df16e7a6aff0b283a0bcb`.
+- Retained supply-chain and semantic artifacts bind that clean SHA; external effects observed: `0`.
+- Historical PRs #2-#11 and issue #1 are closed as superseded; none was merged and no branch was deleted.
+- Live `main` protection remains unchanged: one approving review, last-push approval and four obsolete required checks.
+- `INC-026` is `blocked` pending explicit human authority to change branch protection / merge policy.

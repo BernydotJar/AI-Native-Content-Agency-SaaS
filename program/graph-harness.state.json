@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 12,
-  "event_count": 175,
-  "last_event_id": "4ba4b9b4-aaa3-47f9-909f-3b0fd3538de5",
+  "checkpoint_count": 14,
+  "event_count": 196,
+  "last_event_id": "9fb432f6-1b18-43dc-82a2-e556d9b148eb",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -552,6 +552,96 @@
       "last_event_id": "db64d791-5209-4578-8075-c3325aea4ff0",
       "revision": 2,
       "status": "done"
+    },
+    "INC-026": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "1436e950-3bd3-43c5-9503-1ff9e0a58dc4": {
+          "artifact": "specs/026-repository-governance-reconciliation",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "b64bceed3d7c4ef72730fe230fdf8ee0def5b78d7d6abbf1c18fbbab1d2e6d4b"
+        },
+        "37c397a5-131c-4a43-a435-a5bd5ede2151": {
+          "artifact": "program/reports/inc-026-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "96542a604f6e844fe4f3d32861d8e3d32c750b36cd80423b51a90558632effa3"
+        },
+        "3b4e9cce-bf23-4271-ada7-20cfd5a64a7f": {
+          "artifact": "program/reports/inc-026-partial-reconciliation.md",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "ed9d56c5941bd6295f7d0bd8cd62dd244a80bd6ab5b89d5b66215ad828247fc8"
+        },
+        "4fadeb3b-4ab4-49bc-b401-66acfee8b0ff": {
+          "artifact": "program/superseded-work.json",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "3af8c95127fd3875b434c5e3617ed882d08c3e3b0c82a4cbeadde7991a45ed27"
+        },
+        "5f8d544d-df9e-450f-8e88-c84a01eb62a2": {
+          "artifact": "repository governance validator, policy and release reconciliation",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "7df8455290eb0a0ddd7085bf6988a084d6cd608f59836b228675acd32deba922"
+        },
+        "c77ff898-2534-49d8-9974-2bbc996363b4": {
+          "artifact": "program/reports/inc-026-superseded-work-audit.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "60e1275d816ca18eeb22de3928b1cc100b6dd66158b08f21dc5f792f3cb2444c"
+        },
+        "e29f5d6d-be38-4eaa-950a-eb08c4359b63": {
+          "artifact": "program/reports/inc-026-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "3de12b9119cf490a31aaa43965e6429e6533125c5a2052c2dc13fb409702ccfe"
+        },
+        "ebf8dbc1-f48e-4438-8709-4eca9fe313f9": {
+          "artifact": "specs/026-repository-governance-reconciliation",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "c9dbd1686523a5cca5cf5373d790c1734cdc62a64f7e732088e026cbdfee3926"
+        },
+        "f3b3b05b-a4a2-4974-82c1-5fa89f8f39b4": {
+          "artifact": "GitHub Actions run 30521828441 and retained artifacts",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "48c4bbc867511768ee6695f72e1d6deddcb8f698c6dcecfe590b7b7872846be1"
+        }
+      },
+      "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "5f8d544d-df9e-450f-8e88-c84a01eb62a2",
+            "e29f5d6d-be38-4eaa-950a-eb08c4359b63"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "37c397a5-131c-4a43-a435-a5bd5ede2151"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "c77ff898-2534-49d8-9974-2bbc996363b4",
+            "ebf8dbc1-f48e-4438-8709-4eca9fe313f9"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "1436e950-3bd3-43c5-9503-1ff9e0a58dc4"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "e268bfce-3151-45a9-849b-f876c1c3c91f",
+      "revision": 0,
+      "status": "blocked"
     },
     "INC-038": {
       "active_approval_count": 0,

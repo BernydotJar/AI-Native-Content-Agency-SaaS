@@ -153,6 +153,25 @@ class ReleaseComplianceTests(unittest.TestCase):
             ):
                 COMPLIANCE.validate_repository(root)
 
+    def test_release_blockers_must_exactly_match_unresolved_high_findings(self):
+        temporary, root = self.mutate(
+            "compliance/release-decision.json",
+            lambda data: data["blocked_findings"].pop(),
+        )
+        with temporary, self.assertRaisesRegex(
+            COMPLIANCE.ComplianceValidationError, "unresolved HIGH"
+        ):
+            COMPLIANCE.validate_repository(root)
+
+        temporary, root = self.mutate(
+            "compliance/release-decision.json",
+            lambda data: data["blocked_findings"].append("F-011"),
+        )
+        with temporary, self.assertRaisesRegex(
+            COMPLIANCE.ComplianceValidationError, "unresolved HIGH"
+        ):
+            COMPLIANCE.validate_repository(root)
+
     def test_video_use_commit_and_status_must_match_review_manifest(self):
         temporary, root = self.mutate(
             "compliance/third-party-inventory.json",
