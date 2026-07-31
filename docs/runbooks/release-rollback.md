@@ -39,3 +39,26 @@ Application rollback is not schema rollback. Do not downgrade PostgreSQL or rest
 ## Failure handling
 
 If rollback fails, freeze further release changes, preserve the failed revision and classify whether the failure is chart, Kubernetes API, Secret/configuration, image or database compatibility. Do not use `--force` or delete persistent resources as an unreviewed shortcut.
+
+## Local read-only workload rollback drill
+
+`INC-031` adds an executable pre-production drill that keeps application rollback separate from data rollback:
+
+```bash
+python3 scripts/verify-workload-rollback.py --validate-only
+sudo python3 scripts/verify-workload-rollback.py \
+  --report artifacts/rollback/generated/workload-rollback-report.json
+```
+
+The drill builds the candidate and the pinned compatible ancestor with Buildah vfs/chroot. It runs each image sequentially through `runc` on the same loopback port and the same private SQLite volume with:
+
+- OCI `root.readonly=true`;
+- UID/GID 10001;
+- empty Linux capabilities and `noNewPrivileges`;
+- tmpfs `/tmp`;
+- private `/data` bind mount;
+- all model, social, political and publication effects disabled.
+
+The candidate creates a tenant run and signed audit checkpoint. The drill stops it, starts the prior image on the same port, measures readiness RTO, proves the original run and audit head are unchanged, creates a second run, then independently recalculates every audit hash and checks SQLite integrity after shutdown.
+
+This is not authority to roll back production. A real rollback still requires an approved target, exact image digests, current backup/restore evidence, maintenance/incident authority, traffic plan, observer, rollback owner and explicit human approval. The drill never restores or replaces the database.
