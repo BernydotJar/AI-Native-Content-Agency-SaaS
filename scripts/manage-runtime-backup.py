@@ -109,6 +109,159 @@ def sqlite_integrity(path: Path) -> None:
         raise BackupError("SQLite integrity validation did not return ok")
 
 
+AUDIT_GENESIS_HASH = "0" * 64
+AUDIT_CHAIN_SCHEMA = "audit-chain.v1"
+AUDIT_EVENT_COLUMNS = {
+    "sequence", "event_id", "tenant_id", "request_id", "occurred_at",
+    "action", "resource_type", "resource_id", "actor", "payload_json",
+    "previous_hash", "event_hash",
+}
+AUDIT_HEAD_COLUMNS = {"tenant_id", "event_count", "head_event_id", "head_hash"}
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _audit_event_hash(row: Mapping[str, object], previous_hash: str) -> str:
+    payload_value = row["payload_json"]
+    payload = payload_value if isinstance(payload_value, dict) else json.loads(str(payload_value))
+    if not isinstance(payload, dict):
+        raise BackupError("restored audit payload is not a JSON object")
+    occurred_at = row["occurred_at"]
+    occurred_text = occurred_at.isoformat() if hasattr(occurred_at, "isoformat") else str(occurred_at)
+    document = (
+        AUDIT_CHAIN_SCHEMA,
+        str(row["event_id"]),
+        str(row["tenant_id"]),
+        str(row["request_id"]),
+        occurred_text,
+        str(row["action"]),
+        str(row["resource_type"]),
+        str(row["resource_id"]),
+        str(row["actor"]),
+        payload,
+        previous_hash,
+    )
+    return hashlib.sha256(_canonical_json(document).encode("utf-8")).hexdigest()
+
+
+def _verify_audit_rows(
+    events: Sequence[Mapping[str, object]],
+    heads: Mapping[str, Mapping[str, object]],
+    *,
+    backend: str,
+) -> int:
+    previous_by_tenant: dict[str, str] = {}
+    count_by_tenant: dict[str, int] = {}
+    head_event_by_tenant: dict[str, str] = {}
+    for row in events:
+        tenant_id = str(row["tenant_id"])
+        expected_previous = previous_by_tenant.get(tenant_id, AUDIT_GENESIS_HASH)
+        if str(row["previous_hash"]) != expected_previous:
+            raise BackupError(f"restored {backend} audit previous hash is invalid")
+        expected_event = _audit_event_hash(row, expected_previous)
+        if str(row["event_hash"]) != expected_event:
+            raise BackupError(f"restored {backend} audit event hash is invalid")
+        previous_by_tenant[tenant_id] = expected_event
+        count_by_tenant[tenant_id] = count_by_tenant.get(tenant_id, 0) + 1
+        head_event_by_tenant[tenant_id] = str(row["event_id"])
+    if set(heads) != set(count_by_tenant):
+        raise BackupError(f"restored {backend} audit head tenant set is invalid")
+    for tenant_id, event_count in count_by_tenant.items():
+        head = heads[tenant_id]
+        if (
+            int(head["event_count"]) != event_count
+            or str(head["head_event_id"]) != head_event_by_tenant[tenant_id]
+            or str(head["head_hash"]) != previous_by_tenant[tenant_id]
+        ):
+            raise BackupError(f"restored {backend} audit chain head is invalid")
+    return len(count_by_tenant)
+
+
+def verify_sqlite_audit_chains(path: Path) -> int:
+    try:
+        with sqlite3.connect(sqlite_uri(path), uri=True) as connection:
+            connection.row_factory = sqlite3.Row
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+            if "audit_events" not in tables:
+                return 0
+            event_columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(audit_events)").fetchall()
+            }
+            chain_columns = {"previous_hash", "event_hash"}
+            if not (event_columns & chain_columns):
+                return 0
+            if not AUDIT_EVENT_COLUMNS.issubset(event_columns) or "audit_chain_heads" not in tables:
+                raise BackupError("restored SQLite audit chain schema is incomplete")
+            head_columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(audit_chain_heads)").fetchall()
+            }
+            if not AUDIT_HEAD_COLUMNS.issubset(head_columns):
+                raise BackupError("restored SQLite audit head schema is incomplete")
+            events = [dict(row) for row in connection.execute(
+                "SELECT * FROM audit_events ORDER BY tenant_id ASC, sequence ASC"
+            ).fetchall()]
+            heads = {
+                str(row["tenant_id"]): dict(row)
+                for row in connection.execute("SELECT * FROM audit_chain_heads").fetchall()
+            }
+    except BackupError:
+        raise
+    except (sqlite3.Error, ValueError, TypeError, json.JSONDecodeError) as error:
+        raise BackupError("restored SQLite audit chain validation failed") from error
+    return _verify_audit_rows(events, heads, backend="SQLite")
+
+
+def verify_postgresql_audit_chains(database_url_environment: str) -> int:
+    if not ENVIRONMENT_NAME.fullmatch(database_url_environment):
+        raise BackupError("database URL environment variable name is invalid")
+    connection_url = os.environ.get(database_url_environment)
+    if not connection_url:
+        raise BackupError("database URL environment variable is not configured")
+    backend_root = ROOT / "backend"
+    if str(backend_root) not in sys.path:
+        sys.path.insert(0, str(backend_root))
+    database = None
+    try:
+        from agency_runtime.postgres import PostgresRunStore, PostgresRuntimeDatabase
+
+        database = PostgresRuntimeDatabase(
+            connection_url,
+            min_size=1,
+            max_size=1,
+            connect_timeout_seconds=15,
+            schema_mode="validate",
+        )
+        store = PostgresRunStore(database)
+        with database.pool.connection() as connection:
+            tenants = tuple(
+                str(row["tenant_id"])
+                for row in connection.execute(
+                    "SELECT tenant_id FROM audit_events "
+                    "UNION SELECT tenant_id FROM audit_chain_heads "
+                    "ORDER BY tenant_id"
+                ).fetchall()
+            )
+        for tenant_id in tenants:
+            store.verify_audit_chain(tenant_id)
+        return len(tenants)
+    except BackupError:
+        raise
+    except Exception as error:
+        raise BackupError("restored PostgreSQL audit chain validation failed") from error
+    finally:
+        if database is not None:
+            database.close()
+
+
 def fsync_file(path: Path) -> None:
     with path.open("rb") as handle:
         os.fsync(handle.fileno())
@@ -365,6 +518,7 @@ def restore_sqlite_backup(
         manifest_path, expected_backend="sqlite"
     )
     sqlite_integrity(backup_path)
+    verify_sqlite_audit_chains(backup_path)
     target_path = Path(target)
     if target_path.is_symlink():
         raise BackupError("SQLite restore target must not be a symlink")
@@ -385,6 +539,7 @@ def restore_sqlite_backup(
             with sqlite3.connect(temporary) as target_connection:
                 source_connection.backup(target_connection, pages=1000, sleep=0.01)
         sqlite_integrity(temporary)
+        verify_sqlite_audit_chains(temporary)
         fsync_file(temporary)
         os.replace(temporary, target_path)
         installed = True
@@ -654,6 +809,7 @@ def restore_postgresql_backup(
     restored_tables = non_system_table_count(environment)
     if restored_tables <= 0:
         raise BackupError("PostgreSQL restore produced no runtime tables")
+    verify_postgresql_audit_chains(database_url_environment)
     return {
         "status": "restored",
         "backend": "postgresql",

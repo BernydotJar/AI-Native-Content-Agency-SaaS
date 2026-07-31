@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -196,7 +197,7 @@ class AuthenticatedRequestQuotaApiTests(unittest.TestCase):
 
     def test_bearer_and_session_share_principal_quota(self) -> None:
         with self.client() as client:
-            for _ in range(10):
+            for _ in range(9):
                 self.assertEqual(
                     client.get("/api/v1/me", headers=bearer(VIEWER_KEY)).status_code,
                     200,
@@ -209,6 +210,32 @@ class AuthenticatedRequestQuotaApiTests(unittest.TestCase):
             limited = client.get("/api/v1/me")
             self.assertEqual(limited.status_code, 429)
             self.assertEqual(limited.json()["code"], "request_rate_limited")
+
+        with sqlite3.connect(self.path) as connection:
+            counts = connection.execute(
+                "SELECT request_count FROM authenticated_request_rate_limits "
+                "ORDER BY request_count"
+            ).fetchall()
+        self.assertEqual([row[0] for row in counts], [10, 10])
+
+    def test_rate_limited_log_does_not_publish_tenant_identity(self) -> None:
+        with self.client() as client:
+            for _ in range(10):
+                self.assertEqual(
+                    client.get("/api/v1/me", headers=bearer(VIEWER_KEY)).status_code,
+                    200,
+                )
+            with self.assertLogs("agency_runtime.http", level="INFO") as captured:
+                limited = client.get("/api/v1/me", headers=bearer(VIEWER_KEY))
+            self.assertEqual(limited.status_code, 429)
+
+        events = [json.loads(record.getMessage()) for record in captured.records]
+        rate_limited = [event for event in events if event.get("status_code") == 429]
+        self.assertEqual(len(rate_limited), 1)
+        self.assertNotIn("tenant_id", rate_limited[0])
+        serialized = json.dumps(rate_limited[0], sort_keys=True)
+        self.assertNotIn("tenant-alpha", serialized)
+        self.assertNotIn("viewer@example.com", serialized)
 
     def test_tenant_bucket_limits_multiple_principals(self) -> None:
         with self.client(principal_limit=10, tenant_limit=10) as client:

@@ -1697,95 +1697,6 @@
     },
     {
       "acceptance_criteria": [
-        "framework revision is exact and immutable",
-        "domain ledgers remain authoritative inputs",
-        "graph and event chain validate",
-        "spec implementation production and review gates pass",
-        "close gate remains open",
-        "existing product behavior is unchanged"
-      ],
-      "allowed_paths": [
-        ".gitmodules",
-        "vendor/graph-harness-sdlc",
-        ".github/workflows/production-readiness.yml",
-        "package.json",
-        "package-lock.json",
-        "scripts/verify_graph_harness.py",
-        "backend/tests/test_graph_harness_adapter.py",
-        "program/**",
-        "specs/038-graph-harness-adoption/**",
-        "README.md",
-        "AGENTS.md",
-        "RTK.md"
-      ],
-      "authoritative_inputs": [
-        "user directive",
-        "BernydotJar/Graph-harness-sdlc@1bebce3db35303072049233786464bb01163c98b",
-        "program/task-ledger.yaml",
-        "program/task-graph.yaml"
-      ],
-      "context": "User explicitly selected Graph Harness SDLC as the execution runtime. The canonical framework is pinned at 1bebce3db35303072049233786464bb01163c98b.",
-      "dependencies": [
-        "INC-001"
-      ],
-      "exact_head_ci": {
-        "jobs_failed": 0,
-        "jobs_passed": 8,
-        "run_id": "30465318928",
-        "workflow": "production-readiness"
-      },
-      "expected_outputs": [
-        "pinned framework gitlink",
-        "typed project projection",
-        "append-only execution ledger",
-        "derived state projection",
-        "CI graph gate",
-        "review evidence"
-      ],
-      "graph_initial_status": "spec_ready",
-      "human_gates": [
-        "close feature",
-        "merge",
-        "release",
-        "deployment",
-        "spending",
-        "secret mutation",
-        "external effects"
-      ],
-      "implementation_commit": "58c3761",
-      "objective": "Adopt Graph Harness SDLC as the executable governance runtime without duplicating framework concepts.",
-      "prohibited_paths": [
-        "protected branch mutation",
-        "framework runtime duplication",
-        "production deployment",
-        "external infrastructure",
-        "spending",
-        "secret mutation",
-        "external effects"
-      ],
-      "publication_state": "EXACT_REMOTE_CI_PASS_CLOSURE_PENDING_FINAL_TREE",
-      "read_only_paths": [
-        "backend/agency_runtime/**",
-        "src/**",
-        "infra/**",
-        ".env.local",
-        ".local/**"
-      ],
-      "role": "Graph Runtime Integrator / Production Reviewer",
-      "status": "done",
-      "task_id": "INC-038",
-      "validation_commands": [
-        "python3 scripts/validate-program-state.py",
-        "python3 scripts/verify_graph_harness.py",
-        "python3 -m unittest backend.tests.test_graph_harness_adapter -v",
-        "actionlint .github/workflows/*.yml",
-        "git diff --check"
-      ],
-      "workstream_id": "WS-01",
-      "write_lock": "single writer: graph-harness orchestrator"
-    },
-    {
-      "acceptance_criteria": [
         "old binding replays byte-for-byte while a new key is active",
         "new bindings use the active key identifier",
         "removing a required historical key fails closed with no external effect",
@@ -1950,7 +1861,7 @@
         "historical PR merge",
         "legal/privacy approvals"
       ],
-      "publication_state": "REMOTE_CLOSURES_PASS_LIVE_GOVERNANCE_HUMAN_GATE",
+      "publication_state": "MERGED_EXACT_HEAD_PASS",
       "read_only_paths": [
         "product runtime and UI",
         "production infrastructure",
@@ -1958,7 +1869,7 @@
         "historical branches and commits"
       ],
       "role": "Graph Engineer / Repository Administrator / Independent Verifier",
-      "status": "blocked",
+      "status": "done",
       "task_id": "INC-026",
       "validation_commands": [
         "npm run validate:governance",
@@ -2022,7 +1933,7 @@
         "backend/agency_runtime/observability.py",
         "specs/027-authenticated-request-quota/**"
       ],
-      "context": "F-013 remains open: authentication failures are rate limited, but a valid principal can repeatedly trigger CSRF/authorization denials and append unbounded audit rows.",
+      "context": "Revision 5 repairs PR #36 review findings: session creation consumes the durable principal/tenant quota and rate-limited HTTP logs do not publish raw tenant identity.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -2054,7 +1965,7 @@
         "legal/privacy approval mutation",
         "branch-protection mutation"
       ],
-      "publication_state": "EXACT_HEAD_PASS_MERGE_HUMAN_GATE",
+      "publication_state": "MERGED_EXACT_HEAD_PASS",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2063,7 +1974,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Data Integrity Reviewer / Independent Verifier",
-      "status": "blocked",
+      "status": "done",
       "task_id": "INC-027",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2127,7 +2038,7 @@
         "scripts/manage-runtime-backup.py",
         "specs/028-audit-ledger-integrity/**"
       ],
-      "context": "F-012 remains open because database owners can alter transactional audit rows without deterministic tamper evidence or an independently exportable signed head.",
+      "context": "Revision 1 repairs three PR #37 findings: consistent checkpoint snapshots, source-head validation before migration, and fail-closed restored-chain verification.",
       "dependencies": [
         "INC-003",
         "INC-004"
@@ -2160,7 +2071,7 @@
         "legal non-repudiation claim",
         "branch-protection mutation"
       ],
-      "publication_state": "EXACT_HEAD_PASS_EXTERNAL_CUSTODY_AND_MERGE_GATES",
+      "publication_state": "MERGED_EXACT_HEAD_PASS",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2170,7 +2081,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Database Engineer / Independent Verifier",
-      "status": "blocked",
+      "status": "done",
       "task_id": "INC-028",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2183,7 +2094,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Exact-head run 30527647518 passed 8/8 on 73fd7b7f83cecd87d7ad37a60ff43c7693ec7a42; retained semantic/provenance artifacts pass with zero effects. Node is blocked only by stacked merge authority, immutable off-host checkpoint custody, KMS/HSM and accountable retention/legal acceptance.",
+      "validation_summary": "Revision 1 clean tree e304562 passes 375 locked-wheel tests, 375 PostgreSQL tests, schema v9 migration/backup/restore, reproducible OCI package, supply-chain source_dirty=false, and three PR-review regressions. Exact-head CI and re-review pending.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-028"
     },
@@ -2220,7 +2131,7 @@
         "scripts/verify-production-package.sh",
         "specs/029-versioned-api-contract/**"
       ],
-      "context": "ENG-003 remains incomplete because runtime routes and safe errors exist but no canonical OpenAPI snapshot or global drift gate binds the installed API contract.",
+      "context": "Functional API-contract tree rebuilt on merged audit revision 1; merge and fresh exact-head evidence remain pending.",
       "dependencies": [
         "INC-003",
         "INC-015",
@@ -2251,7 +2162,7 @@
         "branch-protection mutation",
         "breaking API change"
       ],
-      "publication_state": "EXACT_HEAD_PASS_MERGE_HUMAN_GATE",
+      "publication_state": "REBUILT_ON_MAIN_MERGE_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2308,7 +2219,7 @@
         "program/requirements-traceability.csv ENG-002",
         "specs/030-schema-compatibility-audit/**"
       ],
-      "context": "ENG-002 remains weak because individual feature migrations pass but no canonical v1-v9 historical matrix binds exact sources, data preservation and runtime authority.",
+      "context": "Historical schema matrix tree rebuilt on repaired stack; PR #39 merge and fresh exact-head evidence remain pending.",
       "dependencies": [
         "INC-002",
         "INC-024"
@@ -2339,7 +2250,7 @@
         "schema downgrade",
         "destructive historical rewrite"
       ],
-      "publication_state": "EXACT_HEAD_PASS_MERGE_HUMAN_GATE",
+      "publication_state": "REBUILT_ON_PR38_MERGE_PENDING",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2362,6 +2273,95 @@
       "validation_summary": "PR #39 exact-head run 30567232424 passed all eight jobs on 8a87a8538cde73e376008cc79d1d3dbf5d5922dd. SQLite and PostgreSQL v1-v9 matrices passed from installed current code; retained semantic and supply-chain artifacts bind the same clean SHA. Node is blocked only by stacked merge authority and the separate human production-migration gate.",
       "workstream_id": "WS-03",
       "write_lock": "orchestrator:INC-030"
+    },
+    {
+      "acceptance_criteria": [
+        "framework revision is exact and immutable",
+        "domain ledgers remain authoritative inputs",
+        "graph and event chain validate",
+        "spec implementation production and review gates pass",
+        "close gate remains open",
+        "existing product behavior is unchanged"
+      ],
+      "allowed_paths": [
+        ".gitmodules",
+        "vendor/graph-harness-sdlc",
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "package-lock.json",
+        "scripts/verify_graph_harness.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "program/**",
+        "specs/038-graph-harness-adoption/**",
+        "README.md",
+        "AGENTS.md",
+        "RTK.md"
+      ],
+      "authoritative_inputs": [
+        "user directive",
+        "BernydotJar/Graph-harness-sdlc@1bebce3db35303072049233786464bb01163c98b",
+        "program/task-ledger.yaml",
+        "program/task-graph.yaml"
+      ],
+      "context": "User explicitly selected Graph Harness SDLC as the execution runtime. The canonical framework is pinned at 1bebce3db35303072049233786464bb01163c98b.",
+      "dependencies": [
+        "INC-001"
+      ],
+      "exact_head_ci": {
+        "jobs_failed": 0,
+        "jobs_passed": 8,
+        "run_id": "30465318928",
+        "workflow": "production-readiness"
+      },
+      "expected_outputs": [
+        "pinned framework gitlink",
+        "typed project projection",
+        "append-only execution ledger",
+        "derived state projection",
+        "CI graph gate",
+        "review evidence"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "close feature",
+        "merge",
+        "release",
+        "deployment",
+        "spending",
+        "secret mutation",
+        "external effects"
+      ],
+      "implementation_commit": "58c3761",
+      "objective": "Adopt Graph Harness SDLC as the executable governance runtime without duplicating framework concepts.",
+      "prohibited_paths": [
+        "protected branch mutation",
+        "framework runtime duplication",
+        "production deployment",
+        "external infrastructure",
+        "spending",
+        "secret mutation",
+        "external effects"
+      ],
+      "publication_state": "EXACT_REMOTE_CI_PASS_CLOSURE_PENDING_FINAL_TREE",
+      "read_only_paths": [
+        "backend/agency_runtime/**",
+        "src/**",
+        "infra/**",
+        ".env.local",
+        ".local/**"
+      ],
+      "role": "Graph Runtime Integrator / Production Reviewer",
+      "status": "done",
+      "task_id": "INC-038",
+      "validation_commands": [
+        "python3 scripts/validate-program-state.py",
+        "python3 scripts/verify_graph_harness.py",
+        "python3 -m unittest backend.tests.test_graph_harness_adapter -v",
+        "actionlint .github/workflows/*.yml",
+        "git diff --check"
+      ],
+      "workstream_id": "WS-01",
+      "write_lock": "single writer: graph-harness orchestrator"
     }
   ],
   "updated_at": "2026-07-30",
@@ -2403,7 +2403,7 @@
       "evals": [],
       "id": "WS-02",
       "name": "Specifications and Requirements Traceability",
-      "next_ready_task": "INC-026",
+      "next_ready_task": "INC-029",
       "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
       "owner": "orchestrator",
       "requirements": [],
@@ -2426,12 +2426,12 @@
       "evals": [],
       "id": "WS-03",
       "name": "Data Model, SQLite, PostgreSQL and Migration",
-      "next_ready_task": "INC-002",
+      "next_ready_task": "INC-030",
       "objective": "Prove durable correctness, migration, backup and restore.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "review",
+      "status": "blocked",
       "validation": [],
       "write_locks": []
     },
@@ -2549,7 +2549,7 @@
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "blocked",
+      "status": "in_progress",
       "validation": [],
       "write_locks": [
         "backend/agency_runtime/api.py",

@@ -1,61 +1,71 @@
 # INC-028 Role-Separated Review
 
-Date: 2026-07-30
-Graph revision: 4
-Decision: PASS for local review; exact-head CI pending.
+Date: 2026-07-31
+Graph revision: 0 (reconstructed on merged quota base)
+Decision: PASS for local technical review; exact-head CI and PR review pending.
 
 ## Producer
 
-Implemented versioned per-tenant SHA-256 audit chains, durable chain heads, deterministic SQLite/PostgreSQL backfill, schema v9, cross-replica same-tenant serialization, fail-closed verification, strict HMAC checkpoint keyring and a tenant-scoped signed checkpoint endpoint for `audit:read` identities.
+Implemented versioned per-tenant SHA-256 audit chains, durable chain heads, deterministic SQLite/PostgreSQL backfill, schema v9, cross-replica same-tenant serialization, fail-closed verification, a strict rotatable HMAC checkpoint keyring and a tenant-scoped signed checkpoint endpoint for `audit:read` identities.
+
+The reconstructed API preserves the quota revision-5 ordering: authenticated quota is consumed before identity is published to request logging, and browser-session creation consumes the same principal/tenant buckets.
 
 ## Critic / Red Team
 
-The critic exercised:
+Coverage includes:
 
-- mutation of action/actor/payload;
-- deletion of the tail event;
-- sequence reordering;
+- mutation of action, actor and payload;
+- deletion, reordering and broken linkage;
 - legacy rows without hashes;
-- concurrent appends from two PostgreSQL stores;
-- administrative tampering outside the runtime role;
-- weak, padded, duplicate, partial and missing keyring configuration;
-- checkpoint document tampering and retired-key absence;
-- tenant isolation and safe API errors;
-- Secret leakage through health, readiness, Helm render and Terraform state.
+- concurrent PostgreSQL appends;
+- administrator tampering outside the runtime role;
+- weak, padded, duplicate, partial and absent keyring configuration;
+- checkpoint/document tampering and missing retired keys;
+- tenant isolation and sanitized API failures;
+- session quota coverage and 429-log privacy from INC-027 revision 5;
+- absence of signing material from health, readiness and package output.
 
-All scenarios fail closed or verify as expected. A durable head makes tail truncation detectable. Different tenants maintain independent genesis chains.
+All executable scenarios fail closed or verify as expected. A transactional durable head detects tail truncation. Tenants retain independent genesis chains.
 
-## Fixer
+## Historical localized repairs retained
 
-Four Graph Harness repairs were localized to INC-028:
+The implementation contains the four earlier localized repairs:
 
-1. padded base64url was accepted; exact unpadded canonical encoding is now required;
-2. derived hashes were accidentally attached to `AuditWrite`; callers now provide no hashes and persisted `AuditEvent` carries them;
-3. one compatibility test and restore assertion still wrote schema v8; both now preserve schema v9;
-4. API tests assumed `/me` wrote audit events; fixtures now create real audited mutations.
+1. canonical unpadded base64url is mandatory;
+2. callers cannot supply derived audit hashes;
+3. schema/restore fixtures preserve schema v9;
+4. API tests create real audited mutations instead of assuming reads append events.
 
-No unrelated node or evidence was invalidated.
+The reconstruction introduced no conflict and preserved the two quota review repairs merged in PR #36.
 
-## Security and Privacy Reviewer
+## Independent verification on the reconstructed tree
 
-- Chain hashes cover every persisted audit field except global database sequence, while linkage and event ID bind order.
-- `audit_chain_heads` protects against tail deletion and is updated in the same transaction.
-- PostgreSQL advisory locks serialize only the tenant chain being written.
-- Checkpoint keys are exact 32-byte externalized secrets; readiness exposes only configured state and active key ID.
-- API errors do not reflect tampered database content or key material.
-- A database owner can still rewrite all rows and heads; independent signed checkpoint custody is necessary to detect that rewrite.
-- No immutable storage, KMS/HSM custody or legal non-repudiation is claimed.
-
-## Independent Verifier
-
-- focused integrity/API/SQLite tests PASS;
-- locked wheel: 371 PASS, 27 PostgreSQL-only skips;
-- PostgreSQL 15.18: 366 PASS, schema v9, multi-replica chain, migration, least privilege and backup/restore PASS;
-- non-root OCI package: signed checkpoint HMAC independently verified;
-- K3s/Helm/Terraform: Secret refs and plan/apply/destroy PASS; key material absent from state;
-- frontend: 58 PASS; lint and production build PASS;
-- program, graph, governance, compliance and operability validators PASS.
+- locked installed wheel: 375 tests PASS; 27 PostgreSQL-only skips;
+- PostgreSQL 15.18: 375 tests PASS; schema v9; multi-replica chain, migration, least privilege, SQLite/PostgreSQL backup and restore PASS;
+- non-root OCI package: audit checkpoint, durable audit, quota and default-disabled provider guards PASS;
+- frontend: 58 tests PASS; zero lint findings; production build PASS;
+- program, Graph Harness, repository governance, compliance and operability validators PASS;
+- release decision: `DENY_RELEASE`; external effects: `0`.
 
 ## Limitations
 
-Exact-head CI is pending. Production key provisioning/rotation, immutable off-host checkpoint retention, KMS/HSM custody, release, deployment and legal acceptance are human/external gates.
+Exact-head CI, PR review and ordered merge remain pending. Production signing-key provisioning/rotation, immutable off-host checkpoint retention, KMS/HSM custody, release, deployment and legal acceptance remain separate human/external gates.
+
+
+## PR #37 review repair — revision 1
+
+The rebuilt PR review found three valid correctness gaps:
+
+1. PostgreSQL checkpoint verification could read events and the durable head across two READ COMMITTED snapshots while another replica appended;
+2. SQLite-to-PostgreSQL migration verified surviving row hashes but did not compare a schema-v9 source head before rebuilding the target head, which could launder detectable tail deletion;
+3. SQLite/PostgreSQL restore paths validated file/schema shape but did not cryptographically verify restored event chains before returning `status: restored`.
+
+The localized repair:
+
+- acquires the same tenant-scoped transaction advisory lock for PostgreSQL verification as for append;
+- prepares and validates the complete source chain plus exact source heads before executing any target audit insert;
+- verifies chain linkage, event hashes, tenant sets and durable heads before SQLite installation and after copy;
+- enumerates restored PostgreSQL tenants and invokes the runtime verifier before reporting success;
+- converts driver/connection failures to a sanitized restore error and always closes the validation pool.
+
+New regressions prove verifier lock blocking, migration rejection before target writes, valid-checksum SQLite corruption rejection and PostgreSQL restore failure propagation. Development wheel and PostgreSQL suites pass 375 tests. No unrelated node was invalidated and no external effect occurred.

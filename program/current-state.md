@@ -322,7 +322,7 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 
 ## INC-028 audit ledger integrity
 
-- Status: `blocked`, revision 4; exact-head run `30527647518` passed 8/8 on `73fd7b7f83cecd87d7ad37a60ff43c7693ec7a42`; only stacked merge authority and immutable/KMS/legal custody remain.
+- Status: `running`, revision 4; local implementation and production gates pass, exact-head CI pending.
 - SQLite and PostgreSQL schema v9 maintain per-tenant SHA-256 chains plus durable heads, detecting field mutation, deletion, truncation and reordering.
 - PostgreSQL serializes only same-tenant appends and verifies the chain across replicas.
 - Existing rows backfill deterministically; SQLite-to-PostgreSQL migration recomputes hashes and backup/restore preserves events plus heads.
@@ -331,54 +331,12 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Four localized repairs affected only INC-028: canonical base64url enforcement, AuditWrite/AuditEvent model placement, schema-v9 restoration and API fixture creation.
 - Immutable off-host custody, KMS/HSM and legal non-repudiation remain external; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
 
-## INC-029 versioned API contract — local production review
+## 2026-07-31 — Ordered governance/quota merge and audit-integrity reconstruction
 
-- Branch: `agent/versioned-api-contract-v1` stacked on PR #37.
-- Graph status: `running`, revision 2 after two localized repairs.
-- Canonical contract: `contracts/openapi-v1.json`, SHA-256 `c9f0532e19bd5a8bad074f51c7fa7404e1eae76805ffa8659c2997ea51af68e9`.
-- Contract surface: OpenAPI 3.1.0, API version 0.7.0, 30 paths, 31 operations, 14 schemas, 310 standard error declarations.
-- Runtime conformance covers 400/401/403/404/409/413/422/429/500/503 with safe correlation and redaction.
-- Development-tree evidence: 376 locked-wheel tests PASS, 376 PostgreSQL tests PASS, schema v9 migration/backup/restore PASS, OCI installed-contract equality PASS, 58 frontend tests plus lint/build PASS.
-- Localized repair 1 added explicit `X-Request-ID` to exception-handler responses.
-- Localized repair 2 renewed exact compliance hashes for the changed workflow and package command.
-- Clean-tree supply-chain evidence, exact-head CI, remote review, close gate, and merge remain pending.
-- `DENY_RELEASE`, `DENY_APPLY`, disabled provider effects, and all existing human/external gates remain unchanged.
-
-## INC-029 exact-head CI passed; merge gate remains
-
-- PR #38 head: `7c2cc9b7779bca509a4087e51e815ba6a41dbad8`.
-- GitHub Actions run `30564603802`: 8/8 production-readiness jobs PASS.
-- Canonical API contract SHA-256: `c9f0532e19bd5a8bad074f51c7fa7404e1eae76805ffa8659c2997ea51af68e9`.
-- Retained semantic report SHA-256: `c3c061564239c4f1bf5c3dccd1280717d6cc2af216d4b1125a2999bb5bcfe953`; 20/20 expectations, exact source binding, clean worktree, external effects 0.
-- Retained provenance SHA-256: `d704cefb2e62d91880c3c897d4f70b4f4bd8d0800759de6e07b2bd1cba333af1`; `sourceDirty=false`, network publication false.
-- Policy summary SHA-256: `44973f9b9d5bfba08a294a9af5e067757cff7d7e550ae5e0d3ee4c7900bd3bc0`; status PASS.
-- Graph Harness revision 2: spec, implementation, production, and review gates PASS; close gate BLOCKED; `INC-029=blocked`.
-- Blocker is exclusively the stacked merge chain `#38 -> #37 -> #36 -> #35 -> main` and explicit human merge authority.
-- `DENY_RELEASE`, `DENY_APPLY`, disabled external effects, and all production/legal/accessibility/staging gates remain unchanged.
-
-## INC-030 runtime schema compatibility — local review
-
-- Branch: `agent/schema-compatibility-audit-v1`, stacked on PR #38.
-- Graph status: `running`, revision 0.
-- Canonical history binds PostgreSQL schema versions 1–9 to exact historical Git sources.
-- SQLite historical upgrade matrix v1–v9: PASS with tenant event preservation and current audit-chain verification.
-- PostgreSQL historical upgrade matrix v1–v9: PASS with isolated databases, v9 upgrade and data/chain preservation.
-- Installed-wheel suite: 379 tests PASS; PostgreSQL suite: 379/379 PASS.
-- Non-root OCI package and K3s/Terraform SQLite/PostgreSQL plan-apply-destroy PASS; ephemeral resources destroyed.
-- Full-history fetch is restricted to CI jobs that execute historical evidence; exact PR-head SHA remains asserted.
-- Clean implementation commit, supply-chain provenance, exact-head CI, close gate and merge remain pending.
-- Production migration, deployment, secrets, cloud resources, spend and external effects remain unauthorized; `DENY_RELEASE` and `DENY_APPLY` are unchanged.
-
-## INC-030 exact-head CI passed; merge and production-migration gates remain
-
-- PR #39 head: `8a87a8538cde73e376008cc79d1d3dbf5d5922dd`.
-- GitHub Actions run `30567232424`: 8/8 production-readiness jobs PASS.
-- Runtime schema history SHA-256: `e372d426f51dbc2fe45ddfe9ba793c72a46e255a4f0a1e1fdca5f7034664e3d3`.
-- SQLite historical matrix v1-v9: PASS from the installed current wheel.
-- PostgreSQL historical matrix v1-v9: PASS inside the ephemeral shared-state job.
-- Retained semantic report SHA-256: `95995e856ffd450f62c0f46300f364ae944da5414e34b8db7c9ce8b3dc02adac`; 20/20, exact source binding, clean worktree, external effects 0.
-- Retained provenance SHA-256: `0074164ac3f09729b4b7faf600e794956fe10c89ecabf0d5b1156ede96d636c4`; invocation binds the exact head.
-- Policy summary SHA-256: `44973f9b9d5bfba08a294a9af5e067757cff7d7e550ae5e0d3ee4c7900bd3bc0`; status PASS.
-- Graph Harness revision 0: spec, implementation, production, and review gates PASS; close gate BLOCKED; `INC-030=blocked`.
-- Blockers are the stacked merge chain `#39 -> #38 -> #37 -> #36 -> #35 -> main` and explicit human authority for any production migration.
-- `DENY_RELEASE`, `DENY_APPLY`, disabled external effects, and all production/legal/accessibility/staging gates remain unchanged.
+- The live `main` protection now matches the committed single-owner policy: zero approving reviews, no last-push approval, strict eight-job checks, PR requirement, admin enforcement, linear history, conversation resolution, and no force-push/deletion.
+- PR #35 merged as `dc9b10e754c015a5bb8c251e8f9aa8732639ff41`; `INC-026` close-gate is PASS and the node is `done`.
+- PR #36 review found and repaired session-quota bypass and raw-tenant 429 logging. Exact-head run `30599987747` passed 8/8, threads were resolved, and PR #36 merged as `e73823de4556955d8db00dfbc10ba83db82f00fa`; `INC-027` revision 5 is `done`.
+- PR #37 audit-integrity code was reconstructed by three-way merge on the merged quota base. Historical Graph Harness projections were discarded; current `INC-028` revision 0 is the sole execution authority.
+- Development-tree verification passes: 372 locked-wheel tests, 372 PostgreSQL tests with schema v9/migration/backup/restore, non-root OCI package, 58 frontend tests, lint/build, governance, compliance and operability.
+- Exact-head CI and PR review for the rebuilt #37 head remain pending. Immutable external audit custody and production key operations remain unauthorized.
+- Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain `0`.

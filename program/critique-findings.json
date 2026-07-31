@@ -89,20 +89,20 @@
       "status": "CLOSED"
     },
     {
-      "description": "The audit ledger is hash-chained and exposes signed checkpoints, but immutable off-host custody, KMS/HSM key lifecycle and accountable legal retention acceptance are unavailable.",
-      "evidence": "PR #37 exact-head run 30527647518 passed 8/8; schema v9, tamper/truncation detection, signed checkpoint package smoke and Secret-reference gates pass. No immutable external destination or production key custody exists.",
+      "description": "The audit ledger is transactional but is not hash-chained, signed or exported to immutable storage.",
+      "evidence": "INC-028 specifies per-tenant hash chaining and signed checkpoints; immutable off-host custody remains external.",
       "id": "F-012",
       "owner": "INC-028",
       "severity": "MEDIUM",
-      "status": "BLOCKED_EXTERNAL"
+      "status": "IN_PROGRESS"
     },
     {
-      "description": "Authenticated request and denial-audit amplification is bounded by durable per-principal and per-tenant quotas, but the verified implementation remains unmerged behind the repository governance human gate.",
-      "evidence": "PR #36 exact-head runs 30525081524 and 30525388641 passed 8/8 with zero external effects; node revision 4 is blocked only by parent PR #35 and merge/branch-protection authority.",
+      "description": "A valid principal can amplify denial-audit storage because no general authenticated request quota exists.",
+      "evidence": "INC-027 spec defines atomic hashed principal and tenant quotas before denial auditing; implementation and verification pending.",
       "id": "F-013",
       "owner": "INC-027",
       "severity": "MEDIUM",
-      "status": "BLOCKED_EXTERNAL"
+      "status": "IN_PROGRESS"
     },
     {
       "description": "Approver and viewer roles had no path to load an existing tenant-scoped run, leaving server-authorized review authority unusable from the production console.",
@@ -402,6 +402,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "73fd7b7f83cecd87d7ad37a60ff43c7693ec7a42",
+  "source_commit": "702b5f58cafb5516f5491d760a384e95a355c513",
   "updated_at": "2026-07-30"
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import sqlite3
 import tempfile
@@ -21,6 +22,25 @@ from agency_runtime.audit_integrity import (
     audit_event_hash,
 )
 from agency_runtime.persistence import AuditWrite, SQLiteRunStore
+
+ROOT = Path(__file__).resolve().parents[2]
+MIGRATION_SPEC = importlib.util.spec_from_file_location(
+    "migrate_sqlite_to_postgresql_audit_test",
+    ROOT / "scripts/migrate-sqlite-to-postgresql.py",
+)
+if MIGRATION_SPEC is None or MIGRATION_SPEC.loader is None:
+    raise RuntimeError("unable to load SQLite migration tool")
+MIGRATION = importlib.util.module_from_spec(MIGRATION_SPEC)
+MIGRATION_SPEC.loader.exec_module(MIGRATION)
+
+
+class RecordingTarget:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+
+    def execute(self, statement: str, parameters: object = None) -> "RecordingTarget":
+        self.statements.append(statement)
+        return self
 
 
 def encoded(byte: int) -> str:
@@ -319,6 +339,42 @@ def create_audited_run(client: TestClient, key: str, suffix: str) -> None:
     )
     if response.status_code not in {201, 202}:
         raise AssertionError(response.text)
+
+
+class AuditMigrationIntegrityTests(unittest.TestCase):
+    def test_migration_rejects_tail_deletion_exposed_by_source_head(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "runtime.sqlite3"
+            store = SQLiteRunStore(database)
+            try:
+                for index in range(2):
+                    store.append_audit(
+                        "tenant-alpha",
+                        AuditWrite(
+                            request_id=f"migration-request-{index}",
+                            action="migration.audit",
+                            resource_type="probe",
+                            resource_id=f"probe-{index}",
+                            actor="subject:migration-reviewer",
+                            payload={"index": index},
+                            event_id=f"migration-audit-{index}",
+                        ),
+                    )
+            finally:
+                store.close()
+            with sqlite3.connect(database) as connection:
+                connection.execute(
+                    "DELETE FROM audit_events WHERE sequence = "
+                    "(SELECT MAX(sequence) FROM audit_events)"
+                )
+            source = MIGRATION.source_connection(database)
+            try:
+                target = RecordingTarget()
+                with self.assertRaisesRegex(RuntimeError, "chain head"):
+                    MIGRATION.migrate_audit(source, target)
+                self.assertEqual(target.statements, [])
+            finally:
+                source.close()
 
 
 class AuditIntegrityApiTests(unittest.TestCase):
