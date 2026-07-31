@@ -2341,7 +2341,7 @@
         "branch-protection mutation",
         "force push"
       ],
-      "publication_state": "REBUILT_ON_PR39_RUNNING",
+      "publication_state": "EXACT_TREE_PASS_EXACT_HEAD_PENDING",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2351,7 +2351,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Release Reliability Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-031",
       "validation_commands": [
         "python3 scripts/verify-workload-rollback.py --validate-only",
@@ -2362,7 +2362,8 @@
         "git diff --check"
       ],
       "workstream_id": "WS-09",
-      "write_lock": "orchestrator:INC-031"
+      "write_lock": "orchestrator:INC-031",
+      "validation_summary": "Candidate 3d74f89 clean rollback to 6fc3d73 passes at 1271 ms with data/audit preservation; 386 wheel, 386 PostgreSQL, OCI, supply chain, 58 frontend tests and K3s/Terraform pass. Exact-head CI pending."
     },
     {
       "acceptance_criteria": [

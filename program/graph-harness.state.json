@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 15,
-  "event_count": 297,
-  "last_event_id": "f9c17e86-9625-4af7-b2c0-9ca041e3c6c7",
+  "checkpoint_count": 16,
+  "event_count": 306,
+  "last_event_id": "41325969-792f-4fc3-8982-d40ed472d755",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -842,14 +842,57 @@
     "INC-031": {
       "active_approval_count": 1,
       "active_evidence": {
+        "0a7d5270-e2d3-457b-8d03-127edd4da471": {
+          "artifact": "program/reports/inc-031-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "9d7d99754eac8eabfb1f8629df8c70f2a4a056a3bcdc04dd8238cbd2ba9f4edb"
+        },
+        "72aa362d-2e94-4317-b0ac-26897de8101d": {
+          "artifact": "git tree 115721a23a64837cb3bc28bb03ef030748f3de5d",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "63a82a83a2a87fac317f0ca63db48957ff3d6e96987b92df276b853c5b5d60ef"
+        },
         "8a61723a-678e-4092-89ca-8dea32b4aec8": {
           "artifact": "specs/031-workload-rollback-drill",
           "kind": "spec",
           "result": "PASS",
           "sha256": "6f3083912717e34b1e51f40a538fb29d780ed4733688b6fc97efe21b78c25b30"
+        },
+        "ad4e3172-4055-429c-ae84-4b2db4cab2c5": {
+          "artifact": "program/reports/inc-031-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "d393158ccb3a491d2a043b6fcf1d2bdd9a8b9e71b10dc22aaccb196b38f56bb5"
+        },
+        "fbaac95d-1c8d-4a69-871d-93693cfe9769": {
+          "artifact": "program/reports/inc-031-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "9d7d99754eac8eabfb1f8629df8c70f2a4a056a3bcdc04dd8238cbd2ba9f4edb"
         }
       },
       "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "72aa362d-2e94-4317-b0ac-26897de8101d",
+            "fbaac95d-1c8d-4a69-871d-93693cfe9769"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "ad4e3172-4055-429c-ae84-4b2db4cab2c5"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "0a7d5270-e2d3-457b-8d03-127edd4da471"
+          ],
+          "result": "PASS"
+        },
         "spec-gate": {
           "evidence_ids": [
             "8a61723a-678e-4092-89ca-8dea32b4aec8"
@@ -857,9 +900,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "f9c17e86-9625-4af7-b2c0-9ca041e3c6c7",
+      "last_event_id": "e6355f1f-31de-4bee-b618-3b3cba768f55",
       "revision": 0,
-      "status": "running"
+      "status": "review"
     },
     "INC-038": {
       "active_approval_count": 0,

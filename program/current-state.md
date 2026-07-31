@@ -340,3 +340,12 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Development-tree verification passes: 372 locked-wheel tests, 372 PostgreSQL tests with schema v9/migration/backup/restore, non-root OCI package, 58 frontend tests, lint/build, governance, compliance and operability.
 - Exact-head CI and PR review for the rebuilt #37 head remain pending. Immutable external audit custody and production key operations remain unauthorized.
 - Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain `0`.
+
+## 2026-07-31 — INC-031 rebuilt workload rollback evidence
+
+- Candidate `3d74f892735ecc533bd9fea21aa3307dfd167fc3` rolled back locally to compatible prior stack `6fc3d73d73ee75d2f5fdbd5f3fe41e9368f9e9a7` on one loopback endpoint and one SQLite volume.
+- RTO measured 1,271 ms. Both workloads used read-only OCI rootfs, UID/GID 10001, no capabilities and noNewPrivileges; writers never overlapped.
+- The original tenant run and audit head survived without database restore. A post-rollback run succeeded; final SQLite integrity and audit-chain verification passed.
+- Clean delivery evidence passes: 386 wheel tests, 386 PostgreSQL tests, schema v9 and v1-v9 compatibility, OCI, supply chain source_dirty=false, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability.
+- Exact-head CI and PR review remain pending. Merge of #38/#39/#40 and any production rollback remain separate human gates.
+- Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain 0.
