@@ -59,6 +59,22 @@ def response_ref(operation: dict[str, Any], code: str) -> str:
         raise ValueError(f"operation response {code} does not reference a JSON schema") from error
 
 
+def response_refs(operation: dict[str, Any], code: str) -> set[str]:
+    try:
+        schema = operation["responses"][code]["content"]["application/json"]["schema"]
+    except (KeyError, TypeError) as error:
+        raise ValueError(f"operation response {code} does not reference a JSON schema") from error
+    if "$ref" in schema:
+        return {str(schema["$ref"])}
+    variants = schema.get("anyOf") or schema.get("oneOf")
+    if not isinstance(variants, list) or not variants:
+        raise ValueError(f"operation response {code} does not reference a JSON schema")
+    refs = {str(item.get("$ref", "")) for item in variants if isinstance(item, dict)}
+    if len(refs) != len(variants) or "" in refs:
+        raise ValueError(f"operation response {code} contains an invalid union schema")
+    return refs
+
+
 def validate_contract(document: dict[str, Any]) -> dict[str, int]:
     errors: list[str] = []
     info = document.get("info", {})
@@ -90,7 +106,11 @@ def validate_contract(document: dict[str, Any]) -> dict[str, int]:
         errors.append("ValidationErrorResponse errors must remain bounded to 20 items")
 
     paths = document.get("paths", {})
-    observed_unversioned = {path for path in paths if not path.startswith("/api/v1")}
+    observed_unversioned = {
+        path
+        for path in paths
+        if path != "/api/v1" and not path.startswith("/api/v1/")
+    }
     if observed_unversioned != UNVERSIONED_PATHS:
         errors.append(
             "unversioned path set drift: expected {}, found {}".format(
@@ -116,15 +136,20 @@ def validate_contract(document: dict[str, Any]) -> dict[str, int]:
                 errors.append(f"invalid operationId for {method.upper()} {path}: {operation_id!r}")
             operation_ids.append(operation_id)
             for code in STANDARD_ERROR_CODES:
-                expected_ref = VALIDATION_ERROR_REF if code == "422" else PUBLIC_ERROR_REF
+                expected_refs = (
+                    {VALIDATION_ERROR_REF, PUBLIC_ERROR_REF}
+                    if code == "422"
+                    else {PUBLIC_ERROR_REF}
+                )
                 try:
-                    actual_ref = response_ref(operation, code)
+                    actual_refs = response_refs(operation, code)
                 except ValueError as error:
                     errors.append(f"{method.upper()} {path}: {error}")
                     continue
-                if actual_ref != expected_ref:
+                if actual_refs != expected_refs:
                     errors.append(
-                        f"{method.upper()} {path}: response {code} references {actual_ref}, expected {expected_ref}"
+                        f"{method.upper()} {path}: response {code} references "
+                        f"{sorted(actual_refs)}, expected {sorted(expected_refs)}"
                     )
     if len(operation_ids) != len(set(operation_ids)):
         errors.append("operationId values must be unique")

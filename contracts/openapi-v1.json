@@ -651,11 +651,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Audit Events Api V1 Audit Events Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -779,11 +787,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Audit Integrity Checkpoint Api V1 Audit Events Integrity Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -907,11 +923,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Integrations Api V1 Integrations Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1046,11 +1070,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Get Integration Api V1 Integrations  Integration Id  Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1174,11 +1206,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Current Tenant Api V1 Me Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1335,11 +1375,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Reconcile Model Effect Api V1 Model Effects  Effect Id  Reconcile Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1463,11 +1511,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Providers Api V1 Providers Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1632,11 +1688,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Create Run Api V1 Runs Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1771,11 +1835,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Get Run Api V1 Runs  Run Id  Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -1932,11 +2004,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Approve Run Api V1 Runs  Run Id  Greenlight Approve Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2093,11 +2173,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Reject Run Api V1 Runs  Run Id  Greenlight Reject Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2254,11 +2342,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Revoke Run Greenlight Api V1 Runs  Run Id  Greenlight Revoke Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2393,11 +2489,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Model Effects Api V1 Runs  Run Id  Model Effects Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2563,11 +2667,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Execute Model Effect Api V1 Runs  Run Id  Model Effects  Station  Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2745,11 +2857,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Attach Publication Media Api V1 Runs  Run Id  Publication Media  Channel Id  Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -2915,11 +3035,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Revoke Publication Media Api V1 Runs  Run Id  Publication Media  Media Id  Delete"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3054,11 +3182,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Social Publications Api V1 Runs  Run Id  Social Publications Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3224,11 +3360,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Publish Social Artifact Api V1 Runs  Run Id  Social Publications  Channel Id  Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3362,11 +3506,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Create Browser Session Api V1 Sessions Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3485,11 +3637,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Revoke Browser Session Api V1 Sessions Current Delete"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3611,11 +3771,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Resume Browser Session Api V1 Sessions Current Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3739,11 +3907,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 List Social Channels Api V1 Social Channels Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -3887,11 +4063,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Complete Instagram Oauth Api V1 Social Channels Instagram Oauth Callback Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4035,11 +4219,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Complete X Oauth Api V1 Social Channels X Oauth Callback Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4174,11 +4366,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Get Social Channel Api V1 Social Channels  Channel Id  Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4313,11 +4513,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Disconnect Social Channel Api V1 Social Channels  Channel Id  Connection Delete"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4452,11 +4660,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Start Social Oauth Api V1 Social Channels  Channel Id  Oauth Start Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4613,11 +4829,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Reconcile Social Publication Api V1 Social Publications  Intent Id  Reconcile Post"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4777,11 +5001,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Read Trends Api V1 Trends Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -4905,11 +5137,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Healthz Healthz Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {
@@ -5028,11 +5268,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PublicErrorResponse"
+                    }
+                  ],
+                  "title": "Response 422 Readyz Readyz Get"
                 }
               }
             },
-            "description": "Request validation failed with sanitized field metadata."
+            "description": "Request validation failed with sanitized field metadata, or a safe domain validation rule rejected the request."
           },
           "429": {
             "content": {

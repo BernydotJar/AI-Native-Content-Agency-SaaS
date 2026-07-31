@@ -97,17 +97,26 @@ class ApiContractSnapshotTests(unittest.TestCase):
 
     def test_verifier_rejects_unversioned_paths_and_missing_error_contracts(self):
         document = self.contract_module.build_contract()
-        unversioned = copy.deepcopy(document)
-        unversioned["paths"]["/admin"] = copy.deepcopy(
-            unversioned["paths"]["/healthz"]
-        )
-        with self.assertRaisesRegex(ValueError, "unversioned path set drift"):
-            self.contract_module.validate_contract(unversioned)
+        for path in ("/admin", "/api/v10/admin", "/api/v1beta/admin"):
+            with self.subTest(path=path):
+                unversioned = copy.deepcopy(document)
+                unversioned["paths"][path] = copy.deepcopy(
+                    unversioned["paths"]["/healthz"]
+                )
+                with self.assertRaisesRegex(ValueError, "unversioned path set drift"):
+                    self.contract_module.validate_contract(unversioned)
 
         missing_error = copy.deepcopy(document)
         del missing_error["paths"]["/api/v1/me"]["get"]["responses"]["503"]
         with self.assertRaisesRegex(ValueError, "response 503"):
             self.contract_module.validate_contract(missing_error)
+
+        incomplete_422 = copy.deepcopy(document)
+        incomplete_422["paths"]["/api/v1/me"]["get"]["responses"]["422"]["content"][
+            "application/json"
+        ]["schema"] = {"$ref": "#/components/schemas/ValidationErrorResponse"}
+        with self.assertRaisesRegex(ValueError, "response 422 references"):
+            self.contract_module.validate_contract(incomplete_422)
 
     def test_error_models_reject_extra_or_unsanitized_shapes(self):
         with self.assertRaises(ValidationError):
@@ -152,9 +161,24 @@ class ApiContractRuntimeTests(unittest.TestCase):
         def internal_failure():
             raise RuntimeError("private contract failure detail")
 
+        def domain_validation_failure():
+            from agency_runtime.api import PublicApiError
+
+            raise PublicApiError(
+                status_code=422,
+                code="domain_validation_failed",
+                detail="domain validation failed",
+            )
+
         runtime.add_api_route(
             "/api/v1/_contract/internal-error",
             internal_failure,
+            methods=["GET"],
+            include_in_schema=False,
+        )
+        runtime.add_api_route(
+            "/api/v1/_contract/domain-validation-error",
+            domain_validation_failure,
             methods=["GET"],
             include_in_schema=False,
         )
@@ -224,6 +248,16 @@ class ApiContractRuntimeTests(unittest.TestCase):
             for item in invalid.json()["errors"]:
                 self.assertEqual(set(item), {"location", "type"})
             self.assertEqual(invalid.headers.get("X-Request-ID"), "contract-422")
+
+            domain_invalid = client.get(
+                "/api/v1/_contract/domain-validation-error",
+                headers={"X-Request-ID": "contract-domain-422"},
+            )
+            domain_error = self.assert_public_error(
+                domain_invalid, 422, "contract-domain-422"
+            )
+            self.assertEqual(domain_error.code, "domain_validation_failed")
+            self.assertNotIn("errors", domain_invalid.json())
 
             internal = client.get(
                 "/api/v1/_contract/internal-error",

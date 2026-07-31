@@ -278,7 +278,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-029",
-      "status": "blocked"
+      "status": "in_progress"
     },
     {
       "depends_on": [

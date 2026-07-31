@@ -2046,7 +2046,7 @@
           "scripts/verify-production-package.sh",
           "specs/029-versioned-api-contract/**"
         ],
-        "canonical_status": "blocked",
+        "canonical_status": "running",
         "human_gates": [
           "merge",
           "breaking API approval",
