@@ -340,3 +340,15 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Development-tree verification passes: 372 locked-wheel tests, 372 PostgreSQL tests with schema v9/migration/backup/restore, non-root OCI package, 58 frontend tests, lint/build, governance, compliance and operability.
 - Exact-head CI and PR review for the rebuilt #37 head remain pending. Immutable external audit custody and production key operations remain unauthorized.
 - Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain `0`.
+
+## 2026-07-31 — PR #38 merged; INC-030 rebuilt
+
+- INC-029 revision 1 is done after run 30656597259, two resolved P2 findings and squash merge 12332e4653f9db2949a5936dd1765cbd4436ff4c.
+- INC-030 schema compatibility matrix is rebuilt on the merged API-contract tree and requires fresh local/exact-head evidence.
+
+## 2026-07-31 — INC-030 fresh compatibility evidence
+
+- Runtime schema history v1-v9 was re-executed after PR #38 merged into main.
+- SQLite v1-v9 and PostgreSQL v1-v9 all preserve the historical audit event and current hash chain after upgrade to schema v9.
+- 383 installed-wheel tests and 383 PostgreSQL tests pass; OCI, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability pass.
+- Exact-head CI, remote review and merge of PR #39 remain pending. No production migration has been executed.

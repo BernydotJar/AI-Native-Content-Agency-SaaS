@@ -33,6 +33,8 @@ TEST_PYTHON="$TMP_DIR/test-venv/bin/python"
 "$TEST_PYTHON" -m pip check
 API_CONTRACT_USE_INSTALLED=1 "$TEST_PYTHON" \
   "$REPOSITORY_ROOT/scripts/verify-api-contract.py"
+SCHEMA_COMPATIBILITY_USE_INSTALLED=1 "$TEST_PYTHON" \
+  "$REPOSITORY_ROOT/scripts/verify-schema-compatibility.py" --python "$TEST_PYTHON"
 SEMANTIC_ARGS=()
 if [[ "${SEMANTIC_EVAL_ALLOW_DIRTY:-0}" == "1" ]]; then
   SEMANTIC_ARGS+=(--allow-dirty)
