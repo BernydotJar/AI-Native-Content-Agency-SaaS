@@ -53,6 +53,8 @@ jobs:
         env:
           EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+      - name: Fetch canonical runtime schema history refs
+        run: git fetch --force origin 'refs/tags/runtime-schema-v*:refs/tags/runtime-schema-v*'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -146,6 +148,8 @@ jobs:
         env:
           EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+      - name: Fetch canonical runtime schema history refs
+        run: git fetch --force origin 'refs/tags/runtime-schema-v*:refs/tags/runtime-schema-v*'
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"

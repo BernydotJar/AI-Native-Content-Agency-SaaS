@@ -33,3 +33,7 @@ No provider, model, publication, secret, deployment or paid effect is enabled by
 ## Open gates
 
 Clean-tree evidence, exact-head GitHub Actions, remote review and squash merge remain pending. A real production migration remains a separate human gate even after this node closes.
+
+## Revision 1 — retained history refs
+
+PR review identified that early schema commits were reachable only through incidental feature branches. The repair creates canonical non-release tags `runtime-schema-v1` through `runtime-schema-v9`, records full 40-character SHAs, and requires every tag to resolve exactly to its declared commit. CI explicitly fetches only those canonical history refs before running the matrix. Missing, noncanonical or moved refs fail closed.

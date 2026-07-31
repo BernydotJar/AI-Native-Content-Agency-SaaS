@@ -15,15 +15,17 @@ from urllib.parse import quote, urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "contracts/runtime-schema-history.json"
-HEX_COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
+HEX_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+HISTORY_REF = re.compile(r"^refs/tags/runtime-schema-v([1-9][0-9]*)$")
 DECLARATION = re.compile(r'^POSTGRES_SCHEMA_VERSION = "([0-9]+)"$', re.MULTILINE)
-MANIFEST_SCHEMA = "agency-runtime-schema-history.v1"
+MANIFEST_SCHEMA = "agency-runtime-schema-history.v2"
 
 
 @dataclass(frozen=True)
 class SchemaVersion:
     version: int
     commit: str
+    ref: str
     resolved_commit: str
     capability: str
 
@@ -74,11 +76,12 @@ def validate_manifest(
     versions: list[SchemaVersion] = []
     for index, item in enumerate(records, start=1):
         if not isinstance(item, dict) or set(item) != {
-            "version", "commit", "capability"
+            "version", "commit", "ref", "capability"
         }:
             raise ValueError(f"version record {index} fields are invalid")
         version = item["version"]
         commit = item["commit"]
+        ref = item["ref"]
         capability = item["capability"]
         if not isinstance(version, int) or version < 1:
             raise ValueError(f"version record {index} has invalid version")
@@ -86,6 +89,10 @@ def validate_manifest(
             raise ValueError(f"version {version} has invalid commit")
         if commit in seen_commits:
             raise ValueError(f"duplicate historical commit: {commit}")
+        if not isinstance(ref, str) or not HISTORY_REF.fullmatch(ref):
+            raise ValueError(f"version {version} has invalid history ref")
+        if ref != f"refs/tags/runtime-schema-v{version}":
+            raise ValueError(f"version {version} history ref is not canonical")
         if not isinstance(capability, str) or not capability.strip() or len(capability) > 200:
             raise ValueError(f"version {version} has invalid capability")
         observed.append(version)
@@ -93,11 +100,15 @@ def validate_manifest(
         resolved = commit
         if resolve_commits:
             try:
-                resolved = git_text("rev-parse", f"{commit}^{{commit}}")
+                resolved = git_text("rev-parse", f"{ref}^{{commit}}")
             except RuntimeError as error:
                 raise ValueError(
-                    f"historical commit {commit} is unavailable; fetch full Git history"
+                    f"canonical history ref {ref} is unavailable; fetch runtime-schema tags"
                 ) from error
+            if resolved != commit:
+                raise ValueError(
+                    f"canonical history ref {ref} resolves to {resolved}, expected {commit}"
+                )
             source = git_text("show", f"{resolved}:backend/agency_runtime/postgres.py")
             match = DECLARATION.search(source)
             declared = None if match is None else int(match.group(1))
@@ -105,7 +116,7 @@ def validate_manifest(
                 raise ValueError(
                     f"historical commit {commit} declares schema {declared}, expected {version}"
                 )
-        versions.append(SchemaVersion(version, commit, resolved, capability.strip()))
+        versions.append(SchemaVersion(version, commit, ref, resolved, capability.strip()))
 
     expected = list(range(1, current + 1))
     if observed != expected:
