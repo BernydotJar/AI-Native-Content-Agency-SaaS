@@ -2071,7 +2071,7 @@
         "legal non-repudiation claim",
         "branch-protection mutation"
       ],
-      "publication_state": "REVIEW_REPAIR_RUNNING",
+      "publication_state": "REVISION_1_EXACT_TREE_PASS_EXACT_HEAD_PENDING",
       "read_only_paths": [
         ".env.local",
         "production secrets",
@@ -2081,7 +2081,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Security Engineer / Database Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-028",
       "validation_commands": [
         "./scripts/verify-python-locks.sh",
@@ -2094,7 +2094,7 @@
         "actionlint .github/workflows/*.yml",
         "git diff --check"
       ],
-      "validation_summary": "Reconstructed clean tree 824da14 passes 372 locked-wheel tests, 372 PostgreSQL tests, schema v9 migration/backup/restore, OCI package, supply-chain source_dirty=false, 58 frontend tests, lint/build, governance, compliance and operability. Exact-head CI and PR review pending.",
+      "validation_summary": "Revision 1 clean tree e304562 passes 375 locked-wheel tests, 375 PostgreSQL tests, schema v9 migration/backup/restore, reproducible OCI package, supply-chain source_dirty=false, and three PR-review regressions. Exact-head CI and re-review pending.",
       "workstream_id": "WS-07",
       "write_lock": "orchestrator:INC-028"
     },

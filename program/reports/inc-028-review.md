@@ -40,8 +40,8 @@ The reconstruction introduced no conflict and preserved the two quota review rep
 
 ## Independent verification on the reconstructed tree
 
-- locked installed wheel: 372 tests PASS; 27 PostgreSQL-only skips;
-- PostgreSQL 15.18: 372 tests PASS; schema v9; multi-replica chain, migration, least privilege, SQLite/PostgreSQL backup and restore PASS;
+- locked installed wheel: 375 tests PASS; 27 PostgreSQL-only skips;
+- PostgreSQL 15.18: 375 tests PASS; schema v9; multi-replica chain, migration, least privilege, SQLite/PostgreSQL backup and restore PASS;
 - non-root OCI package: audit checkpoint, durable audit, quota and default-disabled provider guards PASS;
 - frontend: 58 tests PASS; zero lint findings; production build PASS;
 - program, Graph Harness, repository governance, compliance and operability validators PASS;

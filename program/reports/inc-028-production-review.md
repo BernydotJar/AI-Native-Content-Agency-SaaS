@@ -10,7 +10,7 @@
 | signed checkpoint verifies | API and installed-image HMAC verification | PASS |
 | weak/partial keyring fails startup | primitive/API tests | PASS |
 | session quota revision 5 preserved | session and sanitized-429 regressions | PASS |
-| schema v9 migration/backup/restore | PostgreSQL 15.18 verifier, 372 tests | PASS |
+| schema v9 migration/backup/restore | PostgreSQL 15.18 verifier, 375 tests | PASS |
 | non-root OCI package | Buildah package verification | PASS |
 | frontend regression | 58 tests, lint, build | PASS |
 | exact-head remote jobs | pending rebuilt PR head | PENDING |
