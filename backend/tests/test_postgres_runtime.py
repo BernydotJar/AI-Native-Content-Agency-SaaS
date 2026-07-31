@@ -581,6 +581,22 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             with ThreadPoolExecutor(max_workers=8) as executor:
                 list(executor.map(append, range(20)))
 
+            with raw_connection(MIGRATION_DATABASE_URL) as locking_connection:
+                locking_cursor = locking_connection.cursor()
+                locking_cursor.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                    ("audit-chain:" + self.tenant,),
+                )
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    blocked_verification = executor.submit(
+                        first.verify_audit_chain, self.tenant
+                    )
+                    time.sleep(0.2)
+                    self.assertFalse(blocked_verification.done())
+                    locking_connection.commit()
+                    locked_checkpoint = blocked_verification.result(timeout=10)
+                self.assertEqual(locked_checkpoint.event_count, 20)
+
             checkpoint_one = first.verify_audit_chain(self.tenant)
             checkpoint_two = second.verify_audit_chain(self.tenant)
             self.assertEqual(checkpoint_one.event_count, 20)

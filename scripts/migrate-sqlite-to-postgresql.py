@@ -126,7 +126,8 @@ def migrate_runs(
 def migrate_audit(
     source: sqlite3.Connection, target: Any
 ) -> int:
-    if "audit_events" not in source_tables(source):
+    available = source_tables(source)
+    if "audit_events" not in available:
         return 0
     records = source.execute(
         "SELECT * FROM audit_events ORDER BY tenant_id ASC, sequence ASC"
@@ -138,6 +139,7 @@ def migrate_audit(
     previous_by_tenant: dict[str, str] = {}
     count_by_tenant: dict[str, int] = {}
     head_event_by_tenant: dict[str, str] = {}
+    prepared: list[tuple[sqlite3.Row, str, dict[str, object], str, str]] = []
     for row in records:
         tenant_id = str(row["tenant_id"])
         previous_hash = previous_by_tenant.get(tenant_id, GENESIS_AUDIT_HASH)
@@ -161,6 +163,28 @@ def migrate_audit(
         if "event_hash" in columns and row["event_hash"]:
             if str(row["event_hash"]) != event_hash:
                 raise RuntimeError("SQLite audit event hash failed migration verification")
+        prepared.append((row, tenant_id, payload, previous_hash, event_hash))
+        previous_by_tenant[tenant_id] = event_hash
+        count_by_tenant[tenant_id] = count_by_tenant.get(tenant_id, 0) + 1
+        head_event_by_tenant[tenant_id] = str(row["event_id"])
+
+    if "audit_chain_heads" in available:
+        source_heads = {
+            str(row["tenant_id"]): row
+            for row in source.execute("SELECT * FROM audit_chain_heads").fetchall()
+        }
+        if set(source_heads) != set(count_by_tenant):
+            raise RuntimeError("SQLite audit chain head tenant set failed migration verification")
+        for tenant_id, event_count in count_by_tenant.items():
+            head = source_heads[tenant_id]
+            if (
+                int(head["event_count"]) != event_count
+                or str(head["head_event_id"]) != head_event_by_tenant[tenant_id]
+                or str(head["head_hash"]) != previous_by_tenant[tenant_id]
+            ):
+                raise RuntimeError("SQLite audit chain head failed migration verification")
+
+    for row, tenant_id, payload, previous_hash, event_hash in prepared:
         target.execute(
             """
             INSERT INTO audit_events(
@@ -187,9 +211,6 @@ def migrate_audit(
                 event_hash,
             ),
         )
-        previous_by_tenant[tenant_id] = event_hash
-        count_by_tenant[tenant_id] = count_by_tenant.get(tenant_id, 0) + 1
-        head_event_by_tenant[tenant_id] = str(row["event_id"])
     for tenant_id, event_count in count_by_tenant.items():
         target.execute(
             """
