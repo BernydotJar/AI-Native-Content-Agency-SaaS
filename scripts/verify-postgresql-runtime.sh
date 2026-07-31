@@ -100,6 +100,7 @@ grant_runtime_privileges() {
 REVOKE ALL ON TABLE public.runtime_schema_meta FROM PUBLIC;
 REVOKE ALL ON TABLE public.runtime_runs FROM PUBLIC;
 REVOKE ALL ON TABLE public.audit_events FROM PUBLIC;
+REVOKE ALL ON TABLE public.audit_chain_heads FROM PUBLIC;
 REVOKE ALL ON TABLE public.runtime_sessions FROM PUBLIC;
 REVOKE ALL ON TABLE public.authentication_rate_limits FROM PUBLIC;
 REVOKE ALL ON TABLE public.authenticated_request_rate_limits FROM PUBLIC;
@@ -114,6 +115,7 @@ REVOKE ALL ON SEQUENCE public.audit_events_sequence_seq FROM PUBLIC;
 GRANT SELECT ON TABLE public.runtime_schema_meta TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_runs TO :"runtime_role";
 GRANT SELECT, INSERT ON TABLE public.audit_events TO :"runtime_role";
+GRANT SELECT, INSERT, UPDATE ON TABLE public.audit_chain_heads TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE ON TABLE public.runtime_sessions TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authentication_rate_limits TO :"runtime_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.authenticated_request_rate_limits TO :"runtime_role";
@@ -401,6 +403,7 @@ try:
             "runtime_schema_meta": {"SELECT"},
             "runtime_runs": {"SELECT", "INSERT", "UPDATE"},
             "audit_events": {"SELECT", "INSERT"},
+            "audit_chain_heads": {"SELECT", "INSERT", "UPDATE"},
             "runtime_sessions": {"SELECT", "INSERT", "UPDATE"},
             "authentication_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
             "authenticated_request_rate_limits": {"SELECT", "INSERT", "UPDATE", "DELETE"},
@@ -455,7 +458,7 @@ AGENCY_DATABASE_URL="$DATABASE_URL" \
 SCHEMA_INCOMPATIBLE_STATUS=$?
 set -e
 "$POSTGRES_BIN_DIR/psql" "$SHARED_MIGRATION_URL" --no-psqlrc -v ON_ERROR_STOP=1 \
-  --command "UPDATE public.runtime_schema_meta SET value = '8' WHERE key = 'schema_version'" \
+  --command "UPDATE public.runtime_schema_meta SET value = '9' WHERE key = 'schema_version'" \
   >/dev/null
 if [ "$SCHEMA_INCOMPATIBLE_STATUS" -eq 0 ]; then
   printf 'runtime schema validation unexpectedly accepted an incompatible version\n' >&2
@@ -668,6 +671,9 @@ with sqlite3.connect(legacy) as connection:
         "audit_events": connection.execute(
             "SELECT COUNT(*) FROM audit_events"
         ).fetchone()[0],
+        "audit_chain_heads": connection.execute(
+            "SELECT COUNT(*) FROM audit_chain_heads"
+        ).fetchone()[0],
         "runtime_sessions": connection.execute(
             "SELECT COUNT(*) FROM runtime_sessions"
         ).fetchone()[0],
@@ -687,6 +693,7 @@ with sqlite3.connect(legacy) as connection:
 required = (
     "runtime_runs",
     "audit_events",
+    "audit_chain_heads",
     "runtime_sessions",
     "authentication_rate_limits",
     "authentication_failure_total",
@@ -746,6 +753,7 @@ with sqlite3.connect(restored) as connection:
     observed = {
         "runtime_runs": connection.execute("SELECT COUNT(*) FROM runtime_runs").fetchone()[0],
         "audit_events": connection.execute("SELECT COUNT(*) FROM audit_events").fetchone()[0],
+        "audit_chain_heads": connection.execute("SELECT COUNT(*) FROM audit_chain_heads").fetchone()[0],
         "runtime_sessions": connection.execute("SELECT COUNT(*) FROM runtime_sessions").fetchone()[0],
         "authentication_rate_limits": connection.execute(
             "SELECT COUNT(DISTINCT bucket_hash) FROM authentication_failures"
@@ -838,6 +846,7 @@ try:
         for table in (
             "runtime_runs",
             "audit_events",
+            "audit_chain_heads",
             "runtime_sessions",
             "authentication_rate_limits",
             "authenticated_request_rate_limits",
@@ -869,7 +878,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "8":
+        if schema is None or schema["value"] != "9":
             raise SystemExit("unexpected schema version: {}".format(schema))
 finally:
     runtime.close()
@@ -975,6 +984,7 @@ try:
         for table in (
             "runtime_runs",
             "audit_events",
+            "audit_chain_heads",
             "runtime_sessions",
             "authentication_rate_limits",
             "authenticated_request_rate_limits",
@@ -1006,7 +1016,7 @@ try:
         schema = connection.execute(
             "SELECT value FROM runtime_schema_meta WHERE key = 'schema_version'"
         ).fetchone()
-        if schema is None or schema["value"] != "8":
+        if schema is None or schema["value"] != "9":
             raise SystemExit("unexpected restored schema version: {}".format(schema))
         restored_run = connection.execute(
             "SELECT tenant_id, status FROM runtime_runs LIMIT 1"
@@ -1022,7 +1032,7 @@ printf 'postgresql_backup_restore=pass\n'
 
 printf 'postgres_version=%s\n' "$("$POSTGRES_BIN_DIR/postgres" --version)"
 printf 'driver=pg8000\n'
-printf 'schema_version=8\n'
+printf 'schema_version=9\n'
 printf 'wheel_install=pass\n'
 printf 'postgres_integration=pass\n'
 printf 'sqlite_migration=pass\n'

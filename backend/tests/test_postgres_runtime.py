@@ -8,9 +8,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from agency_runtime.api import create_app
+from agency_runtime.audit_integrity import AuditIntegrityError, GENESIS_AUDIT_HASH
 from agency_runtime.models import Provenance
+from agency_runtime.persistence import AuditWrite
 from agency_runtime.postgres import (
     PostgresMemory,
+    PostgresRunStore,
     PostgresRuntimeDatabase,
     _connect_database_url,
 )
@@ -185,7 +188,7 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
             with raw_connection(MIGRATION_DATABASE_URL) as connection:
                 cursor = connection.cursor()
                 cursor.execute(
-                    "UPDATE runtime_schema_meta SET value = '8' WHERE key = 'schema_version'"
+                    "UPDATE runtime_schema_meta SET value = '9' WHERE key = 'schema_version'"
                 )
 
     def test_two_instances_share_run_audit_and_greenlight_state(self):
@@ -536,6 +539,106 @@ class PostgresSharedRuntimeTests(unittest.TestCase):
                 sorted(item["payload"]["fencing_token"] for item in checkpoints),
                 [1, 2],
             )
+
+    def test_audit_chain_is_shared_across_replicas_and_detects_admin_tampering(self):
+        database_one = PostgresRuntimeDatabase(
+            DATABASE_URL,
+            min_size=1,
+            max_size=3,
+            connect_timeout_seconds=10,
+            schema_mode="validate",
+        )
+        database_two = PostgresRuntimeDatabase(
+            DATABASE_URL,
+            min_size=1,
+            max_size=3,
+            connect_timeout_seconds=10,
+            schema_mode="validate",
+        )
+        first = PostgresRunStore(database_one)
+        second = PostgresRunStore(database_two)
+        event_ids = [
+            "audit-integrity-{}-{:02d}".format(self.tenant, index)
+            for index in range(20)
+        ]
+
+        def append(index: int) -> None:
+            store = first if index % 2 == 0 else second
+            store.append_audit(
+                self.tenant,
+                AuditWrite(
+                    request_id="audit-integrity-request-{:02d}".format(index),
+                    action="audit.integrity.probe",
+                    resource_type="audit_probe",
+                    resource_id="probe-{:02d}".format(index),
+                    actor="subject:audit-integrity-verifier",
+                    payload={"index": index},
+                    event_id=event_ids[index],
+                ),
+            )
+
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                list(executor.map(append, range(20)))
+
+            with raw_connection(MIGRATION_DATABASE_URL) as locking_connection:
+                locking_cursor = locking_connection.cursor()
+                locking_cursor.execute(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                    ("audit-chain:" + self.tenant,),
+                )
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    blocked_verification = executor.submit(
+                        first.verify_audit_chain, self.tenant
+                    )
+                    time.sleep(0.2)
+                    self.assertFalse(blocked_verification.done())
+                    locking_connection.commit()
+                    locked_checkpoint = blocked_verification.result(timeout=10)
+                self.assertEqual(locked_checkpoint.event_count, 20)
+
+            checkpoint_one = first.verify_audit_chain(self.tenant)
+            checkpoint_two = second.verify_audit_chain(self.tenant)
+            self.assertEqual(checkpoint_one.event_count, 20)
+            self.assertEqual(checkpoint_one.head_hash, checkpoint_two.head_hash)
+            self.assertEqual(checkpoint_one.head_event_id, checkpoint_two.head_event_id)
+            events = first.audit_events(self.tenant, limit=100)
+            self.assertEqual(len(events), 20)
+            self.assertEqual(events[0].previous_hash, GENESIS_AUDIT_HASH)
+            self.assertEqual(
+                [item.previous_hash for item in events[1:]],
+                [item.event_hash for item in events[:-1]],
+            )
+
+            tampered_event = events[len(events) // 2].event_id
+            with raw_connection(MIGRATION_DATABASE_URL) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "UPDATE audit_events SET action = %s WHERE event_id = %s",
+                    ("audit.integrity.tampered", tampered_event),
+                )
+            with self.assertRaises(AuditIntegrityError):
+                first.verify_audit_chain(self.tenant)
+            with raw_connection(MIGRATION_DATABASE_URL) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "UPDATE audit_events SET action = %s WHERE event_id = %s",
+                    ("audit.integrity.probe", tampered_event),
+                )
+            self.assertEqual(first.verify_audit_chain(self.tenant).event_count, 20)
+        finally:
+            with raw_connection(MIGRATION_DATABASE_URL) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "DELETE FROM audit_events WHERE tenant_id = %s",
+                    (self.tenant,),
+                )
+                cursor.execute(
+                    "DELETE FROM audit_chain_heads WHERE tenant_id = %s",
+                    (self.tenant,),
+                )
+            first.close()
+            second.close()
 
     def test_authenticated_request_quota_is_shared_and_atomic_between_instances(self):
         app_one = self.app(

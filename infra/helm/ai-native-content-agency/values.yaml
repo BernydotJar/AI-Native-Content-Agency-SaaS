@@ -41,6 +41,11 @@ runtime:
     cookieName: "agency_session"
     cookieSecure: true
     ttlSeconds: 28800
+  auditIntegrity:
+    # Signed checkpoints are optional and use a pre-provisioned Secret only.
+    existingSecret: ""
+    signingKeysJsonKey: "audit-checkpoint-signing-keys.json"
+    activeKeyIdKey: "audit-checkpoint-active-key-id"
   publicMedia:
     # Public media delivery is optional and requires a pre-provisioned Secret.
     baseUrl: ""

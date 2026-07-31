@@ -219,3 +219,7 @@ No alert should include campaign content, credential material, subject ID, or ke
 ## Authenticated request quota
 
 All authenticated API traffic is bounded before CSRF/authorization denial auditing by durable per-principal and per-tenant fixed-window counters. PostgreSQL schema v8 shares this authority across replicas. Configure the three non-secret `AGENCY_AUTHENTICATED_REQUEST_*` values through environment, Helm or Terraform and monitor `agency_authenticated_request_quota_total`. The detailed tuning and recovery procedure is in `docs/runbooks/authenticated-request-quota.md`.
+
+## Audit ledger integrity
+
+Audit events form per-tenant SHA-256 chains with durable heads; PostgreSQL schema v9 serializes same-tenant appends across replicas. Optional signed checkpoints are exposed at `GET /api/v1/audit-events/integrity` for `audit:read` identities. Configure only through the externalized checkpoint keyring contract and follow `docs/runbooks/audit-ledger-integrity.md`. A verification failure is an incident signal and must never be repaired by silently regenerating history.

@@ -152,6 +152,36 @@ class LocalProductRunnerTests(unittest.TestCase):
         self.assertNotEqual(invalid_dependency.returncode, 0)
         self.assertIn("between the principal limit", invalid_dependency.stderr)
 
+    def test_runner_accepts_audit_checkpoint_keyring_without_printing_secrets(self):
+        secret = base64.urlsafe_b64encode(bytes(range(32))).decode("ascii").rstrip("=")
+        with tempfile.TemporaryDirectory() as tempdir:
+            environment = {
+                "PATH": "/usr/local/bin:/usr/bin:/bin",
+                "AGENCY_PYTHON_BIN": sys.executable,
+                "AGENCY_ENV_FILE": str(Path(tempdir) / "absent.env"),
+                "AGENCY_IDENTITY_CREDENTIALS_JSON": "[]",
+                "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON": json.dumps(
+                    {"audit-v1": secret}
+                ),
+                "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID": "audit-v1",
+            }
+            completed = subprocess.run(
+                [str(SCRIPT), "--check"], cwd=ROOT, env=environment,
+                capture_output=True, text=True, check=False, timeout=10,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("audit_checkpoint_signing_configured=true", completed.stdout)
+        self.assertIn("audit_checkpoint_active_key_id=audit-v1", completed.stdout)
+        self.assertNotIn(secret, completed.stdout + completed.stderr)
+
+        partial = subprocess.run(
+            [str(SCRIPT), "--check"], cwd=ROOT,
+            env={**environment, "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID": ""},
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+        self.assertNotEqual(partial.returncode, 0)
+        self.assertIn("must be configured together", partial.stderr)
+
     def test_runner_accepts_rotation_safe_public_media_keyring_without_printing_secrets(self):
         secret = base64.urlsafe_b64encode(bytes(range(32))).decode("ascii").rstrip("=")
         with tempfile.TemporaryDirectory() as tempdir:

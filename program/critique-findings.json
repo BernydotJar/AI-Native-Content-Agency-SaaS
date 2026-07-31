@@ -90,11 +90,11 @@
     },
     {
       "description": "The audit ledger is transactional but is not hash-chained, signed or exported to immutable storage.",
-      "evidence": "Database owners/operators can alter rows outside the application interface.",
+      "evidence": "INC-028 specifies per-tenant hash chaining and signed checkpoints; immutable off-host custody remains external.",
       "id": "F-012",
-      "owner": "INC-005",
+      "owner": "INC-028",
       "severity": "MEDIUM",
-      "status": "OPEN"
+      "status": "IN_PROGRESS"
     },
     {
       "description": "A valid principal can amplify denial-audit storage because no general authenticated request quota exists.",
@@ -402,6 +402,6 @@
     }
   ],
   "schema_version": "program-critique-findings.v1",
-  "source_commit": "6609cd499bb41b610da1577ed93dbfe1602061bc",
+  "source_commit": "702b5f58cafb5516f5491d760a384e95a355c513",
   "updated_at": "2026-07-30"
 }

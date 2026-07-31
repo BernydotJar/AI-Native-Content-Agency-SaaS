@@ -262,6 +262,39 @@ variable "helm_timeout_seconds" {
   }
 }
 
+variable "audit_checkpoint_existing_secret" {
+  description = "Optional pre-provisioned Kubernetes Secret containing audit checkpoint signing configuration. Secret values never enter Terraform state."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.audit_checkpoint_existing_secret == "" || can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.audit_checkpoint_existing_secret))
+    error_message = "audit_checkpoint_existing_secret must be empty or a valid Kubernetes Secret name."
+  }
+}
+
+variable "audit_checkpoint_signing_keys_json_key" {
+  description = "Secret data-key name containing audit checkpoint key-ID to base64url key JSON."
+  type        = string
+  default     = "audit-checkpoint-signing-keys.json"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.audit_checkpoint_signing_keys_json_key))
+    error_message = "audit_checkpoint_signing_keys_json_key must be empty or a valid Secret data key."
+  }
+}
+
+variable "audit_checkpoint_active_key_id_key" {
+  description = "Secret data-key name containing the active audit checkpoint signing key ID."
+  type        = string
+  default     = "audit-checkpoint-active-key-id"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]*$", var.audit_checkpoint_active_key_id_key))
+    error_message = "audit_checkpoint_active_key_id_key must be empty or a valid Secret data key."
+  }
+}
+
 variable "public_media_base_url" {
   description = "Optional HTTPS public base URL used for bounded publication-media capabilities."
   type        = string
