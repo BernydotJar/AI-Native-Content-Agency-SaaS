@@ -2123,7 +2123,7 @@
           "program/requirements-traceability.csv ENG-002",
           "specs/030-schema-compatibility-audit/**"
         ],
-        "canonical_status": "running",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "production migration",

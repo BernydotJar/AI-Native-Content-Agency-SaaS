@@ -2339,7 +2339,7 @@
         "schema downgrade",
         "destructive historical rewrite"
       ],
-      "publication_state": "REVIEW_REPAIR_RUNNING",
+      "publication_state": "REVISION_1_EXACT_TREE_PASS",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2349,7 +2349,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Schema Compatibility Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-030",
       "validation_commands": [
         "python3 scripts/verify-schema-compatibility.py",
@@ -2359,7 +2359,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "Revision 1: full SHAs plus canonical runtime-schema-v1..v9 refs; verifier rejects missing/moved refs; local tag-bound SQLite v1-v9 and 383 tests pass.",
+      "validation_summary": "Revision 1 clean f6953a7: canonical runtime-schema-v1..v9 tags, 383 wheel, 383 PostgreSQL, v1-v9 matrices and supply-chain source_dirty=false. Exact-head re-review pending.",
       "workstream_id": "WS-03",
       "write_lock": "orchestrator:INC-030"
     }
