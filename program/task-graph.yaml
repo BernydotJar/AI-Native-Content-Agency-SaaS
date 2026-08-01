@@ -304,7 +304,7 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-031",
-      "status": "blocked"
+      "status": "done"
     }
   ],
   "schema_version": "program-task-graph.v1",

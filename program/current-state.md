@@ -371,3 +371,9 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - PR #40 now targets `main`; reviewed head `7da84d9922d3f1c06ece4c57e4e59831384e423a` passed run `30677767019` 8/8.
 - GitHub reported `MERGEABLE/CLEAN`, with zero reviews, code comments, review threads or unresolved conversations.
 - INC-031 is blocked only by the merge receipt; no production rollback or deployment is claimed.
+
+## 2026-07-31 — INC-031 merged and closed
+
+- PR #40 final head `9c755166e14a1d15f1aef02c50ab0c86a4b34208` passed run `30677892259` 8/8 with no review findings.
+- Squash merge `3a82c97d282ef44691f31e34c837141230407fb2` landed on `main`; push run `30677990904` passed 8/8.
+- The close gate is satisfied and INC-031 is done. This closes the local rollback control, not a production rollback or cloud deployment.

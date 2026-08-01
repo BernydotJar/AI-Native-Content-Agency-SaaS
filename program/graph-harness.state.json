@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 20,
-  "event_count": 374,
-  "last_event_id": "f97d0339-4e37-4cda-8e38-c635b270f671",
+  "checkpoint_count": 21,
+  "event_count": 381,
+  "last_event_id": "ef45a160-d377-42ce-9597-f30c1dc9d384",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -978,6 +978,12 @@
           "result": "PASS",
           "sha256": "da7f2ecfa92015e7ed95fcd97820f8e3ae93d05099da80181da1cd78355d2eb1"
         },
+        "523fad76-9e89-47fa-8401-389f419eab2b": {
+          "artifact": "PR #40 merge receipt, main commit 3a82c97d282ef44691f31e34c837141230407fb2, and program/reports/inc-031-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "1f7b130b8e9fa2632582873639c95880b1e6a3a37093b85cd68dc0342d688a42"
+        },
         "8b4ef3ef-ca93-4e81-8348-17e9d158cf28": {
           "artifact": "specs/031-workload-rollback-drill and contracts/workload-rollback-v1.json",
           "kind": "spec",
@@ -1012,10 +1018,9 @@
       "gates": {
         "close-gate": {
           "evidence_ids": [
-            "b88ca80f-47cb-41b4-84fd-878fac7c0900",
-            "a4ad85ab-4ab4-49d5-8bc9-b6517b0bfe12"
+            "523fad76-9e89-47fa-8401-389f419eab2b"
           ],
-          "result": "BLOCKED"
+          "result": "PASS"
         },
         "implementation-gate": {
           "evidence_ids": [
@@ -1043,9 +1048,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "5073cfba-46d1-4320-8435-fe286d824b6a",
+      "last_event_id": "b49299f5-eb68-4cd2-be75-fcb190d22553",
       "revision": 0,
-      "status": "blocked"
+      "status": "done"
     },
     "INC-038": {
       "active_approval_count": 0,

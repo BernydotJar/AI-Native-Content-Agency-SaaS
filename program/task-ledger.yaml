@@ -2430,7 +2430,7 @@
         "branch-protection mutation",
         "force push"
       ],
-      "publication_state": "REMOTE_REVIEW_PASS_CLOSE_BLOCKED_BY_MERGE",
+      "publication_state": "MERGED_CLOSED",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2440,7 +2440,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Release Reliability Engineer / Independent Verifier",
-      "status": "blocked",
+      "status": "done",
       "task_id": "INC-031",
       "validation_commands": [
         "python3 scripts/verify-workload-rollback.py --validate-only",
@@ -2450,7 +2450,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "PR #40 head 7da84d9922d3 passed exact-head run 30677767019 8/8 with zero review threads/findings; close remains blocked only until merge.",
+      "validation_summary": "PR #40 final head 9c755166 passed run 30677892259 8/8, squash merged as 3a82c97d, and main run 30677990904 passed 8/8; INC-031 closed with zero external effects.",
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-031"
     }
