@@ -1,42 +1,23 @@
-# INC-031 Role-Separated Review
+# INC-031 Independent Verification
 
 Date: 2026-07-31
-Candidate commit: `3d74f892735ecc533bd9fea21aa3307dfd167fc3`
-Rollback commit: `6fc3d73d73ee75d2f5fdbd5f3fe41e9368f9e9a7`
-Graph revision: 0 on the rebuilt stack
-Decision: PASS for technical review and exact-head CI; closure remains BLOCKED by merge and production rollback authority.
+Candidate commit: `30974c7698382d04a11cf4765b0fef0690762328`
+Rollback commit: `fe75c5f563e97cda38f4fe0a7c05f9c455000474`
+Graph revision: 0
+Decision: TECHNICAL PASS; exact-head remote CI and merge remain pending.
 
-## Objective and result
+## Independent results
 
-The drill proves application-image rollback without database rollback. It builds two immutable OCI images from exact Git commits, runs each with UID/GID 10001, read-only root filesystems, no Linux capabilities and `noNewPrivileges`, and gives only `/tmp` plus a private SQLite data directory write authority.
+- workload rollback report validation: PASS;
+- real OCI rollback: PASS, RTO 1,863 ms <= 30,000 ms;
+- locked installed wheel: 387 tests PASS;
+- PostgreSQL 15 runtime: 387 tests PASS, schema-history v1-v9 matrix PASS, cleanup PASS;
+- frontend: 58 tests PASS, lint PASS, build PASS;
+- production package: PASS with Buildah;
+- API contract, semantic evals, compliance, operability and Graph Harness validation: PASS;
+- OCI/provider authority: external side effects disabled;
+- Git diff check: PASS.
 
-The candidate created a tenant run and one audit event. After the candidate stopped completely, the prior compatible image started on the same loopback endpoint and same SQLite volume. The prior run remained readable, its status was unchanged, the durable audit head matched, and a new run succeeded after rollback.
+The implementation tree is clean and the report contains no credential material. Candidate and rollback workloads use the same port and database directory without overlapping writers. The original run remains readable, a new run is writable after rollback, and the final audit chain and head verify independently.
 
-Measured local RTO: **1,271 ms** against a 30,000 ms bound. SQLite `integrity_check` returned `ok`; two tenant runs and two linked audit events remained. No database restore, replacement or schema downgrade occurred. External effects: `0`.
-
-## Historical localized repairs
-
-The earlier development iteration exposed three issues, each confined to INC-031:
-
-1. lifecycle dependencies pointed at technically complete but human-blocked nodes; the spec now depends only on completed capabilities and treats other evidence as inputs;
-2. Docker/VFS could not build or load the full image; Buildah vfs/chroot now constructs the image;
-3. runc rejected a symlink rootfs; OCI bundles now use the absolute Buildah mountpoint with `root.readonly=true`.
-
-The rebuilt execution starts at Graph revision 0 because historical event projections were intentionally not copied into the repaired stack. These repairs remain documented evidence, not synthetic current events.
-
-## Exact-tree verification
-
-- workload rollback: PASS, RTO 1,271 ms, report SHA-256 `4fddf51abf3ae19bbf2e9c8ee63161dedba7abff25836c9dfc6773099ef2e6e3`;
-- locked installed wheel: 386 tests PASS, 27 PostgreSQL-only skips;
-- PostgreSQL 15.18: 386 tests PASS, schema v9, historical v1-v9 matrix, migration, least privilege, backup/restore PASS;
-- API contract and semantic adversarial gates: PASS;
-- OCI package: PASS, non-root, provider/model/social effects disabled;
-- supply chain: PASS, `source_dirty=false`, offline signature PASS, registry publication false;
-- frontend: 58 tests PASS, zero lint findings, production build PASS;
-- Helm/K3s/Terraform: SQLite and PostgreSQL plan/apply/destroy PASS, Secret values absent from state, cleanup PASS;
-- repository governance, compliance and operability: PASS;
-- release/cloud decisions: `DENY_RELEASE` / `DENY_APPLY`.
-
-## Remaining human gates
-
-PR #40 exact-head run `30611637480` passed all eight required jobs on `d0e8f0d6df1c90f4e3f8d59c22071e33c6101221`. No review threads or reviews were published during the post-CI observation window. Merge ordering #38 -> #39 -> #40 is not authorized by this increment. Any rollback or traffic change outside local loopback, production restore, production key/secret operation, release or deployment requires separate accountable authorization.
+Remote exact-head CI and GitHub review are intentionally not claimed by this report; they will be recorded after publication.

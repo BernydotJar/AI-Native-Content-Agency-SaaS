@@ -2,23 +2,20 @@
 
 | Criterion | Evidence | Result |
 |---|---|---|
-| exact candidate and rollback commits | `3d74f892...` and `6fc3d73d...` | PASS |
-| schema compatibility | both images declare schema v9; historical v1-v9 matrix PASS | PASS |
-| stable endpoint and readiness | same loopback port; candidate/rollback readiness PASS | PASS |
-| measured local RTO | 1,271 ms <= 30,000 ms | PASS |
-| single-writer boundary | candidate stopped before rollback workload starts | PASS |
-| workload hardening | UID/GID 10001, read-only rootfs, no capabilities, noNewPrivileges | PASS |
-| data preservation | original run/status retained; new post-rollback write succeeds | PASS |
-| audit integrity | pre-switch head unchanged; post-write chain advances; final chain verifies | PASS |
-| database rollback separation | no restore, replacement, downgrade or reverse synchronization | PASS |
+| exact candidate and rollback sources | commits `30974c7...` and `fe75c5f...`; trees `7330233...` and `3cb641d...` | PASS |
+| schema compatibility | both declare schema v9; historical v1-v9 matrices pass | PASS |
+| stable endpoint | same loopback port before and after rollback | PASS |
+| measured local RTO | 1,863 ms <= 30,000 ms | PASS |
+| single-writer boundary | candidate process exits before rollback process starts | PASS |
+| workload hardening | UID/GID 10001, read-only rootfs, empty capabilities, noNewPrivileges | PASS |
+| data preservation | original run/status retained; post-rollback write succeeds | PASS |
+| audit integrity | head unchanged during switch; chain advances after write; final chain verifies | PASS |
+| database separation | no restore, replacement, downgrade or reverse synchronization | PASS |
 | SQLite integrity | `integrity_check=ok`, two tenant runs | PASS |
-| package and recovery | 386 wheel + 386 PostgreSQL tests, OCI and backup/restore PASS | PASS |
-| infrastructure | Helm/K3s/Terraform lifecycle and cleanup PASS | PASS |
-| provenance | source clean, SBOM/policy/signature PASS, registry publication false | PASS |
+| package and recovery | 387 wheel + 387 PostgreSQL tests; production package PASS | PASS |
+| frontend | 58 tests, lint and build PASS | PASS |
 | external effects | provider/model/social/cloud effects 0 | PASS |
-| exact-head CI | run `30611637480`, head `d0e8f0d...`, eight required jobs | PASS |
-| production rollback authority | not granted | BLOCKED HUMAN |
-| merge #38 -> #39 -> #40 | not granted | BLOCKED HUMAN |
-| remote review findings | zero threads/reviews observed after CI polling | PASS WITH NO FINDINGS |
+| exact-head CI | pending publication | PENDING |
+| production rollback | not executed | NOT CLAIMED |
 
-This drill is local control evidence. It does not establish production RTO, production traffic switching, off-host backup availability or authority to execute a rollback. `DENY_RELEASE` and `DENY_APPLY` remain mandatory.
+This review supports a local rollback control only. It does not authorize a release, deployment, database restore, production traffic mutation, secret mutation or provider effect. `DENY_RELEASE` and `DENY_APPLY` remain in force until a separately authorized deployment node satisfies its own budget and production gates.

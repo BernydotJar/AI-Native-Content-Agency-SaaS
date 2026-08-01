@@ -228,8 +228,11 @@ STANDARD_ERROR_RESPONSES = {
         "description": "The request body exceeds the configured bound.",
     },
     status.HTTP_422_UNPROCESSABLE_CONTENT: {
-        "model": ValidationErrorResponse,
-        "description": "Request validation failed with sanitized field metadata.",
+        "model": ValidationErrorResponse | PublicErrorResponse,
+        "description": (
+            "Request validation failed with sanitized field metadata, or a safe "
+            "domain validation rule rejected the request."
+        ),
     },
     status.HTTP_429_TOO_MANY_REQUESTS: {
         "model": PublicErrorResponse,

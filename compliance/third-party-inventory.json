@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/production-readiness.yml",
-      "sha256": "64865081ddf5458ec877caa7f97c1696a3d6543d7774e332b0207b59b32fd805"
+      "sha256": "c9ce57edd2bad357d526b075a4abde348c0f5cd79a5e63a75a5c061196201401"
     },
     {
       "path": ".github/workflows/publish-gcp-image.yml",
@@ -293,7 +293,7 @@
     "sha256": "b5915031a7d4c6d50a2e8530e2cf66f371c667793aebb7d3804d1410fdb08b2a",
     "spdx": "MIT"
   },
-  "reviewed_at": "2026-07-30T18:20:00Z",
+  "reviewed_at": "2026-07-31T19:56:00Z",
   "schema_version": "agency-third-party-inventory.v1",
   "transitive_inventory_evidence": {
     "npm": "package-lock.json and CI/SBOM",

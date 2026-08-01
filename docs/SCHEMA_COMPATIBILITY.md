@@ -1,6 +1,6 @@
 # Runtime Schema Compatibility
 
-`contracts/runtime-schema-history.json` declares the supported PostgreSQL schema lineage from v1 through v9. Each version is bound to an exact Git commit and the capability introduced at that boundary.
+`contracts/runtime-schema-history.json` declares the supported PostgreSQL schema lineage from v1 through v9. Each version is bound to a full Git commit, a canonical retained tag `runtime-schema-vN`, and the capability introduced at that boundary.
 
 ## SQLite matrix
 
@@ -18,6 +18,6 @@ The enclosing harness separately proves current migration/runtime authority sepa
 
 ## History requirement
 
-The verifier fails if a declared commit is unavailable. CI therefore uses `fetch-depth: 0` only for the `verify` and `postgresql-shared-state` jobs that execute historical evidence. Exact pull-request head checkout is still asserted before any gate.
+The verifier fails unless every canonical `refs/tags/runtime-schema-vN` tag exists and resolves exactly to the full commit declared for that version. CI explicitly fetches those retained tags in the `verify` and `postgresql-shared-state` jobs; it does not depend on incidental feature branches. Exact pull-request head checkout is still asserted before any gate.
 
 No production database, cloud target, credential, provider, or external effect is used.

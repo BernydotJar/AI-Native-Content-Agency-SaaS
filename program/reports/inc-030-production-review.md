@@ -1,21 +1,23 @@
 # INC-030 Production Review — Runtime Schema Compatibility
 
-Date: 2026-07-30
+Date: 2026-07-31
 
 ## Development-tree verification
 
-- canonical manifest and negative tests: 3/3 PASS;
-- SQLite historical matrix v1–v9: PASS;
-- PostgreSQL historical matrix v1–v9: PASS;
-- locked installed wheel: 379 tests PASS;
-- PostgreSQL 15.18: 379/379 PASS, schema v9, migration, least privilege and backup/restore PASS;
+- canonical history manifest and negative cases: PASS;
+- SQLite v1–v9 historical upgrade matrix: PASS;
+- PostgreSQL v1–v9 historical upgrade matrix: PASS;
+- installed wheel: 383 tests PASS;
+- PostgreSQL 15.18: 383/383 PASS;
 - non-root OCI package: PASS;
-- K3s/Terraform SQLite and PostgreSQL plan/apply/destroy: PASS;
-- generated infrastructure state contains no Secret values or PostgreSQL URL;
+- installed API contract: PASS;
+- Helm/K3s/Terraform SQLite and PostgreSQL plan/apply/destroy: PASS;
+- Secret values and PostgreSQL URL absent from Terraform state: PASS;
+- frontend: 58 tests, lint and build PASS;
 - external effects: 0.
 
 ## Production boundary
 
-The matrix uses only temporary files and ephemeral local PostgreSQL databases. It does not execute a production migration, persist infrastructure, change credentials, or authorize deployment. Production migration remains a distinct human gate requiring a reviewed backup, target-specific plan, maintenance window, rollback authority and accountable approval.
+All databases and Kubernetes resources used by this evidence are local and ephemeral and were destroyed after verification. This evidence proves migration compatibility and delivery packaging; it does not authorize or execute a production migration. A production migration still requires a target-specific backup, maintenance window, rollback owner, observed target and explicit approval.
 
-`DENY_RELEASE` and `DENY_APPLY` remain authoritative.
+`DENY_RELEASE` and `DENY_APPLY` remain authoritative until a separately authorized deployment node is executed.

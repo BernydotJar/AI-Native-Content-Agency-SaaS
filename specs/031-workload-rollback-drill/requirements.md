@@ -19,7 +19,7 @@ Execute a real local application-image rollback on a stable endpoint while prese
 
 ## Lifecycle dependency note
 
-The node depends only on completed runtime, persistence and QA capabilities (`INC-002`, `INC-019`, `INC-024`). `INC-005`, `INC-030`, and their exact-head evidence are authoritative inputs but remain human-blocked at close, so they cannot be executable graph dependencies.
+The node depends only on completed runtime, persistence and QA capabilities (`INC-002`, `INC-019`, `INC-024`). `INC-030` is complete and its merged schema-v9 evidence is an authoritative input. `INC-005` remains human-blocked at close and is not an executable dependency. Production rollback remains a separate human gate.
 
 ## Builder/runtime separation
 

@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 17,
-  "event_count": 311,
-  "last_event_id": "61d00160-628e-4ec9-87ca-c20e17d6a732",
+  "checkpoint_count": 19,
+  "event_count": 369,
+  "last_event_id": "9824aee3-812f-420b-97e3-e42ca52a728f",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -812,116 +812,221 @@
     "INC-029": {
       "active_approval_count": 0,
       "active_evidence": {
-        "93f13c09-842f-4f11-b44b-f53c2949e6e9": {
-          "artifact": "PR #38",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "53166807c10e0a3ff1158b66dc4757bff671773a01e626e4869f89ce0dccdcd0"
-        }
-      },
-      "gates": {},
-      "last_event_id": "40c4f4c0-bf90-4a7a-8c45-6c877670fb18",
-      "revision": 0,
-      "status": "blocked"
-    },
-    "INC-030": {
-      "active_approval_count": 0,
-      "active_evidence": {
-        "4d58443a-babe-4464-9eb0-76a582430f82": {
-          "artifact": "PR #39",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "e4423913170b574b4ee2ae7e3f7b8b15f70b2dc40e72ce65d64368d2c8aad0a1"
-        }
-      },
-      "gates": {},
-      "last_event_id": "2053e2d6-5e0d-4395-adc9-07ec6af7c86c",
-      "revision": 0,
-      "status": "blocked"
-    },
-    "INC-031": {
-      "active_approval_count": 1,
-      "active_evidence": {
-        "0a7d5270-e2d3-457b-8d03-127edd4da471": {
-          "artifact": "program/reports/inc-031-review.md",
-          "kind": "review",
-          "result": "PASS",
-          "sha256": "9d7d99754eac8eabfb1f8629df8c70f2a4a056a3bcdc04dd8238cbd2ba9f4edb"
-        },
-        "72aa362d-2e94-4317-b0ac-26897de8101d": {
-          "artifact": "git tree 115721a23a64837cb3bc28bb03ef030748f3de5d",
+        "154c9943-4ad3-4c95-8777-2b8e58b6a69b": {
+          "artifact": "git tree f983588c1dbe8537895f4fafb757b7e8344506e2",
           "kind": "implementation",
           "result": "PASS",
-          "sha256": "63a82a83a2a87fac317f0ca63db48957ff3d6e96987b92df276b853c5b5d60ef"
+          "sha256": "148d1d7d0ec142a2b96e55b2c8418a58fc2ef6d7d71e9945592576aa027f711f"
         },
-        "8a61723a-678e-4092-89ca-8dea32b4aec8": {
-          "artifact": "specs/031-workload-rollback-drill",
+        "35272736-afa1-47e4-8261-7788b8a5e5a2": {
+          "artifact": "GitHub Actions run 30656597259",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "3c751349d597db8901f97b4f2ab50e4988d3dc1ceb353db537d22715b8c60bfb"
+        },
+        "521e23bc-19a8-4fa3-a15a-4af6e4553a70": {
+          "artifact": "specs/029-versioned-api-contract",
           "kind": "spec",
           "result": "PASS",
-          "sha256": "6f3083912717e34b1e51f40a538fb29d780ed4733688b6fc97efe21b78c25b30"
+          "sha256": "3e72ae51bcb550b96404cb377f57bf0e9e6d686fb6c1b58eb1a5af73e28cac4f"
         },
-        "ad4e3172-4055-429c-ae84-4b2db4cab2c5": {
-          "artifact": "program/reports/inc-031-production-review.md",
+        "76019669-24f8-4b8e-b750-47d850f52d30": {
+          "artifact": "PR #38 review and program/reports/inc-029-closure.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "3c751349d597db8901f97b4f2ab50e4988d3dc1ceb353db537d22715b8c60bfb"
+        },
+        "b6c79c04-d0e1-4d2e-9297-39a52a279f2b": {
+          "artifact": "production-readiness run 30656597259 and program/reports/inc-029-closure.md",
           "kind": "production",
           "result": "PASS",
-          "sha256": "d393158ccb3a491d2a043b6fcf1d2bdd9a8b9e71b10dc22aaccb196b38f56bb5"
+          "sha256": "3c751349d597db8901f97b4f2ab50e4988d3dc1ceb353db537d22715b8c60bfb"
         },
-        "ae9c7726-2020-4b1f-93a3-680c934374e6": {
-          "artifact": "GitHub Actions run 30611637480 and program/reports/inc-031-remote-review.md",
-          "kind": "verification",
+        "e19d5c2d-26fe-4ee2-b34b-d6e539f5f2a6": {
+          "artifact": "PR #38 merge receipt and program/reports/inc-029-closure.md",
+          "kind": "closure",
           "result": "PASS",
-          "sha256": "6189b4f8e8902c198235e2a50ebf75da929edfb2cc2cc7e62f20548dd31c9761"
-        },
-        "c976beda-37d2-441e-be6b-9849d5e7f406": {
-          "artifact": "PRs #38 -> #39 -> #40 and production rollback authority",
-          "kind": "blocker",
-          "result": "BLOCKED",
-          "sha256": "6189b4f8e8902c198235e2a50ebf75da929edfb2cc2cc7e62f20548dd31c9761"
-        },
-        "fbaac95d-1c8d-4a69-871d-93693cfe9769": {
-          "artifact": "program/reports/inc-031-review.md",
-          "kind": "verification",
-          "result": "PASS",
-          "sha256": "9d7d99754eac8eabfb1f8629df8c70f2a4a056a3bcdc04dd8238cbd2ba9f4edb"
+          "sha256": "3c751349d597db8901f97b4f2ab50e4988d3dc1ceb353db537d22715b8c60bfb"
         }
       },
       "gates": {
         "close-gate": {
           "evidence_ids": [
-            "ae9c7726-2020-4b1f-93a3-680c934374e6",
-            "c976beda-37d2-441e-be6b-9849d5e7f406"
+            "e19d5c2d-26fe-4ee2-b34b-d6e539f5f2a6"
           ],
-          "result": "BLOCKED"
+          "result": "PASS"
         },
         "implementation-gate": {
           "evidence_ids": [
-            "72aa362d-2e94-4317-b0ac-26897de8101d",
-            "fbaac95d-1c8d-4a69-871d-93693cfe9769"
+            "154c9943-4ad3-4c95-8777-2b8e58b6a69b",
+            "35272736-afa1-47e4-8261-7788b8a5e5a2"
           ],
           "result": "PASS"
         },
         "production-gate": {
           "evidence_ids": [
-            "ad4e3172-4055-429c-ae84-4b2db4cab2c5"
+            "b6c79c04-d0e1-4d2e-9297-39a52a279f2b"
           ],
           "result": "PASS"
         },
         "review-gate": {
           "evidence_ids": [
-            "0a7d5270-e2d3-457b-8d03-127edd4da471"
+            "76019669-24f8-4b8e-b750-47d850f52d30"
           ],
           "result": "PASS"
         },
         "spec-gate": {
           "evidence_ids": [
-            "8a61723a-678e-4092-89ca-8dea32b4aec8"
+            "521e23bc-19a8-4fa3-a15a-4af6e4553a70"
           ],
           "result": "PASS"
         }
       },
-      "last_event_id": "8074d013-9dc5-4638-b891-ccb6dedd1fa7",
+      "last_event_id": "fbfc3e45-a3f0-4f68-a2e5-81a42848653c",
+      "revision": 1,
+      "status": "done"
+    },
+    "INC-030": {
+      "active_approval_count": 0,
+      "active_evidence": {
+        "09ca8b5f-4419-49a0-b90d-b08b173a1bb9": {
+          "artifact": "PR #39 P1/P2 repairs and program/reports/inc-030-review.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "85116d92b2b8581b29ee0934de7c8718a64996f55e0d67373ba72c360eb44e7b"
+        },
+        "0d8b3cf6-ea00-45fe-804c-ca885297efce": {
+          "artifact": "PR #39 merge receipt and program/reports/inc-030-closure.md",
+          "kind": "closure",
+          "result": "PASS",
+          "sha256": "40a81eeb803ca1aea89feae262f6359e0923c0eadf937042bc1eed6fbb635b04"
+        },
+        "82205398-e91a-4348-97d2-2ed9e5cc971d": {
+          "artifact": "program/reports/inc-030-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "855dfba6de9367d447f49ac08b6777fcfccc9e90bddb64e8ad35fd42d6520417"
+        },
+        "88d52256-1443-4fa6-8693-fa0c93d55ecc": {
+          "artifact": "specs/030-schema-compatibility-audit",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "e1b2ef4439edfd5e3add4719169b41b1cd3aa6331dc9e7b4e0394d278ebee371"
+        },
+        "cd09bb41-7823-4c3f-828b-40bd3f90d0a6": {
+          "artifact": "git tree 1f006cfe46768870605ef1ee37310ec960ec4878",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "635c7f729dcf79720b40fca52ca62209d6a6623af0751ad70bdc48ae00ffc8e1"
+        },
+        "fa0f821c-05c3-42dd-b385-27a21b9af1e8": {
+          "artifact": "program/reports/inc-030-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "85116d92b2b8581b29ee0934de7c8718a64996f55e0d67373ba72c360eb44e7b"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "0d8b3cf6-ea00-45fe-804c-ca885297efce"
+          ],
+          "result": "PASS"
+        },
+        "implementation-gate": {
+          "evidence_ids": [
+            "cd09bb41-7823-4c3f-828b-40bd3f90d0a6",
+            "fa0f821c-05c3-42dd-b385-27a21b9af1e8"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "82205398-e91a-4348-97d2-2ed9e5cc971d"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "09ca8b5f-4419-49a0-b90d-b08b173a1bb9"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "88d52256-1443-4fa6-8693-fa0c93d55ecc"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "c5603341-9be2-413b-a084-2ea66be4b950",
+      "revision": 2,
+      "status": "done"
+    },
+    "INC-031": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "3a6335f6-bbbc-48ca-a64f-9eab14762b5f": {
+          "artifact": "program/reports/inc-031-production-review.md",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "73d514c1c970c32d77d65ead4ba333fbc15f3386def537e9b9681b27f026ca4b"
+        },
+        "493a917d-d561-4d8c-8b77-3f77cfd2b536": {
+          "artifact": "program/reports/inc-031-critic-red-team.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "da7f2ecfa92015e7ed95fcd97820f8e3ae93d05099da80181da1cd78355d2eb1"
+        },
+        "8b4ef3ef-ca93-4e81-8348-17e9d158cf28": {
+          "artifact": "specs/031-workload-rollback-drill and contracts/workload-rollback-v1.json",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "9c84ca411f68818144b04e9fd598392172ee929029e8831f309ad19106f69b00"
+        },
+        "976ba997-c0ad-4e4f-83c5-99706b9902df": {
+          "artifact": "program/reports/inc-031-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "1c2fb14f10c0aa3022043e0ff789f7eeac143d7148247d314edae1e4aa16ef30"
+        },
+        "cf98303a-e42e-4389-ad1f-6dfd7d09a6cd": {
+          "artifact": "git tree 7330233437630cb8086f9ff71d710987d941ac5d and program/reports/inc-031-producer.md",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "66f14b34b389a5d67ef7c6a6c65b3acab6c78d2c3789dbc003c4fd9c80150ccf"
+        }
+      },
+      "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "cf98303a-e42e-4389-ad1f-6dfd7d09a6cd",
+            "976ba997-c0ad-4e4f-83c5-99706b9902df"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "3a6335f6-bbbc-48ca-a64f-9eab14762b5f"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "493a917d-d561-4d8c-8b77-3f77cfd2b536"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "8b4ef3ef-ca93-4e81-8348-17e9d158cf28"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "91952f1d-21a9-4ce3-94e3-2c54348e3c9a",
       "revision": 0,
-      "status": "blocked"
+      "status": "review"
     },
     "INC-038": {
       "active_approval_count": 0,
@@ -1003,6 +1108,6 @@
   },
   "project_id": "ai-native-content-agency-saas",
   "ready_nodes": [],
-  "repair_plan_count": 13,
+  "repair_plan_count": 16,
   "schema_version": "graph-harness.state.v1"
 }

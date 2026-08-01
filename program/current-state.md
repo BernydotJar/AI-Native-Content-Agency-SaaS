@@ -341,18 +341,27 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Exact-head CI and PR review for the rebuilt #37 head remain pending. Immutable external audit custody and production key operations remain unauthorized.
 - Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain `0`.
 
-## 2026-07-31 — INC-031 rebuilt workload rollback evidence
+## 2026-07-31 — PR #38 merged; INC-030 rebuilt
 
-- Candidate `3d74f892735ecc533bd9fea21aa3307dfd167fc3` rolled back locally to compatible prior stack `6fc3d73d73ee75d2f5fdbd5f3fe41e9368f9e9a7` on one loopback endpoint and one SQLite volume.
-- RTO measured 1,271 ms. Both workloads used read-only OCI rootfs, UID/GID 10001, no capabilities and noNewPrivileges; writers never overlapped.
-- The original tenant run and audit head survived without database restore. A post-rollback run succeeded; final SQLite integrity and audit-chain verification passed.
-- Clean delivery evidence passes: 386 wheel tests, 386 PostgreSQL tests, schema v9 and v1-v9 compatibility, OCI, supply chain source_dirty=false, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability.
-- Exact-head CI and PR review remain pending. Merge of #38/#39/#40 and any production rollback remain separate human gates.
-- Release/cloud decisions remain `DENY_RELEASE` / `DENY_APPLY`; external effects remain 0.
+- INC-029 revision 1 is done after run 30656597259, two resolved P2 findings and squash merge 12332e4653f9db2949a5936dd1765cbd4436ff4c.
+- INC-030 schema compatibility matrix is rebuilt on the merged API-contract tree and requires fresh local/exact-head evidence.
 
-## 2026-07-31 — INC-031 exact-head CI and blocked close gate
+## 2026-07-31 — INC-030 fresh compatibility evidence
 
-- PR #40 exact-head run `30611637480` passed all eight required jobs on `d0e8f0d6df1c90f4e3f8d59c22071e33c6101221`.
-- GitHub reported the PR mergeable/CLEAN. Post-CI polling observed zero review threads and zero submitted reviews.
-- Technical evidence is complete, but ordered merge of #38 -> #39 -> #40 and production rollback authority remain separate human gates.
-- `INC-031` is therefore blocked, not done. `DENY_RELEASE` / `DENY_APPLY` and external effects `0` remain unchanged.
+- Runtime schema history v1-v9 was re-executed after PR #38 merged into main.
+- SQLite v1-v9 and PostgreSQL v1-v9 all preserve the historical audit event and current hash chain after upgrade to schema v9.
+- 383 installed-wheel tests and 383 PostgreSQL tests pass; OCI, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability pass.
+- Exact-head CI, remote review and merge of PR #39 remain pending. No production migration has been executed.
+
+## 2026-07-31 — PR #39 merged; INC-031 rebuilt
+
+- INC-030 revision 2 is done after canonical history refs, optimization-safe checks, 384 wheel/384 PostgreSQL tests, run 30660276585 8/8 and squash merge fe75c5f563e97cda38f4fe0a7c05f9c455000474.
+- INC-031 workload rollback drill is rebuilt on the merged API/schema stack and begins with fresh Graph Harness evidence.
+- Production rollback, deployment, restore and external traffic mutation remain separately human-gated.
+
+## 2026-07-31 — INC-031 rebuilt local lifecycle complete
+
+- Implementation commit `30974c7698382d04a11cf4765b0fef0690762328` executes a real Buildah/runc rollback to merged main `fe75c5f563e97cda38f4fe0a7c05f9c455000474`.
+- RTO is 1,863 ms; the original run and audit head survive, a post-rollback write succeeds, SQLite integrity is `ok`, and external effects are zero.
+- 387 wheel tests, 387 PostgreSQL tests, 58 frontend tests, production package, compliance, operability and graph validation pass.
+- Producer, Critic/Red Team and Independent Verifier report technical PASS. Exact-head remote CI and merge remain pending.
