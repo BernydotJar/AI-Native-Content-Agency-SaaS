@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 18,
-  "event_count": 368,
-  "last_event_id": "91952f1d-21a9-4ce3-94e3-2c54348e3c9a",
+  "checkpoint_count": 19,
+  "event_count": 369,
+  "last_event_id": "9824aee3-812f-420b-97e3-e42ca52a728f",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
