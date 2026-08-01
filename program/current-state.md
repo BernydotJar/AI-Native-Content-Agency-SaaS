@@ -365,3 +365,9 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - RTO is 1,863 ms; the original run and audit head survive, a post-rollback write succeeds, SQLite integrity is `ok`, and external effects are zero.
 - 387 wheel tests, 387 PostgreSQL tests, 58 frontend tests, production package, compliance, operability and graph validation pass.
 - Producer, Critic/Red Team and Independent Verifier report technical PASS. Exact-head remote CI and merge remain pending.
+
+## 2026-07-31 — INC-031 exact-head remote review
+
+- PR #40 now targets `main`; reviewed head `7da84d9922d3f1c06ece4c57e4e59831384e423a` passed run `30677767019` 8/8.
+- GitHub reported `MERGEABLE/CLEAN`, with zero reviews, code comments, review threads or unresolved conversations.
+- INC-031 is blocked only by the merge receipt; no production rollback or deployment is claimed.

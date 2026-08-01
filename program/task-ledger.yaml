@@ -2430,7 +2430,7 @@
         "branch-protection mutation",
         "force push"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_EXACT_HEAD_PENDING",
+      "publication_state": "REMOTE_REVIEW_PASS_CLOSE_BLOCKED_BY_MERGE",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2440,7 +2440,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Release Reliability Engineer / Independent Verifier",
-      "status": "review",
+      "status": "blocked",
       "task_id": "INC-031",
       "validation_commands": [
         "python3 scripts/verify-workload-rollback.py --validate-only",
@@ -2450,7 +2450,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "Local OCI rollback PASS (RTO 1,863 ms), 387 wheel and 387 PostgreSQL tests, 58 frontend tests, production package and governance gates PASS; remote exact-head CI and merge pending.",
+      "validation_summary": "PR #40 head 7da84d9922d3 passed exact-head run 30677767019 8/8 with zero review threads/findings; close remains blocked only until merge.",
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-031"
     }
