@@ -2345,7 +2345,7 @@
           "docs/runbooks/postgresql-schema-rollout.md",
           "specs/039-gcp-pilot-deployment-readiness/**"
         ],
-        "canonical_status": "running",
+        "canonical_status": "review",
         "human_gates": [
           "merge",
           "cloud apply",

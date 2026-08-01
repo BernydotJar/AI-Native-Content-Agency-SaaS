@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 21,
-  "event_count": 387,
-  "last_event_id": "e7a9b78b-c8bb-444a-866b-b438c3898d74",
+  "checkpoint_count": 22,
+  "event_count": 397,
+  "last_event_id": "aa3c4057-ee32-470f-89eb-77cc81c16b50",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -1132,14 +1132,65 @@
     "INC-039": {
       "active_approval_count": 1,
       "active_evidence": {
+        "270931b8-7ed6-4315-8984-16812c334649": {
+          "artifact": "program/reports/inc-039-critic-red-team.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "ac0da446d31e44cdd16ffa75f8b1ebee3569f6587caa45b95529636c450041b3"
+        },
         "293df5ee-0b27-4328-9da0-a4ba54fcd1a4": {
           "artifact": "specs/039-gcp-pilot-deployment-readiness",
           "kind": "spec",
           "result": "PASS",
           "sha256": "6ed5b28b90520a807b47cd2dba9e8cf54b3799f5d3ed4dfea529fc59f06c7662"
+        },
+        "37846c43-be8d-48d4-bd57-f4423558301c": {
+          "artifact": "git tree c670b39e62f7bb1397a4c5cb8c398b65b883fa8b and program/reports/inc-039-producer.md",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "3a4911a0c7d0692f89a0fa47f28b8a2fb1a836b05ffcbf8c424d98adb04edc24"
+        },
+        "41c48149-07ee-4988-866e-6c765b7e77e9": {
+          "artifact": "program/reports/inc-039-production-review.md and infra/gcp/pilot-cost-review.json",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "861cc190fb240a3fcd9904860afb3d79f45945ce1e0a2f231abc6d908e232897"
+        },
+        "b0dcb6b0-1101-410e-a354-960a11b0ff9c": {
+          "artifact": "program/reports/inc-039-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "c94624a601749c455cf27b979d35d7eac6ea5719bff90f3d82e4a59170fe5323"
+        },
+        "b4795282-b644-4f01-9467-c88aed4a89ae": {
+          "artifact": "program/reports/inc-039-fixer.md",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "c461abb76d393ecd3d2c7e427621b89345c53c0037dbf3ab9fd2b4f297df9cd3"
         }
       },
       "gates": {
+        "implementation-gate": {
+          "evidence_ids": [
+            "37846c43-be8d-48d4-bd57-f4423558301c",
+            "b4795282-b644-4f01-9467-c88aed4a89ae",
+            "b0dcb6b0-1101-410e-a354-960a11b0ff9c"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "41c48149-07ee-4988-866e-6c765b7e77e9"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "270931b8-7ed6-4315-8984-16812c334649",
+            "b0dcb6b0-1101-410e-a354-960a11b0ff9c"
+          ],
+          "result": "PASS"
+        },
         "spec-gate": {
           "evidence_ids": [
             "293df5ee-0b27-4328-9da0-a4ba54fcd1a4"
@@ -1147,9 +1198,9 @@
           "result": "PASS"
         }
       },
-      "last_event_id": "e7a9b78b-c8bb-444a-866b-b438c3898d74",
+      "last_event_id": "9b18c12e-1498-46cf-ad8e-521382f001d3",
       "revision": 0,
-      "status": "running"
+      "status": "review"
     }
   },
   "project_id": "ai-native-content-agency-saas",

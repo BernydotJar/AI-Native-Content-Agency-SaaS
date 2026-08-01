@@ -377,3 +377,11 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - PR #40 final head `9c755166e14a1d15f1aef02c50ab0c86a4b34208` passed run `30677892259` 8/8 with no review findings.
 - Squash merge `3a82c97d282ef44691f31e34c837141230407fb2` landed on `main`; push run `30677990904` passed 8/8.
 - The close gate is satisfied and INC-031 is done. This closes the local rollback control, not a production rollback or cloud deployment.
+
+## 2026-07-31 — INC-039 local deployment-readiness lifecycle
+
+- Commit `24b88e5adb9a9c436c617867d17ac50304ef13f4` adds fail-closed Cloud SQL and Cloud Run pilot configuration.
+- Terraform 7/7, mutation tests 5/5, backend 392, frontend 58 and semantic evals 20/20 twice pass.
+- Producer, Critic, Fixer, Independent Verifier and Production Review pass the code-only scope.
+- `DENY_APPLY` remains active: 4,000 COP authorized versus a 24,609 COP compute-only lower bound; no external effect occurred.
+- Exact-head remote CI and merge are pending.
