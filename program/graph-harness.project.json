@@ -2294,6 +2294,82 @@
       },
       "status": "spec_ready",
       "title": "Adopt Graph Harness SDLC as the executable governance runtime without duplicating framework concepts."
+    },
+    {
+      "allowed_paths": [
+        "infra/gcp/**",
+        "scripts/verify-gcp-pilot-readiness.py",
+        "backend/tests/test_gcp_pilot_readiness.py",
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "docs/runbooks/gcp-pilot-deployment.md",
+        "program/**",
+        "specs/039-gcp-pilot-deployment-readiness/**"
+      ],
+      "capability": "Cloud Platform Engineer / Cost and Release Reviewer",
+      "depends_on": [
+        "INC-012",
+        "INC-031",
+        "INC-038"
+      ],
+      "gates": {
+        "approved": [
+          "spec-gate"
+        ],
+        "done": [
+          "review-gate",
+          "production-gate",
+          "close-gate"
+        ],
+        "review": [
+          "implementation-gate",
+          "production-gate"
+        ]
+      },
+      "id": "INC-039",
+      "kind": "feature",
+      "metadata": {
+        "acceptance_criteria": [
+          "default plan creates zero resources",
+          "insufficient monthly cap blocks Cloud SQL",
+          "Cloud SQL backups PITR storage and deletion controls validate",
+          "Cloud Run requires immutable image schema receipt and pinned minimal secrets",
+          "social provider credentials remain optional while effects are disabled",
+          "runtime IAM is least privilege",
+          "all local and exact-head CI checks pass with zero external effects"
+        ],
+        "authoritative_inputs": [
+          "user deployment authorization with 4,000 COP hard cap",
+          "program/reports/inc-037-gcp-staging-bootstrap.md",
+          "infra/gcp/**",
+          "docs/runbooks/postgresql-schema-rollout.md",
+          "specs/039-gcp-pilot-deployment-readiness/**"
+        ],
+        "canonical_status": "blocked",
+        "human_gates": [
+          "merge",
+          "cloud apply",
+          "database roles/schema",
+          "secret versions",
+          "image publication",
+          "public ingress",
+          "spend",
+          "production or external effect"
+        ],
+        "validation_commands": [
+          "python3 scripts/verify-gcp-pilot-readiness.py",
+          "terraform -chdir=infra/gcp fmt -check -recursive",
+          "terraform -chdir=infra/gcp init -backend=false",
+          "terraform -chdir=infra/gcp validate",
+          "terraform -chdir=infra/gcp test",
+          "npm run validate:program && npm run validate:graph",
+          "git diff --check"
+        ],
+        "workstream_id": "WS-09",
+        "write_lock": "orchestrator:INC-039"
+      },
+      "status": "spec_ready",
+      "title": "Implement fail-closed GCP pilot deployment readiness for Cloud SQL and Cloud Run without applying external resources."
     }
   ],
   "project_id": "ai-native-content-agency-saas",

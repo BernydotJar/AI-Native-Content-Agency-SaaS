@@ -1,0 +1,43 @@
+{
+  "schema_version": "agency-gcp-pilot-cost-review.v1",
+  "reviewed_at": "2026-07-31T23:55:00Z",
+  "region": "us-central1",
+  "billing_currency": "COP",
+  "authorized_monthly_cap_units": 4000,
+  "minimum_compute_assumption": {
+    "service": "Cloud SQL for PostgreSQL",
+    "tier": "db-f1-micro",
+    "hourly_price_usd": 0.0105,
+    "hours_per_month": 730,
+    "exchange_rate_cop_per_usd": 3210.56,
+    "computed_monthly_usd": 7.665,
+    "computed_monthly_cop": 24608.9424,
+    "rounded_monthly_cop": 24609
+  },
+  "excluded_from_lower_bound": [
+    "Cloud SQL SSD storage",
+    "backup storage beyond included allowances",
+    "network egress",
+    "Cloud Run requests and compute beyond free allowances",
+    "Artifact Registry storage",
+    "Secret Manager access operations",
+    "taxes and exchange-rate movement"
+  ],
+  "all_in_monthly_estimate_units": null,
+  "decision": "DENY_APPLY",
+  "reason": "The minimum Cloud SQL compute lower bound alone exceeds the authorized 4,000 COP monthly cap; storage, backups and other services would increase the total.",
+  "sources": [
+    {
+      "name": "Google Cloud SQL pricing",
+      "url": "https://cloud.google.com/sql/pricing"
+    },
+    {
+      "name": "Banco de la Republica de Colombia TRM",
+      "url": "https://www.banrep.gov.co/es/estadisticas/trm"
+    },
+    {
+      "name": "Google Cloud Run pricing",
+      "url": "https://cloud.google.com/run/pricing"
+    }
+  ]
+}

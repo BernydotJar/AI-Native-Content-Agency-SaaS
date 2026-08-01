@@ -22,7 +22,7 @@ class GraphHarnessAdapterTests(unittest.TestCase):
         generated = MODULE.build_project()
         checked_in = json.loads(MODULE.PROJECT_PATH.read_text(encoding="utf-8"))
         self.assertEqual(generated, checked_in)
-        self.assertEqual(len(generated["nodes"]), 32)
+        self.assertEqual(len(generated["nodes"]), 33)
 
     def test_adoption_is_done_with_close_gate_passed(self) -> None:
         runtime = MODULE.GraphRuntime.from_paths(MODULE.PROJECT_PATH, MODULE.EVENTS_PATH)

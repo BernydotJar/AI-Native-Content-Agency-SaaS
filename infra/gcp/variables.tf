@@ -91,14 +91,159 @@ variable "enable_bootstrap" {
   default     = false
 }
 
-variable "enable_cloud_run" {
-  description = "Create the Cloud Run service. Requires bootstrap, immutable image and pinned secret versions."
+variable "enable_cloud_sql" {
+  description = "Create the bounded PostgreSQL Cloud SQL pilot instance. Requires bootstrap and an approved estimate within the hard monthly cap."
   type        = bool
   default     = false
 
   validation {
-    condition     = !var.enable_cloud_run || var.enable_bootstrap
-    error_message = "enable_cloud_run requires enable_bootstrap=true."
+    condition = !var.enable_cloud_sql || (
+      var.enable_bootstrap &&
+      can(regex("^[0-9a-f]{64}$", var.cost_review_receipt_sha256)) &&
+      var.authorized_monthly_cost_cap_units > 0 &&
+      var.reviewed_monthly_cost_estimate_units > 0 &&
+      var.reviewed_monthly_cost_estimate_units <= var.authorized_monthly_cost_cap_units &&
+      var.monthly_budget_units <= var.authorized_monthly_cost_cap_units
+    )
+    error_message = "enable_cloud_sql requires bootstrap, explicit cost approval, a positive reviewed estimate within the authorized monthly cap, and a budget no higher than that cap."
+  }
+}
+
+variable "cost_review_receipt_sha256" {
+  description = "SHA-256 of the reviewed all-in cost evidence and approval. The receipt is metadata only and must not contain credentials."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.cost_review_receipt_sha256 == "" || can(regex("^[0-9a-f]{64}$", var.cost_review_receipt_sha256))
+    error_message = "cost_review_receipt_sha256 must be empty or a 64-character lowercase SHA-256 value."
+  }
+}
+
+variable "authorized_monthly_cost_cap_units" {
+  description = "Hard operator-authorized monthly ceiling in whole billing-account currency units."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.authorized_monthly_cost_cap_units >= 0 && floor(var.authorized_monthly_cost_cap_units) == var.authorized_monthly_cost_cap_units
+    error_message = "authorized_monthly_cost_cap_units must be a non-negative whole amount."
+  }
+}
+
+variable "reviewed_monthly_cost_estimate_units" {
+  description = "Fresh reviewed all-in monthly estimate in whole billing-account currency units."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.reviewed_monthly_cost_estimate_units >= 0 && floor(var.reviewed_monthly_cost_estimate_units) == var.reviewed_monthly_cost_estimate_units
+    error_message = "reviewed_monthly_cost_estimate_units must be a non-negative whole amount."
+  }
+}
+
+variable "cloud_sql_instance_name" {
+  description = "Cloud SQL instance name for the pilot."
+  type        = string
+  default     = "campaignos-pilot"
+
+  validation {
+    condition     = can(regex("^[a-z]([-a-z0-9]{0,96}[a-z0-9])?$", var.cloud_sql_instance_name))
+    error_message = "cloud_sql_instance_name must be a valid lowercase Cloud SQL instance name."
+  }
+}
+
+variable "cloud_sql_database_name" {
+  description = "Application database created inside the pilot Cloud SQL instance."
+  type        = string
+  default     = "agency"
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9_]{0,62}$", var.cloud_sql_database_name))
+    error_message = "cloud_sql_database_name must be a bounded lowercase PostgreSQL identifier."
+  }
+}
+
+variable "cloud_sql_tier" {
+  description = "Reviewed Cloud SQL machine tier. db-f1-micro is the minimum shared-core pilot tier, not a production availability claim."
+  type        = string
+  default     = "db-f1-micro"
+
+  validation {
+    condition     = contains(["db-f1-micro", "db-g1-small"], var.cloud_sql_tier) || can(regex("^db-custom-[1-9][0-9]*-[1-9][0-9]*$", var.cloud_sql_tier))
+    error_message = "cloud_sql_tier must be an allowed shared-core or explicit custom PostgreSQL tier."
+  }
+}
+
+variable "cloud_sql_disk_size_gb" {
+  description = "Initial PD-SSD size in GiB. Cloud SQL does not permit shrinking."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.cloud_sql_disk_size_gb >= 10 && var.cloud_sql_disk_size_gb <= 100 && floor(var.cloud_sql_disk_size_gb) == var.cloud_sql_disk_size_gb
+    error_message = "cloud_sql_disk_size_gb must be a whole number from 10 through 100."
+  }
+}
+
+variable "cloud_sql_disk_autoresize_limit_gb" {
+  description = "Finite storage autoresize ceiling in GiB; zero/unbounded is forbidden."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.cloud_sql_disk_autoresize_limit_gb >= var.cloud_sql_disk_size_gb && var.cloud_sql_disk_autoresize_limit_gb <= 100 && floor(var.cloud_sql_disk_autoresize_limit_gb) == var.cloud_sql_disk_autoresize_limit_gb
+    error_message = "cloud_sql_disk_autoresize_limit_gb must be a whole number between the initial disk size and 100."
+  }
+}
+
+variable "cloud_sql_backup_start_time" {
+  description = "UTC start time for the automated backup window."
+  type        = string
+  default     = "03:00"
+
+  validation {
+    condition     = can(regex("^(?:[01][0-9]|2[0-3]):[0-5][0-9]$", var.cloud_sql_backup_start_time))
+    error_message = "cloud_sql_backup_start_time must use 24-hour HH:MM UTC form."
+  }
+}
+
+variable "cloud_sql_backup_retention_count" {
+  description = "Number of automated backups retained by Cloud SQL."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.cloud_sql_backup_retention_count >= 7 && var.cloud_sql_backup_retention_count <= 14 && floor(var.cloud_sql_backup_retention_count) == var.cloud_sql_backup_retention_count
+    error_message = "cloud_sql_backup_retention_count must be a whole number from 7 through 14."
+  }
+}
+
+variable "cloud_sql_deletion_protection" {
+  description = "Protect the pilot database from Terraform deletion. Disable only through a separately reviewed teardown."
+  type        = bool
+  default     = true
+}
+
+variable "schema_initialization_receipt_sha256" {
+  description = "SHA-256 of the separately approved schema/role initialization and runtime-validation receipt. No credential material belongs here."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_cloud_run || can(regex("^[0-9a-f]{64}$", var.schema_initialization_receipt_sha256))
+    error_message = "enable_cloud_run requires a 64-character lowercase SHA-256 schema initialization receipt."
+  }
+}
+
+variable "enable_cloud_run" {
+  description = "Create the Cloud Run service. Requires bootstrap, Cloud SQL, immutable image, schema receipt and pinned minimal secret versions."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.enable_cloud_run || (var.enable_bootstrap && var.enable_cloud_sql)
+    error_message = "enable_cloud_run requires enable_bootstrap=true and enable_cloud_sql=true."
   }
 }
 
@@ -179,8 +324,8 @@ variable "min_instance_count" {
   default     = 0
 
   validation {
-    condition     = var.min_instance_count >= 0 && floor(var.min_instance_count) == var.min_instance_count
-    error_message = "min_instance_count must be a non-negative integer."
+    condition     = var.min_instance_count == 0
+    error_message = "The pilot requires min_instance_count=0 to preserve scale-to-zero."
   }
 }
 
@@ -190,8 +335,8 @@ variable "max_instance_count" {
   default     = 2
 
   validation {
-    condition     = var.max_instance_count >= 1 && var.max_instance_count <= 10 && floor(var.max_instance_count) == var.max_instance_count
-    error_message = "max_instance_count must be an integer from 1 through 10."
+    condition     = var.max_instance_count >= 1 && var.max_instance_count <= 2 && floor(var.max_instance_count) == var.max_instance_count
+    error_message = "The pilot requires max_instance_count to be 1 or 2."
   }
 }
 
@@ -239,6 +384,8 @@ variable "runtime_environment" {
       for forbidden in [
         "AGENCY_DATABASE_URL",
         "AGENCY_IDENTITY_CREDENTIALS_JSON",
+        "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON",
+        "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID",
         "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON",
         "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID",
         "AGENCY_X_CONSUMER_KEY",
@@ -281,15 +428,18 @@ variable "secret_environment" {
       for required in [
         "AGENCY_DATABASE_URL",
         "AGENCY_IDENTITY_CREDENTIALS_JSON",
-        "AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON",
-        "AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID",
-        "AGENCY_X_CONSUMER_KEY",
-        "AGENCY_X_CONSUMER_SECRET",
-        "AGENCY_INSTAGRAM_APP_ID",
-        "AGENCY_INSTAGRAM_APP_SECRET",
+        "AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON",
+        "AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID",
       ] : contains(keys(var.secret_environment), required)
     ])
-    error_message = "Cloud Run requires pinned database, identity, token-encryption and social-provider secrets."
+    error_message = "Cloud Run requires pinned database, individual-identity and audit-checkpoint secrets. Disabled social/provider capabilities do not require credentials."
+  }
+
+  validation {
+    condition = alltrue([
+      for item in values(var.secret_environment) : contains(var.managed_secret_ids, item.secret)
+    ])
+    error_message = "Every injected secret must reference a container in managed_secret_ids."
   }
 }
 
@@ -299,6 +449,8 @@ variable "managed_secret_ids" {
   default = [
     "campaignos-database-url",
     "campaignos-identity-credentials",
+    "campaignos-audit-checkpoint-signing-keys",
+    "campaignos-audit-checkpoint-active-key-id",
     "campaignos-social-token-encryption-keys",
     "campaignos-social-token-active-key-id",
     "campaignos-x-consumer-key",

@@ -21,12 +21,30 @@ resource "google_service_account" "deployer" {
 }
 
 resource "google_secret_manager_secret_iam_member" "runtime_secret_accessor" {
-  for_each = var.enable_bootstrap ? var.managed_secret_ids : toset([])
+  for_each = var.enable_bootstrap ? toset([
+    for item in values(var.secret_environment) : item.secret
+  ]) : toset([])
 
   project   = var.project_id
   secret_id = google_secret_manager_secret.runtime[each.key].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime[0].email}"
+}
+
+resource "google_project_iam_member" "runtime_cloud_sql_client" {
+  count = var.enable_cloud_sql ? 1 : 0
+
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.runtime[0].email}"
+}
+
+resource "google_project_iam_member" "deployer_cloud_sql_admin" {
+  count = var.enable_cloud_sql ? 1 : 0
+
+  project = var.project_id
+  role    = "roles/cloudsql.admin"
+  member  = "serviceAccount:${google_service_account.deployer[0].email}"
 }
 
 resource "google_project_iam_member" "deployer" {

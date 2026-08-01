@@ -5,7 +5,9 @@
         "WS-09"
       ],
       "attempted_resolutions": [
-        "read-only repository/PR/issue inspection"
+        "completed keyless GCP bootstrap",
+        "implemented code-only Cloud SQL and Cloud Run readiness",
+        "verified zero-resource defaults and exact cost gates"
       ],
       "category": [
         "credential",
@@ -13,30 +15,107 @@
         "infrastructure",
         "human_decision"
       ],
-      "evidence": "No authorized target/open billing/saved plan/apply; issue #1 and PR #2 remain DENY_APPLY.",
-      "exact_resume_condition": "Authorized target with open billing, granular preflight, reviewed saved plan, ALLOW_DEV_APPLY, and explicit external-infrastructure/spend authorization.",
+      "evidence": "The project bootstrap exists, but this runtime has no active GCP authentication and no saved deployment plan. External apply remains denied under the current cap.",
+      "exact_resume_condition": "After a sufficient fresh all-in budget authorization, authenticate the exact target project, create and review a saved plan, and obtain separate apply authority.",
       "id": "BLK-GCP-001",
-      "independent_work_remaining": true,
+      "independent_work_remaining": false,
+      "retry_count": 1
+    },
+    {
+      "affected_workstreams": [
+        "WS-09"
+      ],
+      "attempted_resolutions": [
+        "selected scale-to-zero Cloud Run",
+        "selected minimum shared-core Cloud SQL tier",
+        "separated code-only readiness from external apply"
+      ],
+      "category": "budget / infrastructure / external effect",
+      "evidence": "The reviewed db-f1-micro compute lower bound is 24,609 COP/month before storage and backups, while the authorized hard cap is 4,000 COP/month. INC-039 exhausted code-only readiness and retains DENY_APPLY.",
+      "exact_resume_condition": "Provide a monthly cap at or above a fresh reviewed all-in estimate, or authorize a different durable persistence architecture whose reviewed all-in estimate is within 4,000 COP; then authenticate GCP and approve the exact saved plan.",
+      "id": "BLK-GCP-COST-002",
+      "independent_work_remaining": false,
+      "retry_count": 2
+    },
+    {
+      "affected_workstreams": [
+        "WS-09"
+      ],
+      "attempted_resolutions": [
+        "completed local role-separated lifecycle",
+        "published PR #42",
+        "obtained exact-head CI and remote review"
+      ],
+      "category": [
+        "human_decision",
+        "merge"
+      ],
+      "evidence": "PR #42 head ffbbdfb66865f1a63f79cf2173b41666507a10be passed run 30679006770 8/8 and is MERGEABLE/CLEAN with zero review findings. Prior explicit merge authority named only PRs #38-#40.",
+      "exact_resume_condition": "Authorize merge of the exact final PR #42 head after exact-head CI; cloud apply remains a separate gate.",
+      "id": "BLK-INC039-MERGE-001",
+      "independent_work_remaining": false,
       "retry_count": 0
     },
     {
       "affected_workstreams": [
-        "WS-12"
+        "WS-09"
       ],
       "attempted_resolutions": [
-        "official git_push action on exact clean checkpoint",
-        "prior ownership normalization and git fsck"
+        "implemented repository-local SLOs alerts incident and rollback controls",
+        "implemented fail-closed deployment readiness",
+        "preserved external effect gates"
       ],
       "category": [
         "infrastructure",
-        "tooling",
-        "permission"
+        "external_effect",
+        "credential",
+        "spend"
       ],
-      "evidence": "Cloud_Sandbox_MCP.git_push for agent/inc-020-social-publication-authority@50b55f3 failed before Git while starting Docker; NAT chain creation failed because iptables access was denied.",
-      "exact_resume_condition": "Cloud Sandbox push wrapper executes Git without requiring privileged Docker NAT setup, or the user publishes the exact local branch from an authenticated checkout.",
-      "id": "BLK-SANDBOX-PUSH-001",
-      "independent_work_remaining": true,
+      "evidence": "INC-005 and INC-006 still require real monitoring/paging, backup/KMS/off-host retention and staging workload/incident observations; no such external evidence is claimed.",
+      "exact_resume_condition": "Provide authorized monitoring, backup and staging targets, sufficient budget, authenticated credentials and explicit effect authority, then execute the exercises.",
+      "id": "BLK-STAGING-OBSERVATION-001",
+      "independent_work_remaining": false,
       "retry_count": 1
+    },
+    {
+      "affected_workstreams": [
+        "WS-03"
+      ],
+      "attempted_resolutions": [
+        "implemented automated accessibility contracts",
+        "captured Chromium evidence",
+        "published the exact manual review protocol"
+      ],
+      "category": [
+        "human_review",
+        "accessibility"
+      ],
+      "evidence": "Automated accessibility and real Chromium checks pass, but accountable screen-reader, rendered contrast/visual and 400 percent zoom/reflow reviews are NOT_RUN.",
+      "exact_resume_condition": "An accountable human executes docs/accessibility/manual-review-protocol.md against the exact production bundle and resolves or accepts material findings.",
+      "id": "BLK-A11Y-MANUAL-001",
+      "independent_work_remaining": false,
+      "retry_count": 0
+    },
+    {
+      "affected_workstreams": [
+        "WS-05"
+      ],
+      "attempted_resolutions": [
+        "completed third-party inventory and license validation",
+        "implemented fail-closed decision registers",
+        "implemented public-claims and mutation checks"
+      ],
+      "category": [
+        "human_decision",
+        "privacy",
+        "legal",
+        "release"
+      ],
+      "evidence": "Eight privacy/legal/business decisions remain explicitly UNKNOWN or unapproved; release-decision.json remains DENY_RELEASE and DENY_APPLY.",
+      "exact_resume_condition": "Named privacy/legal, security and business reviewers approve jurisdiction, channels, retention/deletion/legal-hold/backup, provider and incident decisions on exact policy versions.",
+      "id": "BLK-LEGAL-DECISIONS-001",
+      "independent_work_remaining": false,
+      "retry_count": 0
     }
   ],
   "nodes": [
@@ -305,8 +384,18 @@
       "graph_initial_status": "spec_ready",
       "id": "INC-031",
       "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-012",
+        "INC-031",
+        "INC-038"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-039",
+      "status": "blocked"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-31T19:55:00Z"
+  "updated_at": "2026-08-01T02:05:00Z"
 }

@@ -1,7 +1,7 @@
 {
-  "checkpoint_count": 21,
-  "event_count": 381,
-  "last_event_id": "ef45a160-d377-42ce-9597-f30c1dc9d384",
+  "checkpoint_count": 23,
+  "event_count": 402,
+  "last_event_id": "27eb035b-f838-44fd-a6de-1521f6260b8d",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -1128,6 +1128,98 @@
       "last_event_id": "d4e08019-ad0e-4a55-829b-b9050e8576c1",
       "revision": 2,
       "status": "done"
+    },
+    "INC-039": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "0f57e8bd-b0cc-4515-bed5-7d4a94c23b25": {
+          "artifact": "PR #42 merge authority and program/reports/product-completion-status-2026-07-31.md",
+          "kind": "blocker",
+          "result": "BLOCKED",
+          "sha256": "5bbd4bf571de302dcb5f1c1a7b49d5b2875782540aaef47ebd1b2bfdb71d7da6"
+        },
+        "270931b8-7ed6-4315-8984-16812c334649": {
+          "artifact": "program/reports/inc-039-critic-red-team.md",
+          "kind": "review",
+          "result": "PASS",
+          "sha256": "ac0da446d31e44cdd16ffa75f8b1ebee3569f6587caa45b95529636c450041b3"
+        },
+        "293df5ee-0b27-4328-9da0-a4ba54fcd1a4": {
+          "artifact": "specs/039-gcp-pilot-deployment-readiness",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "6ed5b28b90520a807b47cd2dba9e8cf54b3799f5d3ed4dfea529fc59f06c7662"
+        },
+        "37846c43-be8d-48d4-bd57-f4423558301c": {
+          "artifact": "git tree c670b39e62f7bb1397a4c5cb8c398b65b883fa8b and program/reports/inc-039-producer.md",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "3a4911a0c7d0692f89a0fa47f28b8a2fb1a836b05ffcbf8c424d98adb04edc24"
+        },
+        "41c48149-07ee-4988-866e-6c765b7e77e9": {
+          "artifact": "program/reports/inc-039-production-review.md and infra/gcp/pilot-cost-review.json",
+          "kind": "production",
+          "result": "PASS",
+          "sha256": "861cc190fb240a3fcd9904860afb3d79f45945ce1e0a2f231abc6d908e232897"
+        },
+        "b0dcb6b0-1101-410e-a354-960a11b0ff9c": {
+          "artifact": "program/reports/inc-039-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "c94624a601749c455cf27b979d35d7eac6ea5719bff90f3d82e4a59170fe5323"
+        },
+        "b4795282-b644-4f01-9467-c88aed4a89ae": {
+          "artifact": "program/reports/inc-039-fixer.md",
+          "kind": "implementation",
+          "result": "PASS",
+          "sha256": "c461abb76d393ecd3d2c7e427621b89345c53c0037dbf3ab9fd2b4f297df9cd3"
+        },
+        "e06071ca-c014-434d-a182-09c375b6f287": {
+          "artifact": "GitHub Actions run 30679006770 and program/reports/inc-039-remote-review.md",
+          "kind": "verification",
+          "result": "PASS",
+          "sha256": "b945650225b28e7dc7ce8c3d57f4544a97c7a160de32d04f91a0e3015d59032a"
+        }
+      },
+      "gates": {
+        "close-gate": {
+          "evidence_ids": [
+            "e06071ca-c014-434d-a182-09c375b6f287",
+            "0f57e8bd-b0cc-4515-bed5-7d4a94c23b25"
+          ],
+          "result": "BLOCKED"
+        },
+        "implementation-gate": {
+          "evidence_ids": [
+            "37846c43-be8d-48d4-bd57-f4423558301c",
+            "b4795282-b644-4f01-9467-c88aed4a89ae",
+            "b0dcb6b0-1101-410e-a354-960a11b0ff9c"
+          ],
+          "result": "PASS"
+        },
+        "production-gate": {
+          "evidence_ids": [
+            "41c48149-07ee-4988-866e-6c765b7e77e9"
+          ],
+          "result": "PASS"
+        },
+        "review-gate": {
+          "evidence_ids": [
+            "270931b8-7ed6-4315-8984-16812c334649",
+            "b0dcb6b0-1101-410e-a354-960a11b0ff9c"
+          ],
+          "result": "PASS"
+        },
+        "spec-gate": {
+          "evidence_ids": [
+            "293df5ee-0b27-4328-9da0-a4ba54fcd1a4"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "b5dbe1a8-31c2-47ce-b786-5c5e934bda76",
+      "revision": 0,
+      "status": "blocked"
     }
   },
   "project_id": "ai-native-content-agency-saas",

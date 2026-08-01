@@ -25,7 +25,8 @@
     "validate:governance": "python3 scripts/verify-repository-governance.py",
     "validate:api-contract": "\"${API_CONTRACT_PYTHON_BIN:-python3}\" scripts/verify-api-contract.py",
     "validate:schema-compatibility": "\"${SCHEMA_COMPATIBILITY_PYTHON_BIN:-python3}\" scripts/verify-schema-compatibility.py",
-    "validate:workload-rollback": "python3 scripts/verify-workload-rollback.py --validate-only"
+    "validate:workload-rollback": "python3 scripts/verify-workload-rollback.py --validate-only",
+    "validate:gcp-pilot": "python3 scripts/verify-gcp-pilot-readiness.py"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
