@@ -2453,6 +2453,94 @@
       "validation_summary": "PR #40 final head 9c755166 passed run 30677892259 8/8, squash merged as 3a82c97d, and main run 30677990904 passed 8/8; INC-031 closed with zero external effects.",
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-031"
+    },
+    {
+      "acceptance_criteria": [
+        "default plan creates zero resources",
+        "insufficient monthly cap blocks Cloud SQL",
+        "Cloud SQL backups PITR storage and deletion controls validate",
+        "Cloud Run requires immutable image schema receipt and pinned minimal secrets",
+        "social provider credentials remain optional while effects are disabled",
+        "runtime IAM is least privilege",
+        "all local and exact-head CI checks pass with zero external effects"
+      ],
+      "allowed_paths": [
+        "infra/gcp/**",
+        "scripts/verify-gcp-pilot-readiness.py",
+        "backend/tests/test_gcp_pilot_readiness.py",
+        ".github/workflows/production-readiness.yml",
+        "package.json",
+        "docs/runbooks/gcp-pilot-deployment.md",
+        "program/**",
+        "specs/039-gcp-pilot-deployment-readiness/**"
+      ],
+      "authoritative_inputs": [
+        "user deployment authorization with 4,000 COP hard cap",
+        "program/reports/inc-037-gcp-staging-bootstrap.md",
+        "infra/gcp/**",
+        "docs/runbooks/postgresql-schema-rollout.md",
+        "specs/039-gcp-pilot-deployment-readiness/**"
+      ],
+      "context": "The GCP bootstrap exists, but Cloud SQL is not modeled and Cloud Run currently over-requires disabled provider secrets. The operator authorized a pilot only within a hard 4,000 COP monthly cap; the reviewed minimum Cloud SQL estimate exceeds that cap, so this node is code-only and INC-006 retains real staging observation.",
+      "dependencies": [
+        "INC-012",
+        "INC-031",
+        "INC-038"
+      ],
+      "expected_outputs": [
+        "Cloud SQL PostgreSQL 15 Terraform contract",
+        "Cloud Run Cloud SQL socket attachment",
+        "cost-cap and schema-receipt interlocks",
+        "minimal effects-off secret contract",
+        "positive and negative Terraform tests",
+        "repository verifier and operator runbook",
+        "role-separated Graph Harness evidence"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "cloud apply",
+        "database roles/schema",
+        "secret versions",
+        "image publication",
+        "public ingress",
+        "spend",
+        "production or external effect"
+      ],
+      "objective": "Implement fail-closed GCP pilot deployment readiness for Cloud SQL and Cloud Run without applying external resources.",
+      "prohibited_paths": [
+        "cloud apply",
+        "image publication",
+        "secret mutation",
+        "database role/schema mutation",
+        "public ingress mutation",
+        "provider effects",
+        "spend",
+        "force push"
+      ],
+      "publication_state": "IMPLEMENTATION_IN_PROGRESS_DENY_APPLY",
+      "read_only_paths": [
+        ".env.local",
+        ".local/**",
+        "production secrets",
+        "provider credentials",
+        "Terraform live state"
+      ],
+      "role": "Cloud Platform Engineer / Cost and Release Reviewer",
+      "status": "in_progress",
+      "task_id": "INC-039",
+      "validation_commands": [
+        "python3 scripts/verify-gcp-pilot-readiness.py",
+        "terraform -chdir=infra/gcp fmt -check -recursive",
+        "terraform -chdir=infra/gcp init -backend=false",
+        "terraform -chdir=infra/gcp validate",
+        "terraform -chdir=infra/gcp test",
+        "npm run validate:program && npm run validate:graph",
+        "git diff --check"
+      ],
+      "validation_summary": "Cloud SQL/Cloud Run plan contract implemented; current 4,000 COP cap remains DENY_APPLY with zero external effects.",
+      "workstream_id": "WS-09",
+      "write_lock": "orchestrator:INC-039"
     }
   ],
   "updated_at": "2026-07-31T19:55:00Z",
@@ -2713,7 +2801,7 @@
       "evals": [],
       "id": "WS-09",
       "name": "Platform, Deployment and Operations",
-      "next_ready_task": "INC-031",
+      "next_ready_task": "INC-039",
       "objective": "SLOs, alerts, rollback and authorized staging evidence.",
       "owner": "orchestrator",
       "requirements": [],

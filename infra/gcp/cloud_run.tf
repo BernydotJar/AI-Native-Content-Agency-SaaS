@@ -9,6 +9,11 @@ resource "google_cloud_run_v2_service" "app" {
   labels              = local.labels
 
   template {
+    annotations = {
+      "agency.dev/cost-review-receipt"           = var.cost_review_receipt_sha256
+      "agency.dev/schema-initialization-receipt" = var.schema_initialization_receipt_sha256
+    }
+
     service_account                  = google_service_account.runtime[0].email
     timeout                          = "300s"
     max_instance_request_concurrency = 20
@@ -18,6 +23,14 @@ resource "google_cloud_run_v2_service" "app" {
       max_instance_count = var.max_instance_count
     }
 
+    volumes {
+      name = "cloudsql"
+
+      cloud_sql_instance {
+        instances = [google_sql_database_instance.app[0].connection_name]
+      }
+    }
+
     containers {
       name  = "campaignos"
       image = var.container_image
@@ -25,6 +38,11 @@ resource "google_cloud_run_v2_service" "app" {
       ports {
         name           = "http1"
         container_port = 8080
+      }
+
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
       }
 
       resources {
@@ -86,6 +104,8 @@ resource "google_cloud_run_v2_service" "app" {
   depends_on = [
     google_project_service.required,
     google_secret_manager_secret.runtime,
+    google_sql_database.app,
+    google_project_iam_member.runtime_cloud_sql_client,
   ]
 }
 

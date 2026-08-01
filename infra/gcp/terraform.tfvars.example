@@ -2,21 +2,40 @@ project_id         = "replace-with-project-id"
 project_number     = "replace-with-project-number"
 billing_account_id = "012345-ABCDEF-6789AB"
 region             = "us-central1"
-environment       = "staging"
-github_repository = "BernydotJar/AI-Native-Content-Agency-SaaS"
-github_ref        = "refs/heads/main"
+environment        = "staging"
+github_repository  = "BernydotJar/AI-Native-Content-Agency-SaaS"
+github_ref         = "refs/heads/main"
 
-enable_bootstrap  = false
-enable_cloud_run  = false
+enable_bootstrap = false
+enable_cloud_sql = false
+enable_cloud_run = false
 monthly_budget_units = 20
 
-# After separate approval:
-# enable_bootstrap = true
+# Current repository cost evidence is DENY_APPLY under the 4,000 COP cap.
+# Do not enable resources by copying the hypothetical values below. Refresh the
+# all-in estimate and obtain an adequate explicit cap first.
 
-# Only after an immutable image and numeric secret versions exist:
-# enable_cloud_run      = true
-# allow_unauthenticated = false
-# container_image       = "us-central1-docker.pkg.dev/PROJECT/campaignos/app@sha256:..."
+# After separate bootstrap and cost approval:
+# enable_bootstrap                      = true
+# enable_cloud_sql                      = true
+# cost_review_receipt_sha256            = "sha256-of-approved-current-cost-review"
+# authorized_monthly_cost_cap_units     = 30000
+# reviewed_monthly_cost_estimate_units  = 28000
+# monthly_budget_units                  = 30000
+# cloud_sql_tier                        = "db-f1-micro"
+# cloud_sql_disk_size_gb                = 10
+# cloud_sql_disk_autoresize_limit_gb    = 20
+# cloud_sql_backup_retention_count      = 7
+# cloud_sql_deletion_protection         = true
+
+# Only after the database schema/roles, immutable image, and numeric secret
+# versions exist and have separate receipts:
+# enable_cloud_run                     = true
+# allow_unauthenticated                = false
+# min_instance_count                   = 0
+# max_instance_count                   = 2
+# schema_initialization_receipt_sha256 = "sha256-of-schema-role-validation-receipt"
+# container_image                      = "us-central1-docker.pkg.dev/PROJECT/campaignos/app@sha256:..."
 # secret_environment = {
 #   AGENCY_DATABASE_URL = {
 #     secret  = "campaignos-database-url"
@@ -26,12 +45,12 @@ monthly_budget_units = 20
 #     secret  = "campaignos-identity-credentials"
 #     version = "1"
 #   }
-#   AGENCY_SOCIAL_TOKEN_ENCRYPTION_KEYS_JSON = {
-#     secret  = "campaignos-social-token-encryption-keys"
+#   AGENCY_AUDIT_CHECKPOINT_SIGNING_KEYS_JSON = {
+#     secret  = "campaignos-audit-checkpoint-signing-keys"
 #     version = "1"
 #   }
-#   AGENCY_SOCIAL_TOKEN_ACTIVE_KEY_ID = {
-#     secret  = "campaignos-social-token-active-key-id"
+#   AGENCY_AUDIT_CHECKPOINT_ACTIVE_KEY_ID = {
+#     secret  = "campaignos-audit-checkpoint-active-key-id"
 #     version = "1"
 #   }
 # }

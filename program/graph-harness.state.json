@@ -1,7 +1,7 @@
 {
   "checkpoint_count": 21,
-  "event_count": 381,
-  "last_event_id": "ef45a160-d377-42ce-9597-f30c1dc9d384",
+  "event_count": 387,
+  "last_event_id": "e7a9b78b-c8bb-444a-866b-b438c3898d74",
   "mode": "SHIP",
   "nodes": {
     "INC-001": {
@@ -1128,6 +1128,28 @@
       "last_event_id": "d4e08019-ad0e-4a55-829b-b9050e8576c1",
       "revision": 2,
       "status": "done"
+    },
+    "INC-039": {
+      "active_approval_count": 1,
+      "active_evidence": {
+        "293df5ee-0b27-4328-9da0-a4ba54fcd1a4": {
+          "artifact": "specs/039-gcp-pilot-deployment-readiness",
+          "kind": "spec",
+          "result": "PASS",
+          "sha256": "6ed5b28b90520a807b47cd2dba9e8cf54b3799f5d3ed4dfea529fc59f06c7662"
+        }
+      },
+      "gates": {
+        "spec-gate": {
+          "evidence_ids": [
+            "293df5ee-0b27-4328-9da0-a4ba54fcd1a4"
+          ],
+          "result": "PASS"
+        }
+      },
+      "last_event_id": "e7a9b78b-c8bb-444a-866b-b438c3898d74",
+      "revision": 0,
+      "status": "running"
     }
   },
   "project_id": "ai-native-content-agency-saas",

@@ -37,6 +37,22 @@
       "id": "BLK-SANDBOX-PUSH-001",
       "independent_work_remaining": true,
       "retry_count": 1
+    },
+    {
+      "affected_workstreams": [
+        "WS-09"
+      ],
+      "attempted_resolutions": [
+        "selected scale-to-zero Cloud Run",
+        "selected minimum shared-core Cloud SQL tier",
+        "separated code-only readiness from external apply"
+      ],
+      "category": "budget / infrastructure / external effect",
+      "evidence": "The reviewed db-f1-micro compute estimate alone is approximately 24,609 COP/month, before storage and backups, while the authorized hard cap is 4,000 COP/month.",
+      "exact_resume_condition": "Provide a monthly cap at or above a fresh reviewed all-in estimate, or authorize a different durable persistence architecture whose reviewed all-in estimate is within 4,000 COP; then authenticate GCP and approve the exact saved plan.",
+      "id": "BLK-GCP-COST-002",
+      "independent_work_remaining": "Implement and verify declarative deployment readiness without applying resources.",
+      "retry_count": 1
     }
   ],
   "nodes": [
@@ -305,8 +321,18 @@
       "graph_initial_status": "spec_ready",
       "id": "INC-031",
       "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-012",
+        "INC-031",
+        "INC-038"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-039",
+      "status": "in_progress"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-31T19:55:00Z"
+  "updated_at": "2026-08-01T02:00:00Z"
 }
