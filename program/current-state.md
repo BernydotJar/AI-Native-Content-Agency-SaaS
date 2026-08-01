@@ -385,3 +385,10 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - Producer, Critic, Fixer, Independent Verifier and Production Review pass the code-only scope.
 - `DENY_APPLY` remains active: 4,000 COP authorized versus a 24,609 COP compute-only lower bound; no external effect occurred.
 - Exact-head remote CI and merge are pending.
+
+## 2026-07-31 — INC-039 remote review and terminal program state
+
+- PR #42 head `ffbbdfb66865f1a63f79cf2173b41666507a10be` passed run `30679006770` 8/8 and is `MERGEABLE/CLEAN` with zero review findings.
+- INC-039 is blocked only by its merge gate; external GCP apply is separately denied by the 4,000 COP cap.
+- The stale sandbox push blocker is resolved; exact remaining blockers are merge, staging/operability effects, manual accessibility and accountable privacy/legal decisions.
+- No READY node remains. Session terminal state: `PARTIAL_WITH_DOCUMENTED_BLOCKERS`.

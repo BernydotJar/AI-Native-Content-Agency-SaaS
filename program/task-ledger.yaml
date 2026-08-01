@@ -2518,7 +2518,7 @@
         "spend",
         "force push"
       ],
-      "publication_state": "LOCAL_GATES_PASS_REMOTE_EXACT_HEAD_PENDING_DENY_APPLY",
+      "publication_state": "REMOTE_EXACT_HEAD_PASS_CLOSE_BLOCKED_BY_MERGE_DENY_APPLY",
       "read_only_paths": [
         ".env.local",
         ".local/**",
@@ -2527,7 +2527,7 @@
         "Terraform live state"
       ],
       "role": "Cloud Platform Engineer / Cost and Release Reviewer",
-      "status": "review",
+      "status": "blocked",
       "task_id": "INC-039",
       "validation_commands": [
         "python3 scripts/verify-gcp-pilot-readiness.py",
@@ -2538,7 +2538,7 @@
         "npm run validate:program && npm run validate:graph",
         "git diff --check"
       ],
-      "validation_summary": "Commit 24b88e5: Terraform 7/7, GCP mutations 5/5, backend 392, frontend 58, semantic evals 20/20 twice; current 4,000 COP cap remains DENY_APPLY and external effects are zero.",
+      "validation_summary": "PR #42 head ffbbdfb passed run 30679006770 8/8, is MERGEABLE/CLEAN with zero review findings; close is blocked by merge authority and GCP apply remains denied by the 4,000 COP cap.",
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-039"
     }
