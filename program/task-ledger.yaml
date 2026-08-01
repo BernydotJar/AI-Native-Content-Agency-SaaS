@@ -2339,7 +2339,7 @@
         "schema downgrade",
         "destructive historical rewrite"
       ],
-      "publication_state": "REVISION_2_EXACT_TREE_PASS",
+      "publication_state": "MERGED_TO_MAIN",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2349,7 +2349,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Schema Compatibility Engineer / Independent Verifier",
-      "status": "review",
+      "status": "done",
       "task_id": "INC-030",
       "validation_commands": [
         "python3 scripts/verify-schema-compatibility.py",
@@ -2359,12 +2359,103 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "Revision 2 clean 4d61acb: canonical refs plus explicit optimization-safe invariants; 384 wheel and 384 PostgreSQL tests PASS. Exact-head CI pending.",
+      "validation_summary": "PR #39 revision 2 passed 384 wheel and 384 PostgreSQL tests, exact-head run 30660276585 8/8, repaired two findings, and merged as fe75c5f563e97cda38f4fe0a7c05f9c455000474.",
       "workstream_id": "WS-03",
       "write_lock": "orchestrator:INC-030"
+    },
+    {
+      "acceptance_criteria": [
+        "candidate and rollback commits/images are exact and immutable",
+        "both workloads are non-root/read-only/effects-disabled",
+        "only one SQLite writer runs at a time",
+        "original tenant run survives rollback without DB restore",
+        "post-rollback write succeeds",
+        "audit chain and SQLite integrity pass",
+        "RTO is measured and within bounded local target",
+        "report contains no credentials",
+        "exact-head CI passes with zero external effects"
+      ],
+      "allowed_paths": [
+        "contracts/workload-rollback-v1.json",
+        "scripts/verify-workload-rollback.py",
+        "backend/tests/test_workload_rollback.py",
+        "backend/tests/test_program_state.py",
+        "backend/tests/test_graph_harness_adapter.py",
+        "docs/runbooks/release-rollback.md",
+        "package.json",
+        ".github/workflows/production-readiness.yml",
+        "compliance/third-party-inventory.json",
+        "program/**",
+        "specs/031-workload-rollback-drill/**"
+      ],
+      "authoritative_inputs": [
+        "contracts/workload-rollback-v1.json",
+        "docs/runbooks/release-rollback.md",
+        "contracts/runtime-schema-history.json",
+        "Dockerfile",
+        "specs/031-workload-rollback-drill/**"
+      ],
+      "context": "Workload rollback drill rebuilt on merged API/schema stack. Fresh exact-tree and exact-head evidence are required; production rollback remains separately gated.",
+      "dependencies": [
+        "INC-002",
+        "INC-019",
+        "INC-024"
+      ],
+      "expected_outputs": [
+        "safe local rollback orchestrator",
+        "deterministic rollback report",
+        "candidate and rollback image identity evidence",
+        "same-port readiness/RTO evidence",
+        "pre/post tenant data and audit-chain verification",
+        "updated rollback runbook and CI gate"
+      ],
+      "graph_initial_status": "spec_ready",
+      "human_gates": [
+        "merge",
+        "production rollback",
+        "traffic mutation outside local loopback",
+        "data restore",
+        "release",
+        "deployment or external effect when applicable"
+      ],
+      "objective": "Execute a local workload-image rollback with stable traffic endpoint, measured RTO and preserved schema-v9 data.",
+      "prohibited_paths": [
+        "production rollback",
+        "database restore or replacement",
+        "schema downgrade",
+        "cloud apply",
+        "secret mutation",
+        "provider effects",
+        "spend",
+        "branch-protection mutation",
+        "force push"
+      ],
+      "publication_state": "REMOTE_REVIEW_PASS_CLOSE_BLOCKED_BY_MERGE",
+      "read_only_paths": [
+        "production databases",
+        "production secrets",
+        ".env.local",
+        "provider credentials",
+        "compliance/privacy-decision-register.json",
+        "compliance/release-decision.json"
+      ],
+      "role": "Release Reliability Engineer / Independent Verifier",
+      "status": "blocked",
+      "task_id": "INC-031",
+      "validation_commands": [
+        "python3 scripts/verify-workload-rollback.py --validate-only",
+        "python3 -m unittest backend.tests.test_workload_rollback",
+        "CONTAINER_BUILDER=buildah python3 scripts/verify-workload-rollback.py",
+        "npm run validate:program && npm run validate:graph",
+        "npm run validate:compliance && npm run validate:operability",
+        "git diff --check"
+      ],
+      "validation_summary": "PR #40 head 7da84d9922d3 passed exact-head run 30677767019 8/8 with zero review threads/findings; close remains blocked only until merge.",
+      "workstream_id": "WS-09",
+      "write_lock": "orchestrator:INC-031"
     }
   ],
-  "updated_at": "2026-07-31T18:57:00Z",
+  "updated_at": "2026-07-31T19:55:00Z",
   "workstreams": [
     {
       "acceptance_criteria": [
@@ -2403,7 +2494,7 @@
       "evals": [],
       "id": "WS-02",
       "name": "Specifications and Requirements Traceability",
-      "next_ready_task": "INC-030",
+      "next_ready_task": "INC-031",
       "objective": "Maintain bidirectional requirements, specs, tasks and evidence.",
       "owner": "orchestrator",
       "requirements": [],
@@ -2426,12 +2517,12 @@
       "evals": [],
       "id": "WS-03",
       "name": "Data Model, SQLite, PostgreSQL and Migration",
-      "next_ready_task": "INC-030",
+      "next_ready_task": "INC-031",
       "objective": "Prove durable correctness, migration, backup and restore.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "in_progress",
+      "status": "done",
       "validation": [],
       "write_locks": []
     },
@@ -2622,12 +2713,12 @@
       "evals": [],
       "id": "WS-09",
       "name": "Platform, Deployment and Operations",
-      "next_ready_task": "INC-005",
+      "next_ready_task": "INC-031",
       "objective": "SLOs, alerts, rollback and authorized staging evidence.",
       "owner": "orchestrator",
       "requirements": [],
       "risks": [],
-      "status": "blocked",
+      "status": "in_progress",
       "validation": [],
       "write_locks": []
     },

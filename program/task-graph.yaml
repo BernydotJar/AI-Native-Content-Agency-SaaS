@@ -294,9 +294,19 @@
       ],
       "graph_initial_status": "spec_ready",
       "id": "INC-030",
-      "status": "review"
+      "status": "done"
+    },
+    {
+      "depends_on": [
+        "INC-002",
+        "INC-019",
+        "INC-024"
+      ],
+      "graph_initial_status": "spec_ready",
+      "id": "INC-031",
+      "status": "blocked"
     }
   ],
   "schema_version": "program-task-graph.v1",
-  "updated_at": "2026-07-31T18:57:00Z"
+  "updated_at": "2026-07-31T19:55:00Z"
 }

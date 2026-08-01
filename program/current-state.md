@@ -352,3 +352,22 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - SQLite v1-v9 and PostgreSQL v1-v9 all preserve the historical audit event and current hash chain after upgrade to schema v9.
 - 383 installed-wheel tests and 383 PostgreSQL tests pass; OCI, 58 frontend tests, Helm/K3s/Terraform cleanup, governance, compliance and operability pass.
 - Exact-head CI, remote review and merge of PR #39 remain pending. No production migration has been executed.
+
+## 2026-07-31 — PR #39 merged; INC-031 rebuilt
+
+- INC-030 revision 2 is done after canonical history refs, optimization-safe checks, 384 wheel/384 PostgreSQL tests, run 30660276585 8/8 and squash merge fe75c5f563e97cda38f4fe0a7c05f9c455000474.
+- INC-031 workload rollback drill is rebuilt on the merged API/schema stack and begins with fresh Graph Harness evidence.
+- Production rollback, deployment, restore and external traffic mutation remain separately human-gated.
+
+## 2026-07-31 — INC-031 rebuilt local lifecycle complete
+
+- Implementation commit `30974c7698382d04a11cf4765b0fef0690762328` executes a real Buildah/runc rollback to merged main `fe75c5f563e97cda38f4fe0a7c05f9c455000474`.
+- RTO is 1,863 ms; the original run and audit head survive, a post-rollback write succeeds, SQLite integrity is `ok`, and external effects are zero.
+- 387 wheel tests, 387 PostgreSQL tests, 58 frontend tests, production package, compliance, operability and graph validation pass.
+- Producer, Critic/Red Team and Independent Verifier report technical PASS. Exact-head remote CI and merge remain pending.
+
+## 2026-07-31 — INC-031 exact-head remote review
+
+- PR #40 now targets `main`; reviewed head `7da84d9922d3f1c06ece4c57e4e59831384e423a` passed run `30677767019` 8/8.
+- GitHub reported `MERGEABLE/CLEAN`, with zero reviews, code comments, review threads or unresolved conversations.
+- INC-031 is blocked only by the merge receipt; no production rollback or deployment is claimed.

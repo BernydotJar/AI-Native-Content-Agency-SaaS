@@ -100,6 +100,7 @@ jobs:
         env:
           SCHEMA_COMPATIBILITY_PYTHON_BIN: python
           SCHEMA_COMPATIBILITY_USE_INSTALLED: "1"
+      - run: npm run validate:workload-rollback
       - run: npm run validate:semantic-evals
         env:
           SEMANTIC_EVAL_EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -167,6 +168,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - name: Verify exact source checkout
         env:
           EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -177,6 +179,20 @@ jobs:
           context: .
           push: false
           tags: ai-native-content-agency:ci
+      - name: Install local OCI rollback runtime
+        run: sudo apt-get update && sudo apt-get install -y buildah runc
+      - name: Execute read-only workload rollback drill
+        run: |
+          sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          sudo env PATH="$PATH" python3 scripts/verify-workload-rollback.py \
+            --report artifacts/rollback/generated/workload-rollback-report.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: workload-rollback-evidence
+          path: artifacts/rollback/generated
+          if-no-files-found: warn
+          retention-days: 30
 
 
   supply-chain:
