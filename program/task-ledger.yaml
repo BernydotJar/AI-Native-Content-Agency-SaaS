@@ -2430,7 +2430,7 @@
         "branch-protection mutation",
         "force push"
       ],
-      "publication_state": "REBUILT_ON_MERGED_PR39_RUNNING",
+      "publication_state": "LOCAL_GATES_PASS_REMOTE_EXACT_HEAD_PENDING",
       "read_only_paths": [
         "production databases",
         "production secrets",
@@ -2440,7 +2440,7 @@
         "compliance/release-decision.json"
       ],
       "role": "Release Reliability Engineer / Independent Verifier",
-      "status": "in_progress",
+      "status": "review",
       "task_id": "INC-031",
       "validation_commands": [
         "python3 scripts/verify-workload-rollback.py --validate-only",
@@ -2450,7 +2450,7 @@
         "npm run validate:compliance && npm run validate:operability",
         "git diff --check"
       ],
-      "validation_summary": "Fresh execution pending on main fe75c5f563e97cda38f4fe0a7c05f9c455000474.",
+      "validation_summary": "Local OCI rollback PASS (RTO 1,863 ms), 387 wheel and 387 PostgreSQL tests, 58 frontend tests, production package and governance gates PASS; remote exact-head CI and merge pending.",
       "workstream_id": "WS-09",
       "write_lock": "orchestrator:INC-031"
     }

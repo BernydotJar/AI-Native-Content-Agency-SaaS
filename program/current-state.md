@@ -358,3 +358,10 @@ must precede any Cloud Run deployment or stable OAuth callback cutover.
 - INC-030 revision 2 is done after canonical history refs, optimization-safe checks, 384 wheel/384 PostgreSQL tests, run 30660276585 8/8 and squash merge fe75c5f563e97cda38f4fe0a7c05f9c455000474.
 - INC-031 workload rollback drill is rebuilt on the merged API/schema stack and begins with fresh Graph Harness evidence.
 - Production rollback, deployment, restore and external traffic mutation remain separately human-gated.
+
+## 2026-07-31 — INC-031 rebuilt local lifecycle complete
+
+- Implementation commit `30974c7698382d04a11cf4765b0fef0690762328` executes a real Buildah/runc rollback to merged main `fe75c5f563e97cda38f4fe0a7c05f9c455000474`.
+- RTO is 1,863 ms; the original run and audit head survive, a post-rollback write succeeds, SQLite integrity is `ok`, and external effects are zero.
+- 387 wheel tests, 387 PostgreSQL tests, 58 frontend tests, production package, compliance, operability and graph validation pass.
+- Producer, Critic/Red Team and Independent Verifier report technical PASS. Exact-head remote CI and merge remain pending.
