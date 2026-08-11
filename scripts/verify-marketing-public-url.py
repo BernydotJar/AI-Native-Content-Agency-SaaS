@@ -58,6 +58,7 @@ def verify_source() -> None:
             'VITE_PUBLIC_MARKETING_DEMO: "true"',
             f"npm run build -- --base {BASE_PATH}",
             "python3 scripts/verify-marketing-public-url.py --dist dist",
+            "node scripts/verify-marketing-public-browser.mjs",
             "python3 scripts/verify-marketing-release-authority.py",
             "enablement: true",
             "if: github.event_name != 'pull_request'",

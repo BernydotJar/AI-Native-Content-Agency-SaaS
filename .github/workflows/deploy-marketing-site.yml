@@ -37,6 +37,11 @@ jobs:
         run: npm run build -- --base /AI-Native-Content-Agency-SaaS/
       - name: Verify built marketing artifact
         run: python3 scripts/verify-marketing-public-url.py --dist dist
+      - name: Verify public demo in a real browser
+        run: |
+          BROWSER_BIN="$(command -v chromium || command -v google-chrome || command -v google-chrome-stable)"
+          test -n "$BROWSER_BIN"
+          CHROMIUM_BIN="$BROWSER_BIN" node scripts/verify-marketing-public-browser.mjs
       - name: Enforce public release authority
         if: github.event_name != 'pull_request'
         run: python3 scripts/verify-marketing-release-authority.py

@@ -21,7 +21,7 @@
   "evidence_files": [
     {
       "path": ".github/workflows/deploy-marketing-site.yml",
-      "sha256": "ed139e11708148e8a48716d721ed351649ead34f2128ae77e5f638f881c9eef8"
+      "sha256": "1d26524dfaa3a9ebbe0b9b4df950168fd115576d22ac0cd61a9243c3d95a2e9b"
     },
     {
       "path": ".github/workflows/production-readiness.yml",

@@ -95,6 +95,8 @@ npm run lint
 npm test
 VITE_PUBLIC_MARKETING_DEMO=true npm run build -- --base /AI-Native-Content-Agency-SaaS/
 python3 scripts/verify-marketing-public-url.py --dist dist
+CHROMIUM_BIN="$(command -v chromium || command -v google-chrome || command -v google-chrome-stable)" \
+  node scripts/verify-marketing-public-browser.mjs
 ```
 
 ### Search crawling note
