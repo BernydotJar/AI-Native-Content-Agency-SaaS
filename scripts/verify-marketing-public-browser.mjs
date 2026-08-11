@@ -177,7 +177,18 @@ async function cleanup() {
 }
 
 async function run() {
-  const preview = start("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", String(previewPort), "--strictPort"]);
+  const preview = start("npm", [
+    "run",
+    "preview",
+    "--",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(previewPort),
+    "--strictPort",
+    "--base",
+    basePath,
+  ]);
   const response = await waitForHttp(previewUrl, preview, "Vite preview");
   const html = await response.text();
   if (!html.includes(`${basePath}assets/`) || html.includes("/src/main.tsx")) {
