@@ -144,6 +144,34 @@ class SupplyChainPolicyTests(unittest.TestCase):
             for token in forbidden:
                 self.assertNotIn(token, source, f"{path} introduced {token}")
 
+    def test_cryptography_pkcs7_fix_exception_requires_no_runtime_surface(self):
+        baseline = json.loads(
+            (ROOT / "artifacts/supply-chain/vulnerability-baseline.json").read_text()
+        )
+        accepted = {
+            item["vulnerability"]: item for item in baseline["accepted"]
+        }
+        entry = accepted["GHSA-g6cj-pr64-35w5"]
+        self.assertEqual(entry["package"], "cryptography")
+        self.assertEqual(entry["version"], "49.0.0")
+        self.assertIn("50.0.0", entry["fix_exception"])
+        self.assertIn("2026-08-21", entry["fix_exception"])
+        self.assertIn("runtime PKCS7-decrypt surface test", entry["fix_exception"])
+
+        forbidden = (
+            "pkcs7_decrypt_der",
+            "pkcs7_decrypt_pem",
+            "pkcs7_decrypt_smime",
+            "from cryptography.hazmat.primitives.serialization import pkcs7",
+            "cryptography.hazmat.primitives.serialization.pkcs7",
+        )
+        runtime_files = sorted((ROOT / "backend/agency_runtime").rglob("*.py"))
+        self.assertTrue(runtime_files)
+        for path in runtime_files:
+            source = path.read_text(encoding="utf-8")
+            for token in forbidden:
+                self.assertNotIn(token, source, f"{path} introduced {token}")
+
     def test_denied_missing_and_stale_license_exceptions_are_rejected(self):
         _, errors = POLICY.evaluate_licenses(
             {
