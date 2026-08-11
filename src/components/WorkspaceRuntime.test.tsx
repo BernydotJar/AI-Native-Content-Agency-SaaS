@@ -293,4 +293,32 @@ describe("WorkspaceRuntime", () => {
     await waitFor(() => expect(screen.getByText(/awaiting greenlight/i)).toBeInTheDocument(), { timeout: 2500 });
     expect(getRun.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
+  it("runs the public marketing demo entirely in-browser without runtime calls", async () => {
+    const user = userEvent.setup();
+    const runtime = api();
+    const onRunChange = vi.fn();
+
+    render(<WorkspaceRuntime api={runtime} publicDemo onRunChange={onRunChange} />);
+
+    expect(await screen.findByText(/Runtime privado no expuesto en la demo/i)).toBeInTheDocument();
+    expect(runtime.resumeSession).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/Título de campaña/i)).toBeEnabled();
+
+    await user.clear(screen.getByLabelText(/Título de campaña/i));
+    await user.type(screen.getByLabelText(/Título de campaña/i), "Campaña pública interactiva");
+    await user.click(screen.getByRole("button", { name: /Ejecutar demo local/i }));
+
+    expect(await screen.findByText(/Demo local completada/i)).toBeInTheDocument();
+    expect(screen.getByText(/demo-local-/i)).toBeInTheDocument();
+    expect(runtime.createRun).not.toHaveBeenCalled();
+    expect(runtime.currentIdentity).not.toHaveBeenCalled();
+    expect(runtime.auditEvents).not.toHaveBeenCalled();
+    await waitFor(() => expect(onRunChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      status: "completed",
+      sandbox: true,
+      external_side_effects_enabled: false,
+      tenant_id: "public-demo",
+    })));
+  });
+
 });

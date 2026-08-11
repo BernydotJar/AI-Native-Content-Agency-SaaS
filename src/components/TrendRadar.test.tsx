@@ -114,4 +114,26 @@ describe("TrendRadar", () => {
     expect(await screen.findByText(/Radar temporalmente no disponible/i)).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: /Señales actuales/i })).not.toBeInTheDocument();
   });
+  it("uses local sample signals in the public demo without calling the runtime", async () => {
+    const user = userEvent.setup();
+    const runtime = api();
+    const onPreparePilot = vi.fn();
+
+    render(<TrendRadar sessionActive={false} publicDemo api={runtime} onPreparePilot={onPreparePilot} />);
+
+    expect(await screen.findByText(/Cómo explicar propuestas complejas con claridad/i)).toBeInTheDocument();
+    expect(runtime.trendRadar).not.toHaveBeenCalled();
+    expect(screen.getByText(/Muestra local · datos ilustrativos/i)).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: /Preparar piloto/i })[0]);
+    expect(onPreparePilot).toHaveBeenCalledWith(expect.objectContaining({
+      brief: expect.objectContaining({
+        budget_cents: 0,
+        evidence_claims: [expect.objectContaining({
+          source: "Muestra local de producto",
+          verification_status: "unverified",
+        })],
+      }),
+    }));
+  });
+
 });

@@ -2,6 +2,7 @@ import { Cpu, Sparkles } from "lucide-react";
 
 interface CinematicHeroProps {
   sessionActive: boolean;
+  publicDemo?: boolean;
   tenantId?: string;
   completedStations: number;
   totalStations: number;
@@ -14,6 +15,7 @@ interface CinematicHeroProps {
 
 export function CinematicHero({
   sessionActive,
+  publicDemo = false,
   tenantId,
   completedStations,
   totalStations,
@@ -23,7 +25,7 @@ export function CinematicHero({
   runStatus,
   selectedProvider,
 }: CinematicHeroProps) {
-  const normalizedRunStatus = runStatus?.replaceAll("_", " ") ?? "standby";
+  const normalizedRunStatus = runStatus?.replaceAll("_", " ") ?? (publicDemo ? "ready" : "standby");
 
   return (
     <section aria-labelledby="hero-title" className="hero-stage">
@@ -31,7 +33,7 @@ export function CinematicHero({
         <div className="coordinate-tag">
           <span>OPS / CAMPAIGN-01</span>
           <i />
-          <span>{sessionActive ? tenantId ?? "TENANT ACTIVE" : "SESSION OFFLINE"}</span>
+          <span>{publicDemo ? "PUBLIC DEMO / LOCAL" : sessionActive ? tenantId ?? "TENANT ACTIVE" : "SESSION OFFLINE"}</span>
         </div>
 
         <p className="mt-8 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--primary-color)]">
@@ -51,7 +53,7 @@ export function CinematicHero({
         <div className="mt-7 grid max-w-2xl grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
           <div className="hero-stat"><strong>{String(totalStations).padStart(2, "0")}</strong><span>estaciones</span></div>
           <div className="hero-stat"><strong>{String(completedStations).padStart(2, "0")}</strong><span>completas</span></div>
-          <div className="hero-stat"><strong>{readyProviders}/{totalProviders || 5}</strong><span>proveedores</span></div>
+          <div className="hero-stat"><strong>{publicDemo ? "LOCAL" : `${readyProviders}/${totalProviders || 5}`}</strong><span>{publicDemo ? "modo demo" : "proveedores"}</span></div>
           <div className="hero-stat"><strong>{String(deliverables).padStart(2, "0")}</strong><span>entregables</span></div>
         </div>
       </div>
@@ -65,8 +67,8 @@ export function CinematicHero({
           <strong>{String(completedStations).padStart(2, "0")}</strong>
           <small>{normalizedRunStatus.toUpperCase()}</small>
         </div>
-        <span className="orbit-tag orbit-tag--one">{sessionActive ? "SCHOLAR / READY" : "SCHOLAR / STANDBY"}</span>
-        <span className="orbit-tag orbit-tag--two">{selectedProvider ? selectedProvider.toUpperCase() : "MODEL / OFF"}</span>
+        <span className="orbit-tag orbit-tag--one">{publicDemo ? "SCHOLAR / DEMO" : sessionActive ? "SCHOLAR / READY" : "SCHOLAR / STANDBY"}</span>
+        <span className="orbit-tag orbit-tag--two">{publicDemo ? "RUNTIME / ISOLATED" : selectedProvider ? selectedProvider.toUpperCase() : "MODEL / OFF"}</span>
         <span className="orbit-tag orbit-tag--three">APROBACIÓN / HUMANA</span>
       </div>
     </section>

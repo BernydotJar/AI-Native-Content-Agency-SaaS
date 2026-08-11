@@ -102,6 +102,7 @@ function pipelineState(run: RuntimeRun | null): Record<string, NodeState> {
 }
 
 export default function App() {
+  const publicMarketingDemo = import.meta.env.VITE_PUBLIC_MARKETING_DEMO === "true";
   const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
   const [runtimeEntitlements, setRuntimeEntitlements] = useState<readonly string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -140,6 +141,10 @@ export default function App() {
   const selectPreviousStation = () => setSelectedNodeId(STATION_NODE_IDS[Math.max(0, selectedStationIndex - 1)]);
   const selectNextStation = () => setSelectedNodeId(STATION_NODE_IDS[Math.min(STATION_NODE_IDS.length - 1, selectedStationIndex + 1)]);
   const openSessionOrCommand = () => {
+    if (publicMarketingDemo) {
+      document.getElementById("execution-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     if (session) {
       document.getElementById("command")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -421,19 +426,25 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              ref={sessionButtonRef}
-              type="button"
-              onClick={openSessionOrCommand}
-              className={`status-pill ${session ? "status-pill--live" : ""}`}
-            >
-              {session ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              ) : (
-                <LogIn size={12} aria-hidden="true" />
-              )}
-              {session ? `${session.subject_id} · conectado` : "Iniciar sesión"}
-            </button>
+            {publicMarketingDemo ? (
+              <span className="status-pill" title="La demo pública no expone credenciales ni el runtime privado">
+                <ShieldCheck size={12} aria-hidden="true" /> Demo pública
+              </span>
+            ) : (
+              <button
+                ref={sessionButtonRef}
+                type="button"
+                onClick={openSessionOrCommand}
+                className={`status-pill ${session ? "status-pill--live" : ""}`}
+              >
+                {session ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                ) : (
+                  <LogIn size={12} aria-hidden="true" />
+                )}
+                {session ? `${session.subject_id} · conectado` : "Iniciar sesión"}
+              </button>
+            )}
             <span className="status-pill status-pill--amber">
               <ShieldCheck size={12} aria-hidden="true" /> Aprobación manual
             </span>
@@ -442,7 +453,7 @@ export default function App() {
               onClick={() => setSettingsOpen(true)}
               className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.025] px-3 text-xs font-semibold text-zinc-300 hover:border-white/[0.18] hover:text-white"
             >
-              <Settings size={13} aria-hidden="true" /> Configuración
+              <Settings size={13} aria-hidden="true" /> {publicMarketingDemo ? "Apariencia" : "Configuración"}
             </button>
           </div>
         </div>
@@ -451,6 +462,7 @@ export default function App() {
       <main id="main-content" tabIndex={-1} className="relative z-10 mx-auto w-full max-w-[1840px] px-4 pb-12 pt-5 sm:px-6 lg:px-8 lg:pb-16">
         <CinematicHero
           sessionActive={Boolean(session)}
+          publicDemo={publicMarketingDemo}
           tenantId={session?.tenant_id}
           completedStations={completedStations}
           totalStations={8}
@@ -464,6 +476,7 @@ export default function App() {
         <div className="mt-8 lg:mt-10">
           <TrendRadar
             sessionActive={Boolean(session)}
+            publicDemo={publicMarketingDemo}
             onPreparePilot={prepareTrendPilot}
           />
         </div>
@@ -484,6 +497,7 @@ export default function App() {
               connectionRequest={connectionRequest}
               connectionReturnFocusRef={sessionButtonRef}
               briefSeed={trendPilotSeed}
+              publicDemo={publicMarketingDemo}
             />
           </div>
         </section>
@@ -541,6 +555,7 @@ export default function App() {
           <div className="mt-5">
             <CampaignOutputPanel
               run={run}
+              publicDemo={publicMarketingDemo}
               socialChannels={socialChannels}
               publicationAllowed={session?.role === "admin"}
               publicationBusy={publicationBusy}
@@ -563,7 +578,11 @@ export default function App() {
         <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-3 px-4 py-4 text-[11px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Network size={13} className="text-[var(--primary-color)]" aria-hidden="true" />
-            <span>Sesión, estados, entregables y aprobaciones provienen del backend gobernado.</span>
+            <span>
+              {publicMarketingDemo
+                ? "La demo se ejecuta localmente; el producto privado usa sesiones, estado durable y aprobaciones del backend gobernado."
+                : "Sesión, estados, entregables y aprobaciones provienen del backend gobernado."}
+            </span>
           </div>
           <div className="text-right font-mono text-[9px] uppercase tracking-[0.1em] text-zinc-600">
             <span className="block">Los efectos externos requieren autoridad durable y Greenlight exacto. Greenlight significa una aprobación humana ligada a esa versión.</span>
@@ -592,6 +611,7 @@ export default function App() {
         onConnectSocial={(channelId) => void connectSocialChannel(channelId)}
         onDisconnectSocial={(channelId) => void disconnectSocialChannel(channelId)}
         onRefreshProviders={() => void refreshFabric()}
+        publicDemo={publicMarketingDemo}
       />
     </div>
   );
