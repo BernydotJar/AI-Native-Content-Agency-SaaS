@@ -241,7 +241,11 @@ async function run() {
     return true;
   })()`);
   if (!prepared) throw new Error("unable to find public trend-to-pilot action");
-  await waitForCondition(client, `document.querySelector('input[aria-label="Título de campaña"]')?.value.includes("Cómo explicar propuestas complejas con claridad")`, "trend seed in mission form");
+  await waitForCondition(client, `(() => {
+    const label = [...document.querySelectorAll('label')].find((item) => item.textContent?.includes('Título de campaña'));
+    const input = label?.querySelector('input');
+    return Boolean(input?.value.includes('Cómo explicar propuestas complejas con claridad'));
+  })()`, "trend seed in mission form");
 
   const executed = await client.evaluate(`(() => {
     const button = [...document.querySelectorAll('button')].find((item) => item.textContent?.includes('Ejecutar demo local'));
@@ -253,16 +257,24 @@ async function run() {
 
   await waitForCondition(client, `document.body?.innerText.includes("Demo local completada")`, "local completion notice");
   await waitForCondition(client, `document.body?.innerText.includes("Vista previa local")`, "local channel output");
-  const result = await client.evaluate(`(() => ({
-    eightStations: [...document.querySelectorAll('button')].filter((item) => item.textContent?.includes('/ READY')).length,
-    localOutput: document.body.innerText.includes('Sin efectos externos'),
-    privatePublishButton: [...document.querySelectorAll('button')].some((item) => item.textContent?.trim() === 'Publicar'),
-    privateLogin: document.body.innerText.includes('Iniciar sesión') || document.querySelectorAll('input[type="password"]').length > 0,
-  }))()`);
+  const result = await client.evaluate(`(() => {
+    const stationNames = ['CEO Director', 'Research', 'Strategist', 'Growth', 'Writer', 'Media Studio', 'Risk & QA', 'Publisher'];
+    const stationButtons = [...document.querySelectorAll('#execution-map button[aria-label]')];
+    const stationsComplete = stationNames.filter((name) => stationButtons.some((button) =>
+      button.getAttribute('aria-label')?.startsWith(name + '.')
+        && button.getAttribute('aria-label')?.includes('Complete, 100%')
+    )).length;
+    return {
+      eightStations: stationsComplete,
+      localOutput: document.body.innerText.includes('Sin efectos externos'),
+      privatePublishButton: [...document.querySelectorAll('button')].some((item) => item.textContent?.trim() === 'Publicar'),
+      privateLogin: document.body.innerText.includes('Iniciar sesión') || document.querySelectorAll('input[type="password"]').length > 0,
+    };
+  })()`);
   const apiRequests = requests.filter((url) => {
     try { return new URL(url).pathname.startsWith("/api/"); } catch { return false; }
   });
-  if (result.eightStations < 8 || !result.localOutput || result.privatePublishButton || result.privateLogin || apiRequests.length) {
+  if (result.eightStations !== 8 || !result.localOutput || result.privatePublishButton || result.privateLogin || apiRequests.length) {
     throw new Error(`public demo browser contract failed: ${JSON.stringify({ ...result, apiRequests })}`);
   }
 
