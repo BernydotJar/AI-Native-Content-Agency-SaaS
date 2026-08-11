@@ -183,7 +183,7 @@ export function createPublicMarketingDemoRun(brief: RuntimeBrief): RuntimeRun {
       reviewer: "public-demo-review",
       note: "Simulación visual aprobada localmente. No concede autoridad de publicación.",
       approved_artifact_ids: artifacts.map((artifact) => artifact.artifact_id),
-      approved_artifact_hashes: artifacts.map((artifact, index) => `demo-hash-${index + 1}`),
+      approved_artifact_hashes: artifacts.map((_, index) => `demo-hash-${index + 1}`),
       authorized_channels: [...brief.platforms],
       authorized_budget_cents: 0,
       fencing_token: 8,
