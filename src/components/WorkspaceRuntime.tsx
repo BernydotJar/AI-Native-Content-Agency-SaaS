@@ -18,6 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { RuntimeApiError, runtimeApi } from "../lib/runtimeApi";
+import { createPublicMarketingDemoRun } from "../lib/publicMarketingDemo";
 import { useModalDialog } from "../lib/useModalDialog";
 import type {
   BrowserRuntimeSession,
@@ -37,6 +38,7 @@ interface WorkspaceRuntimeProps {
   connectionRequest?: number;
   connectionReturnFocusRef?: RefObject<HTMLElement | null>;
   briefSeed?: RuntimeTrendPilotSeed | null;
+  publicDemo?: boolean;
 }
 
 type SessionPhase = "restoring" | "signed_out" | "authenticated";
@@ -207,6 +209,7 @@ export function WorkspaceRuntime({
   connectionRequest = 0,
   connectionReturnFocusRef,
   briefSeed = null,
+  publicDemo = false,
 }: WorkspaceRuntimeProps) {
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>("restoring");
   const [session, setSession] = useState<BrowserRuntimeSession | null>(null);
@@ -230,6 +233,7 @@ export function WorkspaceRuntime({
   const capabilities = session ? ROLE_CAPABILITIES[session.role] : null;
   const canCreate = Boolean(capabilities?.canCreate);
   const canDecide = Boolean(capabilities?.canDecide);
+  const missionEditable = publicDemo || Boolean(session && canCreate);
 
   useEffect(() => onSessionChange(session), [onSessionChange, session]);
   useEffect(() => onRunChange(run), [onRunChange, run]);
@@ -251,13 +255,14 @@ export function WorkspaceRuntime({
   });
 
   useEffect(() => {
+    if (publicDemo) return;
     if (connectionRequest <= handledConnectionRequestRef.current) return;
     handledConnectionRequestRef.current = connectionRequest;
     if (!session) {
       setConnectionOrigin("external");
       setConnectionOpen(true);
     }
-  }, [connectionRequest, session]);
+  }, [connectionRequest, publicDemo, session]);
 
   const commandKey = (scope: string) => {
     const existing = commandKeys.current.get(scope);
@@ -339,6 +344,11 @@ export function WorkspaceRuntime({
   }, [activeRunId, activeRunStatus, api, handleFailure, refreshWorkspace, session]);
 
   useEffect(() => {
+    if (publicDemo) {
+      setSessionPhase("signed_out");
+      onEntitlementsChange([]);
+      return undefined;
+    }
     let active = true;
     void api.resumeSession()
       .then(async (resumed) => {
@@ -371,7 +381,7 @@ export function WorkspaceRuntime({
     return () => {
       active = false;
     };
-  }, [api, handleFailure, onEntitlementsChange]);
+  }, [api, handleFailure, onEntitlementsChange, publicDemo]);
 
   const openSession = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -442,7 +452,23 @@ export function WorkspaceRuntime({
 
   const launchRun = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!session || !canCreate || brief.platforms.length === 0) return;
+    if (brief.platforms.length === 0) return;
+    if (publicDemo) {
+      setBusyAction("run");
+      setNotice(null);
+      const created = createPublicMarketingDemoRun(brief);
+      setRun(created);
+      setRunLookupId(created.run_id);
+      clearCommandKey("run:create");
+      setNotice({
+        title: "Demo local completada",
+        detail: "Las ocho estaciones y sus entregables se generaron en este navegador. No hubo llamadas al runtime privado, credenciales, gasto ni publicación externa.",
+        kind: "info",
+      });
+      setBusyAction("");
+      return;
+    }
+    if (!session || !canCreate) return;
     setBusyAction("run");
     setNotice(null);
     try {
@@ -556,6 +582,10 @@ export function WorkspaceRuntime({
                 <LogOut size={13} aria-hidden="true" /> Desconectar
               </button>
             </>
+          ) : publicDemo ? (
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.025] px-3 text-xs text-zinc-400">
+              <ShieldCheck size={13} aria-hidden="true" /> Runtime privado no expuesto en la demo
+            </span>
           ) : (
             <button
               ref={connectButtonRef}
@@ -614,7 +644,7 @@ export function WorkspaceRuntime({
               <select
                 value={brief.campaign_type ?? "commercial"}
                 onChange={(event) => updateBrief({ campaign_type: event.target.value as "commercial" | "political" })}
-                disabled={!session || !canCreate}
+                disabled={!missionEditable}
                 className="form-control mt-2"
               >
                 <option value="commercial">Marca / comercial</option>
@@ -626,7 +656,7 @@ export function WorkspaceRuntime({
               <input
                 value={brief.locale ?? "es-GT"}
                 onChange={(event) => updateBrief({ locale: event.target.value })}
-                disabled={!session || !canCreate}
+                disabled={!missionEditable}
                 className="form-control mt-2"
                 required
               />
@@ -636,7 +666,7 @@ export function WorkspaceRuntime({
               <input
                 value={brief.title}
                 onChange={(event) => updateBrief({ title: event.target.value })}
-                disabled={!session || !canCreate}
+                disabled={!missionEditable}
                 className="form-control mt-2"
                 required
               />
@@ -646,7 +676,7 @@ export function WorkspaceRuntime({
               <input
                 value={brief.audience}
                 onChange={(event) => updateBrief({ audience: event.target.value })}
-                disabled={!session || !canCreate}
+                disabled={!missionEditable}
                 className="form-control mt-2"
                 required
               />
@@ -657,7 +687,7 @@ export function WorkspaceRuntime({
             <textarea
               value={brief.objective}
               onChange={(event) => updateBrief({ objective: event.target.value })}
-              disabled={!session || !canCreate}
+              disabled={!missionEditable}
               className="form-control mt-2 min-h-28 resize-y py-3"
               required
             />
@@ -670,7 +700,7 @@ export function WorkspaceRuntime({
                 <select
                   value={brief.publication_mode ?? "organic"}
                   onChange={(event) => updateBrief({ publication_mode: event.target.value as "organic" | "paid" })}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2"
                 >
                   <option value="organic">Orgánica</option>
@@ -695,7 +725,7 @@ export function WorkspaceRuntime({
                   <textarea
                     value={String(brief[field] ?? "")}
                     onChange={(event) => updateBrief({ [field]: event.target.value })}
-                    disabled={!session || !canCreate}
+                    disabled={!missionEditable}
                     className="form-control mt-2 min-h-20 resize-y"
                     required
                   />
@@ -706,7 +736,7 @@ export function WorkspaceRuntime({
                 <textarea
                   value={brief.evidence_claims?.[0]?.statement ?? ""}
                   onChange={(event) => updateEvidenceClaim("statement", event.target.value)}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2 min-h-20 resize-y"
                   required
                 />
@@ -716,7 +746,7 @@ export function WorkspaceRuntime({
                 <input
                   value={brief.evidence_claims?.[0]?.source ?? ""}
                   onChange={(event) => updateEvidenceClaim("source", event.target.value)}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2"
                   required
                 />
@@ -726,7 +756,7 @@ export function WorkspaceRuntime({
                 <input
                   value={brief.evidence_claims?.[0]?.locator ?? ""}
                   onChange={(event) => updateEvidenceClaim("locator", event.target.value)}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2"
                   required
                 />
@@ -736,7 +766,7 @@ export function WorkspaceRuntime({
                 <select
                   value={brief.legal_review_status ?? "pending"}
                   onChange={(event) => updateBrief({ legal_review_status: event.target.value as "pending" | "approved" })}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2"
                 >
                   <option value="pending">Pendiente</option>
@@ -753,7 +783,7 @@ export function WorkspaceRuntime({
                 <select
                   value={brief.evidence_claims?.[0]?.verification_status ?? "unverified"}
                   onChange={(event) => updateEvidenceClaim("verification_status", event.target.value)}
-                  disabled={!session || !canCreate}
+                  disabled={!missionEditable}
                   className="form-control mt-2"
                 >
                   <option value="unverified">Pendiente de verificación</option>
@@ -770,7 +800,7 @@ export function WorkspaceRuntime({
               </p>
             </fieldset>
           )}
-          <fieldset className="mt-4" disabled={!session || !canCreate}>
+          <fieldset className="mt-4" disabled={!missionEditable}>
             <legend className="text-xs font-semibold text-zinc-300">Canales de entrega</legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {PLATFORM_OPTIONS.map((platform) => (
@@ -788,17 +818,23 @@ export function WorkspaceRuntime({
           </fieldset>
           <button
             type="submit"
-            disabled={!session || !canCreate || Boolean(busyAction) || brief.platforms.length === 0}
+            disabled={!missionEditable || Boolean(busyAction) || brief.platforms.length === 0}
             className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 text-sm font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
           >
             <Play size={15} aria-hidden="true" />
-            {busyAction === "run" ? "Encolando campaña gobernada…" : "Ejecutar campaña"}
+            {busyAction === "run"
+              ? publicDemo ? "Generando demo local…" : "Encolando campaña gobernada…"
+              : publicDemo ? "Ejecutar demo local" : "Ejecutar campaña"}
           </button>
-          {!session && sessionPhase !== "restoring" && (
+          {publicDemo ? (
+            <p className="mt-3 text-center text-[11px] leading-5 text-zinc-500">
+              Demo 100% local: puedes editar la misión y recorrer el resultado sin iniciar sesión. Ninguna acción sale de este navegador.
+            </p>
+          ) : !session && sessionPhase !== "restoring" ? (
             <p className="mt-3 text-center text-[11px] leading-5 text-zinc-500">
               Conéctate una sola vez para crear una sesión HttpOnly segura. Después, el campo de credencial desaparece del espacio de trabajo.
             </p>
-          )}
+          ) : null}
           {session && !canCreate && (
             <p role="status" className="mt-3 rounded-lg border border-sky-300/15 bg-sky-300/[0.04] p-3 text-[11px] leading-5 text-sky-100">
               Este rol puede inspeccionar ejecuciones, pero no puede crear una.
@@ -807,34 +843,43 @@ export function WorkspaceRuntime({
         </form>
 
         <div className="p-5">
-          <form onSubmit={loadRun} className="flex flex-col gap-2 sm:flex-row">
-            <label className="min-w-0 flex-1 text-xs font-semibold text-zinc-300">
-              Abrir una ejecución existente
-              <input
-                value={runLookupId}
-                onChange={(event) => setRunLookupId(event.target.value)}
-                disabled={!session}
-                placeholder="run-…"
-                className="form-control mt-2 font-mono text-xs"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={!session || !runLookupId.trim() || Boolean(busyAction)}
-              className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.1] px-4 text-xs font-bold text-zinc-200 disabled:opacity-35"
-            >
-              <Search size={14} aria-hidden="true" /> {busyAction === "load" ? "Abriendo…" : "Abrir ejecución"}
-            </button>
-          </form>
+          {publicDemo ? (
+            <div className="rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-4 text-xs leading-5 text-sky-100/80">
+              <p className="font-bold text-sky-100">Simulación aislada</p>
+              <p className="mt-1">Esta URL no puede abrir ejecuciones privadas ni restaurar sesiones. El resultado que ves abajo existe sólo en memoria dentro de este navegador.</p>
+            </div>
+          ) : (
+            <form onSubmit={loadRun} className="flex flex-col gap-2 sm:flex-row">
+              <label className="min-w-0 flex-1 text-xs font-semibold text-zinc-300">
+                Abrir una ejecución existente
+                <input
+                  value={runLookupId}
+                  onChange={(event) => setRunLookupId(event.target.value)}
+                  disabled={!session}
+                  placeholder="run-…"
+                  className="form-control mt-2 font-mono text-xs"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={!session || !runLookupId.trim() || Boolean(busyAction)}
+                className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.1] px-4 text-xs font-bold text-zinc-200 disabled:opacity-35"
+              >
+                <Search size={14} aria-hidden="true" /> {busyAction === "load" ? "Abriendo…" : "Abrir ejecución"}
+              </button>
+            </form>
+          )}
 
           <div className="mt-5" aria-live="polite">
             {!run ? (
               <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-white/[0.08] p-8 text-center">
                 <div>
                   <LockKeyhole size={22} className="mx-auto text-zinc-600" aria-hidden="true" />
-                  <p className="mt-3 text-sm font-semibold text-zinc-300">No hay una ejecución activa</p>
+                  <p className="mt-3 text-sm font-semibold text-zinc-300">{publicDemo ? "La demo está lista para ejecutarse" : "No hay una ejecución activa"}</p>
                   <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-zinc-600">
-                    Crea una misión o abre una ejecución del tenant para inspeccionar entregables y el estado de Greenlight.
+                    {publicDemo
+                      ? "Edita la misión a la izquierda y pulsa Ejecutar demo local para ver las ocho estaciones, entregables y revisión final."
+                      : "Crea una misión o abre una ejecución del tenant para inspeccionar entregables y el estado de Greenlight."}
                   </p>
                 </div>
               </div>
@@ -898,7 +943,7 @@ export function WorkspaceRuntime({
         </div>
       </div>
 
-      {connectionOpen && !session && (
+      {connectionOpen && !session && !publicDemo && (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" role="presentation">
           <section ref={connectionDialogRef} role="dialog" aria-modal="true" aria-labelledby="connect-workspace-title" className="w-full max-w-md rounded-2xl border border-white/[0.12] bg-zinc-950 p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-4">

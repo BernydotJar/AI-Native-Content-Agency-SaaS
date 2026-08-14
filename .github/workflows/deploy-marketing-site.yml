@@ -1,0 +1,79 @@
+name: deploy-marketing-site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-marketing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Enforce zero-cost public-repository boundary
+        env:
+          REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          test "$REPOSITORY_PRIVATE" = "false"
+          echo "marketing_cost_boundary=pass repository_visibility=public runner=standard"
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify marketing deployment contract
+        run: python3 scripts/verify-marketing-public-url.py
+      - run: npm ci --no-audit --no-fund
+      - name: Verify frontend
+        run: |
+          npm run lint
+          npm test
+      - name: Build public marketing demo
+        env:
+          VITE_PUBLIC_MARKETING_DEMO: "true"
+        run: npm run build -- --base /AI-Native-Content-Agency-SaaS/
+      - name: Verify built marketing artifact
+        run: python3 scripts/verify-marketing-public-url.py --dist dist
+      - name: Verify public demo in a real browser
+        run: |
+          BROWSER_BIN="$(command -v chromium || command -v google-chrome || command -v google-chrome-stable)"
+          test -n "$BROWSER_BIN"
+          CHROMIUM_BIN="$BROWSER_BIN" node scripts/verify-marketing-public-browser.mjs
+      - name: Enforce public release authority
+        if: github.event_name != 'pull_request'
+        run: python3 scripts/verify-marketing-release-authority.py
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Configure or enable GitHub Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+        with:
+          enablement: true
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

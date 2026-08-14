@@ -631,15 +631,23 @@ def validate_repository(root: Path) -> dict[str, Any]:
 
 
 def copy_contract(source: Path, target: Path) -> None:
+    inventory = mapping(
+        read_json(source / "compliance/third-party-inventory.json"), "third-party inventory"
+    )
     claims = mapping(
         read_json(source / "compliance/public-claims-policy.json"), "claims"
     )
     release = mapping(
         read_json(source / "compliance/release-decision.json"), "release decision"
     )
+    evidence_paths = {
+        text(mapping(item, "evidence file").get("path"), "evidence file path")
+        for item in sequence(inventory.get("evidence_files"), "evidence_files")
+    }
     paths = (
         set(CONTRACT_FILES)
         | set(SUPPORT_FILES)
+        | evidence_paths
         | set(sequence(claims.get("surfaces"), "surfaces"))
         | set(sequence(release.get("source_documents"), "source_documents"))
     )

@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { runtimeApi, RuntimeApiError } from "../lib/runtimeApi";
+import { PUBLIC_DEMO_TRENDS } from "../lib/publicMarketingDemo";
 import type {
   RuntimeApi,
   RuntimeTrendItem,
@@ -20,6 +21,7 @@ import type {
 
 interface TrendRadarProps {
   sessionActive: boolean;
+  publicDemo?: boolean;
   api?: RuntimeApi;
   onPreparePilot?: (seed: RuntimeTrendPilotSeed) => void;
 }
@@ -58,16 +60,21 @@ function clipped(value: string, maximum: number): string {
 function buildTrendPilotSeed(
   snapshot: RuntimeTrendSnapshot,
   trend: RuntimeTrendItem,
+  publicDemo = false,
 ): RuntimeTrendPilotSeed {
   const primary = trend.news_items[0];
   const locator = primary?.url || snapshot.source_url;
-  const source = primary?.source
-    ? `${snapshot.source} · ${primary.source}`
-    : snapshot.source;
+  const source = publicDemo
+    ? "Muestra local de producto"
+    : primary?.source
+      ? `${snapshot.source} · ${primary.source}`
+      : snapshot.source;
   const traffic = trend.approx_traffic || "volumen no publicado";
-  const statement = trend.signal_type === "search_trend"
-    ? `Google Trends registró “${trend.title}” entre las búsquedas en ascenso en Guatemala, con tráfico aproximado ${traffic}.`
-    : `${trend.news_source || snapshot.source} publicó una señal reciente relacionada con “${trend.title}”.`;
+  const statement = publicDemo
+    ? `“${trend.title}” es una señal de ejemplo incluida únicamente para demostrar el flujo de investigación y briefing; no representa una tendencia actual verificada.`
+    : trend.signal_type === "search_trend"
+      ? `Google Trends registró “${trend.title}” entre las búsquedas en ascenso en Guatemala, con tráfico aproximado ${traffic}.`
+      : `${trend.news_source || snapshot.source} publicó una señal reciente relacionada con “${trend.title}”.`;
 
   return {
     id: `${snapshot.topic}:${trend.published_at}:${trend.title}`,
@@ -107,6 +114,7 @@ function buildTrendPilotSeed(
 
 export function TrendRadar({
   sessionActive,
+  publicDemo = false,
   api = runtimeApi,
   onPreparePilot,
 }: TrendRadarProps) {
@@ -117,6 +125,12 @@ export function TrendRadar({
   const [selectedPilotId, setSelectedPilotId] = useState("");
 
   const refresh = useCallback(async (nextTopic: RuntimeTrendTopic = topic) => {
+    if (publicDemo) {
+      setLoading(false);
+      setError("");
+      setSnapshot(PUBLIC_DEMO_TRENDS[nextTopic]);
+      return;
+    }
     if (!sessionActive) return;
     setLoading(true);
     setError("");
@@ -132,16 +146,16 @@ export function TrendRadar({
     } finally {
       setLoading(false);
     }
-  }, [api, sessionActive, topic]);
+  }, [api, publicDemo, sessionActive, topic]);
 
   useEffect(() => {
-    if (sessionActive) void refresh(topic);
+    if (publicDemo || sessionActive) void refresh(topic);
     else {
       setSnapshot(null);
       setError("");
       setSelectedPilotId("");
     }
-  }, [refresh, sessionActive, topic]);
+  }, [publicDemo, refresh, sessionActive, topic]);
 
   const changeTopic = (nextTopic: RuntimeTrendTopic) => {
     if (nextTopic === topic) return;
@@ -152,7 +166,7 @@ export function TrendRadar({
 
   const preparePilot = (trend: RuntimeTrendItem) => {
     if (!snapshot || !onPreparePilot) return;
-    const seed = buildTrendPilotSeed(snapshot, trend);
+    const seed = buildTrendPilotSeed(snapshot, trend, publicDemo);
     setSelectedPilotId(seed.id);
     onPreparePilot(seed);
   };
@@ -173,14 +187,16 @@ export function TrendRadar({
             </div>
             <h2 id="trend-radar-title" className="mt-1 text-lg font-bold text-zinc-100">Investiga una señal y conviértela en misión</h2>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-500">
-              Google Trends y Google News en modo lectura, sin API key. Seleccionar una señal sólo precarga un brief: no consume créditos de X ni publica contenido.
+              {publicDemo
+                ? "Muestra interactiva con señales de ejemplo. Seleccionar una señal precarga un brief local: no consulta el runtime, no usa credenciales y no publica contenido."
+                : "Google Trends y Google News en modo lectura, sin API key. Seleccionar una señal sólo precarga un brief: no consume créditos de X ni publica contenido."}
             </p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => void refresh(topic)}
-          disabled={!sessionActive || loading}
+          disabled={(!sessionActive && !publicDemo) || loading}
           className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/[0.09] px-4 text-xs font-bold text-zinc-300 disabled:cursor-not-allowed disabled:opacity-35"
         >
           {loading ? <LoaderCircle size={13} className="animate-spin" aria-hidden="true" /> : <RefreshCw size={13} aria-hidden="true" />}
@@ -197,7 +213,7 @@ export function TrendRadar({
             aria-label={`${candidate.label}: ${candidate.description}`}
             aria-selected={topic === candidate.id}
             onClick={() => changeTopic(candidate.id)}
-            disabled={!sessionActive || loading}
+            disabled={(!sessionActive && !publicDemo) || loading}
             className="trend-topic-tab"
           >
             <span>{candidate.label}</span>
@@ -206,7 +222,7 @@ export function TrendRadar({
         ))}
       </div>
 
-      {!sessionActive ? (
+      {!sessionActive && !publicDemo ? (
         <div className="trend-radar-empty">
           <Search size={20} aria-hidden="true" />
           <div>
@@ -282,10 +298,20 @@ export function TrendRadar({
             })}
           </ol>
           <footer className="flex flex-col gap-2 border-t border-white/[0.06] px-5 py-4 text-[10px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-            <span>Actualizado {readableDate(snapshot.fetched_at)} · datos reales, sin resultados sintéticos.</span>
-            <a href={snapshot.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-zinc-300 hover:text-white">
-              Fuente: {snapshot.source} <ExternalLink size={10} aria-hidden="true" />
-            </a>
+            <span>
+              {publicDemo
+                ? "Muestra local · datos ilustrativos · sin consulta al runtime privado."
+                : `Actualizado ${readableDate(snapshot.fetched_at)} · datos reales, sin resultados sintéticos.`}
+            </span>
+            {publicDemo ? (
+              <span className="inline-flex items-center gap-1 font-semibold text-zinc-400">
+                Runtime real separado de esta URL
+              </span>
+            ) : (
+              <a href={snapshot.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-zinc-300 hover:text-white">
+                Fuente: {snapshot.source} <ExternalLink size={10} aria-hidden="true" />
+              </a>
+            )}
           </footer>
         </div>
       ) : null}

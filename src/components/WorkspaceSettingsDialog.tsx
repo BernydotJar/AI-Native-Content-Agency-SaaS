@@ -25,6 +25,7 @@ interface WorkspaceSettingsDialogProps {
   onConnectSocial: (channelId: RuntimeSocialChannel["channel_id"]) => void;
   onDisconnectSocial: (channelId: RuntimeSocialChannel["channel_id"]) => void;
   onRefreshProviders: () => void;
+  publicDemo?: boolean;
 }
 
 const STATE_LABELS: Record<RuntimeProvider["configuration_state"], string> = {
@@ -60,6 +61,7 @@ export function WorkspaceSettingsDialog({
   onConnectSocial,
   onDisconnectSocial,
   onRefreshProviders,
+  publicDemo = false,
 }: WorkspaceSettingsDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -91,10 +93,12 @@ export function WorkspaceSettingsDialog({
           <div>
             <p className="section-kicker">Configuración del espacio</p>
             <h2 id="workspace-settings-title" className="mt-1 text-xl font-bold text-zinc-100">
-              Administración del espacio
+              {publicDemo ? "Apariencia de la demo" : "Administración del espacio"}
             </h2>
             <p className="mt-1 text-xs leading-5 text-zinc-500">
-              La configuración infrecuente vive aquí para mantener la misión enfocada en resultados.
+              {publicDemo
+                ? "La URL pública permite cambiar la apariencia localmente. Configuración, credenciales e integraciones privadas no están expuestas."
+                : "La configuración infrecuente vive aquí para mantener la misión enfocada en resultados."}
             </p>
           </div>
           <button
@@ -204,7 +208,9 @@ export function WorkspaceSettingsDialog({
 
             {!sessionActive ? (
               <div className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-5 text-xs leading-6 text-zinc-500">
-                Conecta el espacio para inspeccionar la configuración autorizada del tenant. Las credenciales de proveedores nunca se solicitan ni se muestran en el navegador.
+                {publicDemo
+                  ? "El catálogo de proveedores pertenece al runtime privado y no se carga en esta URL. La demo local no necesita modelos ni credenciales."
+                  : "Conecta el espacio para inspeccionar la configuración autorizada del tenant. Las credenciales de proveedores nunca se solicitan ni se muestran en el navegador."}
               </div>
             ) : providerError ? (
               <div role="status" className="mt-4 rounded-xl border border-red-300/15 bg-red-300/[0.04] p-4 text-xs leading-5 text-red-100">
@@ -281,7 +287,9 @@ export function WorkspaceSettingsDialog({
             )}
 
             <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-300/[0.04] p-4 text-[11px] leading-5 text-sky-100/80">
-              El estado mostrado es evidencia real de configuración. Esta pantalla no ejecuta inferencia, gasto ni entregas externas.
+              {publicDemo
+                ? "La demo no carga ni infiere el estado de proveedores privados; esta sección explica el límite de seguridad sin solicitar credenciales."
+                : "El estado mostrado es evidencia real de configuración. Esta pantalla no ejecuta inferencia, gasto ni entregas externas."}
             </div>
           </section>
 
@@ -298,7 +306,7 @@ export function WorkspaceSettingsDialog({
             {socialNotice && <p role="status" className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-3 text-xs text-emerald-100">{socialNotice}</p>}
             {socialActionError && <p role="alert" className="mt-4 rounded-xl border border-red-300/20 bg-red-300/[0.05] p-3 text-xs text-red-100">{socialActionError}</p>}
             {!sessionActive ? (
-              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar canales sociales.</p>
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">{publicDemo ? "Los canales sociales reales permanecen en el runtime privado. Esta URL no inicia OAuth ni publica." : "Conecta el espacio para inspeccionar canales sociales."}</p>
             ) : socialChannels.length === 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">El catálogo de canales está temporalmente vacío.</p>
             ) : (
@@ -405,7 +413,7 @@ export function WorkspaceSettingsDialog({
               </div>
             </div>
             {!sessionActive ? (
-              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">Conecta el espacio para inspeccionar integraciones.</p>
+              <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">{publicDemo ? "Las integraciones reales no se enumeran ni se activan desde la demo pública." : "Conecta el espacio para inspeccionar integraciones."}</p>
             ) : integrations.length === 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-white/[0.09] p-4 text-xs leading-5 text-zinc-500">No hay integraciones revisadas para este tenant.</p>
             ) : (

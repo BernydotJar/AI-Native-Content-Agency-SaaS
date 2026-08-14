@@ -22,6 +22,7 @@ import { PublicationConfirmationDialog } from "./PublicationConfirmationDialog";
 
 interface CampaignOutputPanelProps {
   run: RuntimeRun | null;
+  publicDemo?: boolean;
   socialChannels?: readonly RuntimeSocialChannel[];
   publicationAllowed?: boolean;
   publicationBusy?: RuntimeSocialChannel["channel_id"] | null;
@@ -245,7 +246,7 @@ function StepIcon({ state }: { state: ReadinessStep["state"] }) {
   return <CircleDashed size={13} className="text-amber-200" aria-hidden="true" />;
 }
 
-function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }) {
+function ChannelPreview({ draft, run, publicDemo = false }: { draft: ChannelDraft; run: RuntimeRun; publicDemo?: boolean }) {
   if (draft.platform === "instagram") {
     const media = publicationMediaArtifact(run, draft.platform);
     const mediaUrl = asText(media?.payload.media_url);
@@ -288,9 +289,11 @@ function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }
           <div className="grid aspect-[4/5] place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(217,70,239,0.16),transparent_42%),radial-gradient(circle_at_80%_75%,rgba(59,130,246,0.12),transparent_45%),#09090b] p-6 text-center">
             <div>
               <Camera size={28} className="mx-auto text-zinc-600" aria-hidden="true" />
-              <p className="mt-3 text-xs font-bold text-zinc-300">Asset visual pendiente</p>
+              <p className="mt-3 text-xs font-bold text-zinc-300">{publicDemo ? "Concepto visual de demo" : "Asset visual pendiente"}</p>
               <p className="mx-auto mt-1 max-w-52 text-[10px] leading-4 text-zinc-600">
-                Instagram exige imagen; adjunta un JPEG 4:5 con texto alternativo y derechos confirmados antes de Greenlight.
+                {publicDemo
+                  ? "Preview local ilustrativo. No sube archivos, no abre OAuth y no crea media en el runtime privado."
+                  : "Instagram exige imagen; adjunta un JPEG 4:5 con texto alternativo y derechos confirmados antes de Greenlight."}
               </p>
             </div>
           </div>
@@ -316,6 +319,7 @@ function ChannelPreview({ draft, run }: { draft: ChannelDraft; run: RuntimeRun }
 
 export function CampaignOutputPanel({
   run,
+  publicDemo = false,
   socialChannels = [],
   publicationAllowed = false,
   publicationBusy = null,
@@ -434,7 +438,11 @@ export function CampaignOutputPanel({
           <div>
             <p className="section-kicker">03 / OUTPUT</p>
             <h2 id="campaign-output-title" className="mt-1 text-lg font-bold text-zinc-100">Posts listos para revisión</h2>
-            <p className="mt-1 text-[11px] leading-5 text-zinc-500">Resultado visible por canal: copy, asset, Greenlight, cuenta y publicación.</p>
+            <p className="mt-1 text-[11px] leading-5 text-zinc-500">
+              {publicDemo
+                ? "Vista previa local por canal: copy, concepto visual y aprobación simulada, sin publicación externa."
+                : "Resultado visible por canal: copy, asset, Greenlight, cuenta y publicación."}
+            </p>
           </div>
         </div>
         {run && <span className="rounded-full border border-white/[0.08] px-3 py-1.5 font-mono text-[9px] uppercase text-zinc-400">{run.status.replaceAll("_", " ")}</span>}
@@ -454,7 +462,7 @@ export function CampaignOutputPanel({
           <div>
             <Send size={22} className="mx-auto text-zinc-700" aria-hidden="true" />
             <p className="mt-3 text-sm font-semibold text-zinc-300">Todavía no hay posts</p>
-            <p className="mt-1 text-xs leading-5 text-zinc-600">Ejecuta una misión o abre un run para ver el resultado final por canal.</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-600">{publicDemo ? "Ejecuta la demo local para generar previews y artefactos representativos." : "Ejecuta una misión o abre un run para ver el resultado final por canal."}</p>
           </div>
         </div>
       ) : drafts.length === 0 ? (
@@ -474,9 +482,19 @@ export function CampaignOutputPanel({
               const channel = draft.platform === "x" || draft.platform === "instagram"
                 ? channelMap.get(draft.platform)
                 : undefined;
-              const label = publicationLabel(run, draft.platform, channel, publicationAllowed);
-              const steps = readinessSteps(run, draft, channel);
-              const canPublish = label === "Listo para publicar" && Boolean(onPublish);
+              const label = publicDemo
+                ? "Vista previa local"
+                : publicationLabel(run, draft.platform, channel, publicationAllowed);
+              const steps = publicDemo
+                ? [
+                    { label: "Copy", detail: "Borrador de muestra", state: "complete" as const },
+                    { label: "Asset", detail: "Concepto visual local", state: "complete" as const },
+                    { label: "Greenlight", detail: "Aprobación visual de demo", state: "complete" as const },
+                    { label: "Cuenta", detail: "No requerida en demo", state: "optional" as const },
+                    { label: "Publicación", detail: "Efectos externos deshabilitados", state: "blocked" as const },
+                  ]
+                : readinessSteps(run, draft, channel);
+              const canPublish = !publicDemo && label === "Listo para publicar" && Boolean(onPublish);
               return (
                 <article key={draft.platform} className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -488,7 +506,7 @@ export function CampaignOutputPanel({
                   </div>
 
                   <div className="mt-4">
-                    <ChannelPreview draft={draft} run={run} />
+                    <ChannelPreview draft={draft} run={run} publicDemo={publicDemo} />
                   </div>
 
                   {draft.platform === "instagram"
@@ -626,22 +644,30 @@ export function CampaignOutputPanel({
                       {copied === draft.platform ? <Check size={13} aria-hidden="true" /> : <Clipboard size={13} aria-hidden="true" />}
                       {copied === draft.platform ? "Copiado" : "Copiar post"}
                     </button>
-                    {(draft.platform === "x" || draft.platform === "instagram") && onOpenSettings && (
-                      <button type="button" onClick={onOpenSettings} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/[0.1] px-3 text-xs font-semibold text-zinc-200">
-                        {channel?.configured ? <KeyRound size={13} aria-hidden="true" /> : <Settings2 size={13} aria-hidden="true" />}
-                        {channel?.configured ? "Autenticar cuenta" : `Configurar ${PLATFORM_LABELS[draft.platform]}`}
-                      </button>
+                    {publicDemo ? (
+                      <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-300/[0.05] px-3 text-xs font-semibold text-sky-100">
+                        <ShieldCheck size={13} aria-hidden="true" /> Sin efectos externos
+                      </span>
+                    ) : (
+                      <>
+                        {(draft.platform === "x" || draft.platform === "instagram") && onOpenSettings && (
+                          <button type="button" onClick={onOpenSettings} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/[0.1] px-3 text-xs font-semibold text-zinc-200">
+                            {channel?.configured ? <KeyRound size={13} aria-hidden="true" /> : <Settings2 size={13} aria-hidden="true" />}
+                            {channel?.configured ? "Autenticar cuenta" : `Configurar ${PLATFORM_LABELS[draft.platform]}`}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => channel && beginPublication(draft, channel)}
+                          disabled={!canPublish || publicationBusy !== null}
+                          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--primary-color)] px-3 text-xs font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
+                          title={label}
+                        >
+                          <Send size={13} aria-hidden="true" />
+                          {publicationBusy === draft.platform ? "Publicando…" : "Publicar"}
+                        </button>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => channel && beginPublication(draft, channel)}
-                      disabled={!canPublish || publicationBusy !== null}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[var(--primary-color)] px-3 text-xs font-extrabold text-black disabled:cursor-not-allowed disabled:opacity-35"
-                      title={label}
-                    >
-                      <Send size={13} aria-hidden="true" />
-                      {publicationBusy === draft.platform ? "Publicando…" : "Publicar"}
-                    </button>
                   </div>
                 </article>
               );

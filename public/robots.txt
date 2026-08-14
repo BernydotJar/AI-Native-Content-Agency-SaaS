@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bernydotjar.github.io/AI-Native-Content-Agency-SaaS/sitemap.xml
