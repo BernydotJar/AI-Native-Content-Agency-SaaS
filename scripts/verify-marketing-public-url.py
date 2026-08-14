@@ -21,6 +21,21 @@ EXPECTED_ACTIONS = (
     "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e",
 )
 
+FORBIDDEN_BILLABLE_DEPLOYMENT_TOKENS = (
+    "firebase deploy",
+    "firebase hosting",
+    "firestore",
+    "gcloud run deploy",
+    "cloud run",
+    "artifact registry",
+    "google-github-actions/auth",
+    "terraform apply",
+    "docker build",
+    "docker push",
+    "aws-actions/",
+    "azure/login",
+)
+
 
 class MarketingContractError(ValueError):
     pass
@@ -64,12 +79,25 @@ def verify_source() -> None:
             "if: github.event_name != 'pull_request'",
             "pages: write",
             "id-token: write",
+            'REPOSITORY_PRIVATE: ${{ github.event.repository.private }}',
+            'test "$REPOSITORY_PRIVATE" = "false"',
+            "marketing_cost_boundary=pass",
             *EXPECTED_ACTIONS,
         ),
         "Pages workflow",
     )
     if re.search(r"uses:\s+[^\s]+@(v\d+|main|master)\b", workflow):
         raise MarketingContractError("Pages workflow contains a mutable action reference")
+    lower_workflow = workflow.lower()
+    forbidden = [token for token in FORBIDDEN_BILLABLE_DEPLOYMENT_TOKENS if token in lower_workflow]
+    if forbidden:
+        raise MarketingContractError(
+            f"Pages workflow crosses the zero-cost static-hosting boundary: {forbidden}"
+        )
+    if not re.search(r"runs-on:\s*ubuntu-latest\b", workflow):
+        raise MarketingContractError("Pages workflow must use a standard GitHub-hosted runner")
+    if re.search(r"runs-on:\s*[^\n]*(?:large|x64|arm64)", workflow, re.I):
+        raise MarketingContractError("Pages workflow must not select a larger billed runner")
 
     require(
         index,
@@ -139,6 +167,8 @@ def verify_source() -> None:
             "simulación local",
             "GitHub Pages",
             "does not expose",
+            "$0",
+            "No Firebase",
         ),
         "marketing documentation",
     )
@@ -177,7 +207,10 @@ def main() -> int:
     except MarketingContractError as error:
         print(f"marketing_public_url=FAIL: {error}", file=sys.stderr)
         return 1
-    print(f"marketing_public_url=pass canonical={CANONICAL} public_runtime_calls=0")
+    print(
+        f"marketing_public_url=pass canonical={CANONICAL} "
+        "public_runtime_calls=0 deployment_cost_boundary=zero"
+    )
     return 0
 
 

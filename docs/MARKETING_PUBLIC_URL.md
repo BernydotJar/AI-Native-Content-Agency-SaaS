@@ -1,5 +1,30 @@
 # Marketing public URL
 
+## Cost boundary: $0
+
+The marketing URL has a hard **$0 infrastructure-cost requirement**. The supported
+deployment is therefore limited to a public GitHub repository, GitHub Pages and standard
+GitHub-hosted Actions runners. GitHub documents standard hosted runners as free for
+public repositories and for GitHub Pages.
+
+This marketing deployment must not provision or invoke billable application
+infrastructure. In particular:
+
+- no Firebase project or Firebase Hosting deployment;
+- no Firestore;
+- no Cloud Run service;
+- no Artifact Registry publication;
+- no managed PostgreSQL or other database;
+- no paid DNS or custom-domain requirement;
+- no larger GitHub-hosted runners;
+- no Terraform apply, cloud credentials or service-account keys.
+
+The workflow fails when the repository is private and the source verifier rejects known
+cloud-deployment commands. This makes the zero-cost assumption executable instead of
+leaving it only as documentation. If GitHub changes the free-use terms in the future,
+the marketing deployment must be re-evaluated before publication rather than silently
+accepting spend.
+
 ## Purpose
 
 The marketing surface is a public, interactive demonstration of CampaignOS. It is built
@@ -121,11 +146,11 @@ The authoritative deployment URL is also recorded by the `github-pages` environm
 
 ## Firebase decision
 
-Firebase Hosting remains a valid later facade if a custom domain, preview channels, or
-same-origin rewrites to Cloud Run become actual requirements. Firestore is deliberately
-not introduced for this marketing surface: the private application runtime already has
-governed PostgreSQL persistence, and duplicating product state solely to obtain a public
-URL would increase consistency and security scope without improving the static demo.
+**No Firebase is used for this URL.** Under the current $0 requirement there is no reason
+to add Firebase Hosting or Firestore. The public experience is a static/local demo and
+does not need server-side persistence. Any future proposal to move this marketing URL to
+Firebase, Cloud Run or another platform must independently prove that the complete path
+remains $0 before replacing the Pages deployment.
 
 ## Production boundary
 
