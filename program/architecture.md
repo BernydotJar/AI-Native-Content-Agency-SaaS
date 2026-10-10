@@ -32,7 +32,7 @@ The multi-stage OCI image serves the SPA and FastAPI as UID/GID 10001. Helm and 
 
 ## Deployment evidence boundary
 
-The active branch contains no GCP module, configured target, saved GCP plan, apply record, endpoint, or runtime observation. The parallel PR `#2` contains a separate static GCP/Cloud Run foundation and a separate `control_plane` backend. It is unmerged and not proof that the selected runtime is deployed.
+The current repository includes a fail-closed `infra/gcp` Cloud Run bootstrap module, but no authorized live GCP video deployment, Cloud SQL/GCS/Cloud Tasks media pipeline, saved apply record, or verified production runtime is evidenced here. An infrastructure module is not evidence of a deployed service. ADR 0010 selects GCP as the target for the next separately authorized pilot; production activation remains gated.
 
 Current executable infrastructure evidence is limited to:
 
@@ -134,3 +134,7 @@ program/task-ledger.yaml + program/task-graph.yaml
 ```
 
 The application repositories retain domain requirements, paths, roles, validation commands and human gates. The framework owns generic transition legality, dependency readiness, evidence freshness, gate evaluation, event integrity and repair invalidation. The framework is referenced at an immutable gitlink and is not copied into application runtime code. It is development governance only and is excluded from the production image context.
+
+## AI-Native Media Factory v1 target decision — 2026-10-10
+
+[ADR 0010](../docs/adr/0010-ai-native-media-factory-hybrid-video-architecture.md) selects a **logical architecture**, not active vendor execution: retain the React/FastAPI modular control plane, PostgreSQL canonical state and tenant governance; add durable video effect/outbox, an independent asynchronous worker, a fal.ai model gateway for cinematic work, optional admin-managed HeyGen BYOK and video/avatar services, private GCS media storage and independent video QA. Cloud Run + Cloud Tasks are the intended first GCP pilot. Computer Use is supervised browser assistance; ComfyUI/FreeVideo and H3ddle remain optional research workers. No billable API call or production resource is authorized by this decision.

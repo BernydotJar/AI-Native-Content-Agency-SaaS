@@ -1,6 +1,8 @@
 # Video Production Engine — provider evaluation and evidence (2026-10-10)
 
 Status: **READ-ONLY PROVIDER DISCOVERY + TECHNICAL VIDEO QA IMPLEMENTED**.
+Architecture selected in [ADR 0010](../adr/0010-ai-native-media-factory-hybrid-video-architecture.md): GCP Cloud Run target, PostgreSQL + async video effect worker, fal.ai cinematic gateway, HeyGen optional BYOK, private GCS vault, Cloud Tasks wakeup and governed QA. **Selection is not activation.**
+
 No live API generation, desktop-app control, tenant BYOK import, or media-worker execution is enabled.
 
 ## Product decision
