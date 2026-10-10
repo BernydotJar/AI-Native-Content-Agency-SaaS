@@ -1,6 +1,6 @@
 import base64
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
 from pathlib import Path
@@ -552,7 +552,9 @@ class SocialOAuthApiTests(unittest.TestCase):
                 "AGENCY_INSTAGRAM_ACCESS_TOKEN": "bootstrap-instagram-token",
                 "AGENCY_INSTAGRAM_ACCOUNT_ID": "ig-bootstrap-001",
                 "AGENCY_INSTAGRAM_ACCOUNT_USERNAME": "bootstrap.instagram",
-                "AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT": "2026-09-01T00:00:00+00:00",
+                "AGENCY_INSTAGRAM_TOKEN_EXPIRES_AT": (
+                    datetime.now(timezone.utc) + timedelta(days=30)
+                ).isoformat(),
             }
         )
         no_http = lambda request: (_ for _ in ()).throw(AssertionError("no provider HTTP"))
