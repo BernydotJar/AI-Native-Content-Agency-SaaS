@@ -1,0 +1,40 @@
+{
+  "schema": "campaignos-media-benchmark.v1",
+  "mode": "review_only_no_external_effects",
+  "default_cost_ceiling_cents": 0,
+  "target_final": {"width": 1080, "height": 1920, "fps": 24, "duration_seconds": 6},
+  "tests": [
+    {
+      "id": "SPAGHETTI-001",
+      "title": "Fictional human / utensil / pasta motion consistency",
+      "public_figure_likeness": false,
+      "likeness_rights_verified": false,
+      "seed": 20261010,
+      "prompt": "Six-second continuous photoreal cinematic shot at a cozy restaurant. A fictional adult performer with a consistent face twirls spaghetti around a metal fork, raises the pasta naturally, takes one bite, and lowers the fork. Correct five-finger hand anatomy, physically consistent fork tines, uninterrupted pasta strands, gravity and contact, natural facial motion and exposure; no scene cuts, gentle stabilized camera. Warm tungsten key lighting and realistic skin texture. Vertical 9:16, 24 fps. Fully fictional synthetic subject, no public-figure likeness.",
+      "negative_checks": [
+        "no extra limbs or fingers",
+        "no morphing fork or teleporting spaghetti",
+        "no disappearing plate or facial identity drift",
+        "no abrupt jump cuts",
+        "no misleading celebrity endorsement"
+      ],
+      "reference_concept": "Historic Will Smith spaghetti AI-video meme; fictional actor instead of celebrity likeness"
+    },
+    {
+      "id": "CAMPAIGNOS-001",
+      "title": "Premium AI-native SaaS campaign spot",
+      "public_figure_likeness": false,
+      "likeness_rights_verified": false,
+      "seed": 20261011,
+      "prompt": "Premium six-second vertical product commercial for CampaignOS AI-native content agency. Burgundy, dark ink, warm copper and cyan design. One campaign brief smoothly expands into eight intelligent specialist stations with precise luminous connections, then consolidates into approved image, video and copy cards. Fluid controlled camera move, physically consistent UI glass, intentional lighting, readable legible typography: hook by second one, value/agents by second four, clear CampaignOS CTA at finish. No flashing, no random text, no logo distortions.",
+      "negative_checks": [
+        "no illegible or hallucinated labels",
+        "no duplicated or disappearing agents",
+        "no exploding interface elements",
+        "no arbitrary camera jumps",
+        "no unauthorized logos or assets"
+      ],
+      "reference_concept": "Technical B2B product video, not live social publishing"
+    }
+  ]
+}

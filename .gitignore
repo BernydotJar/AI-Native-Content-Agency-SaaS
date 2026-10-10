@@ -49,3 +49,6 @@ gha-creds-*.json
 
 # Generated semantic evaluation evidence
 artifacts/semantic-evals/generated/
+
+# Local-only video QA output (rebuild via scripts/media-lab)
+artifacts/media-lab/generated/
