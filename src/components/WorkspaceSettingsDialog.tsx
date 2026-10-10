@@ -4,6 +4,7 @@ import type { RuntimeIntegrationSummary, RuntimeProvider, RuntimeProviderGateway
 import { THEME_CATALOG, isThemeAvailable } from "../lib/themeCatalog";
 import type { ThemeId } from "../lib/themeCatalog";
 import { useModalDialog } from "../lib/useModalDialog";
+import { VideoProviderSettings } from "./VideoProviderSettings";
 
 interface WorkspaceSettingsDialogProps {
   open: boolean;
@@ -284,6 +285,8 @@ export function WorkspaceSettingsDialog({
               El estado mostrado es evidencia real de configuración. Esta pantalla no ejecuta inferencia, gasto ni entregas externas.
             </div>
           </section>
+
+          <VideoProviderSettings enabled={sessionActive} />
 
           <section aria-labelledby="social-channel-settings-title" className="border-t border-white/[0.07] pt-7">
             <div className="flex items-center gap-3">

@@ -91,8 +91,8 @@ class ApiContractSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("api_contract=pass", completed.stdout)
-        self.assertIn("operations=31", completed.stdout)
-        self.assertIn("standard_error_responses=310", completed.stdout)
+        self.assertIn("operations=33", completed.stdout)
+        self.assertIn("standard_error_responses=330", completed.stdout)
         self.assertIn("external_effects=0", completed.stdout)
 
     def test_verifier_rejects_unversioned_paths_and_missing_error_contracts(self):

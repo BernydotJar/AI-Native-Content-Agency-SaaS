@@ -66,6 +66,7 @@ from .postgres import (
     normalize_postgres_schema_mode,
 )
 from .providers import ProviderRegistry
+from .video_providers import VideoProviderCatalog
 from .publication_media import (
     MAX_PUBLICATION_MEDIA_BYTES,
     PublicationMediaValidationError,
@@ -2205,6 +2206,7 @@ def create_app(
     )
     provider_source = os.environ if provider_environment is None else provider_environment
     provider_registry = ProviderRegistry.from_environment(provider_source)
+    video_provider_catalog = VideoProviderCatalog(provider_source)
     model_gateway = ModelGateway.from_environment(
         provider_source,
         transport=model_transport,
@@ -3168,6 +3170,26 @@ def create_app(
             "providers": app.state.provider_registry.public_list(),
             "gateway": gateway_status,
         }
+
+    @app.get("/api/v1/video/providers", tags=["video-providers"])
+    def list_video_providers(
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        return {
+            "tenant_id": principal.tenant_id,
+            "providers": video_provider_catalog.list(),
+        }
+
+    @app.get("/api/v1/video/providers/{provider_id}", tags=["video-providers"])
+    def get_video_provider(
+        provider_id: str,
+        principal: TenantPrincipal = Depends(require_identity_reader),
+    ) -> Dict[str, object]:
+        try:
+            provider = video_provider_catalog.get(provider_id)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="video provider not found") from error
+        return {"tenant_id": principal.tenant_id, "provider": provider}
 
     @app.get("/api/v1/trends", tags=["research"])
     def read_trends(
